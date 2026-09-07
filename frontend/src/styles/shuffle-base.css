@@ -1,0 +1,80 @@
+/* ==========================================================================
+   Global base — verbatim from the reference global stylesheet
+   ========================================================================== */
+
+@font-face { font-family: Aeonik; src: url(/fonts/Aeonik-Regular.02429098.otf) format("opentype"); font-weight: 400; }
+@font-face { font-family: Aeonik; src: url(/fonts/Aeonik-Medium.822e5d51.otf) format("opentype"); font-weight: 500; }
+@font-face { font-family: Aeonik; src: url(/fonts/Aeonik-Bold.ff927aa4.otf) format("opentype"); font-weight: 700; }
+
+html {
+  --font-heading: "Countach", "Aeonik", sans-serif;
+  --font-body: "Aeonik", sans-serif;
+  --font-accent: "Oswald", sans-serif;
+  --font-serif: "Domine", sans-serif;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  font-size: 16px;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html *,
+html :after,
+html :before {
+  box-sizing: inherit;
+}
+
+html .no_scroll {
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  background: var(--color-grayScaleBlack);
+  color: var(--color-white);
+}
+
+#root {
+  height: 100%;
+}
+
+body ::-webkit-scrollbar { width: 6px; height: 6px; }
+body ::-webkit-scrollbar-button { width: 0; height: 0; }
+body ::-webkit-scrollbar-thumb { background: var(--color-gray700); border-radius: 1.5rem; }
+body ::-webkit-scrollbar-thumb:hover { background: var(--color-gray600); }
+body ::-webkit-scrollbar-thumb:active { background: var(--color-gray500); }
+body ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0); }
+body ::-webkit-scrollbar-corner,
+body ::-webkit-scrollbar-track:active { background: rgba(0, 0, 0, 0); }
+
+h1, h2, h3, h4, h5, h6, p { margin: 0; }
+
+a { text-decoration: none; color: var(--color-white); }
+
+a, p, span { line-height: 150%; }
+
+button, form > *, input, label { font-family: var(--font-body); }
+
+button { padding: 0; border: none; background: none; color: #fff; }
+
+input::-webkit-inner-spin-button,
+input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+input[type=number] { -moz-appearance: textfield; }
+
+input::placeholder,
+textarea::placeholder { color: var(--color-gray400); }
+
+
+button { cursor: pointer; }

@@ -1,0 +1,17 @@
+/* ==========================================================================
+   Shell glue — the layout itself is the reference CasinoLayout module
+   (see shuffle-home.css). Only small additions live here.
+   ========================================================================== */
+
+/* Visually hidden helper used by form controls */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

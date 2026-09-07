@@ -1,0 +1,76 @@
+{
+ "banners": [
+  {
+   "href": "/sports/promotions/us-open-2026",
+   "alt": "10K US OPEN",
+   "img": "/images/banners/10K_US_OPEN.png"
+  },
+  {
+   "href": "/sports/promotions/premier-league-first-score-protection",
+   "alt": "SCORE FIRST PROTEC2",
+   "img": "/images/banners/SCORE_FIRST_PROTEC2.png"
+  },
+  {
+   "href": "/sports/promotions/mlb-sgm-money-back",
+   "alt": "dodgetheloss en",
+   "img": "/images/banners/MLB_Promotion.png"
+  },
+  {
+   "href": "/sports/promotions/boosted-odds-are-here",
+   "alt": "BOOSTED ODDS",
+   "img": "/images/banners/BOOSTED_ODDS.png"
+  },
+  {
+   "href": "/sports/promotions/ufc-bad-beat-refund",
+   "alt": "UFC-BAD-BEAT-REFUND",
+   "img": "/images/banners/UFC-BAD-BEAT-REFUND.png"
+  },
+  {
+   "href": "/sports/promotions/turkish-super-lig-first-score-protection",
+   "alt": "EN-2-TURK-SCORE FIRST PROTEC2",
+   "img": "/images/banners/EN-2-TURK-SCORE_FIRST_PROTEC2.png"
+  },
+  {
+   "href": "/sports/promotions/2-goals-up-early-payout",
+   "alt": "2GOALSUP-REFRESH",
+   "img": "/images/banners/2GOALSUP-REFRESH.png"
+  },
+  {
+   "href": "/sports/promotions/combine-your-sgm",
+   "alt": "COMBINE-SGM",
+   "img": "/images/banners/COMBINE-SGM.png"
+  },
+  {
+   "href": "/sports/promotions/watch-sports-live",
+   "alt": "Watch Sports on Shuffle!",
+   "img": "/images/banners/STREAM_SPORTS__1_.png"
+  },
+  {
+   "href": "/sports/promotions/3xXP-sports-bets",
+   "alt": "3x XP with Sports bets!",
+   "img": "/images/banners/image__4_.png"
+  }
+ ],
+ "tabs": [
+  [
+   "featured",
+   "Featured",
+   "/sports?section=featured"
+  ],
+  [
+   "upcoming",
+   "Upcoming",
+   "/sports?section=upcoming"
+  ],
+  [
+   "bet-live",
+   "Bet Live",
+   "/sports?section=bet-live"
+  ],
+  [
+   "all",
+   "All Sports",
+   "/sports?section=all"
+  ]
+ ]
+}

@@ -1,0 +1,316 @@
+/* ==========================================================================
+   Weekly Race / SHFL Airdrop boards — verbatim from the signed-in reference
+   (`Race`, `LargeIconText`, `DrawResult`, `AirDropRaceTable` modules)
+   ========================================================================== */
+
+.LargeIconText_root { padding: var(--spacing-md2); display: flex; justify-content: center; align-items: center; column-gap: var(--spacing-md); flex: 1 1 0%; min-width: 20rem; }
+.LargeIconText_root > img { height: var(--spacing-lg4); }
+.LargeIconText_root button { width: auto; font-size: var(--text-md); }
+.LargeIconText_body { flex: 1 1 0%; }
+.LargeIconText_text { color: var(--color-gray400); font-size: var(--text-md); line-height: 1.5; }
+.LargeIconText_icon { margin: auto 0; }
+.LargeIconText_content { display: flex; gap: var(--spacing-sm4); align-items: center; margin-top: var(--spacing-sm); }
+.LargeIconText_amount { font-size: var(--text-h4); line-height: 1; }
+
+.Race_icon { background-color: var(--color-gray900); border-radius: var(--radius-md); flex: 1 1 0%; }
+.Race_racePrizeText { color: var(--color-success); font-weight: 500; font-size: var(--text-lg); }
+.Race_raceContainer { display: flex; flex-wrap: wrap; gap: var(--spacing-lg1); }
+.Race_hidden { cursor: not-allowed; }
+.Race_table td { white-space: nowrap; }
+.Race_table td > span { display: flex; gap: var(--spacing-sm4); }
+.Race_table td img { margin: auto 0; }
+.Race_table button { display: inline-flex; align-items: center; gap: var(--spacing-sm4); cursor: pointer; white-space: nowrap; max-width: 100%; line-height: unset; }
+@media (hover: hover) { .Race_table button:hover { color: var(--color-gray300); } }
+
+.DrawResult_root { border: 1px solid var(--color-gray700); border-radius: var(--radius-md); overflow: hidden; }
+.DrawResult_navigation { display: flex; flex-direction: row; gap: var(--spacing-md2); align-items: center; justify-content: space-between; width: 100%; background: var(--color-gray900); padding: var(--spacing-md2); }
+.DrawResult_navigation > button { background: none; border: 0; width: var(--spacing-lg1); height: var(--spacing-lg1); padding: 0; margin: 0; cursor: pointer; transition: var(--animation-duration); }
+.DrawResult_navigation > button > span { display: none; }
+.DrawResult_navigation > button:last-child img { transform: rotate(180deg); }
+.DrawResult_navigation > button:disabled { opacity: var(--disabled-opacity); cursor: default; }
+.DrawResult_navigation > button:active:not(:disabled) { transform: var(--active-state-sm); }
+.DrawResult_navigation > button:active:not(:disabled):last-child > img { transform: rotate(180deg) var(--active-state-sm); }
+@media (hover: hover) {
+  .DrawResult_navigation > button:not(:disabled):hover > span { color: var(--color-gold-lottery); }
+  .DrawResult_navigation > button:not(:disabled):hover > img { filter: var(--filter-gold); }
+  .DrawResult_navigation.DrawResult_purple > button:not(:disabled):hover > span { color: var(--color-primaryViolet); }
+  .DrawResult_navigation.DrawResult_purple > button:not(:disabled):hover > img { filter: var(--filter-primaryViolet); }
+}
+.DrawResult_navigation > p { display: flex; flex-direction: column; color: #fff; text-align: center; font-size: var(--text-lg); font-style: normal; font-weight: 400; }
+.DrawResult_navigation > p .DrawResult_draw { color: #fff; font-size: var(--text-lg); font-weight: 700; }
+.DrawResult_navigation > p .DrawResult_drawDate { color: var(--color-gray300); font-size: var(--text-md); font-weight: 400; }
+
+.AirDropRaceTable_root { gap: var(--spacing-md2); }
+.AirDropRaceTable_tinyButton { height: 1.875rem; }
+.AirDropRaceTable_container { border-top: 1px solid var(--color-gray700); }
+.AirDropRaceTable_container > :first-child { border-bottom: 1px solid var(--color-gray700); }
+.AirDropRaceTable_loader { height: 1.6875rem !important; }
+
+.FormattedAmount_green { color: var(--color-green); }
+.FiatWithTooltip_root { display: inline-block; font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; font-size: var(--text-lg); line-height: var(--text-xl); white-space: nowrap; }
+.FiatWithTooltip_sm { font-size: var(--text-md); }
+
+@media (min-width: 1128px) {
+  .magic-container.right-side-opened-only .LargeIconText_root { padding: var(--spacing-lg1); }
+  .magic-container.right-side-opened-only .DrawResult_navigation > button { display: flex; flex-direction: row; width: auto; justify-content: center; align-items: center; gap: var(--spacing-sm5); }
+  .magic-container.right-side-opened-only .DrawResult_navigation > button > span { display: block; color: #fff; }
+  .magic-container.right-side-opened-only .AirDropRaceTable_root { margin-top: var(--spacing-sm4); gap: var(--spacing-lg1); }
+}
+@media (min-width: 943px) {
+  .magic-container.left-side-opened-only .LargeIconText_root { padding: var(--spacing-lg1); }
+  .magic-container.left-side-opened-only .DrawResult_navigation > button { display: flex; flex-direction: row; width: auto; justify-content: center; align-items: center; gap: var(--spacing-sm5); }
+  .magic-container.left-side-opened-only .DrawResult_navigation > button > span { display: block; color: #fff; }
+  .magic-container.left-side-opened-only .AirDropRaceTable_root { margin-top: var(--spacing-sm4); gap: var(--spacing-lg1); }
+}
+@media (min-width: 1303px) {
+  .magic-container.both-side-opened .LargeIconText_root { padding: var(--spacing-lg1); }
+  .magic-container.both-side-opened .DrawResult_navigation > button { display: flex; flex-direction: row; width: auto; justify-content: center; align-items: center; gap: var(--spacing-sm5); }
+  .magic-container.both-side-opened .DrawResult_navigation > button > span { display: block; color: #fff; }
+  .magic-container.both-side-opened .AirDropRaceTable_root { margin-top: var(--spacing-sm4); gap: var(--spacing-lg1); }
+}
+@media (min-width: 768px) {
+  .magic-container.no-side-opened .LargeIconText_root { padding: var(--spacing-lg1); }
+  .magic-container.no-side-opened .DrawResult_navigation > button { display: flex; flex-direction: row; width: auto; justify-content: center; align-items: center; gap: var(--spacing-sm5); }
+  .magic-container.no-side-opened .DrawResult_navigation > button > span { display: block; color: #fff; }
+  .magic-container.no-side-opened .AirDropRaceTable_root { margin-top: var(--spacing-sm4); gap: var(--spacing-lg1); }
+}
+@media (min-width: 960px) { .magic-container.right-side-opened-only .LargeIconText_root { min-width: 23.75rem; } .magic-container.right-side-opened-only .Race_raceContainer { margin-bottom: var(--spacing-sm4); } }
+@media (min-width: 775px) { .magic-container.left-side-opened-only .LargeIconText_root { min-width: 23.75rem; } .magic-container.left-side-opened-only .Race_raceContainer { margin-bottom: var(--spacing-sm4); } }
+@media (min-width: 1135px) { .magic-container.both-side-opened .LargeIconText_root { min-width: 23.75rem; } .magic-container.both-side-opened .Race_raceContainer { margin-bottom: var(--spacing-sm4); } }
+@media (min-width: 600px) { .magic-container.no-side-opened .LargeIconText_root { min-width: 23.75rem; } .magic-container.no-side-opened .Race_raceContainer { margin-bottom: var(--spacing-sm4); } }
+@media (min-width: 1352px) { .magic-container.right-side-opened-only .AirDropRaceTable_container { flex-direction: row; } .magic-container.right-side-opened-only .AirDropRaceTable_container > :first-child { border-bottom: 0; border-right: 1px solid var(--color-gray700); } }
+@media (min-width: 1167px) { .magic-container.left-side-opened-only .AirDropRaceTable_container { flex-direction: row; } .magic-container.left-side-opened-only .AirDropRaceTable_container > :first-child { border-bottom: 0; border-right: 1px solid var(--color-gray700); } }
+@media (min-width: 1527px) { .magic-container.both-side-opened .AirDropRaceTable_container { flex-direction: row; } .magic-container.both-side-opened .AirDropRaceTable_container > :first-child { border-bottom: 0; border-right: 1px solid var(--color-gray700); } }
+@media (min-width: 992px) { .magic-container.no-side-opened .AirDropRaceTable_container { flex-direction: row; } .magic-container.no-side-opened .AirDropRaceTable_container > :first-child { border-bottom: 0; border-right: 1px solid var(--color-gray700); } }
+
+/* Row-count dropdown on the activity board. The reference renders its popup from
+   a stylesheet chunk that was not part of the download, so these rules are
+   reconstructed to match the other selects on the site. */
+.Select_formWrapper {
+  position: relative;
+}
+
+.ActivityBoard_selectPopup {
+  position: absolute;
+  z-index: var(--z-above);
+  top: calc(100% + var(--spacing-sm1));
+  right: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: var(--spacing-sm1);
+  list-style: none;
+  background: var(--color-gray800);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-sm1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.ActivityBoard_selectOption {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--spacing-sm3) var(--spacing-md);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+  font-size: var(--text-lg);
+  cursor: pointer;
+}
+
+.ActivityBoard_selectOptionSelected {
+  background: var(--color-gray700);
+}
+
+@media (hover: hover) {
+  .ActivityBoard_selectOption:hover {
+    background: var(--color-gray700);
+  }
+}
+
+/* The responsive half of ActivityBoard_hideMobile; only the base rule came
+   through in the downloaded chunk, so the row-count select stayed hidden. */
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .ActivityBoard_hideMobile {
+    display:block;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .ActivityBoard_hideMobile {
+    display:block;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .ActivityBoard_hideMobile {
+    display:block;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .ActivityBoard_hideMobile {
+    display:block;
+  }
+
+}
+
+/* --- Weekly race dialog ---
+   The reference only renders this for a signed-in player, so it is not present
+   in the captured guest DOM; these rules reproduce the dialog's layout. */
+.ModalContent_modalBody.WeeklyRaceModal_body {
+  width: min(675px, calc(100vw - var(--spacing-lg2)));
+  max-width: min(90vw, 675px);
+  max-height: calc(100vh - var(--spacing-lg2));
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-gray900);
+}
+
+.WeeklyRaceModal_close {
+  position: absolute;
+  top: var(--spacing-md2);
+  right: var(--spacing-md2);
+  z-index: var(--z-above);
+  display: flex;
+  padding: var(--spacing-sm3);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  filter: brightness(0) invert(1);
+}
+
+.WeeklyRaceModal_banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
+}
+
+.WeeklyRaceModal_bannerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.WeeklyRaceModal_bannerInner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md2);
+  padding: var(--spacing-lg1);
+}
+
+.WeeklyRaceModal_title {
+  margin: 0;
+  color: var(--color-white);
+  font-size: 1.875rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.WeeklyRaceModal_countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm5);
+}
+
+.WeeklyRaceModal_countdownItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm1);
+  width: 5.0625rem;
+  height: 4.6875rem;
+  border: 1px solid var(--color-success);
+  border-radius: var(--spacing-sm3);
+  background: var(--color-black900);
+}
+
+.WeeklyRaceModal_countdownValue {
+  color: var(--color-success);
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.WeeklyRaceModal_countdownLabel {
+  color: var(--color-white);
+  font-size: 0.8125rem;
+}
+
+.WeeklyRaceModal_content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg1);
+  padding: var(--spacing-lg1) var(--spacing-lg4) var(--spacing-lg4);
+}
+
+.WeeklyRaceModal_text {
+  margin: 0;
+  color: var(--color-white);
+  font-size: var(--text-xl);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.WeeklyRaceModal_row {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.WeeklyRaceModal_row .WeeklyRaceModal_field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.WeeklyRaceModal_field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm4);
+}
+
+.WeeklyRaceModal_label {
+  color: var(--color-white);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.WeeklyRaceModal_value {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  height: 3.25rem;
+  padding: 0 var(--spacing-md2);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-sm1);
+  background: var(--color-black900);
+  color: var(--color-white);
+  font-size: var(--text-lg);
+}
+
+.WeeklyRaceModal_placeholder {
+  color: var(--color-gray400);
+}
+
+.WeeklyRaceModal_cta {
+  width: 100%;
+  height: 4rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}

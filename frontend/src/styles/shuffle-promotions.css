@@ -1,0 +1,1926 @@
+.Pagination_root {
+  list-style-type:none;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin:0;
+  padding:0;
+  overflow:auto;
+}
+
+.Pagination_root .Pagination_item {
+  width:var(--spacing-lg3);
+  height:var(--spacing-lg3);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  border-radius:var(--radius-full);
+}
+
+.Pagination_root .Pagination_item button {
+  background:none;
+  border:0;
+  transition:var(--animation-duration);
+  display:inline-block;
+  color:#fff;
+  width:var(--spacing-lg3);
+  height:var(--spacing-lg3);
+  cursor:pointer;
+  border-radius:var(--radius-full);
+}
+
+.Pagination_root .Pagination_item button.Pagination_active {
+  background:var(--color-primaryNeonPurple);
+  pointer-events:none;
+}
+
+@media(hover:hover) {
+
+  .Pagination_root .Pagination_item button:hover {
+    color:var(--color-primaryViolet);
+  }
+
+  .Pagination_root .Pagination_item button:hover .Pagination_left,.Pagination_root .Pagination_item button:hover .Pagination_right {
+    filter:var(--filter-primaryViolet);
+  }
+
+}
+
+.Pagination_root .Pagination_item button:active {
+  transform:var(--active-state-lg);
+}
+
+.Pagination_left {
+  transform:rotate(90deg);
+  display:flex;
+  justify-self:center;
+}
+
+.Pagination_right {
+  transform:rotate(-90deg);
+  display:flex;
+  justify-self:center;
+}
+
+.BlogAndPromotionTile_link {
+  height:100%;
+  display:block;
+  transition:var(--animation-duration);
+}
+
+.BlogAndPromotionTile_link:active img {
+  opacity:var(--active-opacity-state);
+}
+
+@media(min-width:992px) {
+
+  .BlogAndPromotionTile_link:hover .BlogAndPromotionTile_imagePlaceholder {
+    transform:translateY(calc(var(--spacing-sm4) * -1));
+  }
+
+}
+
+.BlogAndPromotionTile_root {
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-sm4);
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionTile_root.BlogAndPromotionTile_featured {
+    flex-direction:row;
+    gap:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionTile_root.BlogAndPromotionTile_featured {
+    flex-direction:row;
+    gap:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionTile_root.BlogAndPromotionTile_featured {
+    flex-direction:row;
+    gap:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionTile_root.BlogAndPromotionTile_featured {
+    flex-direction:row;
+    gap:var(--spacing-md2);
+  }
+
+}
+
+.BlogAndPromotionTile_image {
+  border-radius:var(--radius-md);
+  height:100%;
+  width:100%;
+  max-width:30rem;
+  transition:var(--animation-duration);
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionTile_image {
+    max-width:50vw;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionTile_image {
+    max-width:50vw;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionTile_image {
+    max-width:50vw;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionTile_image {
+    max-width:50vw;
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionTile_image {
+    width:100%;
+    height:auto;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionTile_image {
+    width:100%;
+    height:auto;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionTile_image {
+    width:100%;
+    height:auto;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionTile_image {
+    width:100%;
+    height:auto;
+  }
+
+}
+
+.BlogAndPromotionTile_featured>div {
+  flex:1 1;
+}
+
+.BlogAndPromotionTile_content {
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-sm1);
+}
+
+.BlogAndPromotionTile_content>h2 {
+  font-size:var(--text-h3);
+  font-weight:700;
+  line-height:130%;
+}
+
+.BlogAndPromotionTile_featured .BlogAndPromotionTile_content {
+  gap:var(--spacing-sm4);
+}
+
+.BlogAndPromotionTile_featured .BlogAndPromotionTile_content>h2 {
+  font-size:var(--text-h1);
+}
+
+.BlogAndPromotionTile_text {
+  color:var(--color-gray200);
+  font-size:var(--text-xl);
+  font-weight:400;
+}
+
+.BlogAndPromotionTile_date {
+  font-size:var(--text-lg);
+  font-weight:400;
+}
+
+.BlogAndPromotionTile_imagePlaceholder {
+  position:relative;
+  display:inline-block;
+  border-radius:var(--radius-md);
+  transition:var(--animation-duration);
+  background:linear-gradient(90deg,var(--color-gray700) 0,var(--color-gray800) 50%,var(--color-gray700) 100%);
+  background-size:200% 100%;
+  animation:BlogAndPromotionTile_gradient__ABafh 1s ease forwards;
+  animation-iteration-count:5;
+  line-height:0;
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionTile_imagePlaceholder {
+    max-width:none;
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionTile_imagePlaceholder {
+    max-width:none;
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionTile_imagePlaceholder {
+    max-width:none;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionTile_imagePlaceholder {
+    max-width:none;
+  }
+
+}
+
+.BlogAndPromotionTile_expired {
+  opacity:var(--disabled-opacity);
+}
+
+@keyframes BlogAndPromotionTile_gradient {
+  0%{background-position:0}to{background-position:-200%};
+}
+
+.BlogLists_root {
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-lg1);
+  margin-bottom:var(--spacing-lg1);
+}
+
+@media(min-width:500px) {
+
+  .BlogLists_root {
+    grid-gap:var(--spacing-lg);
+    gap:var(--spacing-lg);
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .BlogLists_root {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .BlogLists_root {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .BlogLists_root {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .BlogLists_root {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+}
+
+.BlogLists_notFound {
+  margin-top:10%;
+  opacity:.75;
+  text-align:center;
+  width:100%;
+}
+
+h1.PromotionList_heading {
+  font-size:var(--text-h3);
+  margin-bottom:var(--spacing-lg1);
+  text-transform:capitalize;
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only h1.PromotionList_heading {
+    font-size:var(--text-h2);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only h1.PromotionList_heading {
+    font-size:var(--text-h2);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened h1.PromotionList_heading {
+    font-size:var(--text-h2);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened h1.PromotionList_heading {
+    font-size:var(--text-h2);
+  }
+
+}
+
+.PromotionList_tab {
+  margin-bottom:var(--spacing-lg1);
+}
+
+.PromotionList_tab label {
+  text-transform:capitalize;
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .PromotionList_tab {
+    max-width:25rem;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .PromotionList_tab {
+    max-width:25rem;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .PromotionList_tab {
+    max-width:25rem;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .PromotionList_tab {
+    max-width:25rem;
+  }
+
+}
+
+.PromotionList_linebreak {
+  width:100%;
+  border:0;
+  border-top:1px solid var(--color-gray600);
+  margin:var(--spacing-lg1) 0;
+}
+
+ul.PromotionList_pagination {
+  margin-bottom:var(--spacing-lg1);
+}
+
+.BreadcrumbList_list {
+  list-style-type:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:var(--color-gray800);
+  border-radius:var(--radius-sm1);
+  height:var(--spacing-lg3);
+  min-width:0;
+}
+
+.BreadcrumbList_list>li {
+  flex-shrink:0;
+}
+
+.BreadcrumbList_list>li:last-child {
+  min-width:0;
+  flex-shrink:1;
+}
+
+.SportsBreadcrumbLayout_breadcrumbRoot {
+  display:flex;
+  align-items:center;
+  gap:var(--spacing-md2);
+  min-width:0;
+}
+
+.SportsBreadcrumbLayout_backBtn {
+  background:var(--color-gray800);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  border-radius:var(--radius-sm1);
+  width:var(--spacing-lg3);
+  height:var(--spacing-lg3);
+  cursor:pointer;
+  border:none;
+  transition:var(--animation-duration);
+  flex-shrink:0;
+}
+
+@media(hover:hover) {
+
+  .SportsBreadcrumbLayout_backBtn:hover img {
+    filter:var(--filter-primaryViolet);
+  }
+
+}
+
+.SportsBreadcrumbLayout_backBtn:active {
+  transform:var(--active-state-sm);
+}
+
+.BlogAndPromotionArticle_container {
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  gap:var(--spacing-md2);
+  margin-bottom:var(--spacing-lg2);
+}
+
+.BlogAndPromotionArticle_container.BlogAndPromotionArticle_hasRelated,.BlogAndPromotionArticle_container.BlogAndPromotionArticle_hasTournament {
+  padding-bottom:0;
+  margin-bottom:0;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionArticle_container {
+    max-width:var(--max-width-blog);
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionArticle_container {
+    max-width:var(--max-width-blog);
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionArticle_container {
+    max-width:var(--max-width-blog);
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionArticle_container {
+    max-width:var(--max-width-blog);
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionArticle_container.BlogAndPromotionArticle_hasTournament.BlogAndPromotionArticle_hasTournament {
+    padding-bottom:0;
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionArticle_container.BlogAndPromotionArticle_hasTournament.BlogAndPromotionArticle_hasTournament {
+    padding-bottom:0;
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionArticle_container.BlogAndPromotionArticle_hasTournament.BlogAndPromotionArticle_hasTournament {
+    padding-bottom:0;
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionArticle_container.BlogAndPromotionArticle_hasTournament.BlogAndPromotionArticle_hasTournament {
+    padding-bottom:0;
+    margin-bottom:0;
+  }
+
+}
+
+.BlogAndPromotionArticle_nav {
+  display:flex;
+  width:100%;
+  gap:var(--spacing-md2);
+  max-width:var(--max-width-blog);
+  align-items:center;
+  margin:0 auto;
+}
+
+.BlogAndPromotionArticle_imageContainer {
+  padding:0;
+  margin:0;
+  width:100%;
+}
+
+.BlogAndPromotionArticle_image {
+  border-radius:var(--radius-md);
+  height:100%;
+  width:100%;
+}
+
+.BlogAndPromotionArticle_infoDetail {
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-sm4);
+  font-size:var(--text-md);
+}
+
+@media(min-width:960px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionArticle_infoDetail {
+    gap:var(--spacing-md2);
+    flex-direction:row;
+    justify-content:space-between;
+  }
+
+}
+
+@media(min-width:775px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionArticle_infoDetail {
+    gap:var(--spacing-md2);
+    flex-direction:row;
+    justify-content:space-between;
+  }
+
+}
+
+@media(min-width:1135px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionArticle_infoDetail {
+    gap:var(--spacing-md2);
+    flex-direction:row;
+    justify-content:space-between;
+  }
+
+}
+
+@media(min-width:600px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionArticle_infoDetail {
+    gap:var(--spacing-md2);
+    flex-direction:row;
+    justify-content:space-between;
+  }
+
+}
+
+.BlogAndPromotionArticle_relatedBlogs {
+  padding-top:0;
+}
+
+h1.BlogAndPromotionArticle_heading {
+  font-size:var(--text-h3);
+  margin-bottom:var(--spacing-sm1);
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only h1.BlogAndPromotionArticle_heading {
+    font-size:var(--text-h1);
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only h1.BlogAndPromotionArticle_heading {
+    font-size:var(--text-h1);
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened h1.BlogAndPromotionArticle_heading {
+    font-size:var(--text-h1);
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened h1.BlogAndPromotionArticle_heading {
+    font-size:var(--text-h1);
+    margin-bottom:0;
+  }
+
+}
+
+.BlogAndPromotionArticle_body {
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-md2);
+  max-width:var(--max-width-blog);
+  width:100%;
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionArticle_body {
+    gap:var(--spacing-lg);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionArticle_body {
+    gap:var(--spacing-lg);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionArticle_body {
+    gap:var(--spacing-lg);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionArticle_body {
+    gap:var(--spacing-lg);
+  }
+
+}
+
+.BlogAndPromotionArticle_tags {
+  gap:var(--spacing-md2);
+  display:flex;
+}
+
+.BlogAndPromotionArticle_tag {
+  font-size:var(--text-md);
+  font-weight:400;
+  padding:0 var(--spacing-sm4);
+  border-radius:var(--radius-sm1);
+  border:1px solid #fff;
+  text-transform:capitalize;
+  line-height:150%;
+}
+
+@media(hover:hover) {
+
+  .BlogAndPromotionArticle_tag:hover {
+    background-color:var(--color-gray700);
+  }
+
+}
+
+.BlogAndPromotionArticle_lineBreakRelated,.BlogAndPromotionArticle_lineBreak {
+  width:100%;
+  border:0;
+  border-top:1px solid var(--color-gray600);
+  margin:0;
+}
+
+.BlogAndPromotionArticle_lineBreakRelated {
+  margin-top:var(--spacing-md2);
+  margin-bottom:var(--spacing-lg1);
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionArticle_lineBreakRelated {
+    margin-top:var(--spacing-sm1);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionArticle_lineBreakRelated {
+    margin-top:var(--spacing-sm1);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionArticle_lineBreakRelated {
+    margin-top:var(--spacing-sm1);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionArticle_lineBreakRelated {
+    margin-top:var(--spacing-sm1);
+  }
+
+}
+
+.BlogAndPromotionArticle_author {
+  gap:var(--spacing-sm4);
+  display:flex;
+}
+
+.BlogAndPromotionArticle_relatedBlogsHeading {
+  margin-bottom:var(--spacing-md2);
+  font-size:var(--text-h3);
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionArticle_relatedBlogsHeading {
+    font-size:var(--text-h2);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionArticle_relatedBlogsHeading {
+    font-size:var(--text-h2);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionArticle_relatedBlogsHeading {
+    font-size:var(--text-h2);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionArticle_relatedBlogsHeading {
+    font-size:var(--text-h2);
+  }
+
+}
+
+.BlogAndPromotionArticle_headingGroup {
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-sm1);
+}
+
+.BlogAndPromotionArticle_nav .BlogAndPromotionArticle_hiddenOnMobile {
+  display:none;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .BlogAndPromotionArticle_nav .BlogAndPromotionArticle_hiddenOnMobile {
+    display:block;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .BlogAndPromotionArticle_nav .BlogAndPromotionArticle_hiddenOnMobile {
+    display:block;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .BlogAndPromotionArticle_nav .BlogAndPromotionArticle_hiddenOnMobile {
+    display:block;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .BlogAndPromotionArticle_nav .BlogAndPromotionArticle_hiddenOnMobile {
+    display:block;
+  }
+
+}
+
+.BlogAndPromotionArticle_nav .BlogAndPromotionArticle_active {
+  color:var(--color-primaryViolet);
+}
+
+.ModalListContainer_root {
+  display:flex;
+  flex-direction:column;
+  border:1px solid var(--color-gray700);
+  border-radius:var(--radius-md);
+  overflow-y:auto;
+  background:var(--color-black900);
+  width:100%;
+}
+
+.ModalListContainer_root>a,.ModalListContainer_root>div {
+  border-bottom:1px solid var(--color-gray700);
+}
+
+.ModalListContainer_root>a:last-child,.ModalListContainer_root>div:last-child {
+  border-bottom:none;
+}
+
+.ModalListContainer_item {
+  display:flex;
+  justify-content:space-between;
+  padding:0 var(--spacing-md);
+  height:var(--spacing-lg5);
+}
+
+.ModalListContainer_itemLink {
+  font-size:var(--text-lg);
+  font-style:normal;
+  font-weight:500;
+  align-items:center;
+  transition:var(--animation-duration);
+}
+
+@media(hover:hover) {
+
+  .ModalListContainer_itemLink:hover {
+    color:var(--color-primaryViolet);
+  }
+
+  .ModalListContainer_itemLink:hover img {
+    filter:var(--filter-primaryViolet);
+  }
+
+}
+
+.ModalListContainer_itemLink>div {
+  transition:var(--animation-duration);
+}
+
+.ModalListContainer_itemLink>div:active {
+  transform:var(--active-state);
+}
+
+.ModalListContainer_label {
+  color:var(--color-gray300);
+  font-size:var(--text-lg);
+  font-style:normal;
+  font-weight:400;
+  margin:auto 0;
+}
+
+.ModalListContainer_value {
+  color:#fff;
+  text-align:right;
+  text-overflow:ellipsis;
+  font-size:var(--text-lg);
+  font-style:normal;
+  font-weight:500;
+  margin:auto 0;
+}
+
+.MatchEventTileGroupSkeleton_root {
+  display:flex;
+  gap:var(--spacing-md2);
+  background:var(--color-gray900);
+  border-radius:var(--radius-md);
+  flex-direction:column;
+  padding-bottom:var(--spacing-md2);
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .MatchEventTileGroupSkeleton_root {
+    padding-left:var(--spacing-md2);
+    padding-right:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .MatchEventTileGroupSkeleton_root {
+    padding-left:var(--spacing-md2);
+    padding-right:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .MatchEventTileGroupSkeleton_root {
+    padding-left:var(--spacing-md2);
+    padding-right:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .MatchEventTileGroupSkeleton_root {
+    padding-left:var(--spacing-md2);
+    padding-right:var(--spacing-md2);
+  }
+
+}
+
+.MatchEventTileGroupSkeleton_noHeader {
+  padding-top:var(--spacing-lg2);
+}
+
+.MatchEventTileGroupSkeleton_event {
+  display:flex;
+  padding:var(--spacing-md2);
+  flex-direction:column;
+  gap:var(--spacing-sm4);
+  align-self:stretch;
+  background:var(--color-gray800);
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .MatchEventTileGroupSkeleton_event {
+    border-radius:var(--radius-md);
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .MatchEventTileGroupSkeleton_event {
+    border-radius:var(--radius-md);
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .MatchEventTileGroupSkeleton_event {
+    border-radius:var(--radius-md);
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .MatchEventTileGroupSkeleton_event {
+    border-radius:var(--radius-md);
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .MatchEventTileGroupSkeleton_event {
+    gap:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .MatchEventTileGroupSkeleton_event {
+    gap:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .MatchEventTileGroupSkeleton_event {
+    gap:var(--spacing-md2);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .MatchEventTileGroupSkeleton_event {
+    gap:var(--spacing-md2);
+  }
+
+}
+
+.MatchEventTileGroupSkeleton_eventHeader {
+  height:var(--text-title);
+  width:12.625rem;
+  max-width:100%;
+  border-radius:var(--radius-sm);
+}
+
+.MatchEventTileGroupSkeleton_eventWrapper {
+  display:flex;
+  flex-direction:column;
+  flex:1 1;
+  gap:var(--spacing-md2);
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .MatchEventTileGroupSkeleton_eventWrapper {
+    flex-direction:row;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .MatchEventTileGroupSkeleton_eventWrapper {
+    flex-direction:row;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .MatchEventTileGroupSkeleton_eventWrapper {
+    flex-direction:row;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .MatchEventTileGroupSkeleton_eventWrapper {
+    flex-direction:row;
+  }
+
+}
+
+.MatchEventTileGroupSkeleton_eventBody {
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-sm4);
+  flex:1 1;
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .MatchEventTileGroupSkeleton_eventBody {
+    gap:.8rem;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .MatchEventTileGroupSkeleton_eventBody {
+    gap:.8rem;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .MatchEventTileGroupSkeleton_eventBody {
+    gap:.8rem;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .MatchEventTileGroupSkeleton_eventBody {
+    gap:.8rem;
+  }
+
+}
+
+.MatchEventTileGroupSkeleton_competitor {
+  height:var(--text-h3);
+  width:9.1875rem;
+  max-width:100%;
+  border-radius:var(--radius-sm);
+}
+
+.MatchEventTileGroupSkeleton_noHeader .MatchEventTileGroupSkeleton_competitor {
+  height:1.3125rem;
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .MatchEventTileGroupSkeleton_competitor {
+    height:var(--spacing-lg1);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .MatchEventTileGroupSkeleton_competitor {
+    height:var(--spacing-lg1);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .MatchEventTileGroupSkeleton_competitor {
+    height:var(--spacing-lg1);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .MatchEventTileGroupSkeleton_competitor {
+    height:var(--spacing-lg1);
+  }
+
+}
+
+.MatchEventTileGroupSkeleton_buttonsArea {
+  height:var(--spacing-xl);
+  border-radius:var(--radius-sm);
+  width:100%;
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .MatchEventTileGroupSkeleton_buttonsArea {
+    flex:1.5 1;
+    width:auto;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .MatchEventTileGroupSkeleton_buttonsArea {
+    flex:1.5 1;
+    width:auto;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .MatchEventTileGroupSkeleton_buttonsArea {
+    flex:1.5 1;
+    width:auto;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .MatchEventTileGroupSkeleton_buttonsArea {
+    flex:1.5 1;
+    width:auto;
+  }
+
+}
+
+span.MatchEventTileGroupSkeleton_header {
+  border-radius:var(--radius-sm);
+  height:var(--spacing-md2);
+  margin:var(--spacing-md1) var(--spacing-md2) var(--spacing-lg2);
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only span.MatchEventTileGroupSkeleton_header {
+    margin:var(--spacing-md2) var(--spacing-md2) var(--spacing-lg2);
+    height:var(--spacing-md2);
+    margin-left:0;
+    width:20rem;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only span.MatchEventTileGroupSkeleton_header {
+    margin:var(--spacing-md2) var(--spacing-md2) var(--spacing-lg2);
+    height:var(--spacing-md2);
+    margin-left:0;
+    width:20rem;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened span.MatchEventTileGroupSkeleton_header {
+    margin:var(--spacing-md2) var(--spacing-md2) var(--spacing-lg2);
+    height:var(--spacing-md2);
+    margin-left:0;
+    width:20rem;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened span.MatchEventTileGroupSkeleton_header {
+    margin:var(--spacing-md2) var(--spacing-md2) var(--spacing-lg2);
+    height:var(--spacing-md2);
+    margin-left:0;
+    width:20rem;
+  }
+
+}
+
+.BreadcrumbLink_root {
+  font-size:var(--text-lg);
+  color:var(--color-white);
+  gap:var(--spacing-sm4);
+  display:flex;
+  align-items:center;
+  transition:var(--animation-duration);
+  max-width:36rem;
+}
+
+.BreadcrumbLink_root>div,.BreadcrumbLink_root>span {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width:0;
+  max-width:100%;
+}
+
+.BreadcrumbLink_root:last-child {
+  display:flex;
+}
+
+@media(min-width:992px) {
+
+  .BreadcrumbLink_root {
+    display:flex;
+  }
+
+}
+
+.BreadcrumbItem_root {
+  font-size:var(--text-lg);
+  color:var(--color-white);
+  gap:var(--spacing-sm4);
+  text-transform:capitalize;
+  display:flex;
+  transition:var(--animation-duration);
+}
+
+.BreadcrumbItem_root:last-child {
+  font-weight:700;
+  display:flex;
+}
+
+.BreadcrumbItem_name {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--spacing-sm4);
+}
+
+.BreadcrumbItem_active .BreadcrumbItem_name {
+  padding:0 var(--spacing-md2);
+}
+
+.BreadcrumbItem_name:last-child {
+  width:100%;
+}
+
+.BreadcrumbItem_text {
+  font-size:var(--text-lg);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:calc(80vw - var(--spacing-lg3));
+  transition:var(--animation-duration);
+}
+
+.BreadcrumbItem_text:active {
+  transform:var(--active-state-sm);
+}
+
+.BreadcrumbItem_text>a {
+  padding:var(--spacing-sm4) var(--spacing-md2);
+}
+
+@media(hover:hover) {
+
+  .BreadcrumbItem_text>a:hover {
+    color:var(--color-primaryViolet);
+  }
+
+}
+
+@media(orientation:landscape) {
+
+  .BreadcrumbItem_text {
+    max-width:50vw;
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .BreadcrumbItem_text {
+    max-width:13rem;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .BreadcrumbItem_text {
+    max-width:13rem;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .BreadcrumbItem_text {
+    max-width:13rem;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .BreadcrumbItem_text {
+    max-width:13rem;
+  }
+
+}
+
+.BreadcrumbItem_active {
+  font-weight:500;
+  color:var(--color-primaryViolet);
+  pointer-events:none;
+}
+
+.BreadcrumbSeparator_separator {
+  border:1px solid var(--color-gray900);
+  transform:skew(-18deg);
+  height:100%;
+  pointer-events:none;
+}
+
+.CasinoTournamentContent_indicator {
+  border-radius:var(--radius-sm1);
+  border:1px solid var(--color-success);
+  height:1.875rem;
+  justify-content:center;
+  text-align:center;
+  margin-top:var(--spacing-sm5);
+  font-size:var(--text-md);
+  color:var(--color-success);
+  font-weight:500;
+  display:flex;
+  align-items:center;
+  gap:var(--spacing-sm1);
+}
+
+.CasinoTournamentContent_indicator.CasinoTournamentContent_done {
+  background-color:var(--color-success);
+  color:var(--color-black900);
+}
+
+.CasinoTournamentContent_indicator.CasinoTournamentContent_done>img {
+  width:var(--spacing-md);
+  height:var(--spacing-md);
+}
+
+.CasinoTournamentContent_progressContainer {
+  margin-top:var(--text-xl);
+  border-radius:var(--radius-md);
+  overflow:hidden;
+  border:1px solid var(--color-gray700);
+}
+
+.CasinoTournamentContent_progressTitle {
+  color:var(--color-gray300);
+  font-size:var(--text-lg);
+  font-weight:400;
+}
+
+.CasinoTournamentContent_progressStep {
+  font-size:var(--text-lg);
+  font-weight:400;
+}
+
+@media(min-width:860px) {
+
+  .magic-container.right-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - 3.5rem)/4);
+  }
+
+}
+
+@media(min-width:675px) {
+
+  .magic-container.left-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - 3.5rem)/4);
+  }
+
+}
+
+@media(min-width:1035px) {
+
+  .magic-container.both-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - 3.5rem)/4);
+  }
+
+}
+
+@media(min-width:500px) {
+
+  .magic-container.no-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - 3.5rem)/4);
+  }
+
+}
+
+@media(min-width:1060px) {
+
+  .magic-container.right-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/5);
+  }
+
+}
+
+@media(min-width:875px) {
+
+  .magic-container.left-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/5);
+  }
+
+}
+
+@media(min-width:1235px) {
+
+  .magic-container.both-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/5);
+  }
+
+}
+
+@media(min-width:700px) {
+
+  .magic-container.no-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/5);
+  }
+
+}
+
+@media(min-width:1210px) {
+
+  .magic-container.right-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1025px) {
+
+  .magic-container.left-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1385px) {
+
+  .magic-container.both-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:850px) {
+
+  .magic-container.no-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100% - var(--spacing-lg2))/6);
+  }
+
+}
+
+@media(min-width:1860px) {
+
+  .magic-container.right-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100vw - var(--spacing-lg2))/11);
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.left-side-opened-only .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100vw - var(--spacing-lg2))/11);
+  }
+
+}
+
+@media(min-width:2035px) {
+
+  .magic-container.both-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100vw - var(--spacing-lg2))/11);
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.no-side-opened .CasinoTournamentContent_carousel .CasinoTournamentContent_carouselContent>a {
+    width:calc((100vw - var(--spacing-lg2))/11);
+  }
+
+}
+
+.CasinoTournamentContent_carouselHeader {
+  align-items:center;
+}
+
+.ModalListContainer_root,.SportsTournamentContent_progressBarContent {
+  border:1px solid var(--color-gray700);
+  border-radius:var(--radius-md);
+}
+
+.ModalListContainer_root {
+  display:flex;
+  flex-direction:column;
+  overflow-y:auto;
+  background:var(--color-black900);
+  width:100%;
+}
+
+.sportsTournamentMultiRulesContent_multipleSportsGroupRulesRoot {
+  display:flex;
+  flex-direction:column;
+  border:1px solid var(--color-gray700);
+  border-radius:var(--radius-md);
+}
+
+.sportsTournamentMultiRulesContent_sportsGroupRuleSection {
+  padding:0 var(--spacing-md2);
+  height:var(--spacing-lg5);
+}
+
+.sportsTournamentMultiRulesContent_header {
+  display:flex;
+  align-items:center;
+  font-weight:400;
+  line-height:1.5;
+  gap:var(--spacing-sm4);
+}
+
+.sportsTournamentMultiRulesContent_completed {
+  color:var(--color-success);
+  filter:var(--filter-success);
+}
+
+.sportsTournamentMultiRulesContent_rightChevron {
+  transform:rotate(270deg);
+}
+
+.SportsTournamentSingleRuleContent_singleSportsGroupRulesRoot {
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-sm4);
+}
+
+.SportsTournamentSingleRuleContent_singleSportsGroupRulesRoot .SportsTournamentSingleRuleContent_viewAllBtn {
+  margin-top:var(--spacing-md2);
+  width:fit-content;
+  place-self:center;
+}
+
+.SportsTournamentSingleRuleContent_singleSportsGroupRulesRoot .SportsTournamentSingleRuleContent_viewAllBtn .SportsTournamentSingleRuleContent_buttonContent {
+  width:fit-content;
+}
+
+/* Tag / PromotionsInfoDate — captured from the live stylesheet (client-rendered status line on tiles) */
+.Tag_tagBlock {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  background-color: var(--color-gray800);
+  white-space: nowrap;
+  width: min-content;
+  border-radius: var(--radius-sm);
+}
+.Tag_sm {
+  font-size: var(--text-sm);
+}
+.Tag_md, .Tag_sm {
+  padding: var(--spacing-sm3);
+  height: var(--spacing-lg1);
+  line-height: var(--spacing-lg1);
+}
+.Tag_md {
+  font-size: var(--text-md);
+}
+.Tag_lg {
+  font-size: var(--text-lg);
+  padding: var(--spacing-sm5);
+  height: 1.875rem;
+  line-height: 1.875rem;
+}
+.Tag_win {
+  background: var(--color-success);
+  color: #000;
+  font-size: var(--text-md);
+}
+.Tag_ended {
+  background: var(--color-error);
+  color: var(--color-black900);
+  height: var(--spacing-lg);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.Tag_live {
+  background: var(--color-greenLive);
+}
+.Tag_grey, .Tag_live {
+  color: #fff;
+  height: var(--spacing-lg);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.Tag_grey {
+  background: var(--color-gray500);
+}
+.PromotionsInfoDate_root {
+  display: flex;
+  color: unset;
+  gap: var(--spacing-sm4);
+  font-weight: 400;
+  line-height: 150%;
+  align-items: center;
+  font-size: var(--text-lg);
+}
+
+/* Tournament leaderboard (client-rendered on tournament promotions) */
+.FormattedTournamentScores_tableDate {
+  white-space: nowrap;
+}
+.TournamentInfoLeaderboard_tableCell {
+  display: flex;
+  gap: var(--spacing-sm4);
+  color: var(--color-white);
+}
+.TournamentInfoLeaderboard_tableButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: var(--text-title);
+  font-size: var(--text-lg);
+  background: none;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  transition: var(--animation-duration);
+}
+.TournamentInfoLeaderboard_tableButton:active {
+  transform: var(--active-state);
+}
+@media (hover: hover) {
+  .TournamentInfoLeaderboard_tableButton:hover {
+    color: var(--color-gray300);
+  }
+}
+.TournamentInfoLeaderboard_hidden {
+  cursor: not-allowed;
+}
+.TournamentInfoLeaderboard_tablePrize {
+  color: var(--color-success);
+}
+.FormattedUsdAmountWithTooltip_flex {
+  position: relative;
+  display: flex;
+  gap: var(--spacing-sm4);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  align-items: center;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Promotion countdown panel --- */
+.TournamentCounter_root {
+  border-radius:var(--spacing-sm4);
+  border:1px solid var(--color-gray700);
+  background:var(--color-gray900);
+  padding:var(--spacing-lg1) var(--spacing-md2) var(--spacing-md2);
+  gap:var(--spacing-lg1);
+  display:flex;
+  flex-direction:column;
+}
+
+.TournamentCounter_root>p {
+  text-align:center;
+  font-size:var(--text-lg);
+}
+
+.TournamentCounter_countDown {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:var(--spacing-sm5);
+}
+
+.TournamentCounter_countDownItem {
+  border-radius:var(--spacing-sm3);
+  border:1px solid var(--color-success);
+  background:var(--color-black900);
+  width:3.9375rem;
+  height:3.9375rem;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+
+.TournamentCounter_countDownItem>span {
+  text-align:center;
+  font-size:var(--text-sm);
+}
+
+.TournamentCounter_countDownItem>span:first-child {
+  color:var(--color-success);
+  font-size:var(--text-h3);
+  font-weight:700;
+  line-height:130%;
+}
+
+.TournamentCounter_root {
+  border-radius: var(--spacing-sm4);
+  border: 1px solid var(--color-gray700);
+  background: var(--color-gray900);
+  padding: var(--spacing-lg1) var(--spacing-md2) var(--spacing-md2);
+  gap: var(--spacing-lg1);
+  display: flex;
+  flex-direction: column;
+}
+
+.TournamentCounter_root>p {
+  text-align: center;
+  font-size: var(--text-lg);
+}
+
+.TournamentCounter_countDown {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-sm5);
+}
+
+.TournamentCounter_countDownItem {
+  border-radius: var(--spacing-sm3);
+  border: 1px solid var(--color-success);
+  background: var(--color-black900);
+  width: 3.9375rem;
+  height: 3.9375rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.TournamentCounter_countDownItem>span {
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.TournamentCounter_countDownItem>span:first-child {
+  color: var(--color-success);
+  font-size: var(--text-h3);
+  font-weight: 700;
+  line-height: 130%;
+}

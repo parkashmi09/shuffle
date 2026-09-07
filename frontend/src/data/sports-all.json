@@ -1,0 +1,19 @@
+[
+ ["a", [["American Football", "/icons/sports/american-football.svg", "/sports/american-football"], ["Aussie Rules", "/icons/sports/aussie-rules.svg", "/sports/aussie-rules"]]],
+ ["b", [["Baseball", "/icons/sports/baseball.svg", "/sports/baseball"], ["Basketball", "/icons/sports/basketball.svg", "/sports/basketball"], ["Boxing", "/icons/sports/boxing.svg", "/sports/boxing"]]],
+ ["c", [["Counter-Strike 2", "/icons/sports/cs2.svg", "/sports/cs2"], ["Cricket", "/icons/sports/cricket.svg", "/sports/cricket"], ["CS2 Duels", "/icons/sports/cs2-duels.svg", "/sports/cs2-duels"]]],
+ ["d", [["Darts", "/icons/sports/darts.svg", "/sports/darts"], ["Dota 2", "/icons/sports/dota2.svg", "/sports/dota2"], ["Dota 2 Duels", "/icons/sports/dota2-duels.svg", "/sports/dota2-duels"]]],
+ ["e", [["eCricket", "/icons/sports/ecricket.svg", "/sports/ecricket"]]],
+ ["f", [["FIFA", "/icons/sports/fifa.svg", "/sports/efootball"], ["Formula 1", "/icons/sports/f1.svg", "/sports/f1"]]],
+ ["g", [["Golf", "/icons/sports/golf.svg", "/sports/golf"]]],
+ ["h", [["Handball", "/icons/sports/handball.svg", "/sports/handball"]]],
+ ["i", [["Ice Hockey", "/icons/sports/ice-hockey.svg", "/sports/ice-hockey"]]],
+ ["k", [["King of Glory", "/icons/sports/kog.svg", "/sports/kog"]]],
+ ["l", [["League of Legends", "/icons/sports/lol.svg", "/sports/lol"]]],
+ ["m", [["MMA", "/icons/sports/mma.svg", "/sports/mma"]]],
+ ["n", [["NBA2K", "/icons/sports/nba2k.svg", "/sports/ebasketball"], ["Novelties", "/icons/sports/novelties.svg", "/sports/novelties"]]],
+ ["r", [["Rainbow Six", "/icons/sports/rainbowsix.svg", "/sports/r6"], ["Rocket League", "/icons/sports/rocketleague.svg", "/sports/rocketleague"], ["Rugby", "/icons/sports/rugby-union.svg", "/sports/rugby-union"]]],
+ ["s", [["Soccer", "/icons/sports/soccer.svg", "/sports/soccer"]]],
+ ["t", [["Table Tennis", "/icons/sports/table-tennis.svg", "/sports/table-tennis"], ["Tennis", "/icons/sports/tennis.svg", "/sports/tennis"]]],
+ ["v", [["Valorant", "/icons/sports/valorant.svg", "/sports/valorant"], ["Volleyball", "/icons/sports/volleyball.svg", "/sports/volleyball"]]]
+]

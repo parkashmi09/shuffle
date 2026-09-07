@@ -1,0 +1,289 @@
+'use strict';
+
+const { Op, fn, col, where } = require('@ibitplay/db');
+
+const errors = require('./profile.errors');
+const { vipLevelFor } = require('@ibitplay/common');
+
+/**
+ * A player's own profile.
+ *
+ * Collects four handlers that lived inline in the 236 KB `legacy/index.js`.
+ * All four took the uid from the request with no authentication:
+ * `PUT /editProfile {"uid": 7, "username": "x"}` renamed any account.
+ *
+ * `PUT /editProfile` also had no uniqueness check, so two accounts could end up
+ * with the same name — and `name` is what the login endpoint matches on, which
+ * makes a duplicate a genuine authentication problem rather than a cosmetic one.
+ */
+class ProfileService {
+  constructor({ models, db, config, logger, clients }) {
+    this.models = models;
+    this.db = db;
+    this.config = config;
+    this.logger = logger;
+    /* `publicProfile` asks casino-service for the bet counts; nothing else
+       here leaves this service. */
+    this.clients = clients;
+  }
+
+  /**
+   * Another player's profile — gap 17.
+   *
+   * `get()` above answers the CALLER's own and takes no id; there was no route
+   * that took one, so clicking a name in chat or on a leaderboard had nowhere
+   * to go.
+   *
+   * ── WHAT IS PUBLIC, AND WHY THAT LIST AND NOT A LONGER ONE ────────────
+   *
+   * Username, avatar, VIP level, join date and the bet/win counts. NOT email,
+   * phone, country, balance, referral code or status — `get()` returns several
+   * of those and every one of them is either a contact detail, a location, or
+   * money. The test applied was "would this appear next to a name in chat on
+   * the site being ported", and nothing outside that list would.
+   *
+   * `level` is the COMPUTED VIP level, not `users.level`. The two disagree —
+   * `users.level` is a column an operator sets and the computed one is derived
+   * from lifetime wager — and the platform's own eligibility checks compare
+   * against the computed one, so publishing the stored column would show a
+   * number the rest of the system does not act on.
+   *
+   * ── THERE IS NO PRIVACY SETTING TO HONOUR, AND THAT IS A GAP ──────────
+   *
+   * `userconfig` has `hide_balance` and nothing else; there is no "hide my
+   * stats" flag anywhere in the schema, so a player cannot opt out of the
+   * counts below. The front-end has a `hideGameData` field in its own shape
+   * with nothing behind it. Recorded rather than invented: adding a column
+   * here would be this port inventing a product decision.
+   */
+  async publicProfile(userId) {
+    const user = await this.models.Users.findByPk(userId, {
+      attributes: ['id', 'name', 'avatar', 'created', 'games_played'],
+      raw: true,
+    });
+
+    // The same 404 as `get()` — an id that is not a player and one that does
+    // not exist are the same answer.
+    if (!user) throw errors.USER_NOT_FOUND({ userId });
+
+    const wagerRow = await this.models.Userwager.findOne({ where: { uid: userId }, raw: true });
+    const cleaned = String(wagerRow?.wager ?? '0').replace(/,/g, '').trim();
+    const wager = /^-?\d+(\.\d+)?$/.test(cleaned) ? cleaned : '0';
+    const vip = vipLevelFor(wager);
+
+    /**
+     * The counts come from casino-service, which owns `bets`. A failure there
+     * must not 500 a profile — the identity half is the part that matters and
+     * it is already in hand — so the counts degrade to null and the client can
+     * tell "none yet" (0) from "could not read" (null).
+     */
+    let stats = null;
+    try {
+      /* `playerStats` answers `{ ...totals, bySource }` — bets and wins are at
+         the TOP level, not under a `totals` key. An earlier version read
+         `.totals` and got `undefined`, which the `?? null` below then made
+         indistinguishable from a failed call. */
+      const answer = await this.clients.casino.get(`/internal/casino/bet-history/player/${userId}/stats`);
+      stats = answer && typeof answer.bets === 'number' ? { bets: answer.bets, wins: answer.wins } : null;
+    } catch (error) {
+      this.logger?.warn({ err: error, userId: String(userId) }, 'public profile stats unavailable');
+    }
+
+    return {
+      userId: String(user.id),
+      username: user.name,
+      avatar: user.avatar,
+      joinedAt: user.created,
+      /* The COMPUTED level — see above. `card` is the tier name the VIP page
+         shows beside it. */
+      level: vip.level,
+      card: vip.card,
+      gamesPlayed: user.games_played,
+      bets: stats?.bets ?? null,
+      wins: stats?.wins ?? null,
+    };
+  }
+
+  async get(userId) {
+    const user = await this.models.Users.findByPk(userId, {
+      attributes: [
+        'id', 'name', 'email', 'phone', 'country', 'avatar', 'level',
+        'referalcode', 'referral_link', 'status', 'two_fa_status',
+        'games_played', 'last_login_at', 'created', 'created_estimated',
+      ],
+      raw: true,
+    });
+    if (!user) throw errors.USER_NOT_FOUND({ userId });
+
+    return {
+      id: user.id,
+      username: user.name,
+      email: user.email,
+      phone: user.phone,
+      country: user.country,
+      avatar: user.avatar,
+      level: user.level,
+      referralCode: user.referalcode,
+      referralLink: user.referral_link,
+      status: user.status,
+      twoFactorEnabled: Boolean(user.two_fa_status),
+      gamesPlayed: user.games_played,
+      lastLoginAt: user.last_login_at,
+      /**
+       * `created`, NOT `created_estimated`.
+       *
+       * The two names sit next to each other and only one is a date:
+       * `created` is `timestamp with time zone`, `created_estimated` is a
+       * BOOLEAN saying whether that date is exact or was inferred during the
+       * legacy import. This mapped the flag, so every account answered
+       * `joinedAt: false` and a client coercing it got 0 — a join date of
+       * 1 January 1970, or nothing at all for a client that checked.
+       *
+       * The flag is fetched but not returned: whether a date is estimated is
+       * import provenance, and no player-facing screen asks the question.
+       * It stays in `attributes` so the next reader sees the pair and the
+       * comment rather than rediscovering the trap.
+       */
+      joinedAt: user.created,
+    };
+  }
+
+  /**
+   * @legacy PUT /editProfile
+   *
+   * Legacy updated only `name`, and did so unconditionally. Here the username
+   * is checked for uniqueness first — case-insensitively, because `Player` and
+   * `player` both resolve at login and would be ambiguous.
+   */
+  async update(userId, changes) {
+    const user = await this.models.Users.findByPk(userId);
+    if (!user) throw errors.USER_NOT_FOUND({ userId });
+
+    if (changes.username && changes.username !== user.name) {
+      const taken = await this.models.Users.findOne({
+        where: {
+          [Op.and]: [
+            where(fn('LOWER', col('name')), changes.username.toLowerCase()),
+            { id: { [Op.ne]: userId } },
+          ],
+        },
+        attributes: ['id'],
+        raw: true,
+      });
+      if (taken) throw errors.USERNAME_TAKEN({ username: changes.username });
+    }
+
+    await user.update({
+      ...(changes.username !== undefined ? { name: changes.username } : {}),
+      ...(changes.country !== undefined ? { country: changes.country } : {}),
+      ...(changes.avatar !== undefined ? { avatar: changes.avatar } : {}),
+    });
+
+    this.logger?.info({ userId, changed: Object.keys(changes) }, 'Profile updated');
+    return this.get(userId);
+  }
+
+  /**
+   * Change the address on the account, having proved it can receive mail.
+   *
+   * @legacy SOCKET ca6e08ddde39ee9f965270b7d8175d17 (C.EDIT_ACCOUNT)
+   *
+   * ═════════════════════════════════════════════════════════════════════
+   * LEGACY WROTE THE NEW ADDRESS STRAIGHT IN
+   *
+   *     Rule.getUserInfoByEmail(email, (result) => {
+   *       result = _.toArray(result);
+   *       if (result.length > 1) return callback({error: "Email already was taken."});
+   *       else pg.query("UPDATE users SET email = $1 WHERE id = $2", [email, id], ...)
+   *
+   * Two things wrong, and they compound.
+   *
+   *   THE UNIQUENESS CHECK IS OFF BY ONE. One account already on that address
+   *   gives `length === 1`, which is not `> 1`, so the update runs anyway. Two
+   *   accounts, one address.
+   *
+   *   NOTHING PROVED THE ADDRESS WAS REACHABLE. `users.email` is where password
+   *   reset delivers. Setting it to an unverified string hands the recovery
+   *   path to whoever reads that mailbox — and a typo locks the player out of
+   *   their own account recovery with no way back.
+   *
+   * Combined: an attacker holding a session (which the leaked JWT secret gave
+   * anyone — see docs/ROTATION.md) changes the address and owns the reset path
+   * permanently, without ever knowing the password.
+   *
+   * A verified code for `change-email` on the NEW address is required here, and
+   * it is spent — so one verification authorises exactly one change.
+   * ═════════════════════════════════════════════════════════════════════
+   *
+   * @param proveEmail an async `({email, purpose}) => boolean` that spends a
+   *   recent verification. Injected rather than imported so this module does
+   *   not depend on the email module's construction — the caller passes
+   *   `EmailService.spendProof`.
+   */
+  async changeEmail(userId, { email, proveEmail }) {
+    const user = await this.models.Users.findByPk(userId);
+    if (!user) throw errors.USER_NOT_FOUND({ userId });
+
+    const address = String(email ?? '').trim().toLowerCase();
+
+    if (address && user.email && address === String(user.email).toLowerCase()) {
+      throw errors.EMAIL_UNCHANGED({ email: address });
+    }
+
+    /**
+     * `>= 1`, not `> 1`. Case-insensitive, because addresses are — legacy
+     * compared the escaped, normalised string against the column directly, so
+     * `A@b.com` and `a@b.com` were two different accounts to it.
+     */
+    const taken = await this.models.Users.findOne({
+      where: {
+        [Op.and]: [where(fn('LOWER', col('email')), address), { id: { [Op.ne]: userId } }],
+      },
+      attributes: ['id'],
+      raw: true,
+    });
+    if (taken) throw errors.EMAIL_TAKEN({ email: address });
+
+    const proved = await proveEmail({ email: address });
+    if (!proved) throw errors.EMAIL_NOT_VERIFIED({ email: address });
+
+    await user.update({ email: address });
+
+    this.logger?.warn({ userId, email: address }, 'Account email changed');
+    return this.get(userId);
+  }
+
+  /** @legacy GET /get-referral-code/:uid */
+  async getReferral(userId) {
+    const user = await this.models.Users.findByPk(userId, {
+      attributes: ['referalcode', 'referral_link'],
+      raw: true,
+    });
+    if (!user) throw errors.USER_NOT_FOUND({ userId });
+
+    // Legacy returned the strings "No Code" / "No Link" when these were null,
+    // which a client cannot distinguish from a real code. Null is null.
+    return {
+      referralCode: user.referalcode ?? null,
+      referralLink: user.referral_link ?? null,
+    };
+  }
+
+  /**
+   * @legacy GET /verify-referral-code/:referralCode
+   *
+   * Deliberately returns only `{ valid }` — never who the code belongs to.
+   * This runs unauthenticated on the signup form, so anything more would let a
+   * stranger map codes to accounts.
+   */
+  async verifyReferralCode(referralCode) {
+    const owner = await this.models.Users.findOne({
+      where: { referalcode: referralCode },
+      attributes: ['id'],
+      raw: true,
+    });
+    return { valid: Boolean(owner) };
+  }
+}
+
+module.exports = { ProfileService };

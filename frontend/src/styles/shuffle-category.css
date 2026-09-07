@@ -1,0 +1,1245 @@
+.BrowsingGames_header {
+  display:none;
+}
+
+@media(min-width:992px) {
+
+  .BrowsingGames_header {
+    display:block;
+  }
+
+}
+
+.BrowsingGames_displayOnDesktop {
+  display:none;
+}
+
+@media(min-width:992px) {
+
+  .BrowsingGames_displayOnDesktop {
+    display:block;
+  }
+
+}
+
+.BrowsingGames_hide {
+  display:none;
+}
+
+.BrowsingGames_placeholder {
+  display:inline-block;
+  width:100%;
+  aspect-ratio:25/36;
+  border-radius:var(--radius-md);
+}
+
+.PageHeader_root {
+  background:var(--color-black900);
+  padding:1.7rem 0;
+  margin-bottom:var(--spacing-lg2);
+  border-bottom:1px solid var(--color-gray700);
+}
+
+.PageHeader_root .PageHeader_backButton {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:var(--radius-sm1);
+  background-color:var(--color-gray800);
+  color:#fff;
+  width:var(--spacing-lg3);
+  height:var(--spacing-lg3);
+  padding:0;
+  transform:rotate(90deg);
+}
+
+@media(hover:hover) {
+
+  .PageHeader_root .PageHeader_backButton:hover {
+    background-color:var(--color-gray600);
+    transform:rotate(90deg);
+  }
+
+}
+
+.PageHeader_capitalize {
+  text-transform:capitalize;
+}
+
+.PageHeader_truncateText {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  pointer-events:none;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  -webkit-box-align:start;
+}
+
+.ModalLink_root {
+  transition:var(--animation-duration);
+}
+
+@media(hover:hover) {
+
+  .ModalLink_root:hover {
+    color:var(--color-primaryViolet);
+  }
+
+}
+
+.ModalLink_root:active {
+  transform:var(--active-state);
+}
+
+.ChallengeCard_challengeCardWrapper {
+  transition:var(--animation-duration);
+  background-color:var(--color-gray800);
+  border-radius:var(--radius-md);
+}
+
+@media(hover:hover) {
+
+  .ChallengeCard_challengeCardWrapper:hover {
+    transform:translateY(var(--spacing-sm4-neg));
+  }
+
+}
+
+.ChallengeCard_challengeFooter {
+  padding:var(--spacing-md2);
+  display:flex;
+  flex-direction:column;
+  gap:var(--spacing-md);
+}
+
+.ChallengeCard_challengeName {
+  font-weight:400;
+  font-size:var(--text-lg);
+  line-height:1.5;
+  color:var(--color-white);
+}
+
+.ChallengeCard_challengeNameHidden {
+  color:var(--color-gray400);
+}
+
+.ChallengeCard_textTruncated {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.ChallengeCard_challengeInfoBlock {
+  display:flex;
+  justify-content:flex-start;
+  align-items:center;
+  gap:var(--spacing-sm4);
+  max-width:100%;
+  overflow:hidden;
+}
+
+.ChallengeCard_challengeInfoBlock>div {
+  max-width:100%;
+}
+
+.ChallengeCard_challengeInfoBlock>div>span {
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.ChallengeCard_challengeInfoBlock>div>div>span {
+  font-weight:500;
+  font-size:var(--text-lg);
+  line-height:1.5;
+  color:var(--color-success);
+}
+
+.ChallengeCard_challengeInfoBlockCenter {
+  justify-content:center;
+  width:100%;
+}
+
+.ChallengeCard_challengeLabel {
+  font-weight:400;
+  font-size:var(--text-md);
+  line-height:1.5;
+  color:var(--color-gray300);
+}
+
+.ChallengeCard_challengeCreator {
+  height:1.3125rem;
+}
+
+.ChallengeCard_challengeCompletedWrapper {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:center;
+  align-items:center;
+  padding:.6875rem;
+  background:var(--color-gray700);
+  border-radius:var(--radius-sm);
+}
+
+.ChallengeCard_exclusiveTag {
+  background:var(--color-primaryViolet);
+  border:1px solid #9880ff;
+  box-shadow:0 .1875rem var(--spacing-sm2) rgba(0,0,0,.5);
+  position:absolute;
+  width:4.375rem;
+  z-index:var(--z-overlay);
+  font-weight:600;
+  font-size:var(--text-md);
+  line-height:1.5;
+  font-family:var(--font-accent);
+  text-align:center;
+  border-radius:255px;
+  padding:.1875rem var(--spacing-sm4);
+  right:var(--spacing-sm1-neg);
+  top:var(--spacing-sm-neg);
+  text-transform:uppercase;
+}
+
+.ChallengeCard_hide {
+  position:absolute;
+  pointer-events:none;
+  top:-99999rem;
+}
+
+.ChallengeCard_show {
+  animation:ChallengeCard_slideIn__ruRXf var(--animation-duration) var(--animation-standard-ease);
+}
+
+@keyframes ChallengeCard_slideIn {
+  0%{opacity:0;
+  transform:translateY(var(--spacing-lg2))}to{transform:translateY(0)};
+}
+
+.BrowsingChallenges_browsingChallengeHeader {
+  margin-bottom:var(--spacing-lg2);
+}
+
+div.BrowsingChallenges_cardLayout {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+@media(min-width:860px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:675px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1035px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:500px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1060px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:875px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1235px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:700px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1860px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(6,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(6,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:2035px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(6,minmax(0,1fr));
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns:repeat(6,minmax(0,1fr));
+  }
+
+}
+
+.BrowsingChallenges_tabList {
+  width:fit-content!important;
+  margin-bottom:var(--spacing-lg1);
+}
+
+@media(min-width:768px) {
+
+  .BrowsingChallenges_tabList {
+    margin-bottom:var(--spacing-md2);
+  }
+
+}
+
+.BrowsingGames_header {
+  display: none;
+}
+
+@media(min-width:992px) {
+
+  .BrowsingGames_header {
+    display: block;
+  }
+
+}
+
+.BrowsingGames_displayOnDesktop {
+  display: none;
+}
+
+@media(min-width:992px) {
+
+  .BrowsingGames_displayOnDesktop {
+    display: block;
+  }
+
+}
+
+.BrowsingGames_hide {
+  display: none;
+}
+
+.BrowsingGames_placeholder {
+  display: inline-block;
+  width: 100%;
+  aspect-ratio: 25/36;
+  border-radius: var(--radius-md);
+}
+
+.PageHeader_root {
+  background: var(--color-black900);
+  padding: 1.7rem 0;
+  margin-bottom: var(--spacing-lg2);
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.PageHeader_root .PageHeader_backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm1);
+  background-color: var(--color-gray800);
+  color: #fff;
+  width: var(--spacing-lg3);
+  height: var(--spacing-lg3);
+  padding: 0;
+  transform: rotate(90deg);
+}
+
+@media(hover:hover) {
+
+  .PageHeader_root .PageHeader_backButton:hover {
+    background-color: var(--color-gray600);
+    transform: rotate(90deg);
+  }
+
+}
+
+.PageHeader_capitalize {
+  text-transform: capitalize;
+}
+
+.PageHeader_truncateText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  -webkit-box-align: start;
+}
+
+.ModalLink_root {
+  transition: var(--animation-duration);
+}
+
+@media(hover:hover) {
+
+  .ModalLink_root:hover {
+    color: var(--color-primaryViolet);
+  }
+
+}
+
+.ModalLink_root:active {
+  transform: var(--active-state);
+}
+
+.ChallengeCard_challengeCardWrapper {
+  transition: var(--animation-duration);
+  background-color: var(--color-gray800);
+  border-radius: var(--radius-md);
+}
+
+@media(hover:hover) {
+
+  .ChallengeCard_challengeCardWrapper:hover {
+    transform: translateY(var(--spacing-sm4-neg));
+  }
+
+}
+
+.ChallengeCard_challengeFooter {
+  padding: var(--spacing-md2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.ChallengeCard_challengeName {
+  font-weight: 400;
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  color: var(--color-white);
+}
+
+.ChallengeCard_challengeNameHidden {
+  color: var(--color-gray400);
+}
+
+.ChallengeCard_textTruncated {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ChallengeCard_challengeInfoBlock {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.ChallengeCard_challengeInfoBlock>div {
+  max-width: 100%;
+}
+
+.ChallengeCard_challengeInfoBlock>div>span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ChallengeCard_challengeInfoBlock>div>div>span {
+  font-weight: 500;
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  color: var(--color-success);
+}
+
+.ChallengeCard_challengeInfoBlockCenter {
+  justify-content: center;
+  width: 100%;
+}
+
+.ChallengeCard_challengeLabel {
+  font-weight: 400;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-gray300);
+}
+
+.ChallengeCard_challengeCreator {
+  height: 1.3125rem;
+}
+
+.ChallengeCard_challengeCompletedWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  align-items: center;
+  padding: .6875rem;
+  background: var(--color-gray700);
+  border-radius: var(--radius-sm);
+}
+
+.ChallengeCard_exclusiveTag {
+  background: var(--color-primaryViolet);
+  border: 1px solid #9880ff;
+  box-shadow: 0 .1875rem var(--spacing-sm2) rgba(0, 0, 0, .5);
+  position: absolute;
+  width: 4.375rem;
+  z-index: var(--z-overlay);
+  font-weight: 600;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  font-family: var(--font-accent);
+  text-align: center;
+  border-radius: 255px;
+  padding: .1875rem var(--spacing-sm4);
+  right: var(--spacing-sm1-neg);
+  top: var(--spacing-sm-neg);
+  text-transform: uppercase;
+}
+
+.ChallengeCard_hide {
+  position: absolute;
+  pointer-events: none;
+  top: -99999rem;
+}
+
+.ChallengeCard_show {
+  animation: ChallengeCard_slideIn__ruRXf var(--animation-duration) var(--animation-standard-ease);
+}
+
+.BrowsingChallenges_browsingChallengeHeader {
+  margin-bottom: var(--spacing-lg2);
+}
+
+div.BrowsingChallenges_cardLayout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media(min-width:860px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:675px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1035px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:500px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1060px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:875px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1235px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:700px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1860px) {
+
+  .magic-container.right-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.left-side-opened-only div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:2035px) {
+
+  .magic-container.both-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.no-side-opened div.BrowsingChallenges_cardLayout {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+}
+
+.BrowsingChallenges_tabList {
+  width: fit-content !important;
+  margin-bottom: var(--spacing-lg1);
+}
+
+@media(min-width:768px) {
+
+  .BrowsingChallenges_tabList {
+    margin-bottom: var(--spacing-md2);
+  }
+
+}
+
+/* --- GamesToolbar / SearchInput / SelectMultiple --- */
+.SearchInput_root {
+  display:flex;
+  align-items:center;
+  position:relative;
+  width:100%;
+  min-width:10rem;
+  margin-right:auto;
+  background:var(--color-gray900);
+  padding:0 var(--spacing-md2);
+  border-radius:var(--radius-sm1);
+  border:1px solid rgba(0,0,0,0);
+  height:var(--spacing-lg4);
+}
+
+.SearchInput_root:focus-within {
+  border:1px solid var(--color-primaryViolet);
+}
+
+.SearchInput_input {
+  outline:none;
+  border:none;
+  background:rgba(0,0,0,0);
+  width:100%;
+  color:#fff;
+  margin-left:.5625rem;
+  font-size:var(--text-lg);
+}
+
+.SearchInput_input::placeholder {
+  color:var(--color-gray400);
+}
+
+.SearchInput_label {
+  background:rgba(0,0,0,0);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+div.GamesToolbar_root {
+  flex-wrap:nowrap;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:var(--spacing-sm5);
+  margin:var(--spacing-lg1) 0 var(--spacing-md2) 0;
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only div.GamesToolbar_root {
+    margin:0 0 var(--spacing-lg2) 0;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only div.GamesToolbar_root {
+    margin:0 0 var(--spacing-lg2) 0;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened div.GamesToolbar_root {
+    margin:0 0 var(--spacing-lg2) 0;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened div.GamesToolbar_root {
+    margin:0 0 var(--spacing-lg2) 0;
+  }
+
+}
+
+.GamesToolbar_selectWrapper {
+  flex-shrink:0;
+}
+
+div.GamesToolbar_searchInputWrapper {
+  width:100%;
+  background-color:var(--color-gray800);
+}
+
+button.GamesToolbar_select {
+  height:var(--spacing-lg4);
+}
+
+.SelectButton_root {
+  color:inherit;
+  display:grid;
+  text-align:left;
+  grid-template-columns:max-content auto;
+  width:100%;
+  background-color:var(--color-gray800);
+  padding:0 1.75rem 0 var(--spacing-md2);
+  height:var(--spacing-lg4);
+  align-items:center;
+  grid-column-gap:var(--spacing-sm4);
+  column-gap:var(--spacing-sm4);
+  border-radius:var(--radius-sm1);
+  cursor:pointer;
+  border:1px solid rgba(0,0,0,0);
+}
+
+.SelectButton_root:disabled {
+  opacity:var(--disabled-opacity);
+}
+
+.SelectButton_open {
+  border:1px solid var(--color-primaryViolet);
+}
+
+.SelectMultiple_root {
+  position:relative;
+}
+
+.SelectMultiple_root>div {
+  height:100%;
+  width:fit-content;
+}
+
+button.SelectMultiple_select.SelectMultiple_small {
+  height:var(--spacing-lg3);
+  font-size:var(--text-md);
+}
+
+button.SelectMultiple_select {
+  align-items:center;
+  justify-content:space-between;
+  padding:var(--spacing-sm4) var(--spacing-md2) var(--spacing-sm4) var(--spacing-md2);
+  grid-template-columns:1fr auto;
+  transition:var(--animation-duration);
+}
+
+@media(hover:hover) {
+
+  button.SelectMultiple_select:hover:not(:disabled) {
+    border:1px solid var(--color-primaryViolet);
+  }
+
+}
+
+button.SelectMultiple_select:focus-visible {
+  outline:1px solid var(--color-primaryViolet);
+}
+
+.SelectMultiple_mobileButtonWrapper {
+  position:relative;
+}
+
+.SelectMultiple_mobileCounter {
+  position:absolute;
+  right:var(--spacing-sm2-neg);
+  top:var(--spacing-sm2-neg);
+}
+
+.SelectMultiple_mobileButton {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  border-radius:var(--radius-sm1);
+  cursor:pointer;
+  background-color:var(--color-gray800);
+  border:0;
+  height:2.625rem;
+  width:2.625rem;
+}
+
+.SelectMultiple_filterLabelWrapper {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:var(--spacing-sm4);
+  flex-grow:1;
+  margin-right:var(--spacing-sm1);
+  min-width:0;
+}
+
+.SelectMultiple_filterLabelWrapper>div {
+  min-width:0;
+  overflow:hidden;
+  flex:1 1;
+}
+
+.SelectMultiple_labelText {
+  font-size:var(--text-lg);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width:0;
+}
+
+.SelectMultiple_labelTextOpen {
+  color:var(--color-primaryViolet);
+}
+
+.SelectMultiple_chevronIcon {
+  transition:var(--animation-duration);
+}
+
+.SelectMultiple_up {
+  transform:rotate(180deg);
+  filter:var(--filter-primaryViolet);
+}
+
+.SearchInput_root {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  min-width: 10rem;
+  margin-right: auto;
+  background: var(--color-gray900);
+  padding: 0 var(--spacing-md2);
+  border-radius: var(--radius-sm1);
+  border: 1px solid rgba(0, 0, 0, 0);
+  height: var(--spacing-lg4);
+}
+
+.SearchInput_root:focus-within {
+  border: 1px solid var(--color-primaryViolet);
+}
+
+.SearchInput_input {
+  outline: none;
+  border: none;
+  background: rgba(0, 0, 0, 0);
+  width: 100%;
+  color: #fff;
+  margin-left: .5625rem;
+  font-size: var(--text-lg);
+}
+
+.SearchInput_input::placeholder {
+  color: var(--color-gray400);
+}
+
+.SearchInput_label {
+  background: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+div.GamesToolbar_root {
+  flex-wrap: nowrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-sm5);
+  margin: var(--spacing-lg1) 0 var(--spacing-md2) 0;
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only div.GamesToolbar_root {
+    margin: 0 0 var(--spacing-lg2) 0;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only div.GamesToolbar_root {
+    margin: 0 0 var(--spacing-lg2) 0;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened div.GamesToolbar_root {
+    margin: 0 0 var(--spacing-lg2) 0;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened div.GamesToolbar_root {
+    margin: 0 0 var(--spacing-lg2) 0;
+  }
+
+}
+
+.GamesToolbar_selectWrapper {
+  flex-shrink: 0;
+}
+
+div.GamesToolbar_searchInputWrapper {
+  width: 100%;
+  background-color: var(--color-gray800);
+}
+
+button.GamesToolbar_select {
+  height: var(--spacing-lg4);
+}
+
+.SelectButton_root {
+  color: inherit;
+  display: grid;
+  text-align: left;
+  grid-template-columns: max-content auto;
+  width: 100%;
+  background-color: var(--color-gray800);
+  padding: 0 1.75rem 0 var(--spacing-md2);
+  height: var(--spacing-lg4);
+  align-items: center;
+  grid-column-gap: var(--spacing-sm4);
+  column-gap: var(--spacing-sm4);
+  border-radius: var(--radius-sm1);
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0);
+}
+
+.SelectButton_root:disabled {
+  opacity: var(--disabled-opacity);
+}
+
+.SelectButton_open {
+  border: 1px solid var(--color-primaryViolet);
+}
+
+.SelectMultiple_root {
+  position: relative;
+}
+
+.SelectMultiple_root>div {
+  height: 100%;
+  width: fit-content;
+}
+
+button.SelectMultiple_select.SelectMultiple_small {
+  height: var(--spacing-lg3);
+  font-size: var(--text-md);
+}
+
+button.SelectMultiple_select {
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm4) var(--spacing-md2) var(--spacing-sm4) var(--spacing-md2);
+  grid-template-columns: 1fr auto;
+  transition: var(--animation-duration);
+}
+
+@media(hover:hover) {
+
+  button.SelectMultiple_select:hover:not(:disabled) {
+    border: 1px solid var(--color-primaryViolet);
+  }
+
+}
+
+button.SelectMultiple_select:focus-visible {
+  outline: 1px solid var(--color-primaryViolet);
+}
+
+.SelectMultiple_mobileButtonWrapper {
+  position: relative;
+}
+
+.SelectMultiple_mobileCounter {
+  position: absolute;
+  right: var(--spacing-sm2-neg);
+  top: var(--spacing-sm2-neg);
+}
+
+.SelectMultiple_mobileButton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-sm1);
+  cursor: pointer;
+  background-color: var(--color-gray800);
+  border: 0;
+  height: 2.625rem;
+  width: 2.625rem;
+}
+
+.SelectMultiple_filterLabelWrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  flex-grow: 1;
+  margin-right: var(--spacing-sm1);
+  min-width: 0;
+}
+
+.SelectMultiple_filterLabelWrapper>div {
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1;
+}
+
+.SelectMultiple_labelText {
+  font-size: var(--text-lg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.SelectMultiple_labelTextOpen {
+  color: var(--color-primaryViolet);
+}
+
+.SelectMultiple_chevronIcon {
+  transition: var(--animation-duration);
+}
+
+.SelectMultiple_up {
+  transform: rotate(180deg);
+  filter: var(--filter-primaryViolet);
+}
+
+/* Providers page grid — reference `GameProviders` */
+div.GameProviders_cardGridElement {
+  gap: var(--spacing-lg1) var(--spacing-md2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (min-width: 943px) {
+  .magic-container.left-side-opened-only div.GameProviders_cardGridElement {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 768px) {
+  .magic-container.no-side-opened div.GameProviders_cardGridElement {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1128px) {
+  .magic-container.right-side-opened-only div.GameProviders_cardGridElement {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1303px) {
+  .magic-container.both-side-opened div.GameProviders_cardGridElement {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

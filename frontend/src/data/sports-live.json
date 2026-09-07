@@ -1,0 +1,216 @@
+{
+ "cats": [
+  ["Dota 2", "/icons/sports/dota2.svg", "Dota 2", "1", "DOTA2"],
+  ["Table Tennis", "/icons/sports/table-tennis.svg", "Table Tennis", "12", "TABLE_TENNIS"],
+  ["Tennis", "/icons/sports/tennis.svg", "Tennis", "4", "TENNIS"],
+  ["Cricket", "/icons/sports/cricket.svg", "Cricket", "2", "CRICKET"],
+  ["Volleyball", "/icons/sports/volleyball.svg", "Volleyball", "1", "VOLLEYBALL"],
+  ["FIFA", "/icons/sports/fifa.svg", "FIFA", "20", "EFOOTBALL"],
+  ["NBA2K", "/icons/sports/nba2k.svg", "NBA2K", "9", "EBASKETBALL"]
+ ],
+ "sports": {
+  "DOTA2": {
+   "sport": ["Dota 2", "/sports/dota2", "/icons/sports/dota2.svg", "Dota 2"],
+   "markets": ["Match Winner", "Match Handicap", "Number of maps", "Match winner draw no bet"],
+   "groups": [
+    { "catName": "International", "catFlag": "/icons/globe.svg", "catHref": "/sports/dota2/dota-2-international",
+      "compName": "EPL World Series: Southeast Asia Season 17", "compIcon": "/images/sports/logos/3be25e82-e561-46c8-8166-b5a140661854.png",
+      "compHref": "/sports/dota2/dota-2-international/14671-epl-world-series-southeast-asia-season-17",
+      "market": "Match Winner - Twoway", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "1st map", "tools": ["play", "stats"], "cnt": "+4",
+         "href": "/sports/dota2/dota-2-international/14671-epl-world-series-southeast-asia-season-17/3160345-carstensz-esports-vs-interactive-philippines",
+         "home": ["Carstensz Esports", "/images/sports/logos/ce.png"], "away": ["InterActive Philippines", "/images/sports/logos/ia_p.png"],
+         "boards": [{ "v": ["6", "3"], "l": false }, { "v": ["0", "0"], "l": true }],
+         "sels": [["Carstensz Esports", "2.15"], ["InterActive Philippines", "1.62"]] }
+      ] }
+   ]
+  },
+  "TABLE_TENNIS": {
+   "sport": ["Table Tennis", "/sports/table-tennis", "/icons/sports/table-tennis.svg", "Table Tennis"],
+   "markets": ["Winner", "Point handicap", "Game handicap", "Total points"],
+   "groups": [
+    { "catName": "International", "catFlag": "/icons/globe.svg", "catHref": "/sports/table-tennis/88-international",
+      "compName": "TT Cup", "compIcon": "/images/sports/logos/0fd7a48b-8846-49c7-98bf-db8537388708.png",
+      "compHref": "/sports/table-tennis/88-international/32129-tt-cup", "market": "Winner", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "Ended", "tools": ["play", "stats"], "cnt": null,
+         "href": "/sports/table-tennis/88-international/32129-tt-cup/74413302-krupnik-sr-lukas-vs-slivka-tadeas",
+         "home": ["Krupnik SR, Lukas", "/icons/globe.svg"], "away": ["Slivka, Tadeas", "/icons/globe.svg"],
+         "boards": [{ "v": ["2", "3"], "l": true }],
+         "sels": [["Krupnik SR, Lukas", "Suspended"], ["Slivka, Tadeas", "Suspended"]] },
+       { "live": true, "phase": "3rd set", "tools": ["play", "stats"], "cnt": "+15",
+         "href": "/sports/table-tennis/88-international/32129-tt-cup/74413304-radlo-szymon-vs-skvarskyi-dmytro",
+         "home": ["Radlo, Szymon", "/icons/globe.svg"], "away": ["Skvarskyi Dmytro", "/icons/world-flags/UKR_round.svg"],
+         "boards": [{ "v": ["3", "4"], "l": false }, { "v": ["0", "2"], "l": true }],
+         "sels": [["Radlo, Szymon", "8.25"], ["Skvarskyi Dmytro", "1.04"]] },
+       { "live": true, "phase": "2nd set", "tools": ["play", "stats"], "cnt": "+14",
+         "href": "/sports/table-tennis/88-international/32129-tt-cup/74413306-mrowetz-bruno-vs-lasota-laurent",
+         "home": ["Mrowetz, Bruno", "/icons/globe.svg"], "away": ["Lasota, Laurent", "/icons/globe.svg"],
+         "boards": [{ "v": ["3", "4"], "l": false }, { "v": ["0", "1"], "l": true }],
+         "sels": [["Mrowetz, Bruno", "2.65"], ["Lasota, Laurent", "1.42"]] }
+      ] },
+    { "catName": "International", "catFlag": "/icons/globe.svg", "catHref": "/sports/table-tennis/88-international",
+      "compName": "TT Elite Series", "compIcon": "/images/sports/logos/979ff32d-61e6-46d1-8624-2b6c0abbb343.png",
+      "compHref": "/sports/table-tennis/88-international/36377-tt-elite-series", "market": "Winner", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "4th set", "tools": ["play", "stats"], "cnt": "+11",
+         "href": "/sports/table-tennis/88-international/36377-tt-elite-series/74393562-schaniel-krzysztof-vs-nowak-jakub",
+         "home": ["Schaniel Krzysztof", "/icons/globe.svg"], "away": ["Nowak, Jakub", "/icons/globe.svg"],
+         "boards": [{ "v": ["6", "6"], "l": false }, { "v": ["1", "2"], "l": true }],
+         "sels": [["Schaniel Krzysztof", "3.35"], ["Nowak, Jakub", "1.27"]] },
+       { "live": true, "phase": "1st set", "tools": ["play", "stats"], "cnt": "+16",
+         "href": "/sports/table-tennis/88-international/36377-tt-elite-series/74393566-wichowski-grzegorz-vs-fomin-yurij",
+         "home": ["Wichowski, Grzegorz", "/icons/globe.svg"], "away": ["Fomin, Yurij", "/icons/globe.svg"],
+         "boards": [{ "v": ["0", "3"], "l": false }, { "v": ["0", "0"], "l": true }],
+         "sels": [["Wichowski, Grzegorz", "1.60"], ["Fomin, Yurij", "2.20"]] }
+      ] },
+    { "catName": "Czech Republic", "catFlag": "/icons/world-flags/CZE_round.svg", "catHref": "/sports/table-tennis/1017-czech-republic",
+      "compName": "Czech Liga Pro", "compIcon": "/images/sports/logos/22146a58-7725-4f63-809a-b038ee23d94c.png",
+      "compHref": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro", "market": "Winner", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "4th set", "tools": ["play", "stats"], "cnt": "+15",
+         "href": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro/74393328-levicky-matej-vs-kaspar-michal",
+         "home": ["Levicky, Matej", "/icons/world-flags/CZE_round.svg"], "away": ["Kaspar, Michal", "/icons/world-flags/CZE_round.svg"],
+         "boards": [{ "v": ["0", "4"], "l": false }, { "v": ["1", "2"], "l": true }],
+         "sels": [["Levicky, Matej", "8.00"], ["Kaspar, Michal", "1.04"]] },
+       { "live": true, "phase": "4th set", "tools": ["play", "stats"], "cnt": "+5",
+         "href": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro/74392860-srba-jan-vs-hejduk-alexander",
+         "home": ["Srba, Jan", "/icons/world-flags/CZE_round.svg"], "away": ["Hejduk, Alexander", "/icons/world-flags/CZE_round.svg"],
+         "boards": [{ "v": ["10", "5"], "l": false }, { "v": ["2", "1"], "l": true }],
+         "sels": [["Srba, Jan", "Suspended"], ["Hejduk, Alexander", "Suspended"]] },
+       { "live": true, "phase": "4th set", "tools": ["play", "stats"], "cnt": "+16",
+         "href": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro/74392946-levicky-jakub-vs-heczko-marcel",
+         "home": ["Levicky, Jakub", "/icons/world-flags/CZE_round.svg"], "away": ["Heczko, Marcel", "/icons/world-flags/CZE_round.svg"],
+         "boards": [{ "v": ["1", "0"], "l": false }, { "v": ["1", "2"], "l": true }],
+         "sels": [["Levicky, Jakub", "3.15"], ["Heczko, Marcel", "1.30"]] }
+      ] }
+   ]
+  },
+  "TENNIS": {
+   "sport": ["Tennis", "/sports/tennis", "/icons/sports/tennis.svg", "Tennis"],
+   "markets": ["Winner", "Nth set - winner", "Game handicap", "Total games", "Outright"],
+   "groups": [
+    { "catName": "Challenger", "catFlag": "/icons/globe.svg", "catHref": "/sports/tennis/72-challenger",
+      "compName": "ATP Challenger Phan Thiet 3, Vietnam Men Singles", "compIcon": "/images/sports/logos/0177468d-00f6-4147-8dc6-d4d7299a77da.png",
+      "compHref": "/sports/tennis/72-challenger/51734-atp-challenger-phan-thiet-3-vietnam-men-singles", "market": "Winner", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "3rd set", "tools": ["custom bet", "play", "stats"], "cnt": "+10",
+         "href": "/sports/tennis/72-challenger/51734-atp-challenger-phan-thiet-3-vietnam-men-singles/74370716-moriya-hiroki-vs-palan-dominik",
+         "home": ["Moriya, Hiroki", "/icons/world-flags/JPN_round.svg"], "away": ["Palan, Dominik", "/icons/world-flags/CZE_round.svg"],
+         "boards": [{ "v": ["4", "1"], "l": false }, { "v": ["0", "0"], "l": false }, { "v": ["1", "1"], "l": true }],
+         "sels": [["Moriya, Hiroki", "Suspended"], ["Palan, Dominik", "12.50"]] },
+       { "live": true, "phase": "1st set", "tools": ["custom bet", "play", "stats"], "cnt": "+20",
+         "href": "/sports/tennis/72-challenger/51734-atp-challenger-phan-thiet-3-vietnam-men-singles/74370706-hewitt-cruz-vs-bittoun-kouzmine-constantin",
+         "home": ["Hewitt, Cruz", "/icons/world-flags/AUS_round.svg"], "away": ["Bittoun Kouzmine, Constantin", "/icons/world-flags/FRA_round.svg"],
+         "boards": [{ "v": ["4", "2"], "l": false }, { "v": ["15", "40"], "l": false }, { "v": ["0", "0"], "l": true }],
+         "sels": [["Hewitt, Cruz", "1.12"], ["Bittoun Kouzmine, Constantin", "5.50"]] }
+      ] },
+    { "catName": "Simulated Reality", "catFlag": "/icons/globe.svg", "catHref": "/sports/tennis/2157-simulated-reality",
+      "compName": "SRL Summer Invitational Shymkent, KAZ", "compIcon": "/images/sports/logos/92bf0c2b-6dde-4967-8e49-326fefc9588e.png",
+      "compHref": "/sports/tennis/2157-simulated-reality/53214-srl-summer-invitational-shymkent-kaz", "market": "Winner", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "2nd set", "tools": ["custom bet", "stats"], "cnt": "+24",
+         "href": "/sports/tennis/2157-simulated-reality/53214-srl-summer-invitational-shymkent-kaz/74304876-buse-ignacio-srl-vs-fritz-taylor-srl",
+         "home": ["Buse, Ignacio (Srl)", "/icons/globe.svg"], "away": ["Fritz, Taylor (Srl)", "/icons/world-flags/USA_round.svg"],
+         "boards": [{ "v": ["0", "1"], "l": false }, { "v": ["0", "15"], "l": false }, { "v": ["0", "1"], "l": true }],
+         "sels": [["Buse, Ignacio (Srl)", "18.50"], ["Fritz, Taylor (Srl)", "Suspended"]] }
+      ] }
+   ]
+  },
+  "CRICKET": {
+   "sport": ["Cricket", "/sports/cricket", "/icons/sports/cricket.svg", "Cricket"],
+   "markets": ["Match Winner (2 way)", "Draw No Bet (5 Day)", "Winner (incl. super over)", "1x2", "Total Match Sixes Over/Under"],
+   "groups": [
+    { "catName": "International", "catFlag": "/icons/globe.svg", "catHref": "/sports/cricket/105-international",
+      "compName": "ACC Premier Cup", "compIcon": "/images/sports/logos/ad61b21a-ba69-4411-b650-cd74ced8af55.png",
+      "compHref": "/sports/cricket/105-international/39531-acc-premier-cup", "market": "Winner (incl. super over)", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "First innings, away team", "tools": ["play"], "cnt": "+1",
+         "href": "/sports/cricket/105-international/39531-acc-premier-cup/73735336-malaysia-vs-bahrain",
+         "home": ["Malaysia", "/icons/world-flags/MYS_round.svg"], "away": ["Bahrain", "/icons/world-flags/BHR_round.svg"],
+         "boards": [{ "v": ["254/8", "77/3"], "l": true }],
+         "sels": [["Malaysia", "1.06"], ["Bahrain", "6.75"]] }
+      ] },
+    { "catName": "India", "catFlag": "/icons/world-flags/IND_round.svg", "catHref": "/sports/cricket/497-india",
+      "compName": "Duleep Trophy", "compIcon": "/icons/trophy-fill-no-bg.svg",
+      "compHref": "/sports/cricket/497-india/25849-duleep-trophy", "market": "Draw no bet", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "Lunch break", "tools": [], "cnt": "+26",
+         "href": "/sports/cricket/497-india/25849-duleep-trophy/74288992-east-zone-vs-south-zone",
+         "home": ["East Zone", "/icons/world-flags/IND_round.svg"], "away": ["South Zone", "/icons/world-flags/IND_round.svg"],
+         "boards": [{ "v": ["491/5", "0/0"], "l": true }],
+         "sels": [["East Zone", "1.08"], ["South Zone", "6.75"]] }
+      ] }
+   ]
+  },
+  "VOLLEYBALL": {
+   "sport": ["Volleyball", "/sports/volleyball", "/icons/sports/volleyball.svg", "Volleyball"],
+   "markets": ["Winner", "Total points", "Outright"],
+   "groups": [
+    { "catName": "Russia", "catFlag": "/icons/world-flags/RUS_round.svg", "catHref": "/sports/volleyball/262-russia",
+      "compName": "Pro League", "compIcon": "/images/sports/logos/bf421348-c9c7-47df-976e-e59b0661407e.png",
+      "compHref": "/sports/volleyball/262-russia/32175-pro-league", "market": "Winner", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "2nd set", "tools": ["play", "stats"], "cnt": "+14",
+         "href": "/sports/volleyball/262-russia/32175-pro-league/74403410-sokol-pro-vs-berkut",
+         "home": ["Sokol-Pro", "/icons/world-flags/RUS_round.svg"], "away": ["Berkut", "/icons/world-flags/RUS_round.svg"],
+         "boards": [{ "v": ["10", "14"], "l": false }, { "v": ["1", "0"], "l": true }],
+         "sels": [["Sokol-Pro", "Suspended"], ["Berkut", "Suspended"]] }
+      ] }
+   ]
+  },
+  "EFOOTBALL": {
+   "sport": ["FIFA", "/sports/efootball", "/icons/sports/fifa.svg", "FIFA"],
+   "markets": ["Match Winner", "Match Total Goals", "Match goal handicap"],
+   "groups": [
+    { "catName": "International (Bots)", "catFlag": "/icons/globe.svg", "catHref": "/sports/efootball/efootball-bots-international",
+      "compName": "FA Cup (2x6 min) 2026 Week #37", "compIcon": "/images/sports/logos/1e1b6d2a-be48-4b63-ac55-bd023c58dfad.png",
+      "compHref": "/sports/efootball/efootball-bots-international/14743-fa-cup-2x6-min-2026-week-37", "market": "Match Winner - Threeway", "cols": 3,
+      "fx": [
+       { "live": true, "phase": "1st half", "tools": ["play"], "cnt": "+100",
+         "href": "/sports/efootball/efootball-bots-international/14743-fa-cup-2x6-min-2026-week-37/3173115-chelsea-fc-vs-manchester-city",
+         "home": ["Chelsea FC", "/images/sports/logos/chelsea_fc.png"], "away": ["Manchester City", "/icons/globe.svg"],
+         "boards": [{ "v": ["0", "0"], "l": true }],
+         "sels": [["Chelsea FC", "4.80"], ["Draw", "2.70"], ["Manchester City", "1.85"]] }
+      ] },
+    { "catName": "International (Bots)", "catFlag": "/icons/globe.svg", "catHref": "/sports/efootball/efootball-bots-international",
+      "compName": "Absolute Legends eFootball 3 2026 Week #37", "compIcon": "/images/sports/logos/1e1b6d2a-be48-4b63-ac55-bd023c58dfad.png",
+      "compHref": "/sports/efootball/efootball-bots-international/14722-absolute-legends-efootball-3-2026-week-37", "market": "Match Winner - Threeway", "cols": 3,
+      "fx": [
+       { "live": true, "phase": "2nd half", "tools": ["custom bet", "play"], "cnt": "+11",
+         "href": "/sports/efootball/efootball-bots-international/14722-absolute-legends-efootball-3-2026-week-37/3172963-real-madrid-vs-arsenal",
+         "home": ["Real Madrid", "/images/sports/logos/real_madrid.png"], "away": ["Arsenal", "/images/sports/logos/arsenal.png"],
+         "boards": [{ "v": ["2", "1"], "l": true }],
+         "sels": [["Real Madrid", "1.13"], ["Draw", "5.30"], ["Arsenal", "12.00"]] }
+      ] }
+   ]
+  },
+  "EBASKETBALL": {
+   "sport": ["NBA2K", "/sports/ebasketball", "/icons/sports/nba2k.svg", "NBA2K"],
+   "markets": ["Match Winner", "Match total points"],
+   "groups": [
+    { "catName": "International (Bots)", "catFlag": "/icons/globe.svg", "catHref": "/sports/ebasketball/ebasketball-bots-international",
+      "compName": "FIBA Europe 2026 Week #37", "compIcon": "/images/sports/logos/a35afaae-3bcd-4f96-adf3-f160e1badc74.png",
+      "compHref": "/sports/ebasketball/ebasketball-bots-international/14745-fiba-europe-2026-week-37", "market": "Match Winner - Threeway", "cols": 3,
+      "fx": [
+       { "live": true, "phase": "3rd quarter", "clock": "02:24", "tools": ["play"], "cnt": "+59",
+         "href": "/sports/ebasketball/ebasketball-bots-international/14745-fiba-europe-2026-week-37/3172845-finland-vs-sweden",
+         "home": ["Finland", "/images/sports/logos/finland.png"], "away": ["Sweden", "/images/sports/logos/sweden.png"],
+         "boards": [{ "v": ["26", "32"], "l": true }],
+         "sels": [["Finland", "3.30"], ["Draw", "7.50"], ["Sweden", "1.42"]] }
+      ] },
+    { "catName": "International (Bots)", "catFlag": "/icons/globe.svg", "catHref": "/sports/ebasketball/ebasketball-bots-international",
+      "compName": "FIBA Americas 2026 Week #37", "compIcon": "/images/sports/logos/a35afaae-3bcd-4f96-adf3-f160e1badc74.png",
+      "compHref": "/sports/ebasketball/ebasketball-bots-international/14729-fiba-americas-2026-week-37", "market": "Match Winner - Twoway", "cols": 2,
+      "fx": [
+       { "live": true, "phase": "2nd quarter", "clock": "02:15", "tools": [], "cnt": "+52",
+         "href": "/sports/ebasketball/ebasketball-bots-international/14729-fiba-americas-2026-week-37/3172854-dominican-republic-vs-puerto-rico",
+         "home": ["Dominican Republic", "/images/sports/logos/dominican_republic.png"], "away": ["Puerto Rico", "/icons/globe.svg"],
+         "boards": [{ "v": ["19", "25"], "l": true }],
+         "sels": [["Dominican Republic", "Suspended"], ["Puerto Rico", "Suspended"]] }
+      ] }
+   ]
+  }
+ }
+}

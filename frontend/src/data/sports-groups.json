@@ -1,0 +1,166 @@
+[
+ {
+  "outright": false,
+  "sportHref": "/sports/soccer", "sportIcon": "/icons/sports/soccer.svg", "sportAlt": "Soccer", "title": "Soccer",
+  "catHref": "/sports/soccer/31-italy", "catFlag": "/icons/world-flags/ITA_round.svg", "catName": "Italy",
+  "compHref": "/sports/soccer/31-italy/23-serie-a", "compIcon": "/images/sports/logos/da3cb634-2332-49a8-99a0-bbca2c40619b.png", "compName": "Serie A",
+  "market": "1x2", "cols": 3, "loadMore": true,
+  "fx": [
+   { "date": "Sep 07, 10:00 PM - in 10 hours", "tools": ["2up", "custom bet", "stats"], "cnt": "+385",
+     "href": "/sports/soccer/31-italy/23-serie-a/71945228-cagliari-calcio-vs-us-lecce",
+     "home": ["Cagliari Calcio", "/images/sports/logos/f2697504-c430-4bce-8380-1e74cf89dd5d.png"],
+     "away": ["US Lecce", "/images/sports/logos/489d7455-2080-4321-bcc9-014566bdb238.png"],
+     "sels": [["Cagliari Calcio", "2.08"], ["Draw", "3.15"], ["US Lecce", "4.10"]] },
+   { "date": "Sep 08, 12:15 AM - in 12 hours", "tools": ["2up", "custom bet", "stats"], "cnt": "+358",
+     "href": "/sports/soccer/31-italy/23-serie-a/71945244-udinese-calcio-vs-lazio-rome",
+     "home": ["Udinese Calcio", "/images/sports/logos/708e1568-9811-4c69-a39a-7eee4b401f95.png"],
+     "away": ["Lazio Rome", "/images/sports/logos/1a368b0d-d835-4daf-b3ce-b0496c185cde.png"],
+     "sels": [["Udinese Calcio", "2.80"], ["Draw", "3.05"], ["Lazio Rome", "2.70"]] },
+   { "date": "Sep 12, 12:15 AM - in 4 days", "tools": ["2up", "custom bet", "stats"], "cnt": "+118",
+     "href": "/sports/soccer/31-italy/23-serie-a/71945264-venezia-fc-vs-acf-fiorentina",
+     "home": ["Venezia FC", "/images/sports/logos/7aef2239-300a-4e93-91df-b8281fe29579.png"],
+     "away": ["ACF Fiorentina", "/images/sports/logos/d8267d89-aa83-4bb2-96cd-b0dbdeda51ea.png"],
+     "sels": [["Venezia FC", "2.75"], ["Draw", "3.30"], ["ACF Fiorentina", "2.49"]] }
+  ]
+ },
+ {
+  "outright": false,
+  "sportHref": "/sports/dota2", "sportIcon": "/icons/sports/dota2.svg", "sportAlt": "Dota 2", "title": "Dota 2",
+  "catHref": "/sports/dota2/dota-2-international", "catFlag": "/icons/globe.svg", "catName": "International",
+  "compHref": "/sports/dota2/dota-2-international/14611-epl-masters-ii", "compIcon": "/images/sports/logos/8be04ed6-4285-434d-b715-68220c103d5a.png", "compName": "EPL Masters II",
+  "market": "Match Winner - Twoway", "cols": 2, "loadMore": false,
+  "fx": [
+   { "date": "Sep 07, 2:30 PM - in 2 hours", "tools": ["stats"], "cnt": "+191",
+     "href": "/sports/dota2/dota-2-international/14611-epl-masters-ii/3139037-natus-vincere-vs-power-rangers",
+     "home": ["Natus Vincere", "/images/sports/logos/navi_1726228351641.png"],
+     "away": ["Power Rangers", "/images/sports/logos/power.png"],
+     "sels": [["Natus Vincere", "1.06"], ["Power Rangers", "7.00"]] },
+   { "date": "Sep 07, 5:30 PM - in 5 hours", "tools": ["stats"], "cnt": "+218",
+     "href": "/sports/dota2/dota-2-international/14611-epl-masters-ii/3139036-huligani-vs-klim-sani4",
+     "home": ["HULIGANI", "/images/sports/logos/huligani.png"],
+     "away": ["Klim Sani4", "/images/sports/logos/klim_sani4.png"],
+     "sels": [["HULIGANI", "2.00"], ["Klim Sani4", "1.72"]] },
+   { "date": "Sep 07, 11:30 PM - in 11 hours", "tools": ["stats"], "cnt": "+10",
+     "href": "/sports/dota2/dota-2-international/14611-epl-masters-ii/3139034-gamerlegion-vs-pipsqueak-4",
+     "home": ["GamerLegion", "/images/sports/logos/gamerlegion_1776123594413.png"],
+     "away": ["Pipsqueak+4", "/images/sports/logos/p4.png"],
+     "sels": [["GamerLegion", "1.65"], ["Pipsqueak+4", "2.10"]] }
+  ]
+ },
+ {
+  "outright": true,
+  "sportHref": "/sports/american-football/43-usa/31-nfl/139396-nfl-2627", "sportIcon": "/icons/sports/american-football.svg", "sportAlt": "American Football", "title": "Superbowl LXI",
+  "catHref": "/sports/american-football/43-usa", "catFlag": "/icons/world-flags/USA_round.svg", "catName": "USA",
+  "compHref": "/sports/american-football/43-usa/31-nfl", "compIcon": "/images/sports/logos/65738a09-a85e-45d2-8a81-d1a23049c3e6.png", "compName": "NFL",
+  "market": null, "cols": 2, "loadMore": false,
+  "fx": [
+   { "marketName": "NFL 2026/27 - Super Bowl 61 - Winner", "date": "Feb 15, 5:30 AM - in 5 months",
+     "boost": true, "cnt": "+648", "href": "/sports/american-football/43-usa/31-nfl/139396-nfl-2627",
+     "sels": [
+      ["Los Angeles Rams", "/images/sports/logos/cac20115-cad7-437d-b6a9-466f1227890b.png", "6.00", "6.75"],
+      ["Buffalo Bills", "/images/sports/logos/140b87d5-2316-4c67-984d-b7316aeabcda.png", "11.00", "12.50"],
+      ["Baltimore Ravens", "/images/sports/logos/635e6491-6b44-4beb-8a88-1ccb4af4c954.png", "11.00"],
+      ["Seattle Seahawks", "/images/sports/logos/8d5cba9e-9768-46b6-842f-03ed214ab3f8.png", "13.00"],
+      ["Kansas City Chiefs", "/images/sports/logos/8e2dfbfd-1a86-45ad-8bbc-86b476630963.png", "17.00"],
+      ["Philadelphia Eagles", "/images/sports/logos/07e54274-7945-484c-b854-2e0b3049d2a2.png", "18.00"],
+      ["Los Angeles Chargers", "/images/sports/logos/cffbdbdf-29c8-4530-af04-51a7db84fce4.png", "18.00"],
+      ["New England Patriots", "/images/sports/logos/e1a872a9-ecb1-4f65-929d-93e86596a49a.png", "19.00"],
+      ["Houston Texans", "/images/sports/logos/632ecf3c-035d-4a1a-86b3-d69f4f71153b.png", "19.00"],
+      ["Cincinnati Bengals", "/images/sports/logos/000a903a-f632-4bb8-946e-25b1e72ceaaa.png", "19.00"],
+      ["Detroit Lions", "/images/sports/logos/af8ca451-d10f-45b1-be09-59d15dc66099.png", "20.00", "24.00"],
+      ["San Francisco 49ers", "/images/sports/logos/dca3f8d5-f703-41a2-b319-162f8ac4b4c0.png", "20.00"]
+     ] }
+  ]
+ },
+ {
+  "outright": false,
+  "sportHref": "/sports/lol", "sportIcon": "/icons/sports/lol.svg", "sportAlt": "League of Legends", "title": "League of Legends",
+  "catHref": "/sports/lol/league-of-legends-international", "catFlag": "/icons/globe.svg", "catName": "International",
+  "compHref": "/sports/lol/league-of-legends-international/14524-lpl-2026-grand-finals", "compIcon": "/images/sports/logos/11c1d576-f28e-4561-afa3-1f52a5860a0f.png", "compName": "LPL 2026 Grand Finals",
+  "market": "Match Winner - Twoway", "cols": 2, "loadMore": false,
+  "fx": [
+   { "date": "Sep 07, 2:30 PM - in 2 hours", "tools": ["stats"], "cnt": "+409",
+     "href": "/sports/lol/league-of-legends-international/14524-lpl-2026-grand-finals/3119246-anyone-s-legend-vs-bilibili-gaming",
+     "home": ["Anyone's Legend", "/images/sports/logos/anyones_legend_1725456841347.png"],
+     "away": ["Bilibili Gaming", "/images/sports/logos/bilibili_gaming.png"],
+     "sels": [["Anyone's Legend", "4.00"], ["Bilibili Gaming", "1.25"]] },
+   { "date": "Sep 08, 2:30 PM - in a day", "tools": ["stats"], "cnt": "+85",
+     "href": "/sports/lol/league-of-legends-international/14524-lpl-2026-grand-finals/3119241-invictus-gaming-vs-lgd-gaming",
+     "home": ["Invictus Gaming", "/images/sports/logos/invictus_gaming_1725456613681.png"],
+     "away": ["LGD Gaming", "/images/sports/logos/lgd.png"],
+     "sels": [["Invictus Gaming", "1.45"], ["LGD Gaming", "2.80"]] }
+  ]
+ },
+ {
+  "outright": false,
+  "sportHref": "/sports/table-tennis", "sportIcon": "/icons/sports/table-tennis.svg", "sportAlt": "Table Tennis", "title": "Table Tennis",
+  "catHref": "/sports/table-tennis/88-international", "catFlag": "/icons/globe.svg", "catName": "International",
+  "compHref": "/sports/table-tennis/88-international/32129-tt-cup", "compIcon": "/images/sports/logos/0fd7a48b-8846-49c7-98bf-db8537388708.png", "compName": "TT Cup",
+  "market": "Point handicap", "cols": 2, "loadMore": true,
+  "fx": [
+   { "live": "3rd set", "tools": ["play", "stats"], "cnt": "+3",
+     "href": "/sports/table-tennis/88-international/32129-tt-cup/74413298-lysakowski-michal-vs-stepien-marcin",
+     "home": ["Lysakowski, Michal", "/icons/globe.svg"],
+     "away": ["Stepien, Marcin", "/icons/globe.svg"],
+     "sels": [["Lysakowski, Michal (+8.5)", "2.00"], ["Stepien, Marcin (-8.5)", "1.75"]] },
+   { "live": "First break", "tools": ["play", "stats"], "cnt": "+16",
+     "href": "/sports/table-tennis/88-international/32129-tt-cup/74413300-pawlik-dominik-vs-lasota-laurent",
+     "home": ["Pawlik, Dominik", "/icons/globe.svg"],
+     "away": ["Lasota, Laurent", "/icons/globe.svg"],
+     "sels": [["Pawlik, Dominik", "2.45"], ["Lasota, Laurent", "1.50"]] },
+   { "live": "1st set", "tools": ["play", "stats"], "cnt": "+13",
+     "href": "/sports/table-tennis/88-international/32129-tt-cup/74413302-krupnik-sr-lukas-vs-slivka-tadeas",
+     "home": ["Krupnik SR, Lukas", "/icons/globe.svg"],
+     "away": ["Slivka, Tadeas", "/icons/globe.svg"],
+     "sels": [["Krupnik SR, Lukas", "2.10"], ["Slivka, Tadeas", "1.65"]] }
+  ]
+ },
+ {
+  "outright": false,
+  "sportHref": "/sports/tennis", "sportIcon": "/icons/sports/tennis.svg", "sportAlt": "Tennis", "title": "Tennis",
+  "catHref": "/sports/tennis/3-atp", "catFlag": "/icons/globe.svg", "catName": "ATP",
+  "compHref": "/sports/tennis/3-atp/2591-us-open-men-singles", "compIcon": "/images/sports/logos/f9347a71-dbdf-4501-9e49-b0ce06575c1a.png", "compName": "US Open Men Singles",
+  "market": "Winner", "cols": 2, "loadMore": true,
+  "fx": [
+   { "date": "Sep 07, 10:30 PM - in 10 hours", "tools": ["custom bet", "stats"], "cnt": "+40",
+     "href": "/sports/tennis/3-atp/2591-us-open-men-singles/73992466-cerundolo-francisco-vs-blockx-alexander",
+     "home": ["Cerundolo, Francisco", "/icons/world-flags/ARG_round.svg"],
+     "away": ["Blockx, Alexander", "/icons/world-flags/BEL_round.svg"],
+     "sels": [["Cerundolo, Francisco", "2.34"], ["Blockx, Alexander", "1.58"]] },
+   { "date": "Sep 08, 12:00 AM - in 12 hours", "tools": ["custom bet", "stats"], "cnt": "+36",
+     "href": "/sports/tennis/3-atp/2591-us-open-men-singles/73992462-gea-arthur-vs-van-de-zandschulp-botic",
+     "home": ["Gea, Arthur", "/icons/world-flags/FRA_round.svg"],
+     "away": ["Van de Zandschulp, Botic", "/icons/world-flags/NLD_round.svg"],
+     "sels": [["Gea, Arthur", "2.33"], ["Van de Zandschulp, Botic", "1.59"]] },
+   { "date": "Sep 08, 1:30 AM - in 13 hours", "tools": ["custom bet", "stats"], "cnt": "+36",
+     "href": "/sports/tennis/3-atp/2591-us-open-men-singles/73992464-khachanov-karen-vs-tien-learner",
+     "home": ["Khachanov, Karen", "/icons/globe.svg"],
+     "away": ["Tien, Learner", "/icons/world-flags/USA_round.svg"],
+     "sels": [["Khachanov, Karen", "2.39"], ["Tien, Learner", "1.56"]] }
+  ]
+ },
+ {
+  "outright": false,
+  "sportHref": "/sports/cs2", "sportIcon": "/icons/sports/cs2.svg", "sportAlt": "Counter-Strike 2", "title": "Counter-Strike 2",
+  "catHref": "/sports/cs2/counter-strike-2-international", "catFlag": "/icons/globe.svg", "catName": "International",
+  "compHref": "/sports/cs2/counter-strike-2-international/14690-nodwin-clutch-series-12-play-in", "compIcon": "/icons/trophy-fill-no-bg.svg", "compName": "NODWIN Clutch Series #12 Play-In",
+  "market": "Match Winner - Twoway", "cols": 2, "loadMore": false,
+  "fx": [
+   { "date": "Sep 07, 1:30 PM - in an hour", "tools": ["stats"], "cnt": "+7",
+     "href": "/sports/cs2/counter-strike-2-international/14690-nodwin-clutch-series-12-play-in/3162957-ex-rustec-vs-fortress-gaming",
+     "home": ["ex-RUSTEC", "/icons/globe.svg"],
+     "away": ["Fortress Gaming", "/images/sports/logos/frtg.png"],
+     "sels": [["Ex-RUSTEC", "1.01"], ["Fortress Gaming", "12.00"]] },
+   { "date": "Sep 07, 10:30 PM - in 10 hours", "tools": ["stats"], "cnt": "+7",
+     "href": "/sports/cs2/counter-strike-2-international/14690-nodwin-clutch-series-12-play-in/3162975-g2-ares-vs-wazabi",
+     "home": ["G2 Ares", "/images/sports/logos/g2_ares.png"],
+     "away": ["WAZABI", "/images/sports/logos/wazabi.png"],
+     "sels": [["G2 Ares", "1.15"], ["WAZABI", "5.00"]] },
+   { "date": "Sep 10, 7:30 PM - in 3 days", "tools": ["stats"], "cnt": "+7",
+     "href": "/sports/cs2/counter-strike-2-international/14690-nodwin-clutch-series-12-play-in/3162993-rethink-vs-misa-esports",
+     "home": ["ReThink", "/images/sports/logos/rethink_1771213429967.png"],
+     "away": ["Misa Esports", "/images/sports/logos/misa.png"],
+     "sels": [["ReThink", "2.60"], ["Misa Esports", "1.45"]] }
+  ]
+ }
+]

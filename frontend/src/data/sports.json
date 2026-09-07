@@ -1,0 +1,82 @@
+{
+ "tabs": [
+  { "id": "featured", "label": "Featured", "href": "/sports?section=featured" },
+  { "id": "upcoming", "label": "Upcoming", "href": "/sports?section=upcoming" },
+  { "id": "bet-live", "label": "Bet Live", "href": "/sports?section=bet-live", "counter": "316" },
+  { "id": "all", "label": "All Sports", "href": "/sports?section=all" }
+ ],
+ "categories": [
+  ["Popular", "/icons/global-star.svg", "global star", "POPULAR"],
+  ["Soccer", "/icons/sports/soccer.svg", "Soccer", "SOCCER"],
+  ["Baseball", "/icons/sports/baseball.svg", "Baseball", "BASEBALL"],
+  ["Tennis", "/icons/sports/tennis.svg", "Tennis", "TENNIS"],
+  ["League of Legends", "/icons/sports/lol.svg", "League of Legends", "LOL"],
+  ["Dota 2", "/icons/sports/dota2.svg", "Dota 2", "DOTA2"],
+  ["Counter-Strike 2", "/icons/sports/cs2.svg", "Counter-Strike 2", "CS2"],
+  ["MMA", "/icons/sports/mma.svg", "MMA", "MMA"],
+  ["Table Tennis", "/icons/sports/table-tennis.svg", "Table Tennis", "TABLE_TENNIS"],
+  ["American Football", "/icons/sports/american-football.svg", "American Football", "AMERICAN_FOOTBALL"],
+  ["Aussie Rules", "/icons/sports/aussie-rules.svg", "Aussie Rules", "AUSSIE_RULES"],
+  ["Rugby", "/icons/sports/rugby-union.svg", "Rugby", "RUGBY_UNION"],
+  ["Darts", "/icons/sports/darts.svg", "Darts", "DARTS"],
+  ["Cricket", "/icons/sports/cricket.svg", "Cricket", "CRICKET"],
+  ["Basketball", "/icons/sports/basketball.svg", "Basketball", "BASKETBALL"],
+  ["Boxing", "/icons/sports/boxing.svg", "Boxing", "BOXING"],
+  ["Ice Hockey", "/icons/sports/ice-hockey.svg", "Ice Hockey", "ICE_HOCKEY"],
+  ["Formula 1", "/icons/sports/f1.svg", "Formula 1", "F1"],
+  ["Golf", "/icons/sports/golf.svg", "Golf", "GOLF"],
+  ["Volleyball", "/icons/sports/volleyball.svg", "Volleyball", "VOLLEYBALL"],
+  ["Badminton", "/icons/sports/badminton.svg", "Badminton", "BADMINTON"],
+  ["Handball", "/icons/sports/handball.svg", "Handball", "HANDBALL"],
+  ["Futsal", "/icons/sports/futsal.svg", "Futsal", "FUTSAL"],
+  ["Novelties", "/icons/sports/novelties.svg", "Novelties", "NOVELTIES"],
+  ["Valorant", "/icons/sports/valorant.svg", "Valorant", "VALORANT"],
+  ["FIFA", "/icons/sports/fifa.svg", "FIFA", "EFOOTBALL"],
+  ["NBA2K", "/icons/sports/nba2k.svg", "NBA2K", "EBASKETBALL"],
+  ["eCricket", "/icons/sports/ecricket.svg", "eCricket", "ECRICKET"],
+  ["Arena of Valor", "/icons/sports/aov.svg", "Arena of Valor", "AOV"],
+  ["CS2 Duels", "/icons/sports/cs2-duels.svg", "CS2 Duels", "CS2_DUELS"],
+  ["Dota 2 Duels", "/icons/sports/dota2-duels.svg", "Dota 2 Duels", "DOTA2_DUELS"],
+  ["King of Glory", "/icons/sports/kog.svg", "King of Glory", "KOG"],
+  ["Mobile Legends", "/icons/sports/ml.svg", "Mobile Legends", "ML"],
+  ["Rainbow Six", "/icons/sports/rainbowsix.svg", "Rainbow Six", "R6"],
+  ["Rocket League", "/icons/sports/rocketleague.svg", "Rocket League", "ROCKETLEAGUE"],
+  ["Warcraft 3", "/icons/sports/w3.svg", "Warcraft 3", "W3"]
+ ],
+ "groups": [
+  { "kind": "group", "sportHref": "/sports/soccer", "sportIcon": "/icons/sports/soccer.svg", "sportAlt": "Soccer", "title": "Soccer", "catHref": "/sports/soccer/1-england", "catFlag": "/icons/world-flags/ENG_round.svg", "catName": "England", "compHref": "/sports/soccer/1-england/17-premier-league", "compIcon": "/images/sports/logos/c2ebbb7c-2b01-40fd-8500-df0ca51b6ce1.png", "compName": "Premier League" },
+  { "kind": "group", "sportHref": "/sports/baseball", "sportIcon": "/icons/sports/baseball.svg", "sportAlt": "Baseball", "title": "Baseball", "catHref": "/sports/baseball/16-usa", "catFlag": "/icons/world-flags/USA_round.svg", "catName": "USA", "compHref": "/sports/baseball/16-usa/109-mlb", "compIcon": "/images/sports/logos/bd56512b-142e-4b01-8e66-6cd07a6e42b1.png", "compName": "MLB" },
+  { "kind": "group", "sportHref": "/sports/tennis", "sportIcon": "/icons/sports/tennis.svg", "sportAlt": "Tennis", "title": "Tennis", "catHref": "/sports/tennis/3-atp", "catFlag": "/icons/globe.svg", "catName": "ATP", "compHref": "/sports/tennis/3-atp/2591-us-open-men-singles", "compIcon": "/images/sports/logos/f9347a71-dbdf-4501-9e49-b0ce06575c1a.png", "compName": "US Open Men Singles" },
+  { "kind": "outright", "sportHref": "/sports/american-football/43-usa/31-nfl/139396-nfl-2627", "sportIcon": "/icons/sports/american-football.svg", "sportAlt": "American Football", "title": "Superbowl LXI", "catHref": "/sports/american-football/43-usa", "catFlag": "/icons/world-flags/USA_round.svg", "catName": "USA", "compHref": "/sports/american-football/43-usa/31-nfl", "compIcon": "/images/sports/logos/65738a09-a85e-45d2-8a81-d1a23049c3e6.png", "compName": "NFL" },
+  { "kind": "group", "sportHref": "/sports/lol", "sportIcon": "/icons/sports/lol.svg", "sportAlt": "League of Legends", "title": "League of Legends", "catHref": "/sports/lol/league-of-legends-international", "catFlag": "/icons/globe.svg", "catName": "International", "compHref": "/sports/lol/league-of-legends-international/14524-lpl-2026-grand-finals", "compIcon": "/images/sports/logos/11c1d576-f28e-4561-afa3-1f52a5860a0f.png", "compName": "LPL 2026 Grand Finals" },
+  { "kind": "group", "sportHref": "/sports/dota2", "sportIcon": "/icons/sports/dota2.svg", "sportAlt": "Dota 2", "title": "Dota 2", "catHref": "/sports/dota2/dota-2-international", "catFlag": "/icons/globe.svg", "catName": "International", "compHref": "/sports/dota2/dota-2-international/14611-epl-masters-ii", "compIcon": "/images/sports/logos/8be04ed6-4285-434d-b715-68220c103d5a.png", "compName": "EPL Masters II" },
+  { "kind": "group", "sportHref": "/sports/cs2", "sportIcon": "/icons/sports/cs2.svg", "sportAlt": "Counter-Strike 2", "title": "Counter-Strike 2", "catHref": "/sports/cs2/counter-strike-2-international", "catFlag": "/icons/globe.svg", "catName": "International", "compHref": "/sports/cs2/counter-strike-2-international/14485-blast-open-fall-2026", "compIcon": "/images/sports/logos/409b3c91-de21-4031-9049-75a39d902c9e.png", "compName": "BLAST Open Fall 2026" }
+ ],
+ "tournaments": [
+  { "title": "$10,000 - US Open Wager Race", "href": "/promotions/us-open-2026", "countdown": "8d 13h 37m", "image": "/images/sports/tournament-us-open.webp", "ranks": [
+   { "rank": 1, "user": null, "amount": "$1,568,084.83" },
+   { "rank": 2, "user": null, "amount": "$672,161.29" },
+   { "rank": 3, "user": null, "amount": "$502,455.65" }
+  ] },
+  { "title": "$100K WEEKLY Race", "href": "/promotions/100000-weekly-race", "countdown": "16h 37m 7s", "image": "/images/tournament-default-tile.png", "ranks": [
+   { "rank": 1, "user": null, "amount": "$13,486,927.14" },
+   { "rank": 2, "user": { "name": "heyri", "vip": "opal" }, "amount": "$13,373,123.44" },
+   { "rank": 3, "user": null, "amount": "$12,788,617.50" }
+  ] }
+ ],
+ "rail": {
+  "top": [
+   { "id": "sports-home", "label": "Home", "icon": "/icons/home.svg", "href": "/sports" },
+   { "id": "upcoming", "label": "Upcoming", "icon": "/icons/calender-days.svg", "href": "/sports?section=upcoming", "counter": "1335", "counterClass": "Counter_violet" },
+   { "id": "bet-live", "label": "Bet Live", "icon": "/icons/bet-live.svg", "href": "/sports?section=bet-live", "counter": "316", "counterClass": "Counter_green" }
+  ],
+  "featured": [
+   { "id": "us-open-race", "label": "$10k US Open Race!", "icon": "/icons/sports/race-wager.svg", "href": "/promotions/us-open-2026" },
+   { "id": "premier-league", "label": "Premier League", "icon": "/icons/sports/soccer.svg", "href": "/sports/soccer/1-england/17-premier-league" },
+   { "id": "laliga", "label": "LaLiga", "icon": "/icons/sports/soccer.svg", "href": "/sports/soccer/32-spain/8-laliga" },
+   { "id": "ufc-paris", "label": "UFC Paris", "icon": "/icons/sports/mma.svg", "href": "/sports/mma/1089-ufc/194848-ufc-fight-night-hooker-vs-parnasse" },
+   { "id": "blast-open", "label": "BLAST Open Porto", "icon": "/icons/sports/cs2.svg", "href": "/sports/cs2/counter-strike-2-international/14485-blast-open-fall-2026" },
+   { "id": "nfl", "label": "NFL", "icon": "/icons/sports/american-football.svg", "href": "/sports/american-football/43-usa/31-nfl" }
+  ]
+ }
+}

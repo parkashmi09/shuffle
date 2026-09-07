@@ -1,0 +1,226 @@
+{
+ "/sports/soccer/1-england/17-premier-league": {
+  "sport": "soccer",
+  "title": "Premier League",
+  "icon": "/images/sports/logos/c2ebbb7c-2b01-40fd-8500-df0ca51b6ce1.png",
+  "category": {
+   "label": "England",
+   "href": "/sports/soccer/1-england",
+   "flag": "/icons/world-flags/ENG_round.svg"
+  },
+  "tabs": [
+   [
+    "featured",
+    "Featured"
+   ],
+   [
+    "upcoming",
+    "Upcoming"
+   ],
+   [
+    "bet-live",
+    "Bet Live"
+   ],
+   [
+    "outrights",
+    "Outrights",
+    "1"
+   ],
+   [
+    "all",
+    "All Soccer"
+   ]
+  ],
+  "promo": {
+   "title": "EPL: First Score Protection!",
+   "href": "/sports/promotions/premier-league-first-score-protection",
+   "image": "/images/banners/SCORE_FIRST_PROTEC2.png",
+   "alt": "SCORE FIRST PROTEC2",
+   "heading": "Team scores first but loses? Money Back!",
+   "text": "Back a team to win, and if they score first but end up losing, get your stake back up to $200."
+  },
+  "dateGroups": [
+   {
+    "dateLabel": "Saturday, September 12",
+    "market": "1x2",
+    "cols": 3,
+    "fx": [
+     {
+      "date": "Sep 12, 7:30 PM - in 5 days",
+      "tools": [
+       "2up",
+       "custom bet",
+       "stats"
+      ],
+      "cnt": "+114",
+      "href": "/sports/soccer/1-england/17-premier-league/72221256-chelsea-fc-vs-hull-city",
+      "home": [
+       "Chelsea FC",
+       "/images/sports/logos/f36bb13e-114b-4c2e-809d-286cb06fc48f.png"
+      ],
+      "away": [
+       "Hull City",
+       "/images/sports/logos/ea75a918-19b4-4c6b-b76a-37e5eb73f64a.png"
+      ],
+      "sels": [
+       [
+        "Chelsea FC",
+        "1.21"
+       ],
+       [
+        "Draw",
+        "6.60"
+       ],
+       [
+        "Hull City",
+        "11.00"
+       ]
+      ]
+     },
+     {
+      "date": "Sep 12, 7:30 PM - in 5 days",
+      "tools": [
+       "2up",
+       "custom bet",
+       "stats"
+      ],
+      "cnt": "+115",
+      "href": "/sports/soccer/1-england/17-premier-league/72221252-aston-villa-vs-nottingham-forest",
+      "home": [
+       "Aston Villa",
+       "/images/sports/logos/f6230547-9105-4070-ace3-9b69687892e7.png"
+      ],
+      "away": [
+       "Nottingham Forest",
+       "/images/sports/logos/f0731522-9de8-4225-b83f-b991b302f1de.png"
+      ],
+      "sels": [
+       [
+        "Aston Villa",
+        "2.07"
+       ],
+       [
+        "Draw",
+        "3.40"
+       ],
+       [
+        "Nottingham Forest",
+        "3.40"
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "/sports/american-football/43-usa/31-nfl": {
+  "sport": "american-football",
+  "title": "NFL",
+  "icon": "/images/sports/logos/65738a09-a85e-45d2-8a81-d1a23049c3e6.png",
+  "category": {
+   "label": "USA",
+   "href": "/sports/american-football/43-usa",
+   "flag": "/icons/world-flags/USA_round.svg"
+  },
+  "tabs": [
+   [
+    "featured",
+    "Featured"
+   ],
+   [
+    "upcoming",
+    "Upcoming"
+   ],
+   [
+    "bet-live",
+    "Bet Live"
+   ],
+   [
+    "outrights",
+    "Outrights",
+    "1"
+   ],
+   [
+    "all",
+    "All American Football"
+   ]
+  ],
+  "promo": {
+   "title": "$50,000 - NFL Wager Race",
+   "href": "/promotions/50k-nfl-kickoff",
+   "heading": "Wager on any NFL game and join the race!",
+   "text": "The more you bet on NFL markets, the higher your ranking. Make it onto the leaderboard and get your share of the prize pool!",
+   "image": "/images/banners/50K-NFL-KICKOFF.png",
+   "alt": "50K NFL KICKOFF"
+  },
+  "dateGroups": [
+   {
+    "dateLabel": "Thursday, September 10",
+    "market": "Winner (incl. overtime)",
+    "cols": 2,
+    "fx": [
+     {
+      "date": "Sep 10, 5:50 AM - in 2 days",
+      "tools": [
+       "stats"
+      ],
+      "cnt": "+170",
+      "href": "/sports/american-football/43-usa/31-nfl/71515752-seattle-seahawks-vs-new-england-patriots",
+      "home": [
+       "Seattle Seahawks",
+       "/images/sports/logos/8d5cba9e-9768-46b6-842f-03ed214ab3f8.png"
+      ],
+      "away": [
+       "New England Patriots",
+       "/images/sports/logos/e1a872a9-ecb1-4f65-929d-93e86596a49a.png"
+      ],
+      "sels": [
+       [
+        "Seattle Seahawks",
+        "1.51"
+       ],
+       [
+        "New England Patriots",
+        "2.44"
+       ]
+      ]
+     }
+    ]
+   },
+   {
+    "dateLabel": "Friday, September 11",
+    "market": "Winner (incl. overtime)",
+    "cols": 2,
+    "fx": [
+     {
+      "date": "Sep 11, 6:05 AM - in 3 days",
+      "tools": [
+       "custom bet",
+       "stats"
+      ],
+      "cnt": "+163",
+      "href": "/sports/american-football/43-usa/31-nfl/71387370-los-angeles-rams-vs-san-francisco-49ers",
+      "home": [
+       "Los Angeles Rams",
+       "/images/sports/logos/cac20115-cad7-437d-b6a9-466f1227890b.png"
+      ],
+      "away": [
+       "San Francisco 49ers",
+       "/images/sports/logos/dca3f8d5-f703-41a2-b319-162f8ac4b4c0.png"
+      ],
+      "sels": [
+       [
+        "Los Angeles Rams",
+        "1.48"
+       ],
+       [
+        "San Francisco 49ers",
+        "2.50"
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

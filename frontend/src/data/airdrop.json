@@ -1,0 +1,111 @@
+{
+ "faq": [
+  {
+   "q": "What is Airdrop 3?",
+   "a": "<div class=\"Accordion_content Accordion_openContent\"><p class=\"TokenAirdropFaq_paragraph\">Airdrop 3 will distribute 90,000,000 SHFL over 52 weeks starting on 07 March 2026. It is designed to reward long-term eligible players and ongoing weekly engagement, with tokens unlocking progressively through gameplay activity under a structured wager-to-vest model.</p></div>"
+  },
+  {
+   "q": "Am I eligible for Airdrop 3?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Stage 1 is limited to the top 50,000 eligible players based on a snapshot ranking from 1 December 2024 to 1 March 2026. Stage 2 rewards the top 10,000 eligible players each week through the Weekly SHFL Airdrop. For more information, you can check out this article <a class=\"TextLink_root\" href=\"https://shfl.shuffle.com/shfl-airdrop-3\" target=\"_blank\">here</a>. Eligibility criteria applies.</p></div>"
+  },
+  {
+   "q": "Are any accounts excluded?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Permanently excluded, closed, or restricted accounts are not eligible for the Weekly SHFL Airdrop. </p></div>"
+  },
+  {
+   "q": "What is the Weekly SHFL Airdrop?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Following the initial airdrop week, Airdrop 3 continues as the Weekly SHFL Airdrop, a recurring weekly event from Saturday 12:00 AM UTC to Friday 11:59 PM UTC, where eligible players can earn points and compete for a place among the top 10,000. Learn more in this article <a class=\"TextLink_root\" href=\"https://shfl.shuffle.com/shfl-airdrop-3\" target=\"_blank\">here</a>. Eligibility criteria applies.</p></div>"
+  },
+  {
+   "q": "How are my tokens unlocked?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">All SHFL tokens start with 10% unlocked immediately, and the rest unlock as you wager. Normally, 1 SHFL unlocks for every $20 USD wagered, but successfully completing Level 2 verification (or Level 3 verification, at our request) halves this to $10 USD per SHFL.</p></div>"
+  },
+  {
+   "q": "Does verification increase my Airdrop rewards?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">No, there are no bonuses or extra SHFL for successful Level 2 or Level 3 verification completion. However, successfully completing Level 2 verification (or Level 3 verification, at our request) lets you unlock your Weekly Airdrop rewards at a rate of $10 USD wagered per SHFL instead of $20 USD.</p></div>"
+  },
+  {
+   "q": "Do my tokens expire?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Airdrop 3 prizes accumulate in your dashboard during the campaign. Be sure to claim your SHFL tokens while Weekly Airdrops are active.</p></div>"
+  },
+  {
+   "q": "How do I claim my Airdrop?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Unlocked tokens accumulate in your account until claimed. If you are eligible, you can claim them directly from your <a class=\"TextLink_root\" href=\"/token\">token dashboard</a> or by scrolling to the top of this page. For detailed steps, you can check out this article <a class=\"TextLink_root\" href=\"https://shfl.shuffle.com/shfl-airdrop-3\" target=\"_blank\">here</a>. Eligibility criteria applies.</p></div>"
+  },
+  {
+   "q": "How are the weekly points calculated?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Weekly points are calculated using a weighted formula that considers total wagered amount, house edge, game type, currency used, and VIP rank. Originals and SHFL wagering receive boosts! To understand how it is calculated, you can check out this article <a class=\"TextLink_root\" href=\"https://shfl.shuffle.com/shfl-airdrop-3\" target=\"_blank\">here</a>. Eligibility criteria applies.</p></div>"
+  },
+  {
+   "q": "Do weekly points carry over?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">No. Each Weekly SHFL Airdrop is independent, and points reset at the start of every new weekly period on Saturday at 12:00 AM UTC.</p></div>"
+  },
+  {
+   "q": "What is the emissions schedule?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Emissions begin at a higher level and decrease over the first 20 weeks before stabilising at up to 1,000,000 SHFL per week. This structure is designed to support gradual and sustainable distribution.</p></div>"
+  },
+  {
+   "q": "Are all wagers eligible for Weekly SHFL Airdrop points?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Points are awarded for Casino wagers, Sports wagers, and Lottery Standard or PowerPlay purchases only.</p></div>"
+  },
+  {
+   "q": "How are Sports wagers counted for Weekly SHFL Airdrop points?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">Sports wagers are counted using the same weighted formula as Casino games, taking into account wager amount, bet type, currency, and VIP rank. Multi-leg bets generally earn more points than single bets for the same wager. For full details and examples, you can check out this article <a class=\"TextLink_root\" href=\"https://shfl.shuffle.com/shfl-airdrop-3\" target=\"_blank\">here</a>. Eligibility criteria applies.</p></div>"
+  },
+  {
+   "q": "Where can I find the Terms and Conditions?",
+   "a": "<div class=\"Accordion_content\"><p class=\"TokenAirdropFaq_paragraph\">You can view the Terms <a class=\"TextLink_root\" href=\"/info/airdrop\">here</a>.</p></div>"
+  }
+ ],
+ "features": [
+  {
+   "icon": "/icons/race.svg",
+   "title": "Earn more bonuses with SHFL",
+   "desc": "Bet with SHFL for bigger and better bonuses when you level up!"
+  },
+  {
+   "icon": "/icons/weekly-bonus.svg",
+   "title": "Play the SHFL Lottery for free",
+   "desc": "Stake your SHFL in the SHFL lottery and get a chance to win millions each week."
+  },
+  {
+   "icon": "/icons/token-drop.svg",
+   "title": "Increase your weekly Airdrop",
+   "desc": "Wager with SHFL and your weekly airdrop points increase by 25%. Wager with SHFL and win!"
+  }
+ ],
+ "steps": [
+  {
+   "title": "Step 1. Wager on Sports & Casino to enter the Airdrop",
+   "desc": "Wager across the site to earn points and place yourself on the leaderboard to win awesome SHFL rewards. Wagering in SHFL increases your points by 25%!"
+  },
+  {
+   "title": "Step 2. Climb the leaderboard, earn more rewards",
+   "desc": "The more you wager, the more you can win each week. Wager on a huge selection of casino games and sports markets to earn points, rewards and climb the leaderboard."
+  },
+  {
+   "title": "Step 3. Win weekly SHFL rewards and more!",
+   "desc": "We’ll announce the reward winners weekly. Don’t forget you can play with your SHFL Airdrop or enter the SHFL Lottery for FREE for a chance to win millions each week!"
+  }
+ ],
+ "hero": {
+  "desc": "Increase the amount of SHFL tokens you receive and join the weekly airdrops to win awesome SHFL rewards"
+ },
+ "stats": [
+  {
+   "h": "90M",
+   "p": "Total SHFL tokens to be won",
+   "icon": "/icons/token-white.svg"
+  },
+  {
+   "h": "6000+",
+   "p": "Casino games & sports to bet on",
+   "icon": "/icons/dice.svg"
+  },
+  {
+   "h": "52",
+   "p": "Weeks of Airdrop rewards to win!",
+   "icon": "/icons/trophy.svg"
+  }
+ ]
+}
