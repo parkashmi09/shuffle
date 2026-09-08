@@ -13,6 +13,7 @@ import PromotionsPage from "./pages/PromotionsPage";
 import PromotionArticlePage from "./pages/PromotionArticlePage";
 import SportPage from "./pages/SportPage";
 import CompetitionPage from "./pages/CompetitionPage";
+import FixturePage from "./pages/FixturePage";
 import sportsPages from "./data/sports-pages.json";
 import { usePath } from "./lib/router";
 
@@ -39,6 +40,8 @@ function renderPage(path) {
   if (sport && sportsPages.sports[sport]) return <SportPage key={sport} slug={sport} />;
   const comp = path.match(/^\/sports\/([^/]+)\/([^/]+)\/([^/]+)$/);
   if (comp) return <CompetitionPage key={path} category={comp[2]} competition={comp[3]} sport={comp[1]} />;
+  const fx = path.match(/^\/sports\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/);
+  if (fx) return <FixturePage key={path} category={fx[2]} competition={fx[3]} event={fx[4]} sport={fx[1]} />;
   const cat = path.match(/^\/casino\/categories\/([^/]+)$/)?.[1];
   if (cat === "latest-releases" || categories[cat]) return <CategoryPage key={cat} slug={cat} />;
   return <CasinoHome />;

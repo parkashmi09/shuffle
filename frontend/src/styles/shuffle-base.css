@@ -5,6 +5,13 @@
 @font-face { font-family: Aeonik; src: url(/fonts/Aeonik-Regular.02429098.otf) format("opentype"); font-weight: 400; }
 @font-face { font-family: Aeonik; src: url(/fonts/Aeonik-Medium.822e5d51.otf) format("opentype"); font-weight: 500; }
 @font-face { font-family: Aeonik; src: url(/fonts/Aeonik-Bold.ff927aa4.otf) format("opentype"); font-weight: 700; }
+/* The accent face (--font-accent), used for the VS block on a fixture and other
+   display text. Declared in the reference's order: Medium follows Regular and so
+   wins at weight 400. */
+@font-face { font-family: Oswald; src: url(/fonts/Oswald-Light.82b605da.ttf) format("truetype"); font-weight: 300; }
+@font-face { font-family: Oswald; src: url(/fonts/Oswald-Regular.79043c89.ttf) format("truetype"); font-weight: 400; }
+@font-face { font-family: Oswald; src: url(/fonts/Oswald-Medium.5d34e3fc.ttf) format("truetype"); font-weight: 400; }
+@font-face { font-family: Oswald; src: url(/fonts/Oswald-Bold.9e55e27e.ttf) format("truetype"); font-weight: 700; }
 
 html {
   --font-heading: "Countach", "Aeonik", sans-serif;

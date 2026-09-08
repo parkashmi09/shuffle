@@ -3,109 +3,6146 @@
  "headIcon": "/icons/sports-leagues.svg",
  "loadMore": true,
  "cats": [
-  ["All Sports", "/icons/sports-leagues.svg", "all sports", "596", "ALLSPORTS"],
-  ["Soccer", "/icons/sports/soccer.svg", "Soccer", "150", "SOCCER"],
-  ["Dota 2", "/icons/sports/dota2.svg", "Dota 2", "5", "DOTA2"],
-  ["League of Legends", "/icons/sports/lol.svg", "League of Legends", "7", "LOL"],
-  ["Table Tennis", "/icons/sports/table-tennis.svg", "Table Tennis", "32", "TABLE_TENNIS"],
-  ["Tennis", "/icons/sports/tennis.svg", "Tennis", "146", "TENNIS"],
-  ["Counter-Strike 2", "/icons/sports/cs2.svg", "Counter-Strike 2", "14", "CS2"],
-  ["American Football", "/icons/sports/american-football.svg", "American Football", "3", "AMERICAN_FOOTBALL"],
-  ["Baseball", "/icons/sports/baseball.svg", "Baseball", "13", "BASEBALL"],
-  ["Basketball", "/icons/sports/basketball.svg", "Basketball", "17", "BASKETBALL"],
-  ["Darts", "/icons/sports/darts.svg", "Darts", "15", "DARTS"],
-  ["Cricket", "/icons/sports/cricket.svg", "Cricket", "23", "CRICKET"],
-  ["Ice Hockey", "/icons/sports/ice-hockey.svg", "Ice Hockey", "19", "ICE_HOCKEY"],
-  ["Volleyball", "/icons/sports/volleyball.svg", "Volleyball", "5", "VOLLEYBALL"],
-  ["Handball", "/icons/sports/handball.svg", "Handball", "3", "HANDBALL"],
-  ["FIFA", "/icons/sports/fifa.svg", "FIFA", "92", "EFOOTBALL"],
-  ["NBA2K", "/icons/sports/nba2k.svg", "NBA2K", "34", "EBASKETBALL"],
-  ["eCricket", "/icons/sports/ecricket.svg", "eCricket", "2", "ECRICKET"],
-  ["CS2 Duels", "/icons/sports/cs2-duels.svg", "CS2 Duels", "3", "CS2_DUELS"],
-  ["Dota 2 Duels", "/icons/sports/dota2-duels.svg", "Dota 2 Duels", "3", "DOTA2_DUELS"],
-  ["King of Glory", "/icons/sports/kog.svg", "King of Glory", "2", "KOG"],
-  ["Rainbow Six", "/icons/sports/rainbowsix.svg", "Rainbow Six", "8", "R6"]
+  [
+   "All Sports",
+   "/icons/sports-leagues.svg",
+   "all sports",
+   "596",
+   "ALLSPORTS"
+  ],
+  [
+   "Soccer",
+   "/icons/sports/soccer.svg",
+   "Soccer",
+   "150",
+   "SOCCER"
+  ],
+  [
+   "Dota 2",
+   "/icons/sports/dota2.svg",
+   "Dota 2",
+   "5",
+   "DOTA2"
+  ],
+  [
+   "League of Legends",
+   "/icons/sports/lol.svg",
+   "League of Legends",
+   "7",
+   "LOL"
+  ],
+  [
+   "Table Tennis",
+   "/icons/sports/table-tennis.svg",
+   "Table Tennis",
+   "32",
+   "TABLE_TENNIS"
+  ],
+  [
+   "Tennis",
+   "/icons/sports/tennis.svg",
+   "Tennis",
+   "146",
+   "TENNIS"
+  ],
+  [
+   "Counter-Strike 2",
+   "/icons/sports/cs2.svg",
+   "Counter-Strike 2",
+   "14",
+   "CS2"
+  ],
+  [
+   "American Football",
+   "/icons/sports/american-football.svg",
+   "American Football",
+   "3",
+   "AMERICAN_FOOTBALL"
+  ],
+  [
+   "Baseball",
+   "/icons/sports/baseball.svg",
+   "Baseball",
+   "13",
+   "BASEBALL"
+  ],
+  [
+   "Basketball",
+   "/icons/sports/basketball.svg",
+   "Basketball",
+   "17",
+   "BASKETBALL"
+  ],
+  [
+   "Darts",
+   "/icons/sports/darts.svg",
+   "Darts",
+   "15",
+   "DARTS"
+  ],
+  [
+   "Cricket",
+   "/icons/sports/cricket.svg",
+   "Cricket",
+   "23",
+   "CRICKET"
+  ],
+  [
+   "Ice Hockey",
+   "/icons/sports/ice-hockey.svg",
+   "Ice Hockey",
+   "19",
+   "ICE_HOCKEY"
+  ],
+  [
+   "Volleyball",
+   "/icons/sports/volleyball.svg",
+   "Volleyball",
+   "5",
+   "VOLLEYBALL"
+  ],
+  [
+   "Handball",
+   "/icons/sports/handball.svg",
+   "Handball",
+   "3",
+   "HANDBALL"
+  ],
+  [
+   "FIFA",
+   "/icons/sports/fifa.svg",
+   "FIFA",
+   "92",
+   "EFOOTBALL"
+  ],
+  [
+   "NBA2K",
+   "/icons/sports/nba2k.svg",
+   "NBA2K",
+   "34",
+   "EBASKETBALL"
+  ],
+  [
+   "eCricket",
+   "/icons/sports/ecricket.svg",
+   "eCricket",
+   "2",
+   "ECRICKET"
+  ],
+  [
+   "CS2 Duels",
+   "/icons/sports/cs2-duels.svg",
+   "CS2 Duels",
+   "3",
+   "CS2_DUELS"
+  ],
+  [
+   "Dota 2 Duels",
+   "/icons/sports/dota2-duels.svg",
+   "Dota 2 Duels",
+   "3",
+   "DOTA2_DUELS"
+  ],
+  [
+   "King of Glory",
+   "/icons/sports/kog.svg",
+   "King of Glory",
+   "2",
+   "KOG"
+  ],
+  [
+   "Rainbow Six",
+   "/icons/sports/rainbowsix.svg",
+   "Rainbow Six",
+   "8",
+   "R6"
+  ]
  ],
  "fx": [
-  { "m": "Match Winner - Threeway", "si": ["/sports/efootball", "/icons/sports/fifa.svg", "FIFA"],
-    "live": true, "phase": "2nd half", "clock": null,
-    "lg": ["(Absolute Legends eFootball 2 2026 Week #37)", "/sports/efootball/efootball-bots-international/14720-absolute-legends-efootball-2-2026-week-37"],
-    "tools": ["custom bet", "play"], "cnt": "+38",
-    "href": "/sports/efootball/efootball-bots-international/14720-absolute-legends-efootball-2-2026-week-37/3172924-mexico-vs-england",
-    "home": ["Mexico", "/images/sports/logos/mexico.png"], "away": ["England", "/images/sports/logos/england.png"],
-    "boards": [{ "v": ["0", "0"], "l": true }], "cols": 3,
-    "sels": [["Mexico", "3.80"], ["Draw", "2.20"], ["England", "2.50"]] },
-  { "m": null, "si": ["/sports/efootball", "/icons/sports/fifa.svg", "FIFA"],
-    "live": false, "status": "About to start", "green": true,
-    "lg": ["(Absolute Legends eFootball 1 2026 Week #37)", "/sports/efootball/efootball-bots-international/14719-absolute-legends-efootball-1-2026-week-37"],
-    "tools": ["custom bet", "play"], "cnt": "+37",
-    "href": "/sports/efootball/efootball-bots-international/14719-absolute-legends-efootball-1-2026-week-37/3172923-liverpool-franz-baumann-vs-bayern-amaya-liu",
-    "home": ["Liverpool (Franz Baumann)", "/images/sports/logos/liverpool_franz_baumann.png"], "away": ["Bayern (Amaya Liu)", "/images/sports/logos/bayern_amaya_liu.png"],
-    "boards": [], "cols": 3,
-    "sels": [["Liverpool (Franz Baumann)", "1.30"], ["Draw", "4.40"], ["Bayern (Amaya Liu)", "8.00"]] },
-  { "m": "Match Winner - Twoway", "si": ["/sports/dota2-duels", "/icons/sports/dota2-duels.svg", "Dota 2 Duels"],
-    "live": true, "phase": "1st map", "clock": null,
-    "lg": ["(Berserk Dota 2 League 2026 Week #37)", "/sports/dota2-duels/dota-2-duels-international/14708-berserk-dota-2-league-2026-week-37"],
-    "tools": ["play"], "cnt": "+44",
-    "href": "/sports/dota2-duels/dota-2-duels-international/14708-berserk-dota-2-league-2026-week-37/3170047-d4gger-vs-om3ga",
-    "home": ["D4gger", "/images/sports/logos/d4gger.jpeg"], "away": ["Om3ga", "/images/sports/logos/om3ga.jpeg"],
-    "boards": [{ "v": ["1", "1"], "l": false }, { "v": ["0", "0"], "l": true }], "cols": 2,
-    "sels": [["D4gger", "1.65"], ["Om3ga", "2.10"]] },
-  { "m": "Match Winner - Threeway", "si": ["/sports/efootball", "/icons/sports/fifa.svg", "FIFA"],
-    "live": true, "phase": "2nd half", "clock": "04:48",
-    "lg": ["(Valhalla Cup 2026 Week #37)", "/sports/efootball/efootball-international/14709-valhalla-cup-2026-week-37"],
-    "tools": ["custom bet", "play", "stats"], "cnt": "+47",
-    "href": "/sports/efootball/efootball-international/14709-valhalla-cup-2026-week-37/3170163-real-betis-eder-vs-sevilla-fc-gavi",
-    "home": ["Real Betis (Eder)", "/images/sports/logos/bet_eder.png"], "away": ["Sevilla FC (Gavi)", "/images/sports/logos/sev_gavi.png"],
-    "boards": [{ "v": ["0", "2"], "l": true }], "cols": 3,
-    "sels": [["Real Betis (Eder)", "12.00"], ["Draw", "10.00"], ["Sevilla FC (Gavi)", "1.02"]] },
-  { "m": null, "si": ["/sports/ebasketball", "/icons/sports/nba2k.svg", "NBA2K"],
-    "live": true, "phase": "1st quarter", "clock": "03:46",
-    "lg": ["(FIBA Americas 2026 Week #37)", "/sports/ebasketball/ebasketball-bots-international/14729-fiba-americas-2026-week-37"],
-    "tools": [], "cnt": "+21",
-    "href": "/sports/ebasketball/ebasketball-bots-international/14729-fiba-americas-2026-week-37/3172854-dominican-republic-vs-puerto-rico",
-    "home": ["Dominican Republic", "/images/sports/logos/dominican_republic.png"], "away": ["Puerto Rico", "/icons/globe.svg"],
-    "boards": [{ "v": ["5", "8"], "l": true }], "cols": 3,
-    "sels": [["Dominican Republic", "5.80"], ["Draw", "9.00"], ["Puerto Rico", "1.17"]] },
-  { "m": null, "si": ["/sports/efootball", "/icons/sports/fifa.svg", "FIFA"],
-    "live": false, "status": "About to start", "green": true,
-    "lg": ["(EURO (2x6 min) 2026 Week #37)", "/sports/efootball/efootball-bots-international/14735-euro-2x6-min-2026-week-37"],
-    "tools": ["play"], "cnt": "+109",
-    "href": "/sports/efootball/efootball-bots-international/14735-euro-2x6-min-2026-week-37/3173102-england-vs-spain",
-    "home": ["England", "/images/sports/logos/england.png"], "away": ["Spain", "/images/sports/logos/spain.png"],
-    "boards": [], "cols": 3,
-    "sels": [["England", "Suspended"], ["Draw", "Suspended"], ["Spain", "Suspended"]] },
-  { "m": null, "si": ["/sports/ebasketball", "/icons/sports/nba2k.svg", "NBA2K"],
-    "live": true, "phase": "1st quarter", "clock": "06:00",
-    "lg": ["(NBA Philippine Cup 2026 Week #37)", "/sports/ebasketball/ebasketball-bots-international/14738-nba-philippine-cup-2026-week-37"],
-    "tools": ["play"], "cnt": "+14",
-    "href": "/sports/ebasketball/ebasketball-bots-international/14738-nba-philippine-cup-2026-week-37/3172840-tnt-tropang-giga-vs-rain-or-shine-elasto-painters",
-    "home": ["TNT Tropang Giga", "/icons/globe.svg"], "away": ["Rain or Shine Elasto Painters", "/icons/globe.svg"],
-    "boards": [{ "v": ["0", "0"], "l": true }], "cols": 3,
-    "sels": [["TNT Tropang Giga", "1.85"], ["Draw", "7.50"], ["Rain or Shine Elasto Painters", "2.15"]] },
-  { "m": null, "si": ["/sports/efootball", "/icons/sports/fifa.svg", "FIFA"],
-    "live": true, "phase": "1st half", "clock": "01:03",
-    "lg": ["(Valhalla Cup 4 2026 Week #37)", "/sports/efootball/efootball-international/14710-valhalla-cup-4-2026-week-37"],
-    "tools": ["custom bet", "play", "stats"], "cnt": "+50",
-    "href": "/sports/efootball/efootball-international/14710-valhalla-cup-4-2026-week-37/3170389-rc-celta-homie-vs-getafe-cf-mordor",
-    "home": ["RC Celta (Homie)", "/images/sports/logos/cel_homie.png"], "away": ["Getafe CF (Mordor)", "/images/sports/logos/get_mordor.png"],
-    "boards": [{ "v": ["0", "0"], "l": true }], "cols": 3,
-    "sels": [["RC Celta (Homie)", "2.40"], ["Draw", "4.40"], ["Getafe CF (Mordor)", "2.10"]] },
-  { "m": "Match Winner Draw No Bet", "si": ["/sports/ecricket", "/icons/sports/ecricket.svg", "eCricket"],
-    "live": true, "phase": "1st inning", "clock": null,
-    "lg": ["(Yodha Premier League Super Over 2026 Week #37)", "/sports/ecricket/ecricket-international/14707-yodha-premier-league-super-over-2026-week-37"],
-    "tools": ["play", "stats"], "cnt": "+6",
-    "href": "/sports/ecricket/ecricket-international/14707-yodha-premier-league-super-over-2026-week-37/3169886-royal-challengers-bengaluru-markzman-vs-chennai-super-kings-demonslayer",
-    "home": ["Royal Challengers Bengaluru (MarkzMan)", "/images/sports/logos/rcb_markzman_1760292068674.png"], "away": ["Chennai Super Kings (DemonSlayer)", "/images/sports/logos/csk_demonslayer.png"],
-    "boards": [{ "v": ["8/0", "0/0"], "l": true }], "cols": 2,
-    "sels": [["Royal Challengers Bengaluru (MarkzMan)", "1.28"], ["Chennai Super Kings (DemonSlayer)", "3.30"]] },
-  { "m": "Match Winner - Threeway", "si": ["/sports/efootball", "/icons/sports/fifa.svg", "FIFA"],
-    "live": true, "phase": "1st half", "clock": null,
-    "lg": ["(Absolute Legends eFootball 5 2026 Week #37)", "/sports/efootball/efootball-bots-international/14723-absolute-legends-efootball-5-2026-week-37"],
-    "tools": ["custom bet"], "cnt": "+57",
-    "href": "/sports/efootball/efootball-bots-international/14723-absolute-legends-efootball-5-2026-week-37/3172971-portugal-vs-spain",
-    "home": ["Portugal", "/images/sports/logos/portugal.png"], "away": ["Spain", "/images/sports/logos/spain.png"],
-    "boards": [{ "v": ["0", "0"], "l": true }], "cols": 3,
-    "sels": [["Portugal", "2.40"], ["Draw", "3.30"], ["Spain", "2.40"]] }
- ]
+  {
+   "m": "Match Winner - Threeway",
+   "si": [
+    "/sports/efootball",
+    "/icons/sports/fifa.svg",
+    "FIFA"
+   ],
+   "live": true,
+   "phase": "2nd half",
+   "clock": null,
+   "lg": [
+    "(Absolute Legends eFootball 2 2026 Week #37)",
+    "/sports/efootball/efootball-bots-international/14720-absolute-legends-efootball-2-2026-week-37"
+   ],
+   "tools": [
+    "custom bet",
+    "play"
+   ],
+   "cnt": "+38",
+   "href": "/sports/efootball/efootball-bots-international/14720-absolute-legends-efootball-2-2026-week-37/3172924-mexico-vs-england",
+   "home": [
+    "Mexico",
+    "/images/sports/logos/mexico.png"
+   ],
+   "away": [
+    "England",
+    "/images/sports/logos/england.png"
+   ],
+   "boards": [
+    {
+     "v": [
+      "0",
+      "0"
+     ],
+     "l": true
+    }
+   ],
+   "cols": 3,
+   "sels": [
+    [
+     "Mexico",
+     "3.80"
+    ],
+    [
+     "Draw",
+     "2.20"
+    ],
+    [
+     "England",
+     "2.50"
+    ]
+   ]
+  },
+  {
+   "m": null,
+   "si": [
+    "/sports/efootball",
+    "/icons/sports/fifa.svg",
+    "FIFA"
+   ],
+   "live": false,
+   "status": "About to start",
+   "green": true,
+   "lg": [
+    "(Absolute Legends eFootball 1 2026 Week #37)",
+    "/sports/efootball/efootball-bots-international/14719-absolute-legends-efootball-1-2026-week-37"
+   ],
+   "tools": [
+    "custom bet",
+    "play"
+   ],
+   "cnt": "+37",
+   "href": "/sports/efootball/efootball-bots-international/14719-absolute-legends-efootball-1-2026-week-37/3172923-liverpool-franz-baumann-vs-bayern-amaya-liu",
+   "home": [
+    "Liverpool (Franz Baumann)",
+    "/images/sports/logos/liverpool_franz_baumann.png"
+   ],
+   "away": [
+    "Bayern (Amaya Liu)",
+    "/images/sports/logos/bayern_amaya_liu.png"
+   ],
+   "boards": [],
+   "cols": 3,
+   "sels": [
+    [
+     "Liverpool (Franz Baumann)",
+     "1.30"
+    ],
+    [
+     "Draw",
+     "4.40"
+    ],
+    [
+     "Bayern (Amaya Liu)",
+     "8.00"
+    ]
+   ]
+  },
+  {
+   "m": "Match Winner - Twoway",
+   "si": [
+    "/sports/dota2-duels",
+    "/icons/sports/dota2-duels.svg",
+    "Dota 2 Duels"
+   ],
+   "live": true,
+   "phase": "1st map",
+   "clock": null,
+   "lg": [
+    "(Berserk Dota 2 League 2026 Week #37)",
+    "/sports/dota2-duels/dota-2-duels-international/14708-berserk-dota-2-league-2026-week-37"
+   ],
+   "tools": [
+    "play"
+   ],
+   "cnt": "+44",
+   "href": "/sports/dota2-duels/dota-2-duels-international/14708-berserk-dota-2-league-2026-week-37/3170047-d4gger-vs-om3ga",
+   "home": [
+    "D4gger",
+    "/images/sports/logos/d4gger.jpeg"
+   ],
+   "away": [
+    "Om3ga",
+    "/images/sports/logos/om3ga.jpeg"
+   ],
+   "boards": [
+    {
+     "v": [
+      "1",
+      "1"
+     ],
+     "l": false
+    },
+    {
+     "v": [
+      "0",
+      "0"
+     ],
+     "l": true
+    }
+   ],
+   "cols": 2,
+   "sels": [
+    [
+     "D4gger",
+     "1.65"
+    ],
+    [
+     "Om3ga",
+     "2.10"
+    ]
+   ]
+  },
+  {
+   "m": "Match Winner - Threeway",
+   "si": [
+    "/sports/efootball",
+    "/icons/sports/fifa.svg",
+    "FIFA"
+   ],
+   "live": true,
+   "phase": "2nd half",
+   "clock": "04:48",
+   "lg": [
+    "(Valhalla Cup 2026 Week #37)",
+    "/sports/efootball/efootball-international/14709-valhalla-cup-2026-week-37"
+   ],
+   "tools": [
+    "custom bet",
+    "play",
+    "stats"
+   ],
+   "cnt": "+47",
+   "href": "/sports/efootball/efootball-international/14709-valhalla-cup-2026-week-37/3170163-real-betis-eder-vs-sevilla-fc-gavi",
+   "home": [
+    "Real Betis (Eder)",
+    "/images/sports/logos/bet_eder.png"
+   ],
+   "away": [
+    "Sevilla FC (Gavi)",
+    "/images/sports/logos/sev_gavi.png"
+   ],
+   "boards": [
+    {
+     "v": [
+      "0",
+      "2"
+     ],
+     "l": true
+    }
+   ],
+   "cols": 3,
+   "sels": [
+    [
+     "Real Betis (Eder)",
+     "12.00"
+    ],
+    [
+     "Draw",
+     "10.00"
+    ],
+    [
+     "Sevilla FC (Gavi)",
+     "1.02"
+    ]
+   ]
+  },
+  {
+   "m": null,
+   "si": [
+    "/sports/ebasketball",
+    "/icons/sports/nba2k.svg",
+    "NBA2K"
+   ],
+   "live": true,
+   "phase": "1st quarter",
+   "clock": "03:46",
+   "lg": [
+    "(FIBA Americas 2026 Week #37)",
+    "/sports/ebasketball/ebasketball-bots-international/14729-fiba-americas-2026-week-37"
+   ],
+   "tools": [],
+   "cnt": "+21",
+   "href": "/sports/ebasketball/ebasketball-bots-international/14729-fiba-americas-2026-week-37/3172854-dominican-republic-vs-puerto-rico",
+   "home": [
+    "Dominican Republic",
+    "/images/sports/logos/dominican_republic.png"
+   ],
+   "away": [
+    "Puerto Rico",
+    "/icons/globe.svg"
+   ],
+   "boards": [
+    {
+     "v": [
+      "5",
+      "8"
+     ],
+     "l": true
+    }
+   ],
+   "cols": 3,
+   "sels": [
+    [
+     "Dominican Republic",
+     "5.80"
+    ],
+    [
+     "Draw",
+     "9.00"
+    ],
+    [
+     "Puerto Rico",
+     "1.17"
+    ]
+   ]
+  },
+  {
+   "m": null,
+   "si": [
+    "/sports/efootball",
+    "/icons/sports/fifa.svg",
+    "FIFA"
+   ],
+   "live": false,
+   "status": "About to start",
+   "green": true,
+   "lg": [
+    "(EURO (2x6 min) 2026 Week #37)",
+    "/sports/efootball/efootball-bots-international/14735-euro-2x6-min-2026-week-37"
+   ],
+   "tools": [
+    "play"
+   ],
+   "cnt": "+109",
+   "href": "/sports/efootball/efootball-bots-international/14735-euro-2x6-min-2026-week-37/3173102-england-vs-spain",
+   "home": [
+    "England",
+    "/images/sports/logos/england.png"
+   ],
+   "away": [
+    "Spain",
+    "/images/sports/logos/spain.png"
+   ],
+   "boards": [],
+   "cols": 3,
+   "sels": [
+    [
+     "England",
+     "Suspended"
+    ],
+    [
+     "Draw",
+     "Suspended"
+    ],
+    [
+     "Spain",
+     "Suspended"
+    ]
+   ]
+  },
+  {
+   "m": null,
+   "si": [
+    "/sports/ebasketball",
+    "/icons/sports/nba2k.svg",
+    "NBA2K"
+   ],
+   "live": true,
+   "phase": "1st quarter",
+   "clock": "06:00",
+   "lg": [
+    "(NBA Philippine Cup 2026 Week #37)",
+    "/sports/ebasketball/ebasketball-bots-international/14738-nba-philippine-cup-2026-week-37"
+   ],
+   "tools": [
+    "play"
+   ],
+   "cnt": "+14",
+   "href": "/sports/ebasketball/ebasketball-bots-international/14738-nba-philippine-cup-2026-week-37/3172840-tnt-tropang-giga-vs-rain-or-shine-elasto-painters",
+   "home": [
+    "TNT Tropang Giga",
+    "/icons/globe.svg"
+   ],
+   "away": [
+    "Rain or Shine Elasto Painters",
+    "/icons/globe.svg"
+   ],
+   "boards": [
+    {
+     "v": [
+      "0",
+      "0"
+     ],
+     "l": true
+    }
+   ],
+   "cols": 3,
+   "sels": [
+    [
+     "TNT Tropang Giga",
+     "1.85"
+    ],
+    [
+     "Draw",
+     "7.50"
+    ],
+    [
+     "Rain or Shine Elasto Painters",
+     "2.15"
+    ]
+   ]
+  },
+  {
+   "m": null,
+   "si": [
+    "/sports/efootball",
+    "/icons/sports/fifa.svg",
+    "FIFA"
+   ],
+   "live": true,
+   "phase": "1st half",
+   "clock": "01:03",
+   "lg": [
+    "(Valhalla Cup 4 2026 Week #37)",
+    "/sports/efootball/efootball-international/14710-valhalla-cup-4-2026-week-37"
+   ],
+   "tools": [
+    "custom bet",
+    "play",
+    "stats"
+   ],
+   "cnt": "+50",
+   "href": "/sports/efootball/efootball-international/14710-valhalla-cup-4-2026-week-37/3170389-rc-celta-homie-vs-getafe-cf-mordor",
+   "home": [
+    "RC Celta (Homie)",
+    "/images/sports/logos/cel_homie.png"
+   ],
+   "away": [
+    "Getafe CF (Mordor)",
+    "/images/sports/logos/get_mordor.png"
+   ],
+   "boards": [
+    {
+     "v": [
+      "0",
+      "0"
+     ],
+     "l": true
+    }
+   ],
+   "cols": 3,
+   "sels": [
+    [
+     "RC Celta (Homie)",
+     "2.40"
+    ],
+    [
+     "Draw",
+     "4.40"
+    ],
+    [
+     "Getafe CF (Mordor)",
+     "2.10"
+    ]
+   ]
+  },
+  {
+   "m": "Match Winner Draw No Bet",
+   "si": [
+    "/sports/ecricket",
+    "/icons/sports/ecricket.svg",
+    "eCricket"
+   ],
+   "live": true,
+   "phase": "1st inning",
+   "clock": null,
+   "lg": [
+    "(Yodha Premier League Super Over 2026 Week #37)",
+    "/sports/ecricket/ecricket-international/14707-yodha-premier-league-super-over-2026-week-37"
+   ],
+   "tools": [
+    "play",
+    "stats"
+   ],
+   "cnt": "+6",
+   "href": "/sports/ecricket/ecricket-international/14707-yodha-premier-league-super-over-2026-week-37/3169886-royal-challengers-bengaluru-markzman-vs-chennai-super-kings-demonslayer",
+   "home": [
+    "Royal Challengers Bengaluru (MarkzMan)",
+    "/images/sports/logos/rcb_markzman_1760292068674.png"
+   ],
+   "away": [
+    "Chennai Super Kings (DemonSlayer)",
+    "/images/sports/logos/csk_demonslayer.png"
+   ],
+   "boards": [
+    {
+     "v": [
+      "8/0",
+      "0/0"
+     ],
+     "l": true
+    }
+   ],
+   "cols": 2,
+   "sels": [
+    [
+     "Royal Challengers Bengaluru (MarkzMan)",
+     "1.28"
+    ],
+    [
+     "Chennai Super Kings (DemonSlayer)",
+     "3.30"
+    ]
+   ]
+  },
+  {
+   "m": "Match Winner - Threeway",
+   "si": [
+    "/sports/efootball",
+    "/icons/sports/fifa.svg",
+    "FIFA"
+   ],
+   "live": true,
+   "phase": "1st half",
+   "clock": null,
+   "lg": [
+    "(Absolute Legends eFootball 5 2026 Week #37)",
+    "/sports/efootball/efootball-bots-international/14723-absolute-legends-efootball-5-2026-week-37"
+   ],
+   "tools": [
+    "custom bet"
+   ],
+   "cnt": "+57",
+   "href": "/sports/efootball/efootball-bots-international/14723-absolute-legends-efootball-5-2026-week-37/3172971-portugal-vs-spain",
+   "home": [
+    "Portugal",
+    "/images/sports/logos/portugal.png"
+   ],
+   "away": [
+    "Spain",
+    "/images/sports/logos/spain.png"
+   ],
+   "boards": [
+    {
+     "v": [
+      "0",
+      "0"
+     ],
+     "l": true
+    }
+   ],
+   "cols": 3,
+   "sels": [
+    [
+     "Portugal",
+     "2.40"
+    ],
+    [
+     "Draw",
+     "3.30"
+    ],
+    [
+     "Spain",
+     "2.40"
+    ]
+   ]
+  }
+ ],
+ "bySport": {
+  "SOCCER": [
+   {
+    "m": "1x2",
+    "href": "/sports/soccer/45-singapore/48515-premier-league-2/73737072-geylang-international-reserve-vs-fc-jurong-reserve",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 3m",
+    "marketName": null,
+    "lg": [
+     "(Premier League 2)",
+     "/sports/soccer/45-singapore/48515-premier-league-2"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": null,
+    "home": [
+     "Geylang International Reserve",
+     "/icons/world-flags/SGP_round.svg"
+    ],
+    "away": [
+     "FC Jurong Reserve",
+     "/icons/world-flags/SGP_round.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Geylang International Reserve",
+      "Suspended"
+     ],
+     [
+      "Draw",
+      "Suspended"
+     ],
+     [
+      "FC Jurong Reserve",
+      "Suspended"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/45-singapore/48515-premier-league-2/73737074-balestier-khalsa-reserve-vs-tanjong-pagar-united-fc-reserve",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 3m",
+    "marketName": null,
+    "lg": [
+     "(Premier League 2)",
+     "/sports/soccer/45-singapore/48515-premier-league-2"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": null,
+    "home": [
+     "Balestier Khalsa Reserve",
+     "/icons/world-flags/SGP_round.svg"
+    ],
+    "away": [
+     "Tanjong Pagar United FC Reserve",
+     "/icons/world-flags/SGP_round.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Balestier Khalsa Reserve",
+      "Suspended"
+     ],
+     [
+      "Draw",
+      "Suspended"
+     ],
+     [
+      "Tanjong Pagar United FC Reserve",
+      "Suspended"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/296-armenia/672-first-league/74041844-andranik-vs-fc-pyunik-yerevan-2",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 3m",
+    "marketName": null,
+    "lg": [
+     "(First League)",
+     "/sports/soccer/296-armenia/672-first-league"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+3",
+    "home": [
+     "FC Pyunik Yerevan 2",
+     "/main-api/bp-storage/public-assets/sports/team-logo/b49b8449-0a55-431b-8a6f-80251326d6fa.png?size=small"
+    ],
+    "away": [
+     "Andranik",
+     "/icons/world-flags/ARM_round.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Andranik",
+      "1.53"
+     ],
+     [
+      "Draw",
+      "4.20"
+     ],
+     [
+      "FC Pyunik Yerevan 2",
+      "4.70"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/385-uzbekistan/23477-pro-liga/72217560-pfc-terdu-vs-fc-jayxun",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 33m",
+    "marketName": null,
+    "lg": [
+     "(Pro Liga)",
+     "/sports/soccer/385-uzbekistan/23477-pro-liga"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+3",
+    "home": [
+     "FC Jayxun",
+     "/icons/world-flags/UZB_round.svg"
+    ],
+    "away": [
+     "PFC Terdu",
+     "/icons/world-flags/UZB_round.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "PFC Terdu",
+      "4.00"
+     ],
+     [
+      "Draw",
+      "3.60"
+     ],
+     [
+      "FC Jayxun",
+      "1.60"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/428-lebanon/2053-lebanon-cup/74026372-al-ahed-fc-vs-al-akhaa-al-ahli",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 33m",
+    "marketName": null,
+    "lg": [
+     "(Lebanon Cup)",
+     "/sports/soccer/428-lebanon/2053-lebanon-cup"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Al Ahed FC",
+     "/main-api/bp-storage/public-assets/sports/team-logo/854ec0d9-a255-4265-a822-eb590b54db97.png?size=small"
+    ],
+    "away": [
+     "Al Akhaa Al Ahli",
+     "/main-api/bp-storage/public-assets/sports/team-logo/e9d0d974-afc4-4b06-8044-1aab14ddc39d.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Al Ahed FC",
+      "1.35"
+     ],
+     [
+      "Draw",
+      "4.60"
+     ],
+     [
+      "Al Akhaa Al Ahli",
+      "5.20"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/254-turkiye-amateur/29912-u19-paf-ligi/73436470-caykur-rizespor-u19-vs-aytemiz-alanyaspor-u19",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:30 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(U19 PAF Ligi)",
+     "/sports/soccer/254-turkiye-amateur/29912-u19-paf-ligi"
+    ],
+    "tools": [
+     "custom bet"
+    ],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Caykur Rizespor U19",
+     "/main-api/bp-storage/public-assets/sports/team-logo/9c5ce01a-a812-4b9c-9d9f-ae16748ca0c7.png?size=small"
+    ],
+    "away": [
+     "Aytemiz Alanyaspor U19",
+     "/main-api/bp-storage/public-assets/sports/team-logo/acb64335-dbfd-49ca-8492-db9f886c70b9.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Caykur Rizespor U19",
+      "2.08"
+     ],
+     [
+      "Draw",
+      "3.30"
+     ],
+     [
+      "Aytemiz Alanyaspor U19",
+      "2.75"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/254-turkiye-amateur/29912-u19-paf-ligi/73436472-goztepe-u19-vs-gaziantep-fk-u19",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:30 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(U19 PAF Ligi)",
+     "/sports/soccer/254-turkiye-amateur/29912-u19-paf-ligi"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Gaziantep FK U19",
+     "/main-api/bp-storage/public-assets/sports/team-logo/1eaa5705-320a-4ef0-8484-a5437e60ca12.png?size=small"
+    ],
+    "away": [
+     "Goztepe U19",
+     "/main-api/bp-storage/public-assets/sports/team-logo/beb8abf8-63c9-4e11-bfa1-1a11e6110808.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Goztepe U19",
+      "1.40"
+     ],
+     [
+      "Draw",
+      "4.20"
+     ],
+     [
+      "Gaziantep FK U19",
+      "5.00"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/951-rwanda/20162-premier-league/73805988-police-fc-rwanda-vs-gicumbi-fc",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:30 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(Premier League)",
+     "/sports/soccer/951-rwanda/20162-premier-league"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Gicumbi FC",
+     "/main-api/bp-storage/public-assets/sports/team-logo/054f9f61-f6bb-4a0f-9426-76d020bab31f.png?size=small"
+    ],
+    "away": [
+     "Police FC Rwanda",
+     "/main-api/bp-storage/public-assets/sports/team-logo/bc8b0a56-25b3-49c8-b06f-45b0fe9089c7.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Police FC Rwanda",
+      "1.82"
+     ],
+     [
+      "Draw",
+      "2.90"
+     ],
+     [
+      "Gicumbi FC",
+      "3.90"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/392-international-youth/804-u20-fifa-world-cup-women/71680648-dpr-korea-u20-vs-portugal-u20",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:30 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(U20 FIFA World Cup, Women)",
+     "/sports/soccer/392-international-youth/804-u20-fifa-world-cup-women"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+88",
+    "home": [
+     "DPR Korea U20",
+     "/main-api/bp-storage/public-assets/sports/team-logo/1862e0d3-57d4-4dfc-b2fb-aa83636e65dc.png?size=small"
+    ],
+    "away": [
+     "Portugal U20",
+     "/icons/world-flags/PRT_round.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "DPR Korea U20",
+      "1.20"
+     ],
+     [
+      "Draw",
+      "6.80"
+     ],
+     [
+      "Portugal U20",
+      "13.00"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/soccer/67-greece/186-super-league-2/74172370-gs-marko-vs-panserraikos-fc",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:30 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(Super League 2)",
+     "/sports/soccer/67-greece/186-super-league-2"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+14",
+    "home": [
+     "Panserraikos FC",
+     "/main-api/bp-storage/public-assets/sports/team-logo/695c9177-a2b3-4fda-b31d-538ed7c26119.png?size=small"
+    ],
+    "away": [
+     "GS Marko",
+     "/icons/world-flags/GRC_round.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "GS Marko",
+      "3.40"
+     ],
+     [
+      "Draw",
+      "3.05"
+     ],
+     [
+      "Panserraikos FC",
+      "2.24"
+     ]
+    ]
+   }
+  ],
+  "DOTA2": [
+   {
+    "m": "Match Winner - Twoway",
+    "href": "/sports/dota2/dota-2-international/14611-epl-masters-ii/3139036-huligani-vs-klim-sani4",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 32m",
+    "marketName": null,
+    "lg": [
+     "(EPL Masters II)",
+     "/sports/dota2/dota-2-international/14611-epl-masters-ii"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+218",
+    "home": [
+     "HULIGANI",
+     "https://cdn.oddin.gg/assets/teams/icons/huligani.png?size=small"
+    ],
+    "away": [
+     "Klim Sani4",
+     "https://cdn.oddin.gg/assets/teams/icons/klim_sani4.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "HULIGANI",
+      "1.92"
+     ],
+     [
+      "Klim Sani4",
+      "1.78"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/dota2/dota-2-international/14611-epl-masters-ii/3139034-gamerlegion-vs-pipsqueak-4",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 11:30 PM - in 6 hours",
+    "marketName": null,
+    "lg": [
+     "(EPL Masters II)",
+     "/sports/dota2/dota-2-international/14611-epl-masters-ii"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+214",
+    "home": [
+     "GamerLegion",
+     "https://cdn.oddin.gg/assets/teams/icons/gamerlegion_1776123594413.png?size=small"
+    ],
+    "away": [
+     "Pipsqueak+4",
+     "https://cdn.oddin.gg/assets/teams/icons/p4.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "GamerLegion",
+      "1.58"
+     ],
+     [
+      "Pipsqueak+4",
+      "2.20"
+     ]
+    ]
+   }
+  ],
+  "LOL": [
+   {
+    "m": "Match Winner - Twoway",
+    "href": "/sports/lol/league-of-legends-international/14495-nlc-2026-summer-playoffs/3095929-arctic-pandas-oy-vs-ruddy-corporation",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 9:30 PM - in 4 hours",
+    "marketName": null,
+    "lg": [
+     "(NLC 2026 Summer Playoffs)",
+     "/sports/lol/league-of-legends-international/14495-nlc-2026-summer-playoffs"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+15",
+    "home": [
+     "Arctic Pandas Oy",
+     "https://cdn.oddin.gg/assets/teams/icons/arctic_pandas_oy.png?size=small"
+    ],
+    "away": [
+     "Ruddy Corporation",
+     "https://cdn.oddin.gg/assets/teams/icons/ruddy_1769152934058.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Arctic Pandas Oy",
+      "2.50"
+     ],
+     [
+      "Ruddy Corporation",
+      "1.48"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/lol/league-of-legends-international/14428-nacl-2026-summer-playoffs/3157221-nrg-esports-vs-conviction",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:30 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(NACL 2026 Summer Playoffs)",
+     "/sports/lol/league-of-legends-international/14428-nacl-2026-summer-playoffs"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+15",
+    "home": [
+     "NRG Esports",
+     "https://cdn.oddin.gg/assets/teams/icons/nrg_1725454534707.png?size=small"
+    ],
+    "away": [
+     "Conviction",
+     "https://cdn.oddin.gg/assets/teams/icons/conviction.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "NRG Esports",
+      "1.25"
+     ],
+     [
+      "Conviction",
+      "3.50"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/lol/league-of-legends-international/14131-circuito-desafiante-2026-split-2/3103674-intz-vs-kabum-ilha-das-lendas",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 1:30 AM - in 8 hours",
+    "marketName": null,
+    "lg": [
+     "(Circuito Desafiante 2026 Split 2)",
+     "/sports/lol/league-of-legends-international/14131-circuito-desafiante-2026-split-2"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+15",
+    "home": [
+     "INTZ",
+     "https://cdn.oddin.gg/assets/teams/icons/intz.png?size=small"
+    ],
+    "away": [
+     "KaBuM! Ilha das Lendas",
+     "https://cdn.oddin.gg/assets/teams/icons/kab_x_idl.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "INTZ",
+      "2.05"
+     ],
+     [
+      "KaBuM! Ilha das Lendas",
+      "1.68"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/lol/league-of-legends-international/14290-lrn-2026-split-2-playoffs/3024578-zeu5-esports-vs-fuego",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 4:30 AM - in 11 hours",
+    "marketName": null,
+    "lg": [
+     "(LRN 2026 Split 2 Playoffs)",
+     "/sports/lol/league-of-legends-international/14290-lrn-2026-split-2-playoffs"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Zeu5 Esports",
+     "https://cdn.oddin.gg/assets/teams/icons/zeu5.png?size=small"
+    ],
+    "away": [
+     "Fuego",
+     "https://cdn.oddin.gg/assets/teams/icons/fuego.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Zeu5 Esports",
+      "2.30"
+     ],
+     [
+      "Fuego",
+      "1.55"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/lol/league-of-legends-international/14583-lck-cl-2026-season-playoffs/3125929-t1-esports-academy-vs-kt-rolster-challengers",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 10:30 AM - in 17 hours",
+    "marketName": null,
+    "lg": [
+     "(LCK CL 2026 Season Playoffs)",
+     "/sports/lol/league-of-legends-international/14583-lck-cl-2026-season-playoffs"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+85",
+    "home": [
+     "T1 Esports Academy",
+     "https://cdn.oddin.gg/assets/teams/icons/t1_esports_academy.png?size=small"
+    ],
+    "away": [
+     "KT Rolster Challengers",
+     "https://cdn.oddin.gg/assets/teams/icons/ktc_1741955554515.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "T1 Esports Academy",
+      "1.50"
+     ],
+     [
+      "KT Rolster Challengers",
+      "2.40"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/lol/league-of-legends-international/14583-lck-cl-2026-season-playoffs/3125930-dplus-kia-challengers-vs-nongshim-esports-academy",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 1:30 PM - in 20 hours",
+    "marketName": null,
+    "lg": [
+     "(LCK CL 2026 Season Playoffs)",
+     "/sports/lol/league-of-legends-international/14583-lck-cl-2026-season-playoffs"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+85",
+    "home": [
+     "Dplus KIA Challengers",
+     "https://cdn.oddin.gg/assets/teams/icons/dplus_kiac_1758571840452.png?size=small"
+    ],
+    "away": [
+     "Nongshim Esports Academy",
+     "https://cdn.oddin.gg/assets/teams/icons/nsa.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Dplus KIA Challengers",
+      "1.68"
+     ],
+     [
+      "Nongshim Esports Academy",
+      "2.05"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/lol/league-of-legends-international/14524-lpl-2026-grand-finals/3119241-invictus-gaming-vs-lgd-gaming",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 2:30 PM - in 21 hours",
+    "marketName": null,
+    "lg": [
+     "(LPL 2026 Grand Finals)",
+     "/sports/lol/league-of-legends-international/14524-lpl-2026-grand-finals"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+85",
+    "home": [
+     "Invictus Gaming",
+     "https://cdn.oddin.gg/assets/teams/icons/invictus_gaming_1725456613681.png?size=small"
+    ],
+    "away": [
+     "LGD Gaming",
+     "https://cdn.oddin.gg/assets/teams/icons/lgd.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Invictus Gaming",
+      "1.45"
+     ],
+     [
+      "LGD Gaming",
+      "2.80"
+     ]
+    ]
+   }
+  ],
+  "TABLE_TENNIS": [
+   {
+    "m": "Winner",
+    "href": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro/74393276-blejchar-marek-vs-hradil-oliver",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 43s",
+    "marketName": null,
+    "lg": [
+     "(Czech Liga Pro)",
+     "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Hradil, Oliver",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "away": [
+     "Blejchar, Marek",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Blejchar, Marek",
+      "1.96"
+     ],
+     [
+      "Hradil, Oliver",
+      "1.73"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/88-international/32129-tt-cup/74413384-lysakowski-michal-vs-burkacki-mateusz",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 43s",
+    "marketName": null,
+    "lg": [
+     "(TT Cup)",
+     "/sports/table-tennis/88-international/32129-tt-cup"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Lysakowski, Michal",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Burkacki, Mateusz",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Lysakowski, Michal",
+      "1.37"
+     ],
+     [
+      "Burkacki, Mateusz",
+      "2.80"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro/74392868-svec-jiri-vs-chalupnicek-milan",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 43s",
+    "marketName": null,
+    "lg": [
+     "(Czech Liga Pro)",
+     "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Svec, Jiri",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "away": [
+     "Chalupnicek, Milan",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Svec, Jiri",
+      "2.07"
+     ],
+     [
+      "Chalupnicek, Milan",
+      "1.65"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/88-international/36377-tt-elite-series/74393696-mecik-patryk-vs-tobiasz-wojciech",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 43s",
+    "marketName": null,
+    "lg": [
+     "(TT Elite Series)",
+     "/sports/table-tennis/88-international/36377-tt-elite-series"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Tobiasz, Wojciech",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Mecik, Patryk",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Mecik, Patryk",
+      "2.10"
+     ],
+     [
+      "Tobiasz, Wojciech",
+      "1.63"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro/74392880-regner-milan-vs-vaclavik-miroslav",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 43s",
+    "marketName": null,
+    "lg": [
+     "(Czech Liga Pro)",
+     "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Regner, Milan",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "away": [
+     "Vaclavik, Miroslav",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Regner, Milan",
+      "1.59"
+     ],
+     [
+      "Vaclavik, Miroslav",
+      "2.16"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro/74393004-plachy-jiri-vs-postelt-vladimir",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 43s",
+    "marketName": null,
+    "lg": [
+     "(Czech Liga Pro)",
+     "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Postelt, Vladimir",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "away": [
+     "Plachy, Jiri",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Plachy, Jiri",
+      "2.29"
+     ],
+     [
+      "Postelt, Vladimir",
+      "1.53"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/88-international/14107-challenger-series/74406186-fadeev-kirill-vs-senkbeil-vincent-u21",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 43s",
+    "marketName": null,
+    "lg": [
+     "(Challenger Series)",
+     "/sports/table-tennis/88-international/14107-challenger-series"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+1",
+    "home": [
+     "Fadeev, Kirill",
+     "/icons/world-flags/DEU_round.svg"
+    ],
+    "away": [
+     "Senkbeil, Vincent U21",
+     "/icons/world-flags/DEU_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Fadeev, Kirill",
+      "1.43"
+     ],
+     [
+      "Senkbeil, Vincent U21",
+      "2.55"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro/74392842-navedla-matyas-vs-dousek-tomas",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 43s",
+    "marketName": null,
+    "lg": [
+     "(Czech Liga Pro)",
+     "/sports/table-tennis/1017-czech-republic/36349-czech-liga-pro"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Navedla, Matyas",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "away": [
+     "Dousek, Tomas",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Navedla, Matyas",
+      "2.38"
+     ],
+     [
+      "Dousek, Tomas",
+      "1.49"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/88-international/32129-tt-cup/74413386-vavricka-richard-vs-neterda-radek",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 6m",
+    "marketName": null,
+    "lg": [
+     "(TT Cup)",
+     "/sports/table-tennis/88-international/32129-tt-cup"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Neterda, Radek",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "away": [
+     "Vavricka, Richard",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Vavricka, Richard",
+      "2.47"
+     ],
+     [
+      "Neterda, Radek",
+      "1.46"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/table-tennis/88-international/32129-tt-cup/74413388-kindl-tomas-vs-mrowetz-bruno",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 11m",
+    "marketName": null,
+    "lg": [
+     "(TT Cup)",
+     "/sports/table-tennis/88-international/32129-tt-cup"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "Mrowetz, Bruno",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Kindl, Tomas",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Kindl, Tomas",
+      "2.12"
+     ],
+     [
+      "Mrowetz, Bruno",
+      "1.62"
+     ]
+    ]
+   }
+  ],
+  "TENNIS": [
+   {
+    "m": "Winner",
+    "href": "/sports/tennis/871-wta-125k/51944-wta-125k-antalya-4-turkiye-women-singles/74397864-ristic-mia-vs-gjorcheska-lina",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "About to start",
+    "marketName": null,
+    "lg": [
+     "(WTA 125K Antalya 4, Turkiye Women Singles)",
+     "/sports/tennis/871-wta-125k/51944-wta-125k-antalya-4-turkiye-women-singles"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": null,
+    "home": [
+     "Ristic, Mia",
+     "/icons/world-flags/SRB_round.svg"
+    ],
+    "away": [
+     "Gjorcheska, Lina",
+     "/icons/world-flags/MKD_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Ristic, Mia",
+      "Suspended"
+     ],
+     [
+      "Gjorcheska, Lina",
+      "Suspended"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/3813-atp-challenger-seville-spain-men-singles/74408076-forejtek-jonas-vs-campana-lee-gerard",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "About to start",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Seville, Spain Men Singles)",
+     "/sports/tennis/72-challenger/3813-atp-challenger-seville-spain-men-singles"
+    ],
+    "tools": [
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+14",
+    "home": [
+     "Campana Lee, Gerard",
+     "/icons/world-flags/KOR_round.svg"
+    ],
+    "away": [
+     "Forejtek, Jonas",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Forejtek, Jonas",
+      "1.52"
+     ],
+     [
+      "Campana Lee, Gerard",
+      "2.35"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/26126-atp-challenger-cassis-france-men-singles/74374958-echargui-moez-vs-poullain-lucas",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Cassis, France Men Singles)",
+     "/sports/tennis/72-challenger/26126-atp-challenger-cassis-france-men-singles"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Echargui, Moez",
+     "/icons/world-flags/TUN_round.svg"
+    ],
+    "away": [
+     "Poullain, Lucas",
+     "/icons/world-flags/FRA_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Echargui, Moez",
+      "1.69"
+     ],
+     [
+      "Poullain, Lucas",
+      "2.09"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/6067-atp-challenger-shanghai-china-men-singles/74368502-pankin-semen-vs-galarneau-alexis",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Shanghai, China Men Singles)",
+     "/sports/tennis/72-challenger/6067-atp-challenger-shanghai-china-men-singles"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Pankin, Semen",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Galarneau, Alexis",
+     "/icons/world-flags/CAN_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Pankin, Semen",
+      "4.20"
+     ],
+     [
+      "Galarneau, Alexis",
+      "1.20"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/3801-atp-challenger-genoa-italy-men-singles/74375208-piraino-gabriele-vs-feldbausch-kilian",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Genoa, Italy Men Singles)",
+     "/sports/tennis/72-challenger/3801-atp-challenger-genoa-italy-men-singles"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Piraino, Gabriele",
+     "/icons/world-flags/ITA_round.svg"
+    ],
+    "away": [
+     "Feldbausch, Kilian",
+     "/icons/world-flags/CHE_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Piraino, Gabriele",
+      "4.40"
+     ],
+     [
+      "Feldbausch, Kilian",
+      "1.19"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/51728-atp-challenger-istanbul-3-turkiye-men-singles/74375440-ayeni-alafia-vs-overbeck-carl-emil",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Istanbul 3, Turkiye Men Singles)",
+     "/sports/tennis/72-challenger/51728-atp-challenger-istanbul-3-turkiye-men-singles"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Overbeck, Carl Emil",
+     "/icons/world-flags/DNK_round.svg"
+    ],
+    "away": [
+     "Ayeni, Alafia",
+     "/icons/world-flags/USA_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Ayeni, Alafia",
+      "3.25"
+     ],
+     [
+      "Overbeck, Carl Emil",
+      "1.31"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/34874-atp-challenger-tulln-austria-men-singles/74374876-soto-matias-vs-kopp-sandro",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Tulln, Austria Men Singles)",
+     "/sports/tennis/72-challenger/34874-atp-challenger-tulln-austria-men-singles"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Soto, Matias",
+     "/icons/world-flags/CHL_round.svg"
+    ],
+    "away": [
+     "Kopp, Sandro",
+     "/icons/world-flags/AUT_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Soto, Matias",
+      "3.00"
+     ],
+     [
+      "Kopp, Sandro",
+      "1.35"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/26126-atp-challenger-cassis-france-men-singles/74374964-brouwer-gijs-vs-martineau-matteo",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Cassis, France Men Singles)",
+     "/sports/tennis/72-challenger/26126-atp-challenger-cassis-france-men-singles"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Martineau, Matteo",
+     "/icons/world-flags/FRA_round.svg"
+    ],
+    "away": [
+     "Brouwer, Gijs",
+     "/icons/world-flags/NLD_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Brouwer, Gijs",
+      "2.50"
+     ],
+     [
+      "Martineau, Matteo",
+      "1.49"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/34874-atp-challenger-tulln-austria-men-singles/74374880-milic-ognjen-vs-barrena-alex",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Tulln, Austria Men Singles)",
+     "/sports/tennis/72-challenger/34874-atp-challenger-tulln-austria-men-singles"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Barrena, Alex",
+     "/icons/world-flags/ARG_round.svg"
+    ],
+    "away": [
+     "Milic, Ognjen",
+     "/icons/world-flags/SRB_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Milic, Ognjen",
+      "2.34"
+     ],
+     [
+      "Barrena, Alex",
+      "1.56"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/tennis/72-challenger/34874-atp-challenger-tulln-austria-men-singles/74374878-mrva-maxim-vs-moeller-marvin",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(ATP Challenger Tulln, Austria Men Singles)",
+     "/sports/tennis/72-challenger/34874-atp-challenger-tulln-austria-men-singles"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Mrva, Maxim",
+     "/icons/world-flags/CZE_round.svg"
+    ],
+    "away": [
+     "Moeller, Marvin",
+     "/icons/world-flags/DEU_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Mrva, Maxim",
+      "1.62"
+     ],
+     [
+      "Moeller, Marvin",
+      "2.21"
+     ]
+    ]
+   }
+  ],
+  "CS2": [
+   {
+    "m": "Match Winner - Twoway",
+    "href": "/sports/cs2/counter-strike-2-international/14699-private-club-1-closed-qualifier/3168026-sinners-esports-vs-phantom-esports",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 31m",
+    "marketName": null,
+    "lg": [
+     "(Private Club #1 Closed Qualifier)",
+     "/sports/cs2/counter-strike-2-international/14699-private-club-1-closed-qualifier"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+288",
+    "home": [
+     "Sinners Esports",
+     "https://cdn.oddin.gg/assets/teams/icons/sinners.png?size=small"
+    ],
+    "away": [
+     "Phantom Esports",
+     "https://cdn.oddin.gg/assets/teams/icons/phe.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Sinners Esports",
+      "1.95"
+     ],
+     [
+      "Phantom Esports",
+      "1.78"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14697-esl-challenger-league-season-52-europe-cup-6/3168188-mouz-nxt-vs-kuusamo-gg",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:30 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(ESL Challenger League Season 52: Europe - Cup #6)",
+     "/sports/cs2/counter-strike-2-international/14697-esl-challenger-league-season-52-europe-cup-6"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+7",
+    "home": [
+     "mouz NXT",
+     "https://cdn.oddin.gg/assets/teams/icons/mouz_nxt.png?size=small"
+    ],
+    "away": [
+     "KUUSAMO.gg",
+     "https://cdn.oddin.gg/assets/teams/icons/ksm.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Mouz NXT",
+      "1.26"
+     ],
+     [
+      "KUUSAMO.gg",
+      "3.60"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14693-fiesta-series-2-cq/3164110-big-academy-vs-trafficpills-esports",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:30 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(Fiesta Series 2 CQ)",
+     "/sports/cs2/counter-strike-2-international/14693-fiesta-series-2-cq"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+7",
+    "home": [
+     "BIG Academy",
+     "https://cdn.oddin.gg/assets/teams/icons/biga.png?size=small"
+    ],
+    "away": [
+     "TrafficPills Esports",
+     "https://cdn.oddin.gg/assets/teams/icons/tfp.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "BIG Academy",
+      "1.10"
+     ],
+     [
+      "TrafficPills Esports",
+      "6.00"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14693-fiesta-series-2-cq/3164109-rounds-vs-revise",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:30 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(Fiesta Series 2 CQ)",
+     "/sports/cs2/counter-strike-2-international/14693-fiesta-series-2-cq"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+7",
+    "home": [
+     "ROUNDS",
+     "https://cdn.oddin.gg/assets/teams/icons/rnds.png?size=small"
+    ],
+    "away": [
+     "Revise",
+     "https://cdn.oddin.gg/assets/teams/icons/revise.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "ROUNDS",
+      "3.60"
+     ],
+     [
+      "Revise",
+      "1.26"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14676-cct-europe-2026-series-8/3153390-ea-copenhagen-vs-team-unity",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:30 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(CCT Europe 2026 Series #8)",
+     "/sports/cs2/counter-strike-2-international/14676-cct-europe-2026-series-8"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+160",
+    "home": [
+     "EA Copenhagen",
+     "https://cdn.oddin.gg/assets/teams/icons/eac.png?size=small"
+    ],
+    "away": [
+     "Team UNiTY",
+     "https://cdn.oddin.gg/assets/teams/icons/unity.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "EA Copenhagen",
+      "1.75"
+     ],
+     [
+      "Team UNiTY",
+      "2.00"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14690-nodwin-clutch-series-12-play-in/3162975-g2-ares-vs-wazabi",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:30 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(NODWIN Clutch Series #12 Play-In)",
+     "/sports/cs2/counter-strike-2-international/14690-nodwin-clutch-series-12-play-in"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+7",
+    "home": [
+     "G2 Ares",
+     "https://cdn.oddin.gg/assets/teams/icons/g2_ares.png?size=small"
+    ],
+    "away": [
+     "WAZABI",
+     "https://cdn.oddin.gg/assets/teams/icons/wazabi.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "G2 Ares",
+      "1.17"
+     ],
+     [
+      "WAZABI",
+      "4.50"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14699-private-club-1-closed-qualifier/3168029-nuclear-tigeres-vs-cybershoke",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 11:00 PM - in 6 hours",
+    "marketName": null,
+    "lg": [
+     "(Private Club #1 Closed Qualifier)",
+     "/sports/cs2/counter-strike-2-international/14699-private-club-1-closed-qualifier"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+159",
+    "home": [
+     "Nuclear TigeRES",
+     "https://cdn.oddin.gg/assets/teams/icons/nuclear_tigeres.png?size=small"
+    ],
+    "away": [
+     "CYBERSHOKE",
+     "https://cdn.oddin.gg/assets/teams/icons/cybershoke_1723139191993.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Nuclear TigeRES",
+      "1.62"
+     ],
+     [
+      "CYBERSHOKE",
+      "2.20"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14529-fissure-playground-3/3146170-legacy-vs-magic",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 8:30 AM - in 15 hours",
+    "marketName": null,
+    "lg": [
+     "(FISSURE Playground #3)",
+     "/sports/cs2/counter-strike-2-international/14529-fissure-playground-3"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+296",
+    "home": [
+     "Legacy",
+     "https://cdn.oddin.gg/assets/teams/icons/legacy.png?size=small"
+    ],
+    "away": [
+     "Magic",
+     "https://cdn.oddin.gg/assets/teams/icons/magic.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Legacy",
+      "1.30"
+     ],
+     [
+      "Magic",
+      "3.30"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14529-fissure-playground-3/3146155-9z-team-vs-5star-esports",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 8:30 AM - in 15 hours",
+    "marketName": null,
+    "lg": [
+     "(FISSURE Playground #3)",
+     "/sports/cs2/counter-strike-2-international/14529-fissure-playground-3"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+277",
+    "home": [
+     "9z Team",
+     "https://cdn.oddin.gg/assets/teams/icons/9z_team_1725454932800.png?size=small"
+    ],
+    "away": [
+     "5star eSports",
+     "https://cdn.oddin.gg/assets/teams/icons/5s.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "9z Team",
+      "1.05"
+     ],
+     [
+      "5star eSports",
+      "8.50"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2/counter-strike-2-international/14529-fissure-playground-3/3146166-the-mongolz-vs-mibr",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 11:30 AM - in 18 hours",
+    "marketName": null,
+    "lg": [
+     "(FISSURE Playground #3)",
+     "/sports/cs2/counter-strike-2-international/14529-fissure-playground-3"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+295",
+    "home": [
+     "The MongolZ",
+     "https://cdn.oddin.gg/assets/teams/icons/mongolz_1731229167088.png?size=small"
+    ],
+    "away": [
+     "MIBR",
+     "https://cdn.oddin.gg/assets/teams/icons/mibr.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "The MongolZ",
+      "1.65"
+     ],
+     [
+      "MIBR",
+      "2.15"
+     ]
+    ]
+   }
+  ],
+  "AMERICAN_FOOTBALL": [
+   {
+    "m": "Winner (incl. overtime)",
+    "href": "/sports/american-football/93-canada/790-cfl/68385832-hamilton-tiger-cats-vs-toronto-argonauts",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 12:00 AM - in 7 hours",
+    "marketName": null,
+    "lg": [
+     "(CFL)",
+     "/sports/american-football/93-canada/790-cfl"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Toronto Argonauts",
+     "/main-api/bp-storage/public-assets/sports/team-logo/6da432ec-82da-40f4-815f-8cf6dba14e4c.png?size=small"
+    ],
+    "away": [
+     "Hamilton Tiger-Cats",
+     "/main-api/bp-storage/public-assets/sports/team-logo/d33db59d-2987-4f41-819c-d2b5344c4781.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Hamilton Tiger-Cats",
+      "2.60"
+     ],
+     [
+      "Toronto Argonauts",
+      "1.44"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/american-football/93-canada/790-cfl/68385834-calgary-stampeders-vs-edmonton-elks",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 3:30 AM - in 10 hours",
+    "marketName": null,
+    "lg": [
+     "(CFL)",
+     "/sports/american-football/93-canada/790-cfl"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Edmonton Elks",
+     "/main-api/bp-storage/public-assets/sports/team-logo/3228318a-8621-45df-b1d4-8cd55745202c.png?size=small"
+    ],
+    "away": [
+     "Calgary Stampeders",
+     "/main-api/bp-storage/public-assets/sports/team-logo/56e7b04d-d512-4196-9950-4993b38a2565.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Calgary Stampeders",
+      "1.78"
+     ],
+     [
+      "Edmonton Elks",
+      "1.93"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/american-football/43-usa/27653-ncaa-regular-season/70900780-florida-state-seminoles-vs-smu-mustangs",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 5:00 AM - in 12 hours",
+    "marketName": null,
+    "lg": [
+     "(NCAA, Regular Season)",
+     "/sports/american-football/43-usa/27653-ncaa-regular-season"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+63",
+    "home": [
+     "Florida State Seminoles",
+     "/main-api/bp-storage/public-assets/sports/team-logo/2bb9da35-dcf3-4bea-90d8-e11f9db5c780.png?size=small"
+    ],
+    "away": [
+     "SMU Mustangs",
+     "/main-api/bp-storage/public-assets/sports/team-logo/e7ab668b-1a78-468b-989a-65084c087918.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Florida State Seminoles",
+      "2.16"
+     ],
+     [
+      "SMU Mustangs",
+      "1.62"
+     ]
+    ]
+   }
+  ],
+  "BASEBALL": [
+   {
+    "m": "Winner (incl. extra innings)",
+    "href": "/sports/baseball/16-usa/109-mlb/63303047-philadelphia-phillies-vs-atlanta-braves",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:35 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+144",
+    "home": [
+     "Atlanta Braves",
+     "/main-api/bp-storage/public-assets/sports/team-logo/fb902e04-19f1-4192-a07f-829cb5860066.png?size=small"
+    ],
+    "away": [
+     "Philadelphia Phillies",
+     "/main-api/bp-storage/public-assets/sports/team-logo/53e7e253-33ee-4251-b401-0256ebc324a2.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Philadelphia Phillies",
+      "1.58"
+     ],
+     [
+      "Atlanta Braves",
+      "2.35"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63303613-miami-marlins-vs-new-york-mets",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:40 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+140",
+    "home": [
+     "Miami Marlins",
+     "/main-api/bp-storage/public-assets/sports/team-logo/e9c79430-39d7-4803-bfac-520dd130492e.png?size=small"
+    ],
+    "away": [
+     "New York Mets",
+     "/main-api/bp-storage/public-assets/sports/team-logo/c64c5cb8-e4d2-4cfb-a962-3d295bf13b93.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Miami Marlins",
+      "1.82"
+     ],
+     [
+      "New York Mets",
+      "1.96"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63303323-boston-red-sox-vs-los-angeles-angels",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 11:05 PM - in 6 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+83",
+    "home": [
+     "Los Angeles Angels",
+     "/main-api/bp-storage/public-assets/sports/team-logo/e02bf202-18dd-4b01-8f11-1f48705e62e7.png?size=small"
+    ],
+    "away": [
+     "Boston Red Sox",
+     "/main-api/bp-storage/public-assets/sports/team-logo/af39de71-178f-409b-85f2-a25bcd2fa139.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Boston Red Sox",
+      "1.55"
+     ],
+     [
+      "Los Angeles Angels",
+      "2.41"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63300945-baltimore-orioles-vs-cleveland-guardians",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 11:05 PM - in 6 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+117",
+    "home": [
+     "Baltimore Orioles",
+     "/main-api/bp-storage/public-assets/sports/team-logo/cf0d748e-74fc-4897-88aa-1558613326c9.png?size=small"
+    ],
+    "away": [
+     "Cleveland Guardians",
+     "/main-api/bp-storage/public-assets/sports/team-logo/ef9cf271-517b-4471-ae61-7ed5373a0528.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Baltimore Orioles",
+      "1.76"
+     ],
+     [
+      "Cleveland Guardians",
+      "2.04"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63302379-milwaukee-brewers-vs-chicago-cubs",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 11:40 PM - in 6 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+118",
+    "home": [
+     "Milwaukee Brewers",
+     "/main-api/bp-storage/public-assets/sports/team-logo/89bd1e7c-e9c0-40b5-8716-1ee18f8a93fd.png?size=small"
+    ],
+    "away": [
+     "Chicago Cubs",
+     "/main-api/bp-storage/public-assets/sports/team-logo/039b68d3-0a49-41cc-bbac-6cee4df90f9d.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Milwaukee Brewers",
+      "1.76"
+     ],
+     [
+      "Chicago Cubs",
+      "2.03"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63299219-kansas-city-royals-vs-arizona-diamondbacks",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 11:40 PM - in 6 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+114",
+    "home": [
+     "Kansas City Royals",
+     "/main-api/bp-storage/public-assets/sports/team-logo/fa02dbe4-6131-4fb4-b7b2-0caad22ae314.png?size=small"
+    ],
+    "away": [
+     "Arizona Diamondbacks",
+     "/main-api/bp-storage/public-assets/sports/team-logo/75ee2f5e-98c8-4224-b7d8-f2b6a6df82a5.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Kansas City Royals",
+      "1.85"
+     ],
+     [
+      "Arizona Diamondbacks",
+      "1.92"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63301027-detroit-tigers-vs-minnesota-twins",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 12:40 AM - in 7 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+38",
+    "home": [
+     "Minnesota Twins",
+     "/main-api/bp-storage/public-assets/sports/team-logo/f257c33d-abdd-46b2-bc38-73c09335d46f.png?size=small"
+    ],
+    "away": [
+     "Detroit Tigers",
+     "/main-api/bp-storage/public-assets/sports/team-logo/fb70039c-8495-438a-bcb2-c077931cbf64.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Detroit Tigers",
+      "1.79"
+     ],
+     [
+      "Minnesota Twins",
+      "2.00"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63301093-san-diego-padres-vs-washington-nationals",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 2:40 AM - in 9 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+117",
+    "home": [
+     "Washington Nationals",
+     "/main-api/bp-storage/public-assets/sports/team-logo/a30ef397-45bd-4049-aaec-2d931a4c35c0.png?size=small"
+    ],
+    "away": [
+     "San Diego Padres",
+     "/main-api/bp-storage/public-assets/sports/team-logo/f8f0a65a-e576-496f-b11d-e48fb8eb0a73.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "San Diego Padres",
+      "1.50"
+     ],
+     [
+      "Washington Nationals",
+      "2.55"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63301511-san-francisco-giants-vs-st-louis-cardinals",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 5:40 AM - in 12 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+114",
+    "home": [
+     "San Francisco Giants",
+     "/main-api/bp-storage/public-assets/sports/team-logo/9eef23c7-aa09-4b71-95ce-033f84b8dd88.png?size=small"
+    ],
+    "away": [
+     "St. Louis Cardinals",
+     "/main-api/bp-storage/public-assets/sports/team-logo/a3445b3f-b68a-49ce-9e62-e17e9a7a1cfb.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "San Francisco Giants",
+      "1.73"
+     ],
+     [
+      "St. Louis Cardinals",
+      "2.07"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/baseball/16-usa/109-mlb/63303773-los-angeles-dodgers-vs-cincinnati-reds",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 6:40 AM - in 13 hours",
+    "marketName": null,
+    "lg": [
+     "(MLB)",
+     "/sports/baseball/16-usa/109-mlb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+110",
+    "home": [
+     "Los Angeles Dodgers",
+     "/main-api/bp-storage/public-assets/sports/team-logo/18d83053-bae8-48b4-b9c4-6fe9d87f896b.png?size=small"
+    ],
+    "away": [
+     "Cincinnati Reds",
+     "/main-api/bp-storage/public-assets/sports/team-logo/00aff7e3-ce94-4e53-984e-7a4b3f4d3bcf.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Los Angeles Dodgers",
+      "1.63"
+     ],
+     [
+      "Cincinnati Reds",
+      "2.24"
+     ]
+    ]
+   }
+  ],
+  "BASKETBALL": [
+   {
+    "m": "Winner (incl. overtime)",
+    "href": "/sports/basketball/103-international/1195-club-friendly-games/74317948-ryukyu-golden-kings-okinawa-vs-chiba-jets-funabashi",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Delayed start",
+    "marketName": null,
+    "lg": [
+     "(Club Friendly Games)",
+     "/sports/basketball/103-international/1195-club-friendly-games"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": null,
+    "home": [
+     "Ryukyu Golden Kings Okinawa",
+     "/main-api/bp-storage/public-assets/sports/team-logo/ce9c9653-aa3a-47c3-a6cd-a0606ada29b8.png?size=small"
+    ],
+    "away": [
+     "Chiba Jets Funabashi",
+     "/main-api/bp-storage/public-assets/sports/team-logo/2821b74e-42ab-4648-b400-7ad72ee606ef.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Ryukyu Golden Kings Okinawa",
+      "Suspended"
+     ],
+     [
+      "Chiba Jets Funabashi",
+      "Suspended"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/basketball/103-international/442-fiba-world-cup-women/71036280-hungary-vs-republic-of-korea",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:00 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(FIBA World Cup, Women)",
+     "/sports/basketball/103-international/442-fiba-world-cup-women"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+21",
+    "home": [
+     "Republic of Korea",
+     "/main-api/bp-storage/public-assets/sports/team-logo/e0097209-97ce-493e-9087-1a73edc93e13.png?size=small"
+    ],
+    "away": [
+     "Hungary",
+     "/main-api/bp-storage/public-assets/sports/team-logo/befe6e22-a3db-499a-ade1-761a49c2519e.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Hungary",
+      "1.37"
+     ],
+     [
+      "Republic of Korea",
+      "2.85"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/basketball/103-international/442-fiba-world-cup-women/71036282-nigeria-vs-france",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:00 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(FIBA World Cup, Women)",
+     "/sports/basketball/103-international/442-fiba-world-cup-women"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+19",
+    "home": [
+     "Nigeria",
+     "/main-api/bp-storage/public-assets/sports/team-logo/c213a098-127e-4c61-8fc3-7812d9ae6974.png?size=small"
+    ],
+    "away": [
+     "France",
+     "/main-api/bp-storage/public-assets/sports/team-logo/7ba95fe1-b57a-41c0-bd4e-8adbe7726690.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Nigeria",
+      "11.00"
+     ],
+     [
+      "France",
+      "1.01"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/basketball/103-international/442-fiba-world-cup-women/71036222-japan-vs-spain",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 9:20 PM - in 4 hours",
+    "marketName": null,
+    "lg": [
+     "(FIBA World Cup, Women)",
+     "/sports/basketball/103-international/442-fiba-world-cup-women"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+21",
+    "home": [
+     "Spain",
+     "/main-api/bp-storage/public-assets/sports/team-logo/337fbd87-1f9c-457e-bdb6-95cd6d75ad1f.png?size=small"
+    ],
+    "away": [
+     "Japan",
+     "/main-api/bp-storage/public-assets/sports/team-logo/e5a545a9-2d45-46aa-85d8-31313d2bf728.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Japan",
+      "6.40"
+     ],
+     [
+      "Spain",
+      "1.08"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/basketball/103-international/442-fiba-world-cup-women/71036226-germany-vs-mali",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 9:20 PM - in 4 hours",
+    "marketName": null,
+    "lg": [
+     "(FIBA World Cup, Women)",
+     "/sports/basketball/103-international/442-fiba-world-cup-women"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+19",
+    "home": [
+     "Germany",
+     "/main-api/bp-storage/public-assets/sports/team-logo/6086df1f-9f20-47a2-9da0-42febe4bebef.png?size=small"
+    ],
+    "away": [
+     "Mali",
+     "/main-api/bp-storage/public-assets/sports/team-logo/5d34503d-d544-4d57-b721-e6c1d0e3781f.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Germany",
+      "1.24"
+     ],
+     [
+      "Mali",
+      "3.70"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/basketball/103-international/1195-club-friendly-games/74002618-valencia-basket-vs-basket-zaragoza-2002",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 11:30 PM - in 6 hours",
+    "marketName": null,
+    "lg": [
+     "(Club Friendly Games)",
+     "/sports/basketball/103-international/1195-club-friendly-games"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+9",
+    "home": [
+     "Valencia Basket",
+     "/main-api/bp-storage/public-assets/sports/team-logo/3fab70ed-c579-474c-b1ce-37ce4610f5c8.png?size=small"
+    ],
+    "away": [
+     "Basket Zaragoza 2002",
+     "/main-api/bp-storage/public-assets/sports/team-logo/7e346032-f30c-4ba4-9a2a-be5690e2d990.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Valencia Basket",
+      "1.74"
+     ],
+     [
+      "Basket Zaragoza 2002",
+      "1.94"
+     ]
+    ]
+   },
+   {
+    "m": "Handicap (incl. overtime)",
+    "href": "/sports/basketball/103-international/442-fiba-world-cup-women/71036308-usa-vs-czechia",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 12:15 AM - in 7 hours",
+    "marketName": null,
+    "lg": [
+     "(FIBA World Cup, Women)",
+     "/sports/basketball/103-international/442-fiba-world-cup-women"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+17",
+    "home": [
+     "USA",
+     "/main-api/bp-storage/public-assets/sports/team-logo/99092fa7-d76f-4993-a669-83a0f40adbc5.png?size=small"
+    ],
+    "away": [
+     "Czechia",
+     "/main-api/bp-storage/public-assets/sports/team-logo/3dc999cc-b8f1-484c-9d0b-35b647af41a7.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "USA (-34.5)",
+      "1.81"
+     ],
+     [
+      "Czechia (+34.5)",
+      "1.89"
+     ]
+    ]
+   },
+   {
+    "m": "Winner (incl. overtime)",
+    "href": "/sports/basketball/103-international/442-fiba-world-cup-women/71036310-italy-vs-china",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 12:15 AM - in 7 hours",
+    "marketName": null,
+    "lg": [
+     "(FIBA World Cup, Women)",
+     "/sports/basketball/103-international/442-fiba-world-cup-women"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+21",
+    "home": [
+     "China",
+     "/main-api/bp-storage/public-assets/sports/team-logo/4a156e64-0f81-4f10-b851-5cee03234883.png?size=small"
+    ],
+    "away": [
+     "Italy",
+     "/main-api/bp-storage/public-assets/sports/team-logo/f72d70e6-a9a0-4854-ae8e-d433dbb414f4.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Italy",
+      "1.37"
+     ],
+     [
+      "China",
+      "2.90"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/basketball/263-brazil/34952-paulista-divisao-especial-a-1/74153910-bauru-basket-sp-vs-ca-paulistano-sp",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 2:30 AM - in 9 hours",
+    "marketName": null,
+    "lg": [
+     "(Paulista Divisao Especial A-1)",
+     "/sports/basketball/263-brazil/34952-paulista-divisao-especial-a-1"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+17",
+    "home": [
+     "CA Paulistano SP",
+     "/main-api/bp-storage/public-assets/sports/team-logo/c9102c0f-630d-4284-bbc0-5d69fbdde75f.png?size=small"
+    ],
+    "away": [
+     "Bauru Basket SP",
+     "/main-api/bp-storage/public-assets/sports/team-logo/df33e932-ab41-4d2a-866e-d19f049e005b.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Bauru Basket SP",
+      "1.40"
+     ],
+     [
+      "CA Paulistano SP",
+      "2.70"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/basketball/753-paraguay/46847-lnb/73493968-olimpia-kings-vs-colonias-gold",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 4:30 AM - in 11 hours",
+    "marketName": null,
+    "lg": [
+     "(LNB)",
+     "/sports/basketball/753-paraguay/46847-lnb"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+21",
+    "home": [
+     "Colonias Gold",
+     "/main-api/bp-storage/public-assets/sports/team-logo/8275eef3-c5b6-4957-bc1b-2bb8c67eba17.png?size=small"
+    ],
+    "away": [
+     "Olimpia Kings",
+     "/main-api/bp-storage/public-assets/sports/team-logo/55ebbb4f-00c2-42e0-b1a8-84ce65b3d352.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Olimpia Kings",
+      "1.46"
+     ],
+     [
+      "Colonias Gold",
+      "2.50"
+     ]
+    ]
+   }
+  ],
+  "DARTS": [
+   {
+    "m": "Winner",
+    "href": "/sports/darts/104-international/33994-modus-super-series/74325926-hubbard-james-vs-munyua-david",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 14m",
+    "marketName": null,
+    "lg": [
+     "(Modus Super Series)",
+     "/sports/darts/104-international/33994-modus-super-series"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Hubbard, James",
+     "/main-api/bp-storage/public-assets/sports/team-logo/8d65bf69-be83-4740-af89-2a749467ad83.png?size=small"
+    ],
+    "away": [
+     "Munyua, David",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Hubbard, James",
+      "1.24"
+     ],
+     [
+      "Munyua, David",
+      "3.70"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/darts/104-international/33994-modus-super-series/74325928-dekker-patrick-vs-coulson-derek",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 29m",
+    "marketName": null,
+    "lg": [
+     "(Modus Super Series)",
+     "/sports/darts/104-international/33994-modus-super-series"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Coulson, Derek",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Dekker, Patrick",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Dekker, Patrick",
+      "4.70"
+     ],
+     [
+      "Coulson, Derek",
+      "1.15"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/darts/104-international/33994-modus-super-series/74325930-hubbard-james-vs-mawson-gary",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 44m",
+    "marketName": null,
+    "lg": [
+     "(Modus Super Series)",
+     "/sports/darts/104-international/33994-modus-super-series"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Hubbard, James",
+     "/main-api/bp-storage/public-assets/sports/team-logo/8d65bf69-be83-4740-af89-2a749467ad83.png?size=small"
+    ],
+    "away": [
+     "Mawson, Gary",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Hubbard, James",
+      "1.50"
+     ],
+     [
+      "Mawson, Gary",
+      "2.43"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/darts/104-international/33994-modus-super-series/74325932-coulson-derek-vs-van-den-herik-jamai",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 59m",
+    "marketName": null,
+    "lg": [
+     "(Modus Super Series)",
+     "/sports/darts/104-international/33994-modus-super-series"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "van den Herik, Jamai",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Coulson, Derek",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Coulson, Derek",
+      "1.21"
+     ],
+     [
+      "Van den Herik, Jamai",
+      "4.00"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/darts/104-international/33994-modus-super-series/74325934-munyua-david-vs-dekker-patrick",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:20 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(Modus Super Series)",
+     "/sports/darts/104-international/33994-modus-super-series"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Munyua, David",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Dekker, Patrick",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Munyua, David",
+      "2.32"
+     ],
+     [
+      "Dekker, Patrick",
+      "1.54"
+     ]
+    ]
+   }
+  ],
+  "CRICKET": [
+   {
+    "m": "Winner (incl. super over)",
+    "href": "/sports/cricket/2247-belgium/33011-t10-ecs-belgium/74171310-beveren-cc-vs-stekene-defenders",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "About to start",
+    "marketName": null,
+    "lg": [
+     "(T10 ECS Belgium)",
+     "/sports/cricket/2247-belgium/33011-t10-ecs-belgium"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+11",
+    "home": [
+     "Beveren Cc",
+     "/icons/world-flags/BEL_round.svg"
+    ],
+    "away": [
+     "Stekene Defenders",
+     "/icons/world-flags/BEL_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Beveren Cc",
+      "1.40"
+     ],
+     [
+      "Stekene Defenders",
+      "2.65"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/2128-simulated-reality-league/36807-t20-international-srl/74114622-sri-lanka-srl-vs-new-zealand-srl",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 29m",
+    "marketName": null,
+    "lg": [
+     "(T20 International SRL)",
+     "/sports/cricket/2128-simulated-reality-league/36807-t20-international-srl"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Sri Lanka SRL",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "New Zealand SRL",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Sri Lanka SRL",
+      "2.20"
+     ],
+     [
+      "New Zealand SRL",
+      "1.65"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/2128-simulated-reality-league/39175-sa-t20-league-srl/74114290-sunrisers-eastern-cape-srl-vs-pretoria-capitals-srl",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 6:30 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(SA T20 League SRL)",
+     "/sports/cricket/2128-simulated-reality-league/39175-sa-t20-league-srl"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Sunrisers Eastern Cape SRL",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Pretoria Capitals SRL",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Sunrisers Eastern Cape SRL",
+      "1.70"
+     ],
+     [
+      "Pretoria Capitals SRL",
+      "2.15"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/497-india/40435-t20-sher-e-punjab-league/74097728-jalandhar-warriors-vs-amritsar-soormas",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:00 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(T20 Sher E Punjab League)",
+     "/sports/cricket/497-india/40435-t20-sher-e-punjab-league"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": null,
+    "home": [
+     "Jalandhar Warriors",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Amritsar Soormas",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Jalandhar Warriors",
+      "Suspended"
+     ],
+     [
+      "Amritsar Soormas",
+      "Suspended"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/2247-belgium/33011-t10-ecs-belgium/74171312-zwijndrecht-challengers-vs-st-niklaas-capitals",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:00 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(T10 ECS Belgium)",
+     "/sports/cricket/2247-belgium/33011-t10-ecs-belgium"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+2",
+    "home": [
+     "St Niklaas Capitals",
+     "/icons/world-flags/BEL_round.svg"
+    ],
+    "away": [
+     "Zwijndrecht Challengers",
+     "/icons/world-flags/BEL_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Zwijndrecht Challengers",
+      "1.55"
+     ],
+     [
+      "St Niklaas Capitals",
+      "2.25"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/2128-simulated-reality-league/32201-premier-league-srl/74113854-gujarat-titans-srl-vs-kolkata-knight-riders-srl",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:30 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(Premier League SRL)",
+     "/sports/cricket/2128-simulated-reality-league/32201-premier-league-srl"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Gujarat Titans SRL",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Kolkata Knight Riders SRL",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Gujarat Titans SRL",
+      "1.75"
+     ],
+     [
+      "Kolkata Knight Riders SRL",
+      "2.05"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/105-international/24804-t20-asia-cup-women/73540982-hong-kong-china-vs-pakistan",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 8:00 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(T20 Asia Cup, Women)",
+     "/sports/cricket/105-international/24804-t20-asia-cup-women"
+    ],
+    "tools": [
+     "custom bet"
+    ],
+    "boost": false,
+    "cnt": "+30",
+    "home": [
+     "Hong Kong, China",
+     "/icons/world-flags/HKG_round.svg"
+    ],
+    "away": [
+     "Pakistan",
+     "/icons/world-flags/PAK_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Hong Kong, China",
+      "9.50"
+     ],
+     [
+      "Pakistan",
+      "1.02"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/2128-simulated-reality-league/46519-super-smash-srl/74114468-central-districts-srl-vs-northern-districts-srl",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 8:30 PM - in 3 hours",
+    "marketName": null,
+    "lg": [
+     "(Super Smash SRL)",
+     "/sports/cricket/2128-simulated-reality-league/46519-super-smash-srl"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Northern Districts SRL",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Central Districts SRL",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Central Districts SRL",
+      "2.05"
+     ],
+     [
+      "Northern Districts SRL",
+      "1.75"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/2128-simulated-reality-league/36805-pakistan-super-league-srl/74114028-rawalpindiz-srl-vs-peshawar-zalmi-srl",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 9:30 PM - in 4 hours",
+    "marketName": null,
+    "lg": [
+     "(Pakistan Super League SRL)",
+     "/sports/cricket/2128-simulated-reality-league/36805-pakistan-super-league-srl"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "Peshawar Zalmi SRL",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Rawalpindiz Srl",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Rawalpindiz Srl",
+      "2.15"
+     ],
+     [
+      "Peshawar Zalmi SRL",
+      "1.70"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cricket/2128-simulated-reality-league/36807-t20-international-srl/74114624-australia-srl-vs-west-indies-srl",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:30 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(T20 International SRL)",
+     "/sports/cricket/2128-simulated-reality-league/36807-t20-international-srl"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+10",
+    "home": [
+     "West Indies SRL",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Australia SRL",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Australia SRL",
+      "1.65"
+     ],
+     [
+      "West Indies SRL",
+      "2.20"
+     ]
+    ]
+   }
+  ],
+  "ICE_HOCKEY": [
+   {
+    "m": "Winner (incl. overtime and penalties)",
+    "href": "/sports/ice-hockey/101-russia/1141-vhl/73707798-hc-norilsk-vs-dinamo-altai-barnaul",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 29m",
+    "marketName": null,
+    "lg": [
+     "(VHL)",
+     "/sports/ice-hockey/101-russia/1141-vhl"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Dinamo-Altai Barnaul",
+     "/icons/world-flags/RUS_round.svg"
+    ],
+    "away": [
+     "HC Norilsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/3e2038b7-0bd8-4f87-a5ff-9c9dd5d2e149.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "HC Norilsk",
+      "1.48"
+     ],
+     [
+      "Dinamo-Altai Barnaul",
+      "2.40"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/101-russia/268-khl/72166072-hk-avangard-omsk-vs-salavat-yulaev-ufa",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:00 PM - in an hour",
+    "marketName": null,
+    "lg": [
+     "(KHL)",
+     "/sports/ice-hockey/101-russia/268-khl"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "HK Avangard Omsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/64bc82db-b924-4627-a887-4008e7988611.png?size=small"
+    ],
+    "away": [
+     "Salavat Yulaev UFA",
+     "/main-api/bp-storage/public-assets/sports/team-logo/64b4c526-3d3c-4073-bcee-83cfd8b13ffc.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "HK Avangard Omsk",
+      "1.38"
+     ],
+     [
+      "Salavat Yulaev UFA",
+      "2.75"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/810-kazakhstan/30156-pro-hockey-league/73810444-yertis-pavlodar-vs-hc-almaty",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:30 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(Pro Hockey League)",
+     "/sports/ice-hockey/810-kazakhstan/30156-pro-hockey-league"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "HC Almaty",
+     "/main-api/bp-storage/public-assets/sports/team-logo/f29393d8-e3cf-464f-b0fb-605c33a1482d.png?size=small"
+    ],
+    "away": [
+     "Yertis Pavlodar",
+     "/main-api/bp-storage/public-assets/sports/team-logo/94c4a216-1679-4676-91ec-5403a4a8fc7a.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Yertis Pavlodar",
+      "6.40"
+     ],
+     [
+      "HC Almaty",
+      "1.07"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/810-kazakhstan/30156-pro-hockey-league/73810448-hk-arlan-kokschetau-vs-torpedo-ust-kamenogorsk",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:30 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(Pro Hockey League)",
+     "/sports/ice-hockey/810-kazakhstan/30156-pro-hockey-league"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "HK Arlan Kokschetau",
+     "/main-api/bp-storage/public-assets/sports/team-logo/0e2eb600-8eec-452b-a0fc-53748cba01a6.png?size=small"
+    ],
+    "away": [
+     "Torpedo Ust Kamenogorsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/612d4b48-0a5c-4707-855b-41ab8f08fc0f.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "HK Arlan Kokschetau",
+      "3.75"
+     ],
+     [
+      "Torpedo Ust Kamenogorsk",
+      "1.21"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/101-russia/268-khl/72166064-avtomobilist-yekaterinburg-vs-traktor-chelyabinsk",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:30 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(KHL)",
+     "/sports/ice-hockey/101-russia/268-khl"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Traktor Chelyabinsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/999da2b1-77f5-4ecf-b21e-3db0dcc73c8c.png?size=small"
+    ],
+    "away": [
+     "Avtomobilist Yekaterinburg",
+     "/main-api/bp-storage/public-assets/sports/team-logo/0de14f03-1671-4355-a023-4a34161244cc.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Avtomobilist Yekaterinburg",
+      "1.47"
+     ],
+     [
+      "Traktor Chelyabinsk",
+      "2.44"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/101-russia/1141-vhl/73707800-toros-neftekamsk-vs-ska-vmf",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:30 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(VHL)",
+     "/sports/ice-hockey/101-russia/1141-vhl"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Toros Neftekamsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/38ce2b3c-f1a4-43df-9513-98071bef1562.png?size=small"
+    ],
+    "away": [
+     "Ska-Vmf",
+     "/main-api/bp-storage/public-assets/sports/team-logo/5a1dd069-d487-4882-8219-7e40ef1bc8f2.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Toros Neftekamsk",
+      "1.79"
+     ],
+     [
+      "Ska-Vmf",
+      "1.88"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/101-russia/268-khl/72166070-hc-barys-vs-sibir-novosibirsk",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 7:30 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(KHL)",
+     "/sports/ice-hockey/101-russia/268-khl"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Sibir Novosibirsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/c8eacc68-f7ac-4884-9c00-0025abed96a7.png?size=small"
+    ],
+    "away": [
+     "HC Barys",
+     "/main-api/bp-storage/public-assets/sports/team-logo/c6c751e6-7788-4172-9fe9-17a1cb030a16.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "HC Barys",
+      "2.05"
+     ],
+     [
+      "Sibir Novosibirsk",
+      "1.66"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/101-russia/1141-vhl/73707802-izhstal-izhevsk-vs-hk-dinamo-st-petersburg",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 8:00 PM - in 2 hours",
+    "marketName": null,
+    "lg": [
+     "(VHL)",
+     "/sports/ice-hockey/101-russia/1141-vhl"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Izhstal Izhevsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/2dade42f-4dc8-4455-8651-18307a643680.png?size=small"
+    ],
+    "away": [
+     "HK Dinamo St. Petersburg",
+     "/main-api/bp-storage/public-assets/sports/team-logo/faef4871-16de-44e1-ae1c-fccff8555b99.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Izhstal Izhevsk",
+      "1.66"
+     ],
+     [
+      "HK Dinamo St. Petersburg",
+      "2.06"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/101-russia/1141-vhl/73707804-olimpiya-kirovo-chepetsk-vs-zvezda-moscow",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 9:00 PM - in 3 hours",
+    "marketName": null,
+    "lg": [
+     "(VHL)",
+     "/sports/ice-hockey/101-russia/1141-vhl"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Zvezda Moscow",
+     "/main-api/bp-storage/public-assets/sports/team-logo/fe5cc951-69a5-4cd4-8610-d257367fe739.png?size=small"
+    ],
+    "away": [
+     "Olimpiya Kirovo-Chepetsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/9f580361-8449-4d00-a6cb-ebbee95d9644.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Olimpiya Kirovo-Chepetsk",
+      "1.84"
+     ],
+     [
+      "Zvezda Moscow",
+      "1.83"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ice-hockey/101-russia/1141-vhl/73707806-hc-tambov-vs-neftyanik-almetyevsk",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 9:00 PM - in 3 hours",
+    "marketName": null,
+    "lg": [
+     "(VHL)",
+     "/sports/ice-hockey/101-russia/1141-vhl"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Neftyanik Almetyevsk",
+     "/main-api/bp-storage/public-assets/sports/team-logo/c2ccc909-dcf6-4cdb-a1d4-f9c49b472334.png?size=small"
+    ],
+    "away": [
+     "HC Tambov",
+     "/main-api/bp-storage/public-assets/sports/team-logo/8e4aab80-c439-433d-8681-42aa1ba0f9b5.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "HC Tambov",
+      "2.60"
+     ],
+     [
+      "Neftyanik Almetyevsk",
+      "1.42"
+     ]
+    ]
+   }
+  ],
+  "VOLLEYBALL": [
+   {
+    "m": "Winner",
+    "href": "/sports/volleyball/814-usa/43847-ncaa-women-regular-season/73534470-maryland-terrapins-vs-george-mason-patriots",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:30 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(NCAA Women, Regular Season)",
+     "/sports/volleyball/814-usa/43847-ncaa-women-regular-season"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+1",
+    "home": [
+     "George Mason Patriots",
+     "/icons/world-flags/USA_round.svg"
+    ],
+    "away": [
+     "Maryland Terrapins",
+     "/icons/world-flags/USA_round.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Maryland Terrapins",
+      "1.19"
+     ],
+     [
+      "George Mason Patriots",
+      "4.60"
+     ]
+    ]
+   }
+  ],
+  "HANDBALL": [
+   {
+    "m": "1x2",
+    "href": "/sports/handball/298-romania/1398-liga-nationala-women/73756710-csm-slatina-vs-cs-rapid-bucuresti",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 8:30 PM - in 3 hours",
+    "marketName": null,
+    "lg": [
+     "(Liga Nationala, Women)",
+     "/sports/handball/298-romania/1398-liga-nationala-women"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+7",
+    "home": [
+     "CS Rapid Bucuresti",
+     "/main-api/bp-storage/public-assets/sports/team-logo/88d2c714-c69d-4da5-8e84-f72c8d6e5b12.png?size=small"
+    ],
+    "away": [
+     "CSM Slatina",
+     "/main-api/bp-storage/public-assets/sports/team-logo/a23894b7-0906-42b0-9c51-27c388eac26b.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "CSM Slatina",
+      "3.20"
+     ],
+     [
+      "Draw",
+      "12.00"
+     ],
+     [
+      "CS Rapid Bucuresti",
+      "1.44"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/handball/59-denmark/157-herreligaen/72840224-bjerringbro-silkeborg-haandbold-vs-fredericia-hk-1990",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 9:30 PM - in 4 hours",
+    "marketName": null,
+    "lg": [
+     "(Herreligaen)",
+     "/sports/handball/59-denmark/157-herreligaen"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+7",
+    "home": [
+     "Fredericia HK 1990",
+     "/main-api/bp-storage/public-assets/sports/team-logo/61f5a75a-b82e-4b4a-8313-a7379d897548.png?size=small"
+    ],
+    "away": [
+     "Bjerringbro-Silkeborg Haandbold",
+     "/main-api/bp-storage/public-assets/sports/team-logo/91078fe9-1f1b-4e13-940f-893c8c36dec7.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Bjerringbro-Silkeborg Haandbold",
+      "1.97"
+     ],
+     [
+      "Draw",
+      "7.80"
+     ],
+     [
+      "Fredericia HK 1990",
+      "2.21"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/handball/53-germany/149-bundesliga/72473102-hsg-wetzlar-vs-thsv-eisenach",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:30 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(Bundesliga)",
+     "/sports/handball/53-germany/149-bundesliga"
+    ],
+    "tools": [
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+7",
+    "home": [
+     "ThSV Eisenach",
+     "/main-api/bp-storage/public-assets/sports/team-logo/9381b133-61fa-43f9-a88f-ec4a4f196986.png?size=small"
+    ],
+    "away": [
+     "HSG Wetzlar",
+     "/main-api/bp-storage/public-assets/sports/team-logo/bc799d76-0458-46ce-a432-8b22ea152f77.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "HSG Wetzlar",
+      "1.96"
+     ],
+     [
+      "Draw",
+      "7.80"
+     ],
+     [
+      "ThSV Eisenach",
+      "2.22"
+     ]
+    ]
+   }
+  ],
+  "EFOOTBALL": [
+   {
+    "m": "Match Winner - Threeway",
+    "href": "/sports/efootball/efootball-bots-international/14721-absolute-legends-efootball-4-2026-week-37/3173552-spain-antonio-vs-usa-jennifer",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "About to start",
+    "marketName": null,
+    "lg": [
+     "(Absolute Legends eFootball 4 2026 Week #37)",
+     "/sports/efootball/efootball-bots-international/14721-absolute-legends-efootball-4-2026-week-37"
+    ],
+    "tools": [
+     "custom bet",
+     "play"
+    ],
+    "boost": false,
+    "cnt": "+37",
+    "home": [
+     "Spain (Antonio)",
+     "https://cdn.oddin.gg/assets/teams/icons/esp_antonio.png?size=small"
+    ],
+    "away": [
+     "USA (Jennifer)",
+     "https://cdn.oddin.gg/assets/teams/icons/usa_jennifer.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Spain (Antonio)",
+      "Suspended"
+     ],
+     [
+      "Draw",
+      "Suspended"
+     ],
+     [
+      "USA (Jennifer)",
+      "Suspended"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-bots-international/14722-absolute-legends-efootball-3-2026-week-37/3173553-paris-saint-germain-vs-real-madrid",
+    "si": null,
+    "live": true,
+    "phase": "2nd half",
+    "clock": null,
+    "date": null,
+    "marketName": null,
+    "lg": [
+     "(Absolute Legends eFootball 3 2026 Week #37)",
+     "/sports/efootball/efootball-bots-international/14722-absolute-legends-efootball-3-2026-week-37"
+    ],
+    "tools": [
+     "custom bet",
+     "play"
+    ],
+    "boost": false,
+    "cnt": "+34",
+    "home": [
+     "Paris Saint-Germain",
+     "https://cdn.oddin.gg/assets/teams/icons/paris_saintgermain.png?size=small"
+    ],
+    "away": [
+     "Real Madrid",
+     "https://cdn.oddin.gg/assets/teams/icons/real_madrid.png?size=small"
+    ],
+    "boards": [
+     {
+      "v": [
+       "0",
+       "1"
+      ],
+      "l": true
+     }
+    ],
+    "cols": 3,
+    "sels": [
+     [
+      "Paris Saint-Germain",
+      "10.00"
+     ],
+     [
+      "Draw",
+      "4.00"
+     ],
+     [
+      "Real Madrid",
+      "1.25"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-international/14709-valhalla-cup-2026-week-37/3170201-werder-bremen-fede-vs-1-fc-k-ln-gavi",
+    "si": null,
+    "live": true,
+    "phase": "2nd half",
+    "clock": null,
+    "date": null,
+    "marketName": null,
+    "lg": [
+     "(Valhalla Cup 2026 Week #37)",
+     "/sports/efootball/efootball-international/14709-valhalla-cup-2026-week-37"
+    ],
+    "tools": [
+     "custom bet",
+     "play",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+19",
+    "home": [
+     "Werder Bremen (Fede)",
+     "https://cdn.oddin.gg/assets/teams/icons/svw_fede.png?size=small"
+    ],
+    "away": [
+     "1. FC Köln (Gavi)",
+     "https://cdn.oddin.gg/assets/teams/icons/koe_gavi.png?size=small"
+    ],
+    "boards": [
+     {
+      "v": [
+       "2",
+       "2"
+      ],
+      "l": true
+     }
+    ],
+    "cols": 3,
+    "sels": [
+     [
+      "Werder Bremen (Fede)",
+      "3.50"
+     ],
+     [
+      "Draw",
+      "2.80"
+     ],
+     [
+      "1. FC Köln (Gavi)",
+      "2.10"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-bots-international/14723-absolute-legends-efootball-5-2026-week-37/3173570-argentina-vs-italy",
+    "si": null,
+    "live": true,
+    "phase": "1st half",
+    "clock": null,
+    "date": null,
+    "marketName": null,
+    "lg": [
+     "(Absolute Legends eFootball 5 2026 Week #37)",
+     "/sports/efootball/efootball-bots-international/14723-absolute-legends-efootball-5-2026-week-37"
+    ],
+    "tools": [
+     "custom bet",
+     "play"
+    ],
+    "boost": false,
+    "cnt": "+36",
+    "home": [
+     "Argentina",
+     "https://cdn.oddin.gg/assets/teams/icons/argentina.png?size=small"
+    ],
+    "away": [
+     "Italy",
+     "https://cdn.oddin.gg/assets/teams/icons/italy.png?size=small"
+    ],
+    "boards": [
+     {
+      "v": [
+       "0",
+       "1"
+      ],
+      "l": true
+     }
+    ],
+    "cols": 3,
+    "sels": [
+     [
+      "Argentina",
+      "10.00"
+     ],
+     [
+      "Draw",
+      "5.80"
+     ],
+     [
+      "Italy",
+      "1.13"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-bots-international/14724-absolute-legends-efootball-6-2026-week-37/3173593-mexico-carlos-vs-germany-thomas",
+    "si": null,
+    "live": true,
+    "phase": "1st half",
+    "clock": null,
+    "date": null,
+    "marketName": null,
+    "lg": [
+     "(Absolute Legends eFootball 6 2026 Week #37)",
+     "/sports/efootball/efootball-bots-international/14724-absolute-legends-efootball-6-2026-week-37"
+    ],
+    "tools": [
+     "custom bet",
+     "play"
+    ],
+    "boost": false,
+    "cnt": "+55",
+    "home": [
+     "Mexico (Carlos)",
+     "https://cdn.oddin.gg/assets/teams/icons/mexico_carlos.png?size=small"
+    ],
+    "away": [
+     "Germany (Thomas)",
+     "https://cdn.oddin.gg/assets/teams/icons/germany_thomas.png?size=small"
+    ],
+    "boards": [
+     {
+      "v": [
+       "0",
+       "0"
+      ],
+      "l": true
+     }
+    ],
+    "cols": 3,
+    "sels": [
+     [
+      "Mexico (Carlos)",
+      "3.30"
+     ],
+     [
+      "Draw",
+      "3.30"
+     ],
+     [
+      "Germany (Thomas)",
+      "1.85"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-bots-international/14727-j1-league-2x6-min-2026-week-37/3173662-gamba-osaka-vs-kawasaki-frontale",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13s",
+    "marketName": null,
+    "lg": [
+     "(J1 League (2x6 min) 2026 Week #37)",
+     "/sports/efootball/efootball-bots-international/14727-j1-league-2x6-min-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+113",
+    "home": [
+     "Gamba Osaka",
+     "https://cdn.oddin.gg/assets/teams/icons/gamba_osaka.png?size=small"
+    ],
+    "away": [
+     "Kawasaki Frontale",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Gamba Osaka",
+      "3.80"
+     ],
+     [
+      "Draw",
+      "3.80"
+     ],
+     [
+      "Kawasaki Frontale",
+      "1.72"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-bots-international/14732-turkish-cup-2x6-min-2026-week-37/3173658-trabzonspor-vs-sivasspor",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 35s",
+    "marketName": null,
+    "lg": [
+     "(Turkish Cup (2x6 min) 2026 Week #37)",
+     "/sports/efootball/efootball-bots-international/14732-turkish-cup-2x6-min-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+114",
+    "home": [
+     "Trabzonspor",
+     "https://cdn.oddin.gg/assets/teams/icons/trabzonspor.png?size=small"
+    ],
+    "away": [
+     "Sivasspor",
+     "https://cdn.oddin.gg/assets/teams/icons/sivasspor_1680682274379.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Trabzonspor",
+      "1.52"
+     ],
+     [
+      "Draw",
+      "3.80"
+     ],
+     [
+      "Sivasspor",
+      "4.80"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-bots-international/14743-fa-cup-2x6-min-2026-week-37/3173661-man-united-vs-arsenal-fc",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 45s",
+    "marketName": null,
+    "lg": [
+     "(FA Cup (2x6 min) 2026 Week #37)",
+     "/sports/efootball/efootball-bots-international/14743-fa-cup-2x6-min-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+106",
+    "home": [
+     "Man. United",
+     "https://cdn.oddin.gg/assets/teams/icons/man_united.png?size=small"
+    ],
+    "away": [
+     "Arsenal FC",
+     "https://cdn.oddin.gg/assets/teams/icons/arsenal_fc.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Man. United",
+      "2.15"
+     ],
+     [
+      "Draw",
+      "3.10"
+     ],
+     [
+      "Arsenal FC",
+      "2.90"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-international/14710-valhalla-cup-4-2026-week-37/3170408-real-madrid-strudl-vs-arsenal-mordor",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 46s",
+    "marketName": null,
+    "lg": [
+     "(Valhalla Cup 4 2026 Week #37)",
+     "/sports/efootball/efootball-international/14710-valhalla-cup-4-2026-week-37"
+    ],
+    "tools": [
+     "custom bet",
+     "stats"
+    ],
+    "boost": false,
+    "cnt": "+49",
+    "home": [
+     "Real Madrid (Strudl)",
+     "https://cdn.oddin.gg/assets/teams/icons/rma_strudl.png?size=small"
+    ],
+    "away": [
+     "Arsenal (Mordor)",
+     "https://cdn.oddin.gg/assets/teams/icons/ars_mordor.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Real Madrid (Strudl)",
+      "1.92"
+     ],
+     [
+      "Draw",
+      "4.80"
+     ],
+     [
+      "Arsenal (Mordor)",
+      "2.60"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/efootball/efootball-bots-international/14731-afc-asian-cup-2-15-min-2026-week-37/3173545-thailand-vs-vietnam",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 46s",
+    "marketName": null,
+    "lg": [
+     "(AFC Asian Cup (2х15 min) 2026 Week #37)",
+     "/sports/efootball/efootball-bots-international/14731-afc-asian-cup-2-15-min-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+127",
+    "home": [
+     "Thailand",
+     "https://cdn.oddin.gg/assets/teams/icons/thailand.png?size=small"
+    ],
+    "away": [
+     "Vietnam",
+     "https://cdn.oddin.gg/assets/teams/icons/vietnam_1751892630585.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Thailand",
+      "1.25"
+     ],
+     [
+      "Draw",
+      "5.80"
+     ],
+     [
+      "Vietnam",
+      "6.30"
+     ]
+    ]
+   }
+  ],
+  "EBASKETBALL": [
+   {
+    "m": "Match Winner - Threeway",
+    "href": "/sports/ebasketball/ebasketball-bots-international/14729-fiba-americas-2026-week-37/3173551-brazil-vs-argentina",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 12m",
+    "marketName": null,
+    "lg": [
+     "(FIBA Americas 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-bots-international/14729-fiba-americas-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+13",
+    "home": [
+     "Brazil",
+     "https://cdn.oddin.gg/assets/teams/icons/brazil.png?size=small"
+    ],
+    "away": [
+     "Argentina",
+     "https://cdn.oddin.gg/assets/teams/icons/argentina.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Brazil",
+      "1.65"
+     ],
+     [
+      "Draw",
+      "8.00"
+     ],
+     [
+      "Argentina",
+      "2.50"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ebasketball/ebasketball-bots-international/14739-liga-acb-2026-week-37/3173555-club-joventut-badalona-vs-real-betis",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 13m",
+    "marketName": null,
+    "lg": [
+     "(Liga ACB 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-bots-international/14739-liga-acb-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+14",
+    "home": [
+     "Club Joventut Badalona",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Real Betis",
+     "https://cdn.oddin.gg/assets/teams/icons/real_betis.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Club Joventut Badalona",
+      "1.65"
+     ],
+     [
+      "Draw",
+      "8.00"
+     ],
+     [
+      "Real Betis",
+      "2.50"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ebasketball/ebasketball-bots-international/14742-super-lig-2026-week-37/3173562-turk-telekom-vs-galatasaray-nef",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 14m",
+    "marketName": null,
+    "lg": [
+     "(Super Lig 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-bots-international/14742-super-lig-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+12",
+    "home": [
+     "Turk Telekom",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Galatasaray Nef",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Turk Telekom",
+      "1.28"
+     ],
+     [
+      "Draw",
+      "8.00"
+     ],
+     [
+      "Galatasaray Nef",
+      "4.40"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ebasketball/ebasketball-bots-international/14738-nba-philippine-cup-2026-week-37/3173539-rain-or-shine-elasto-painters-vs-nlex-road-warriors",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 16m",
+    "marketName": null,
+    "lg": [
+     "(NBA Philippine Cup 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-bots-international/14738-nba-philippine-cup-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+14",
+    "home": [
+     "Rain or Shine Elasto Painters",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "NLEX Road Warriors",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Rain or Shine Elasto Painters",
+      "2.40"
+     ],
+     [
+      "Draw",
+      "7.50"
+     ],
+     [
+      "NLEX Road Warriors",
+      "1.65"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ebasketball/ebasketball-bots-international/14741-nba-cba-2026-week-37/3173576-zhejiang-guangsha-vs-shanghai",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 18m",
+    "marketName": null,
+    "lg": [
+     "(NBA CBA 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-bots-international/14741-nba-cba-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+16",
+    "home": [
+     "Zhejiang Guangsha",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Shanghai",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Zhejiang Guangsha",
+      "2.10"
+     ],
+     [
+      "Draw",
+      "7.50"
+     ],
+     [
+      "Shanghai",
+      "1.88"
+     ]
+    ]
+   },
+   {
+    "m": "Match Winner - Twoway",
+    "href": "/sports/ebasketball/ebasketball-international/14703-valhalla-league-2026-week-37/3169593-dallas-mavericks-lenny-vs-denver-nuggets-steel",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 21m",
+    "marketName": null,
+    "lg": [
+     "(Valhalla League 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-international/14703-valhalla-league-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+8",
+    "home": [
+     "Dallas Mavericks (Lenny)",
+     "https://cdn.oddin.gg/assets/teams/icons/dal_lenny.png?size=small"
+    ],
+    "away": [
+     "Denver Nuggets (Steel)",
+     "https://cdn.oddin.gg/assets/teams/icons/den_steel.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Dallas Mavericks (Lenny)",
+      "1.65"
+     ],
+     [
+      "Denver Nuggets (Steel)",
+      "2.10"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ebasketball/ebasketball-international/14703-valhalla-league-2026-week-37/3169478-indiana-pacers-icekimi-vs-new-orleans-pelicans-clyde",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 21m",
+    "marketName": null,
+    "lg": [
+     "(Valhalla League 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-international/14703-valhalla-league-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+32",
+    "home": [
+     "Indiana Pacers (IceKimi)",
+     "https://cdn.oddin.gg/assets/teams/icons/ind_icekimi.png?size=small"
+    ],
+    "away": [
+     "New Orleans Pelicans (Clyde)",
+     "https://cdn.oddin.gg/assets/teams/icons/no_clyde.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Indiana Pacers (IceKimi)",
+      "2.80"
+     ],
+     [
+      "New Orleans Pelicans (Clyde)",
+      "1.38"
+     ]
+    ]
+   },
+   {
+    "m": "Match Winner - Threeway",
+    "href": "/sports/ebasketball/ebasketball-bots-international/14733-lnb-elite-2026-week-37/3173588-asvel-villeurbanne-vs-as-monaco",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 22m",
+    "marketName": null,
+    "lg": [
+     "(LNB Elite 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-bots-international/14733-lnb-elite-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+12",
+    "home": [
+     "ASVEL Villeurbanne",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "AS Monaco",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "ASVEL Villeurbanne",
+      "3.80"
+     ],
+     [
+      "Draw",
+      "8.00"
+     ],
+     [
+      "AS Monaco",
+      "1.38"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ebasketball/ebasketball-bots-international/14736-nba-2026-week-37/3173594-golden-state-warriors-vs-philadelphia-76ers",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 23m",
+    "marketName": null,
+    "lg": [
+     "(NBA 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-bots-international/14736-nba-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+11",
+    "home": [
+     "Golden State Warriors",
+     "https://cdn.oddin.gg/assets/teams/icons/golden_state_warriors.png?size=small"
+    ],
+    "away": [
+     "Philadelphia 76ers",
+     "https://cdn.oddin.gg/assets/teams/icons/philadelphia_76ers.png?size=small"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "Golden State Warriors",
+      "3.80"
+     ],
+     [
+      "Draw",
+      "8.00"
+     ],
+     [
+      "Philadelphia 76ers",
+      "1.32"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ebasketball/ebasketball-bots-international/14728-novo-basquete-brasil-2026-week-37/3173608-r10-score-vasco-da-gama-vs-bauru-basket",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 37m",
+    "marketName": null,
+    "lg": [
+     "(Novo Basquete Brasil 2026 Week #37)",
+     "/sports/ebasketball/ebasketball-bots-international/14728-novo-basquete-brasil-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+12",
+    "home": [
+     "R10 Score Vasco da Gama",
+     "/icons/globe.svg"
+    ],
+    "away": [
+     "Bauru Basket",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 3,
+    "sels": [
+     [
+      "R10 Score Vasco da Gama",
+      "2.70"
+     ],
+     [
+      "Draw",
+      "8.00"
+     ],
+     [
+      "Bauru Basket",
+      "1.58"
+     ]
+    ]
+   }
+  ],
+  "ECRICKET": [
+   {
+    "m": "Match Winner Draw No Bet",
+    "href": "/sports/ecricket/ecricket-international/14707-yodha-premier-league-super-over-2026-week-37/3169925-chennai-super-kings-markzman-vs-mumbai-indians-demonslayer",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 2m",
+    "marketName": null,
+    "lg": [
+     "(Yodha Premier League Super Over 2026 Week #37)",
+     "/sports/ecricket/ecricket-international/14707-yodha-premier-league-super-over-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+6",
+    "home": [
+     "Mumbai Indians (DemonSlayer)",
+     "https://cdn.oddin.gg/assets/teams/icons/mi_demonslayer.png?size=small"
+    ],
+    "away": [
+     "Chennai Super Kings (MarkzMan)",
+     "https://cdn.oddin.gg/assets/teams/icons/csk_markzman.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Chennai Super Kings (MarkzMan)",
+      "1.90"
+     ],
+     [
+      "Mumbai Indians (DemonSlayer)",
+      "1.80"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/ecricket/ecricket-international/14707-yodha-premier-league-super-over-2026-week-37/3169926-royal-challengers-bengaluru-demonslayer-vs-chennai-super-kings-anjidan",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 9m",
+    "marketName": null,
+    "lg": [
+     "(Yodha Premier League Super Over 2026 Week #37)",
+     "/sports/ecricket/ecricket-international/14707-yodha-premier-league-super-over-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+4",
+    "home": [
+     "Royal Challengers Bengaluru (DemonSlayer)",
+     "https://cdn.oddin.gg/assets/teams/icons/rcb_demonslayer_1760556598893.png?size=small"
+    ],
+    "away": [
+     "Chennai Super Kings (AnjiDan)",
+     "https://cdn.oddin.gg/assets/teams/icons/csk_anjidan.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Royal Challengers Bengaluru (DemonSlayer)",
+      "2.50"
+     ],
+     [
+      "Chennai Super Kings (AnjiDan)",
+      "1.48"
+     ]
+    ]
+   }
+  ],
+  "CS2_DUELS": [
+   {
+    "m": "Match Winner - Twoway",
+    "href": "/sports/cs2-duels/counter-strike-2-duels-international/14711-berserk-cs2-league-2026-week-37/3170517-zeth-vs-lancer",
+    "si": null,
+    "live": true,
+    "phase": "1st map: Round 13",
+    "clock": null,
+    "date": null,
+    "marketName": null,
+    "lg": [
+     "(Berserk CS2 League 2026 Week #37)",
+     "/sports/cs2-duels/counter-strike-2-duels-international/14711-berserk-cs2-league-2026-week-37"
+    ],
+    "tools": [
+     "custom bet",
+     "play"
+    ],
+    "boost": false,
+    "cnt": "+52",
+    "home": [
+     "Lancer",
+     "https://cdn.oddin.gg/assets/teams/icons/lancer.jpeg?size=small"
+    ],
+    "away": [
+     "Zeth",
+     "/icons/globe.svg"
+    ],
+    "boards": [
+     {
+      "v": [
+       "6",
+       "6"
+      ],
+      "l": false
+     },
+     {
+      "v": [
+       "0",
+       "0"
+      ],
+      "l": true
+     }
+    ],
+    "cols": 2,
+    "sels": [
+     [
+      "Zeth",
+      "1.68"
+     ],
+     [
+      "Lancer",
+      "2.05"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2-duels/counter-strike-2-duels-international/14711-berserk-cs2-league-2026-week-37/3170518-lancer-vs-omnic",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 6m",
+    "marketName": null,
+    "lg": [
+     "(Berserk CS2 League 2026 Week #37)",
+     "/sports/cs2-duels/counter-strike-2-duels-international/14711-berserk-cs2-league-2026-week-37"
+    ],
+    "tools": [
+     "custom bet"
+    ],
+    "boost": false,
+    "cnt": "+91",
+    "home": [
+     "Lancer",
+     "https://cdn.oddin.gg/assets/teams/icons/lancer.jpeg?size=small"
+    ],
+    "away": [
+     "Omnic",
+     "https://cdn.oddin.gg/assets/teams/icons/omnic.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Lancer",
+      "2.20"
+     ],
+     [
+      "Omnic",
+      "1.58"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/cs2-duels/counter-strike-2-duels-international/14711-berserk-cs2-league-2026-week-37/3170519-zeth-vs-omnic",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 14m",
+    "marketName": null,
+    "lg": [
+     "(Berserk CS2 League 2026 Week #37)",
+     "/sports/cs2-duels/counter-strike-2-duels-international/14711-berserk-cs2-league-2026-week-37"
+    ],
+    "tools": [
+     "custom bet"
+    ],
+    "boost": false,
+    "cnt": "+91",
+    "home": [
+     "Omnic",
+     "https://cdn.oddin.gg/assets/teams/icons/omnic.png?size=small"
+    ],
+    "away": [
+     "Zeth",
+     "/icons/globe.svg"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Zeth",
+      "2.20"
+     ],
+     [
+      "Omnic",
+      "1.58"
+     ]
+    ]
+   }
+  ],
+  "DOTA2_DUELS": [
+   {
+    "m": "Match Winner - Twoway",
+    "href": "/sports/dota2-duels/dota-2-duels-international/14708-berserk-dota-2-league-2026-week-37/3170059-d4gger-vs-om3ga",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 9m",
+    "marketName": null,
+    "lg": [
+     "(Berserk Dota 2 League 2026 Week #37)",
+     "/sports/dota2-duels/dota-2-duels-international/14708-berserk-dota-2-league-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+51",
+    "home": [
+     "Om3ga",
+     "https://cdn.oddin.gg/assets/teams/icons/om3ga.jpeg?size=small"
+    ],
+    "away": [
+     "D4gger",
+     "https://cdn.oddin.gg/assets/teams/icons/d4gger.jpeg?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "D4gger",
+      "1.65"
+     ],
+     [
+      "Om3ga",
+      "2.10"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/dota2-duels/dota-2-duels-international/14708-berserk-dota-2-league-2026-week-37/3170060-d4gger-vs-n3xus",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 29m",
+    "marketName": null,
+    "lg": [
+     "(Berserk Dota 2 League 2026 Week #37)",
+     "/sports/dota2-duels/dota-2-duels-international/14708-berserk-dota-2-league-2026-week-37"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+53",
+    "home": [
+     "N3xus",
+     "https://cdn.oddin.gg/assets/teams/icons/n3xus_1757437128216.jpeg?size=small"
+    ],
+    "away": [
+     "D4gger",
+     "https://cdn.oddin.gg/assets/teams/icons/d4gger.jpeg?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "D4gger",
+      "2.70"
+     ],
+     [
+      "N3xus",
+      "1.40"
+     ]
+    ]
+   }
+  ],
+  "KOG": [
+   {
+    "m": "Match Winner - Twoway",
+    "href": "/sports/kog/king-of-glory-international/13759-kpl-growth-league-summer-2026/2869461-qing-jiu-club-vs-uu-gamers",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 12:30 PM - in 19 hours",
+    "marketName": null,
+    "lg": [
+     "(KPL Growth League Summer 2026)",
+     "/sports/kog/king-of-glory-international/13759-kpl-growth-league-summer-2026"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+8",
+    "home": [
+     "Qing Jiu Club",
+     "https://cdn.oddin.gg/assets/teams/icons/q9.png?size=small"
+    ],
+    "away": [
+     "UU Gamers",
+     "https://cdn.oddin.gg/assets/teams/icons/uug.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Qing Jiu Club",
+      "1.65"
+     ],
+     [
+      "UU Gamers",
+      "2.10"
+     ]
+    ]
+   }
+  ],
+  "R6": [
+   {
+    "m": "Match Winner - Twoway",
+    "href": "/sports/r6/rainbow-six-international/14589-asia-pacific-league-2026-oceania-stage-2/3131990-circular-spheres-vs-enterprise-esports",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Delayed start",
+    "marketName": null,
+    "lg": [
+     "(Asia Pacific League 2026 - Oceania - Stage 2)",
+     "/sports/r6/rainbow-six-international/14589-asia-pacific-league-2026-oceania-stage-2"
+    ],
+    "tools": [
+     "play"
+    ],
+    "boost": false,
+    "cnt": "+1",
+    "home": [
+     "Circular Spheres",
+     "https://cdn.oddin.gg/assets/teams/icons/circular_spheres.png?size=small"
+    ],
+    "away": [
+     "ENTERPRISE Esports",
+     "https://cdn.oddin.gg/assets/teams/icons/enterprise_1749623579725.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Circular Spheres",
+      "Suspended"
+     ],
+     [
+      "ENTERPRISE Esports",
+      "Suspended"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/r6/rainbow-six-international/14589-asia-pacific-league-2026-oceania-stage-2/3131992-7even-stars-vs-chiefs-esc",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "In 25m",
+    "marketName": null,
+    "lg": [
+     "(Asia Pacific League 2026 - Oceania - Stage 2)",
+     "/sports/r6/rainbow-six-international/14589-asia-pacific-league-2026-oceania-stage-2"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+1",
+    "home": [
+     "7EVEN STARS",
+     "https://cdn.oddin.gg/assets/teams/icons/7es.png?size=small"
+    ],
+    "away": [
+     "Chiefs ESC",
+     "https://cdn.oddin.gg/assets/teams/icons/chiefs_esc_1734524880711.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "7EVEN STARS",
+      "3.80"
+     ],
+     [
+      "Chiefs ESC",
+      "1.22"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/r6/rainbow-six-international/14590-europe-mena-league-2026-stage-2/3131804-team-heretics-vs-virtus-pro",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 9:30 PM - in 4 hours",
+    "marketName": null,
+    "lg": [
+     "(Europe MENA League 2026 - Stage 2)",
+     "/sports/r6/rainbow-six-international/14590-europe-mena-league-2026-stage-2"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+1",
+    "home": [
+     "Team Heretics",
+     "https://cdn.oddin.gg/assets/teams/icons/th_1725553434540.png?size=small"
+    ],
+    "away": [
+     "Virtus.pro",
+     "https://cdn.oddin.gg/assets/teams/icons/vp.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Team Heretics",
+      "3.50"
+     ],
+     [
+      "Virtus.pro",
+      "1.25"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/r6/rainbow-six-international/14590-europe-mena-league-2026-stage-2/3131805-fnatic-vs-team-falcons",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 10:30 PM - in 5 hours",
+    "marketName": null,
+    "lg": [
+     "(Europe MENA League 2026 - Stage 2)",
+     "/sports/r6/rainbow-six-international/14590-europe-mena-league-2026-stage-2"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+1",
+    "home": [
+     "Fnatic",
+     "https://cdn.oddin.gg/assets/teams/icons/fnatic.png?size=small"
+    ],
+    "away": [
+     "Team Falcons",
+     "https://cdn.oddin.gg/assets/teams/icons/falcons_1700742874975.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Fnatic",
+      "3.30"
+     ],
+     [
+      "Team Falcons",
+      "1.28"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/r6/rainbow-six-international/14590-europe-mena-league-2026-stage-2/3131807-twisted-minds-vs-g2-esports",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 07, 11:30 PM - in 6 hours",
+    "marketName": null,
+    "lg": [
+     "(Europe MENA League 2026 - Stage 2)",
+     "/sports/r6/rainbow-six-international/14590-europe-mena-league-2026-stage-2"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+1",
+    "home": [
+     "Twisted Minds",
+     "https://cdn.oddin.gg/assets/teams/icons/twisted_minds_1748430326071.png?size=small"
+    ],
+    "away": [
+     "G2 Esports",
+     "https://cdn.oddin.gg/assets/teams/icons/g2_1726602099109.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Twisted Minds",
+      "2.80"
+     ],
+     [
+      "G2 Esports",
+      "1.38"
+     ]
+    ]
+   },
+   {
+    "m": null,
+    "href": "/sports/r6/rainbow-six-international/14590-europe-mena-league-2026-stage-2/3131809-geekay-esports-vs-rebels-gaming",
+    "si": null,
+    "live": false,
+    "phase": null,
+    "clock": null,
+    "date": "Sep 08, 1:30 AM - in 8 hours",
+    "marketName": null,
+    "lg": [
+     "(Europe MENA League 2026 - Stage 2)",
+     "/sports/r6/rainbow-six-international/14590-europe-mena-league-2026-stage-2"
+    ],
+    "tools": [],
+    "boost": false,
+    "cnt": "+1",
+    "home": [
+     "Geekay Esports",
+     "https://cdn.oddin.gg/assets/teams/icons/gk_1747645814119.png?size=small"
+    ],
+    "away": [
+     "Rebels Gaming",
+     "https://cdn.oddin.gg/assets/teams/icons/rebels.png?size=small"
+    ],
+    "boards": [],
+    "cols": 2,
+    "sels": [
+     [
+      "Geekay Esports",
+      "1.35"
+     ],
+     [
+      "Rebels Gaming",
+      "2.90"
+     ]
+    ]
+   }
+  ]
+ }
 }

@@ -13,6 +13,8 @@ import groupData from "../data/sports-groups.json";
 import upcoming from "../data/sports-upcoming.json";
 import liveData from "../data/sports-live.json";
 import allSports from "../data/sports-all.json";
+import pageData from "../data/sports-pages.json";
+import { bannerForSport, groupsForSport } from "../lib/sportsData";
 import seoHtml from "../data/seo-sports.html?raw";
 
 /**
@@ -21,7 +23,12 @@ import seoHtml from "../data/seo-sports.html?raw";
  * tournament standings here were captured from its live DOM.
  */
 
-const stop = (e) => e.preventDefault();
+/** Fixture, competition and sport links render as real anchors; this keeps the
+ *  click inside the router instead of letting the browser leave the app. */
+const go = (e) => {
+  e.preventDefault();
+  navigate(e.currentTarget.getAttribute("href"));
+};
 const logo = (id) => `/images/sports/logos/${id}.png`;
 const PITCH = "/images/sports/banner/sports-soccer.webp";
 const TOOL_ICONS = { "2up": "/icons/2up.svg", "custom bet": "/icons/custom-bet.svg", play: "/icons/play.svg", stats: "/icons/sports-stats.svg" };
@@ -71,7 +78,12 @@ function NavTabs({ active, onChange }) {
 }
 
 /** Sport icon rail — reference `SportsCategoryCarousel`. */
-function CategoryCarousel({ cats, selected, onSelect, section }) {
+/** Chip code to sport slug, e.g. `TABLE_TENNIS` -> `table-tennis`. */
+function slugForCode(code) {
+  return code.toLowerCase().replace(/_/g, "-");
+}
+
+function CategoryCarousel({ cats, selected, section }) {
   const ref = useRef(null);
   const [atEnd, setAtEnd] = useState(false);
   const [atStart, setAtStart] = useState(true);
@@ -90,21 +102,26 @@ function CategoryCarousel({ cats, selected, onSelect, section }) {
     <section className="LayoutContainer_root LayoutContainer_column">
       <section className="SportsCategoryCarousel_root">
         <div ref={ref} className="SportsCategoryCarousel_categoryContainer" onScroll={onScroll}>
-          {cats.map(([name, icon, alt, counter, code]) => (
-            <a
-              key={code}
-              data-testid={`sports-category-${name}`}
-              className={cx("SportsCategoryCarousel_slideItem", selected === code && "SportsCategoryCarousel_selected")}
-              href={section ? `/sports?section=${section}&sport=${code}` : `/sports?sport=${code}`}
-              onClick={(e) => { e.preventDefault(); onSelect(code); }}
-            >
-              <div className="SportsCategoryCarousel_icon">
-                <img alt={alt} src={icon} />
-              </div>
-              {counter && <span className={cx("SportsCategoryCarousel_counterBadge", selected === code && "SportsCategoryCarousel_selected")}>{counter}</span>}
-              <span className={cx("SportsCategoryCarousel_name", selected === code && "SportsCategoryCarousel_selected")}>{name}</span>
-            </a>
-          ))}
+          {cats.map(([name, icon, alt, counter, code]) => {
+            // The reference carries the chosen category in the query string, so each
+            // chip stays a real link and the selection survives a reload.
+            const href = section ? `/sports?section=${section}&sport=${code}` : `/sports?sport=${code}`;
+            return (
+              <a
+                key={code}
+                data-testid={`sports-category-${name}`}
+                className={cx("SportsCategoryCarousel_slideItem", selected === code && "SportsCategoryCarousel_selected")}
+                href={href}
+                onClick={(e) => { e.preventDefault(); navigate(href); }}
+              >
+                <div className="SportsCategoryCarousel_icon">
+                  <img alt={alt} src={icon} />
+                </div>
+                {counter && <span className={cx("SportsCategoryCarousel_counterBadge", selected === code && "SportsCategoryCarousel_selected")}>{counter}</span>}
+                <span className={cx("SportsCategoryCarousel_name", selected === code && "SportsCategoryCarousel_selected")}>{name}</span>
+              </a>
+            );
+          })}
         </div>
         {!atStart && (
           <button type="button" className="SearchScrollableContainer_button SearchScrollableContainer_leftNav SearchScrollableContainer_showNav" aria-label="scroll to left" onClick={() => scroll(-1)}>
@@ -162,7 +179,7 @@ function ToolbarIcon({ alt, href }) {
             {inner}
           </button>
         ) : (
-          <a className="" href={href} onClick={stop}>
+          <a className="" href={href} onClick={go}>
             <span className="ButtonVariants_root ButtonVariants_buttonHeightXSmall ButtonVariants_iconTransparent ButtonVariants_hasIcon">{inner}</span>
           </a>
         )}
@@ -174,33 +191,39 @@ function ToolbarIcon({ alt, href }) {
 /** Live match tile with 1X2 odds — reference `FeaturedFixtureCard`. */
 function FixtureCard({ f }) {
   const [picked, setPicked] = useState(null);
+  // The reference paints each card on its own sport's pitch, and shows either a
+  // live scoreboard or, before kick-off, the two names either side of "vs.".
+  const names = f.teams ? f.teams.map((t) => t[0]) : f.competitors.map((c) => c[0]);
+  const banner = bannerForSport(f.href.split("/")[2]);
   return (
     <div className="FeaturedFixtureCard_cardWrapper">
-      <a className="FeaturedFixtureCard_cardLink" aria-label={f.competitors.map((c) => c[0]).join(" vs ")} href={f.href} onClick={stop} />
+      <a className="FeaturedFixtureCard_cardLink" aria-label={names.join(" vs ")} href={f.href} onClick={go} />
       <div className="Flex_root Flex_column FeaturedFixtureCard_card">
         <div className="Flex_root Flex_md FeaturedFixtureCard_header">
           <div className="Flex_root Flex_sm4 FeaturedFixtureCard_leftContent">
-            <a className="TextLink_root LabelLink_root" href={f.leagueHref} onClick={stop}>
+            <a className="TextLink_root LabelLink_root" href={f.leagueHref} onClick={go}>
               <span className="LabelLink_prefix">
-                <img alt="SOCCER" width="20" height="20" className="FeaturedFixtureCard_sportIcon" src="/icons/sports/soccer.svg" />
+                <img alt={f.league} width="20" height="20" className="FeaturedFixtureCard_sportIcon" src={f.sportIcon || "/icons/sports/soccer.svg"} />
               </span>
               <span className="LabelLink_label">{f.league}</span>
               <img height="16" width="16" alt="" className="LabelLink_chevron" src="/icons/chevron-small.svg" />
             </a>
           </div>
           <div className="Flex_root Flex_center ToolbarGroup_root ToolbarGroup_xs">
-            <div>
-              <span className="Tooltip_trigger">
-                <div className="ToolbarButton_buttonXs">
-                  <span className="Tag_tagBlock Tag_live Tag_md">LIVE</span>
-                </div>
-              </span>
-            </div>
+            {f.live && (
+              <div>
+                <span className="Tooltip_trigger">
+                  <div className="ToolbarButton_buttonXs">
+                    <span className="Tag_tagBlock Tag_live Tag_md">LIVE</span>
+                  </div>
+                </span>
+              </div>
+            )}
             {f.tools.map((tool) => (
               <ToolbarIcon key={tool} alt={tool} href={f.href} />
             ))}
             <div className="FixtureToolbar_marketCountButton">
-              <a className="" href={f.href} onClick={stop}>
+              <a className="" href={f.href} onClick={go}>
                 <span className="ButtonVariants_root ButtonVariants_buttonHeightXSmall ButtonVariants_iconTransparent ButtonVariants_hasIcon">
                   <span className="ButtonVariants_buttonContent ToolbarButton_buttonXs">
                     <span className="ButtonIcon_root">
@@ -212,18 +235,39 @@ function FixtureCard({ f }) {
             </div>
           </div>
         </div>
-        <div className="FeaturedFixtureCard_scoreboard" style={{ backgroundImage: `url("${PITCH}")` }}>
-          <div className="Flex_root Flex_column Flex_lg FeaturedFixtureCard_competitors">
-            {f.competitors.map(([name, id, score]) => (
-              <div key={name} className="Flex_root Flex_sm4 FeaturedFixtureCard_competitor">
-                <div className="ImageWithFallback_imageContainer" style={{ width: 20, height: 20 }}>
-                  <img alt={name} width="20" height="20" loading="lazy" src={logo(id)} style={{ objectFit: "contain" }} />
-                </div>
-                <span className="FeaturedFixtureCard_competitorName">{name}</span>
-                <span className="FeaturedFixtureCard_score">{score}</span>
+        <div className="FeaturedFixtureCard_scoreboard" style={banner ? { backgroundImage: `url("${banner}")` } : undefined}>
+          {f.teams ? (
+            <div className="Flex_root Flex_center FeaturedFixtureCard_scoreboardContent">
+              <div className="ImageWithFallback_imageContainer" style={{ width: 40, height: 40 }}>
+                <img alt={f.teams[0][0]} width="40" height="40" loading="lazy" src={f.teams[0][1]} style={{ objectFit: "contain" }} />
               </div>
-            ))}
-          </div>
+              <div className="Flex_root Flex_column FeaturedFixtureCard_matchInfo">
+                <span className="FeaturedFixtureCard_matchName">
+                  <span className="FeaturedFixtureCard_teamName">{f.teams[0][0]}</span>
+                  <span className="FeaturedFixtureCard_vs"> vs.</span>
+                </span>
+                <span className="FeaturedFixtureCard_matchName">
+                  <span className="FeaturedFixtureCard_teamName">{f.teams[1][0]}</span>
+                </span>
+                <div className="FeaturedFixtureCard_startTime">{f.startTime}</div>
+              </div>
+              <div className="ImageWithFallback_imageContainer" style={{ width: 40, height: 40 }}>
+                <img alt={f.teams[1][0]} width="40" height="40" loading="lazy" src={f.teams[1][1]} style={{ objectFit: "contain" }} />
+              </div>
+            </div>
+          ) : (
+            <div className="Flex_root Flex_column Flex_lg FeaturedFixtureCard_competitors">
+              {f.competitors.map(([name, id, score]) => (
+                <div key={name} className="Flex_root Flex_sm4 FeaturedFixtureCard_competitor">
+                  <div className="ImageWithFallback_imageContainer" style={{ width: 20, height: 20 }}>
+                    <img alt={name} width="20" height="20" loading="lazy" src={logo(id)} style={{ objectFit: "contain" }} />
+                  </div>
+                  <span className="FeaturedFixtureCard_competitorName">{name}</span>
+                  <span className="FeaturedFixtureCard_score">{score}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="FeaturedFixtureCard_selections">
           {f.selections.map(([name, odds], i) => {
@@ -320,7 +364,7 @@ function FixtureHeader({ f }) {
     <div className="Flex_root Flex_sm4 MatchEventHeader_matchElementHeader">
       <div style={HEADER_TEXT}>
         {f.si && (
-          <a className="SportsIconLink_sportIcon" href={f.si[0]} onClick={stop}>
+          <a className="SportsIconLink_sportIcon" href={f.si[0]} onClick={go}>
             <img alt={f.si[2]} src={f.si[1]} />
           </a>
         )}
@@ -337,7 +381,7 @@ function FixtureHeader({ f }) {
           ) : (
             <>
               {f.marketName && (
-                <a className="SportEventHeaderBlock_eventLinkHover SportEventHeaderBlock_marketName" href={f.href} style={MARKET_LINK} onClick={stop}>
+                <a className="SportEventHeaderBlock_eventLinkHover SportEventHeaderBlock_marketName" href={f.href} style={MARKET_LINK} onClick={go}>
                   {f.marketName}
                 </a>
               )}
@@ -345,7 +389,7 @@ function FixtureHeader({ f }) {
             </>
           )}
           {f.lg && (
-            <a className="SportEventHeaderBlock_leagueLinkHover" href={f.lg[1]} style={LEAGUE_LINK} onClick={stop}>
+            <a className="SportEventHeaderBlock_leagueLinkHover" href={f.lg[1]} style={LEAGUE_LINK} onClick={go}>
               {f.lg[0]}
             </a>
           )}
@@ -355,7 +399,7 @@ function FixtureHeader({ f }) {
         {f.boost && (
           <div className="BoostButton_boostButton">
             <span className="Tooltip_trigger">
-              <a href={f.href} onClick={stop}>
+              <a href={f.href} onClick={go}>
                 <span className="ButtonVariants_root ButtonVariants_buttonHeightXSmall ButtonVariants_iconTransparent ButtonVariants_hasIcon">
                   <span className="ButtonVariants_buttonContent ToolbarButton_buttonXs">
                     <span className="ButtonIcon_root">
@@ -372,7 +416,7 @@ function FixtureHeader({ f }) {
         ))}
         {f.cnt && (
           <div className="FixtureToolbar_marketCountButton">
-            <a href={f.href} onClick={stop}>
+            <a href={f.href} onClick={go}>
               <span className="ButtonVariants_root ButtonVariants_buttonHeightXSmall ButtonVariants_iconTransparent ButtonVariants_hasIcon">
                 <span className="ButtonVariants_buttonContent ToolbarButton_buttonXs">
                   <span className="ButtonIcon_root">
@@ -409,7 +453,7 @@ function ScoreBoards({ boards }) {
 /** One competitor line of a match row — reference `MatchEventInfoSection`. */
 function Competitor({ team, href, away }) {
   return (
-    <a className={cx("MatchEventInfoSection_competitor", away && "MatchEventInfoSection_awayTeam")} href={href} onClick={stop}>
+    <a className={cx("MatchEventInfoSection_competitor", away && "MatchEventInfoSection_awayTeam")} href={href} onClick={go}>
       <div className="ImageWithFallback_imageContainer MatchEventInfoSection_competitorIcon" style={{ width: 20, height: 20 }}>
         <img alt={team[0]} width="20" height="20" loading="lazy" src={team[1]} style={{ objectFit: "contain" }} />
       </div>
@@ -503,7 +547,7 @@ function OutrightBody({ f, picked, onPick }) {
 }
 
 /** One fixture inside an expanded group — reference `MatchEventTiles` + `MatchEventTile`. */
-function MatchRow({ f, market, cols, outright, first, noTopMargin }) {
+export function MatchRow({ f, market, cols, outright, first, noTopMargin }) {
   const [picked, setPicked] = useState(null);
   const columns = cols || f.cols || 2;
   return (
@@ -538,7 +582,7 @@ function MatchRow({ f, market, cols, outright, first, noTopMargin }) {
               </div>
             </div>
           )}
-          <a className="MatchEventTiles_linkOverlay" href={f.href} onClick={stop} />
+          <a className="MatchEventTiles_linkOverlay" href={f.href} onClick={go} />
         </div>
       </div>
     </section>
@@ -546,7 +590,7 @@ function MatchRow({ f, market, cols, outright, first, noTopMargin }) {
 }
 
 /** The "Load more" link under a fixture list — reference `LoadMoreFixturesButton`. */
-function LoadMoreButton() {
+export function LoadMoreButton() {
   return (
     <button className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_textLink LoadMoreFixturesButton_btnLoadMore" type="button">
       <span className="ButtonVariants_buttonContent">Load more</span>
@@ -569,14 +613,14 @@ export function MatchGroup({ g }) {
                 <span className="SportTitleLink_title">{g.dateLabel}</span>
               ) : (
               <>
-              <a className="SportTitleLink_categoryName" href={g.catHref} onClick={stop}>
+              <a className="SportTitleLink_categoryName" href={g.catHref} onClick={go}>
                 <div className="ImageWithFallback_imageContainer SportTitleLink_countryFlag" style={{ width: 16, height: 16 }}>
                   <img alt={g.catName} width="16" height="16" loading="lazy" src={g.catFlag} />
                 </div>
                 <span className="SportTitleLink_categoryNameText">{g.catName}</span>
               </a>
               <span className="SportTitleLink_separator" />
-              <a className="SportTitleLink_competitionName" href={g.compHref} onClick={stop}>
+              <a className="SportTitleLink_competitionName" href={g.compHref} onClick={go}>
                 <div className="ImageWithFallback_imageContainer SportTitleLink_tournamentIcon" style={{ width: 16, height: 16 }}>
                   <img alt={g.compName} width="16" height="16" loading="lazy" src={g.compIcon} />
                 </div>
@@ -621,7 +665,7 @@ function SportGroup({ g }) {
 }
 
 /** Linked sport title used above the fixture groups — reference `SportsHeader`. */
-export function SportsHeading({ icon, alt, title, href, toolbar }) {
+export function SportsHeading({ icon, alt, title, href, toolbar, noMargin }) {
   const label = (
     <>
       <span className="LabelLink_prefix">
@@ -632,14 +676,17 @@ export function SportsHeading({ icon, alt, title, href, toolbar }) {
     </>
   );
   return (
-    <div className="Flex_root SportsHeader_wrapper" style={{ justifyContent: "space-between", alignItems: "center" }}>
+    <div className={cx("Flex_root SportsHeader_wrapper", noMargin && "SportsHeader_wrapperNoMargin")} style={{ justifyContent: "space-between", alignItems: "center" }}>
       <h3 className="LabelLink_root LabelLink_lg">
+        {/* Only the linked form is wrapped: the reference puts the prefix and label
+            straight into the flex h3 when there is no link, and the shared
+            `LabelLink_innerLink` rule only ever targets an anchor. */}
         {href ? (
-          <a className="TextLink_root LabelLink_innerLink" href={href} onClick={stop}>
+          <a className="TextLink_root LabelLink_innerLink" href={href} onClick={go}>
             {label}
           </a>
         ) : (
-          <span className="LabelLink_innerLink">{label}</span>
+          label
         )}
       </h3>
       <div className="SportsHeader_toolbar">{toolbar}</div>
@@ -653,7 +700,7 @@ function SgmCard({ s }) {
   return (
     <div className="FeaturedCustomBetCard_cardWrapper">
       <div className="Flex_root Flex_column FeaturedCustomBetCard_card">
-        <a className="FeaturedCustomBetCard_cardLink" aria-label={s.label} href={sgmHref} onClick={stop}>
+        <a className="FeaturedCustomBetCard_cardLink" aria-label={s.label} href={sgmHref} onClick={go}>
           <div className="FeaturedCustomBetCard_header">
             <img alt="" width="16" height="16" src="/icons/custom-bet.svg" />
             <span className="FeaturedCustomBetCard_headerText">3 Leg Same-Game Multi</span>
@@ -677,7 +724,7 @@ function SgmCard({ s }) {
         <div className="Flex_root Flex_spaced FeaturedCustomBetCard_summary">
           <div className="Flex_root Flex_column Flex_sm1">
             <span className="FeaturedCustomBetCard_summaryText">3 Legs</span>
-            <a className="TextLink_root LabelLink_root" href={sgmHref} onClick={stop}>
+            <a className="TextLink_root LabelLink_root" href={sgmHref} onClick={go}>
               <span className="LabelLink_label">{s.date}</span>
               <img height="16" width="16" alt="" className="LabelLink_chevron" src="/icons/chevron-small.svg" />
             </a>
@@ -688,7 +735,7 @@ function SgmCard({ s }) {
         </div>
         <div className="FeaturedCustomBetCard_divider" />
         <div className="Flex_root Flex_column Flex_sm5 FeaturedCustomBetCard_selections">
-          <a className="TextLink_root LabelLink_root FeaturedCustomBetCard_competitionLink" href={s.competitionHref} onClick={stop}>
+          <a className="TextLink_root LabelLink_root FeaturedCustomBetCard_competitionLink" href={s.competitionHref} onClick={go}>
             <span className="LabelLink_label">{s.competition}</span>
             <img height="16" width="16" alt="" className="LabelLink_chevron" src="/icons/chevron-small.svg" />
           </a>
@@ -703,7 +750,7 @@ function SgmCard({ s }) {
           ))}
         </div>
         <div className="Flex_root Flex_md FeaturedCustomBetCard_footer">
-          <a className="FeaturedCustomBetCard_editButton" href={sgmHref} onClick={stop}>
+          <a className="FeaturedCustomBetCard_editButton" href={sgmHref} onClick={go}>
             <span className="ButtonVariants_root ButtonVariants_buttonHeightSmall ButtonVariants_tertiary">
               <span className="ButtonVariants_buttonContent FeaturedCustomBetCard_editButtonBg">Edit</span>
             </span>
@@ -802,61 +849,11 @@ function TournamentsCarousel() {
 }
 
 /** Featured tab: trending fixtures, sport groups, same-game multis and tournaments. */
-function FeaturedTab() {
-  const [sport, setSport] = useState("POPULAR");
-  const groups = groupData;
-  return (
-    <div>
-      <CategoryCarousel cats={sports.categories.map(([n, i, a, c]) => [n, i, a, null, c])} selected={sport} onSelect={setSport} />
-      <section className="LayoutContainer_root LayoutContainer_mobile-top-md LayoutContainer_column">
-        <TrendingCarousel />
-        {groups.slice(0, 5).map((g) => (
-          <SportGroup key={g.title} g={g} />
-        ))}
-        <SgmCarousel />
-        {groups.slice(5).map((g) => (
-          <SportGroup key={g.title} g={g} />
-        ))}
-        <TournamentsCarousel />
-      </section>
-    </div>
-  );
-}
-
-/** Upcoming tab: one flat, market-labelled list across every sport. */
-function UpcomingTab() {
-  const [sport, setSport] = useState("ALLSPORTS");
-  return (
-    <div>
-      <CategoryCarousel cats={upcoming.cats} section="upcoming" selected={sport} onSelect={setSport} />
-      <section className="LayoutContainer_root LayoutContainer_mobile-top-md LayoutContainer_column">
-        <SportsHeading alt="all sports" icon={upcoming.headIcon} title={upcoming.heading} />
-        <div className="MatchEventTileGroup_root">
-          <div className="MatchEventTileGroup_matchEventBody MatchEventTileGroup_matchEventBodyWithoutCollapse MatchEventTileGroup_matchEventBodyWithLoadMore">
-            {upcoming.fx.map((f) => (
-              <MatchRow key={f.href} f={f} market={f.m} noTopMargin />
-            ))}
-            {upcoming.loadMore && <LoadMoreButton />}
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-/** Bet Live tab: live events for one sport, grouped by competition. */
-function BetLiveTab() {
-  const [sport, setSport] = useState(liveData.cats[0][4]);
-  const s = liveData.sports[sport] || liveData.sports[liveData.cats[0][4]];
-  const [market, setMarket] = useState(s.markets[0]);
+/** Layout toggle and market select beside a sport heading — reference `SportsHeader`.
+ *  Keyed by sport at the call site so the control resets when the sport changes. */
+function MarketToolbar({ markets }) {
   const [open, setOpen] = useState(false);
-  const pickSport = (code) => {
-    setSport(code);
-    const next = liveData.sports[code];
-    if (next) setMarket(next.markets[0]);
-    setOpen(false);
-  };
-  const toolbar = (
+  return (
     <>
       <span className="Tooltip_trigger">
         <button className="SportsHeader_layoutToggle" type="button">
@@ -873,18 +870,106 @@ function BetLiveTab() {
           onClick={() => setOpen((o) => !o)}
         >
           <span className="Select_item">
-            <span className="Select_text">{s.markets.includes(market) ? market : s.markets[0]}</span>
+            <span className="Select_text">{markets[0]}</span>
           </span>
           <img alt="Toggle dropdown menu" className="Select_chevronIcon" src="/icons/chevron.svg" />
         </button>
       </div>
     </>
   );
+}
+
+function FeaturedTab({ sport }) {
+  const cats = sports.categories.map(([n, i, a, c]) => [n, i, a, null, c]);
+  const slug = sport && sport !== "POPULAR" ? slugForCode(sport) : null;
+  const page = slug ? pageData.sports[slug] : null;
+  // A chosen sport replaces the popular mix with that sport's own competitions. The
+  // reference keeps the tournaments banner here but drops the trending and SGM rows.
+  if (page) {
+    return (
+      <div>
+        <CategoryCarousel cats={cats} selected={sport} />
+        <section className="LayoutContainer_root LayoutContainer_mobile-top-md LayoutContainer_column">
+          <SportsHeading
+            alt={page.title}
+            href={`/sports/${slug}`}
+            icon={page.icon}
+            title={page.title}
+            toolbar={<MarketToolbar key={slug} markets={page.markets} />}
+          />
+          {groupsForSport(slug, page).map((g) => (
+            <MatchGroup key={g.compHref} g={g} />
+          ))}
+          <TournamentsCarousel />
+        </section>
+      </div>
+    );
+  }
+  const groups = groupData;
   return (
     <div>
-      <CategoryCarousel cats={liveData.cats} section="bet-live" selected={sport} onSelect={pickSport} />
+      <CategoryCarousel cats={cats} selected="POPULAR" />
       <section className="LayoutContainer_root LayoutContainer_mobile-top-md LayoutContainer_column">
-        <SportsHeading alt={s.sport[3]} href={s.sport[1]} icon={s.sport[2]} title={s.sport[0]} toolbar={toolbar} />
+        <TrendingCarousel />
+        {groups.slice(0, 5).map((g) => (
+          <SportGroup key={g.title} g={g} />
+        ))}
+        <SgmCarousel />
+        {groups.slice(5).map((g) => (
+          <SportGroup key={g.title} g={g} />
+        ))}
+        <TournamentsCarousel />
+      </section>
+    </div>
+  );
+}
+
+/** Upcoming tab: one flat, market-labelled list across every sport. */
+function UpcomingTab({ sport }) {
+  const picked = sport && sport !== "ALLSPORTS" ? upcoming.cats.find((c) => c[4] === sport) : null;
+  const selected = picked ? sport : "ALLSPORTS";
+  // Each sport carries its own captured page; All Sports keeps the mixed list.
+  const rows = picked ? upcoming.bySport[selected] || [] : upcoming.fx;
+  // The reference pages these lists, so a full page means there is more behind it.
+  const loadMore = picked ? rows.length >= 10 : upcoming.loadMore;
+  return (
+    <div>
+      <CategoryCarousel cats={upcoming.cats} section="upcoming" selected={selected} />
+      <section className="LayoutContainer_root LayoutContainer_mobile-top-md LayoutContainer_column">
+        <SportsHeading
+          alt={picked ? picked[2] : "all sports"}
+          icon={picked ? picked[1] : upcoming.headIcon}
+          title={picked ? picked[0] : upcoming.heading}
+        />
+        <div className="MatchEventTileGroup_root">
+          <div className="MatchEventTileGroup_matchEventBody MatchEventTileGroup_matchEventBodyWithoutCollapse MatchEventTileGroup_matchEventBodyWithLoadMore">
+            {rows.map((f) => (
+              <MatchRow key={f.href} f={f} market={f.m} noTopMargin />
+            ))}
+            {loadMore && <LoadMoreButton />}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/** Bet Live tab: live events for one sport, grouped by competition. */
+function BetLiveTab({ sport }) {
+  // Only sports with live events get a chip here, so an unknown code falls back.
+  const selected = liveData.sports[sport] ? sport : liveData.cats[0][4];
+  const s = liveData.sports[selected];
+  return (
+    <div>
+      <CategoryCarousel cats={liveData.cats} section="bet-live" selected={selected} />
+      <section className="LayoutContainer_root LayoutContainer_mobile-top-md LayoutContainer_column">
+        <SportsHeading
+          alt={s.sport[3]}
+          href={s.sport[1]}
+          icon={s.sport[2]}
+          title={s.sport[0]}
+          toolbar={<MarketToolbar key={selected} markets={s.markets} />}
+        />
         {s.groups.map((g) => (
           <MatchGroup key={g.compHref} g={g} />
         ))}
@@ -917,7 +1002,7 @@ function AllSportsTab() {
               <span className="AllSportsList_sportLetter">{letter}</span>
               <div className="AllSportsList_wrapper">
                 {rows.map(([name, icon, href]) => (
-                  <a key={href} className="SportItem_sportItemWrapper" href={href} onClick={stop}>
+                  <a key={href} className="SportItem_sportItemWrapper" href={href} onClick={(e) => { e.preventDefault(); navigate(href); }}>
                     <div className="SportItem_sportItem">
                       <span className="SportItem_sportItemName">
                         <img alt={name} src={icon} />
@@ -941,7 +1026,8 @@ export default function SportsPage() {
   // The reference keeps the section in the query string, so the rail's Upcoming
   // and Bet Live links and these tabs stay in sync.
   const search = useSearch();
-  const section = new URLSearchParams(search).get("section");
+  const params = new URLSearchParams(search);
+  const section = params.get("section");
   const tab = TABS[section] ? section : "featured";
   const Body = TABS[tab];
   return (
@@ -949,7 +1035,7 @@ export default function SportsPage() {
       <HeroBanners banners={staticData.banners} />
       <div className="SportsHome_root">
         <NavTabs active={tab} onChange={navigate} />
-        <Body />
+        <Body sport={params.get("sport")} />
       </div>
       <ActivityBoard />
       <SeoArticle html={seoHtml} />

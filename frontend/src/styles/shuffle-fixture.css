@@ -1,0 +1,2691 @@
+/* Fixture detail page — verbatim from the reference CSS chunks, hashes stripped.
+   Modules: markets list and layouts, pre-live widget, event banner and aside. */
+
+.Switch_switchWrapper {
+  display:flex;
+  background:none;
+  border:none;
+  align-items:center;
+  gap:var(--spacing-sm5);
+  flex-direction:row;
+  justify-content:flex-start;
+  color:inherit;
+  cursor:pointer;
+}
+
+.Switch_switchWrapper:has(.Switch_hiddenCheckbox:disabled):not(.Switch_keepEnabledStyle) .Switch_darkSwitchElement,.Switch_switchWrapper:has(.Switch_hiddenCheckbox:disabled):not(.Switch_keepEnabledStyle) .Switch_switchElement {
+  cursor:default;
+  background:var(--color-gray300);
+}
+
+.Switch_switchWrapper.Switch_keepEnabledStyle:has(.Switch_hiddenCheckbox:disabled) .Switch_darkSwitchElement,.Switch_switchWrapper.Switch_keepEnabledStyle:has(.Switch_hiddenCheckbox:disabled) .Switch_switchElement {
+  cursor:default;
+}
+
+.Switch_switchWrapper:active:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_darkSwitchElement,.Switch_switchWrapper:active:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_switchElement {
+  background:var(--color-primaryViolet);
+}
+
+@media(hover:hover) {
+
+  .Switch_switchWrapper:hover:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_darkSwitchElement,.Switch_switchWrapper:hover:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_switchElement {
+    box-shadow:0 0 0 1px #fff;
+  }
+
+}
+
+.Switch_labelFloat {
+  flex-direction:row-reverse;
+  justify-content:flex-end;
+}
+
+.Switch_spacedLayout {
+  justify-content:space-between;
+}
+
+.Switch_spacedLayout .Switch_label {
+  color:#fff;
+  font-size:var(--text-lg);
+  font-weight:500;
+  line-height:150%;
+}
+
+.Switch_label {
+  font-size:var(--text-md);
+}
+
+.Switch_hiddenCheckbox {
+  position:absolute;
+  opacity:0;
+  width:0;
+  height:0;
+  pointer-events:none;
+}
+
+.Switch_switchElement {
+  position:relative;
+  display:flex;
+  align-items:center;
+  height:var(--spacing-lg1);
+  width:2.625rem;
+  transition:var(--animation-duration);
+  background:var(--color-gray700);
+  border-radius:var(--radius-rounded);
+  cursor:pointer;
+}
+
+.Switch_darkSwitchElement {
+  background:var(--color-black900);
+}
+
+.Switch_checked {
+  background:var(--color-primaryNeonPurple);
+}
+
+.Switch_checked .Switch_knob {
+  transform:translateX(1.125rem);
+}
+
+.Switch_knob {
+  position:absolute;
+  left:var(--spacing-sm2);
+  transition:transform var(--animation-duration);
+  transform:translateX(0);
+  width:var(--spacing-md1);
+  height:var(--spacing-md1);
+  border-radius:var(--radius-full);
+  background:#fff;
+}
+
+.Visible_hide {
+  display:none;
+}
+
+.SandboxedIframe_iframe {
+  border:0;
+  display:block;
+}
+
+.NoMarket_wrapper {
+  background:var(--color-gray900);
+  justify-content:center;
+  align-content:center;
+  flex-direction:column;
+  border-radius:var(--radius-md);
+  position:relative;
+  text-align:center;
+  padding:3.5rem var(--spacing-lg4) 4.375rem;
+  font-size:var(--text-title);
+  width:100%;
+  display:flex;
+  align-items:center;
+}
+
+.NoMarket_icon {
+  width:80px;
+  height:80px;
+  margin:0 auto var(--spacing-md1);
+}
+
+.NoMarket_text {
+  margin-bottom:1.375rem;
+  font-style:normal;
+  font-weight:700;
+  font-size:var(--text-title);
+  text-align:center;
+}
+
+.NoMarket_sportsFixturesButtons {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column-reverse;
+  gap:var(--spacing-lg);
+  max-width:9.6875rem;
+}
+
+.AllMarkets_root {
+  position:relative;
+  min-height:var(--min-container-height-sm);
+  max-width:100%;
+}
+
+.AllMarkets_root>div:first-child {
+  border-top-left-radius:var(--radius-md);
+  border-top-right-radius:var(--radius-md);
+}
+
+.AllMarkets_root>div {
+  border-bottom:none;
+}
+
+.AllMarkets_loader {
+  position:absolute;
+  left:50%;
+  opacity:0;
+  pointer-events:none;
+}
+
+.AllMarkets_loading {
+  opacity:1;
+}
+
+.AllMarkets_content {
+  opacity:1;
+  transition:var(--animation-duration) opacity;
+}
+
+.AllMarkets_customBoosts {
+  margin-bottom:var(--spacing-md2);
+}
+
+.AllMarkets_contentLoading {
+  opacity:0;
+  transition:0s;
+}
+
+.MarketsSkeleton_container {
+  border-radius:var(--radius-md);
+  background:var(--color-gray900);
+}
+
+.MarketsSkeleton_header {
+  padding:var(--spacing-md2);
+}
+
+.MarketsSkeleton_headerSkeleton {
+  border-radius:var(--radius-md);
+  height:var(--spacing-md2);
+  width:50%;
+}
+
+.MarketsSkeleton_wrapper {
+  display:flex;
+  gap:var(--spacing-sm4);
+  flex-direction:column;
+  padding:var(--spacing-md2);
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .MarketsSkeleton_wrapper {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .MarketsSkeleton_wrapper {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .MarketsSkeleton_wrapper {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .MarketsSkeleton_wrapper {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+.MarketsSkeleton_wrapperSkeleton {
+  border-radius:var(--radius-md);
+  height:var(--spacing-lg5);
+  width:100%;
+}
+
+.LadderMarketLayout_selections {
+  display:flex;
+  flex-direction:column;
+  flex:1 1;
+  gap:var(--spacing-sm5);
+}
+
+.LadderMarketLayout_heading {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:var(--spacing-sm4);
+  margin-bottom:var(--spacing-md2);
+  font-size:var(--text-lg);
+}
+
+.LadderMarketLayout_headingText {
+  line-height:var(--spacing-lg);
+}
+
+.LadderMarketLayout_button {
+  background:none;
+  border:0;
+  color:#fff;
+  text-decoration:underline;
+  display:block;
+  cursor:pointer;
+  padding:var(--spacing-md2) 0 var(--spacing-sm);
+  width:100%;
+  transition:var(--animation-slow-duration);
+  font-size:var(--text-lg);
+  font-weight:500;
+}
+
+.LadderMarketLayout_contaienr {
+  container-type:inline-size;
+}
+
+.LadderMarketLayout_button:hover {
+  color:var(--color-primaryViolet);
+}
+
+.LadderMarketLayout_root {
+  display:grid;
+  grid-gap:var(--spacing-md2);
+  gap:var(--spacing-md2);
+  grid-template-columns:1fr;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .LadderMarketLayout_root:not(.LadderMarketLayout_doubleColumn) {
+    grid-template-columns:minmax(0,1fr) minmax(0,.6fr) minmax(0,1fr);
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .LadderMarketLayout_root:not(.LadderMarketLayout_doubleColumn) {
+    grid-template-columns:minmax(0,1fr) minmax(0,.6fr) minmax(0,1fr);
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .LadderMarketLayout_root:not(.LadderMarketLayout_doubleColumn) {
+    grid-template-columns:minmax(0,1fr) minmax(0,.6fr) minmax(0,1fr);
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .LadderMarketLayout_root:not(.LadderMarketLayout_doubleColumn) {
+    grid-template-columns:minmax(0,1fr) minmax(0,.6fr) minmax(0,1fr);
+  }
+
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .LadderMarketLayout_root {
+    column-gap:var(--spacing-sm5);
+    row-gap:0;
+    grid-template-rows:auto 1fr;
+  }
+
+  .magic-container.right-side-opened-only .LadderMarketLayout_root>.LadderMarketLayout_column {
+    display:contents;
+  }
+
+  .magic-container.right-side-opened-only .LadderMarketLayout_root>.LadderMarketLayout_column>.LadderMarketLayout_heading {
+    grid-row:1;
+  }
+
+  .magic-container.right-side-opened-only .LadderMarketLayout_root>.LadderMarketLayout_column>.LadderMarketLayout_selections {
+    grid-row:2;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .LadderMarketLayout_root {
+    column-gap:var(--spacing-sm5);
+    row-gap:0;
+    grid-template-rows:auto 1fr;
+  }
+
+  .magic-container.left-side-opened-only .LadderMarketLayout_root>.LadderMarketLayout_column {
+    display:contents;
+  }
+
+  .magic-container.left-side-opened-only .LadderMarketLayout_root>.LadderMarketLayout_column>.LadderMarketLayout_heading {
+    grid-row:1;
+  }
+
+  .magic-container.left-side-opened-only .LadderMarketLayout_root>.LadderMarketLayout_column>.LadderMarketLayout_selections {
+    grid-row:2;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .LadderMarketLayout_root {
+    column-gap:var(--spacing-sm5);
+    row-gap:0;
+    grid-template-rows:auto 1fr;
+  }
+
+  .magic-container.both-side-opened .LadderMarketLayout_root>.LadderMarketLayout_column {
+    display:contents;
+  }
+
+  .magic-container.both-side-opened .LadderMarketLayout_root>.LadderMarketLayout_column>.LadderMarketLayout_heading {
+    grid-row:1;
+  }
+
+  .magic-container.both-side-opened .LadderMarketLayout_root>.LadderMarketLayout_column>.LadderMarketLayout_selections {
+    grid-row:2;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .LadderMarketLayout_root {
+    column-gap:var(--spacing-sm5);
+    row-gap:0;
+    grid-template-rows:auto 1fr;
+  }
+
+  .magic-container.no-side-opened .LadderMarketLayout_root>.LadderMarketLayout_column {
+    display:contents;
+  }
+
+  .magic-container.no-side-opened .LadderMarketLayout_root>.LadderMarketLayout_column>.LadderMarketLayout_heading {
+    grid-row:1;
+  }
+
+  .magic-container.no-side-opened .LadderMarketLayout_root>.LadderMarketLayout_column>.LadderMarketLayout_selections {
+    grid-row:2;
+  }
+
+}
+
+@container (max-width: 600) {
+
+  .LadderMarketLayout_root {
+    grid-template-columns:1fr;
+  }
+
+}
+
+.LadderMarketLayout_doubleColumn {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-gap:var(--spacing-sm5);
+  gap:var(--spacing-sm5);
+  grid-row-gap:0;
+  row-gap:0;
+}
+
+.LadderMarketLayout_doubleColumn>.LadderMarketLayout_column {
+  display:contents;
+}
+
+.LadderMarketLayout_doubleColumn>.LadderMarketLayout_column>.LadderMarketLayout_heading {
+  grid-row:1;
+}
+
+.LadderMarketLayout_doubleColumn>.LadderMarketLayout_column>.LadderMarketLayout_selections {
+  grid-row:2;
+}
+
+.MarketViewToggle_viewToggleContainer {
+  display:flex;
+  gap:var(--spacing-md);
+  height:var(--spacing-lg);
+}
+
+button.MarketViewToggle_viewToggle {
+  color:var(--color-white);
+  font-weight:700;
+  font-size:var(--text-lg);
+  position:relative;
+}
+
+button.MarketViewToggle_viewToggle:before {
+  content:"";
+  position:absolute;
+  top:var(--spacing-sm4-neg);
+  bottom:var(--spacing-sm4-neg);
+  left:var(--spacing-sm2-neg);
+  right:var(--spacing-sm2-neg);
+}
+
+button.MarketViewToggle_viewToggle:disabled {
+  color:var(--color-primaryViolet);
+}
+
+.SportsBetOptionButton_root {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-direction:row;
+  background:var(--color-black900);
+  border-radius:var(--radius-sm1);
+  padding:var(--spacing-sm4);
+  width:100%;
+  transition:var(--animation-slow-duration) opacity;
+  position:relative;
+  text-align:left;
+}
+
+.SportsBetOptionButton_value {
+  font-weight:400;
+  font-size:var(--text-lg);
+  color:var(--color-white);
+  max-width:100%;
+  text-align:center;
+}
+
+button.SportsBetOptionButton_button {
+  font-weight:700;
+  width:2.75rem;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  border:0;
+}
+
+.SportsBetOptionButton_hideButton {
+  background:var(--color-gray800);
+}
+
+.SportsBetOptionButton_hideButton button {
+  visibility:hidden;
+  pointer-events:none;
+}
+
+.SportsBetOptionButton_icon {
+  width:var(--spacing-sm5);
+  height:var(--spacing-sm5);
+}
+
+.ScoreSelector_scoreSelector {
+  display:grid;
+  grid-gap:var(--spacing-md);
+  gap:var(--spacing-md);
+  grid-template-columns:1fr;
+  grid-template-areas:"homeHeader" "homeControl" "awayHeader" "awayControl" "oddsHeader" "oddsControl";
+}
+
+@media(min-width:768px) {
+
+  .ScoreSelector_scoreSelector {
+    grid-template-columns:1fr 1fr 1fr;
+    grid-template-areas:"homeHeader awayHeader oddsHeader" "homeControl awayControl oddsControl";
+    row-gap:0;
+    column-gap:var(--spacing-sm5);
+  }
+
+}
+
+.ScoreSelector_homeHeader {
+  grid-area:homeHeader;
+}
+
+.ScoreSelector_awayHeader {
+  grid-area:awayHeader;
+}
+
+.ScoreSelector_oddsHeader {
+  grid-area:oddsHeader;
+}
+
+.ScoreSelector_sectionHeader {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:var(--spacing-sm4);
+}
+
+@media(min-width:768px) {
+
+  .ScoreSelector_sectionHeader {
+    margin-bottom:var(--spacing-md2);
+  }
+
+}
+
+.ScoreSelector_homeControl {
+  grid-area:homeControl;
+  display:flex;
+  justify-content:center;
+}
+
+.ScoreSelector_awayControl {
+  grid-area:awayControl;
+  display:flex;
+  justify-content:center;
+}
+
+.ScoreSelector_headerText {
+  font-size:var(--text-lg);
+  font-weight:400;
+  line-height:var(--spacing-lg);
+  margin:0;
+  word-wrap:break-word;
+}
+
+.ScoreSelector_oddsControl {
+  grid-area:oddsControl;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+}
+
+@media(min-width:768px) {
+
+  .ScoreSelector_oddsControl {
+    width:auto;
+  }
+
+}
+
+.MarketCollapseHeader_root {
+  display:flex;
+  align-items:center;
+  gap:var(--spacing-sm4);
+  min-width:0;
+  flex:1 1;
+}
+
+.MarketCollapseHeader_sportIcon {
+  filter:var(--filter-primaryViolet);
+  flex-shrink:0;
+}
+
+.MarketCollapseHeader_title {
+  font-weight:700;
+  font-size:var(--text-lg);
+  text-transform:capitalize;
+  text-align:left;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  min-width:0;
+  flex:1 1;
+}
+
+.MarketCollapseHeader_subTitle {
+  font-weight:400;
+}
+
+div.SportsMarketCollapse_subCollapseBody {
+  background-color:var(--color-gray800);
+}
+
+div.SportsMarketCollapse_subCollapseBodyNoPadding {
+  background-color:var(--color-gray800);
+  padding:0;
+}
+
+.DefaultMarketLayout_container {
+  container-type:inline-size;
+}
+
+.DefaultMarketLayout_root {
+  display:grid;
+  grid-gap:var(--spacing-sm5);
+  gap:var(--spacing-sm5);
+  width:100%;
+}
+
+.DefaultMarketLayout_extraGrid {
+  padding-top:var(--spacing-sm5);
+}
+
+.DefaultMarketLayout_button {
+  background:none;
+  border:0;
+  color:#fff;
+  text-decoration:underline;
+  display:block;
+  cursor:pointer;
+  width:fit-content;
+  margin:var(--spacing-md2) auto 0;
+  transition:var(--animation-slow-duration);
+  font-size:var(--text-md);
+  font-weight:500;
+}
+
+@media(hover:hover) {
+
+  .DefaultMarketLayout_button:hover {
+    color:var(--color-primaryViolet);
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only .DefaultMarketLayout_button {
+    font-size:var(--text-lg);
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only .DefaultMarketLayout_button {
+    font-size:var(--text-lg);
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened .DefaultMarketLayout_button {
+    font-size:var(--text-lg);
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened .DefaultMarketLayout_button {
+    font-size:var(--text-lg);
+  }
+
+}
+
+.DefaultMarketLayout_columns {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(var(--spacing-lg5),1fr));
+  grid-gap:var(--spacing-sm5);
+  gap:var(--spacing-sm5);
+  width:100%;
+}
+
+.DefaultMarketLayout_marketSelectionsWithThreeEqualColumns {
+  grid-template-columns:none;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .DefaultMarketLayout_marketSelectionsWithThreeEqualColumns {
+    grid-template-columns:repeat(3,1fr);
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .DefaultMarketLayout_marketSelectionsWithThreeEqualColumns {
+    grid-template-columns:repeat(3,1fr);
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .DefaultMarketLayout_marketSelectionsWithThreeEqualColumns {
+    grid-template-columns:repeat(3,1fr);
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .DefaultMarketLayout_marketSelectionsWithThreeEqualColumns {
+    grid-template-columns:repeat(3,1fr);
+  }
+
+}
+
+@container (max-width: 650px) {
+
+  .DefaultMarketLayout_marketSelectionsWithThreeEqualColumns {
+    grid-template-columns:none!important;
+  }
+
+}
+
+.DefaultMarketLayout_marketSelectionsDeskWithTwoEqualColumns {
+  grid-template-columns:none;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .DefaultMarketLayout_marketSelectionsDeskWithTwoEqualColumns {
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .DefaultMarketLayout_marketSelectionsDeskWithTwoEqualColumns {
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .DefaultMarketLayout_marketSelectionsDeskWithTwoEqualColumns {
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .DefaultMarketLayout_marketSelectionsDeskWithTwoEqualColumns {
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+@container (max-width: 650px) {
+
+  .DefaultMarketLayout_marketSelectionsDeskWithTwoEqualColumns {
+    grid-template-columns:none!important;
+  }
+
+}
+
+.DefaultMarketLayout_marketSelectionsWithOneEqualColumns {
+  grid-template-columns:none;
+}
+
+.MarketHeaderIcons_headerIcons {
+  display:flex;
+  align-items:center;
+  gap:var(--spacing-sm2);
+  pointer-events:auto;
+}
+
+.MarketHeaderIcons_icon {
+  margin-right:var(--spacing-sm1);
+}
+
+section.BreadcrumbSkeleton_root {
+  gap:var(--spacing-md2);
+  padding-left:var(--spacing-md2);
+  padding-right:var(--spacing-md2);
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only section.BreadcrumbSkeleton_root {
+    padding-left:var(--spacing-lg4);
+    padding-right:var(--spacing-lg4);
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only section.BreadcrumbSkeleton_root {
+    padding-left:var(--spacing-lg4);
+    padding-right:var(--spacing-lg4);
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened section.BreadcrumbSkeleton_root {
+    padding-left:var(--spacing-lg4);
+    padding-right:var(--spacing-lg4);
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened section.BreadcrumbSkeleton_root {
+    padding-left:var(--spacing-lg4);
+    padding-right:var(--spacing-lg4);
+  }
+
+}
+
+@media(min-width:1860px) {
+
+  .magic-container.right-side-opened-only section.BreadcrumbSkeleton_root {
+    padding-left:0;
+    padding-right:0;
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.left-side-opened-only section.BreadcrumbSkeleton_root {
+    padding-left:0;
+    padding-right:0;
+  }
+
+}
+
+@media(min-width:2035px) {
+
+  .magic-container.both-side-opened section.BreadcrumbSkeleton_root {
+    padding-left:0;
+    padding-right:0;
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.no-side-opened section.BreadcrumbSkeleton_root {
+    padding-left:0;
+    padding-right:0;
+  }
+
+}
+
+.BreadcrumbSkeleton_skeletonIcon {
+  width:var(--spacing-lg3);
+  height:var(--spacing-lg3);
+  flex-shrink:0;
+  border-radius:var(--radius-md);
+}
+
+.BreadcrumbSkeleton_skeletonText {
+  width:10rem;
+  height:var(--spacing-lg3);
+  border-radius:var(--radius-md);
+}
+
+.SportBreadCrumbEventName_container {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--spacing-sm1);
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
+  white-space:nowrap;
+}
+
+.SportBreadCrumbEventName_competitor {
+  display:inline-flex;
+  align-items:center;
+  gap:var(--spacing-sm2);
+  min-width:0;
+  flex-grow:0;
+  flex-shrink:1;
+  flex-basis:50%;
+  max-width:max-content;
+}
+
+.SportBreadCrumbEventName_competitorName {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.SportBreadCrumbEventName_versus {
+  padding:0 var(--spacing-sm1);
+  flex-shrink:0;
+}
+
+.SportBreadCrumbEventName_eventName {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  display:block;
+  max-width:100%;
+}
+
+.ExpandCollapse_rotate180 {
+  transform:rotate(180deg);
+}
+
+.ExpandCollapse_negRotate180 {
+  transform:rotate(-180deg);
+}
+
+.ExpandCollapse_topPath {
+  transform-origin:var(--spacing-sm4) 2.7px;
+  transition:transform var(--animation-slow-duration);
+}
+
+.ExpandCollapse_bottomPath {
+  transform-origin:var(--spacing-sm4) 13.3px;
+  transition:transform var(--animation-slow-duration);
+}
+
+.MarketGroupAndSearchBar_searchMarketsWrapper {
+  border:1px solid var(--color-gray700);
+  background:var(--color-black900);
+}
+
+.MarketGroupAndSearchBar_tabsWrapper {
+  display:inline-flex;
+  min-width:5rem;
+}
+
+.MarketGroupAndSearchBar_tabsWrapper>div {
+  min-height:var(--spacing-lg4);
+}
+
+.MarketGroupAndSearchBar_tabsWrapper>div>div {
+  margin-bottom:0;
+}
+
+.MarketGroupAndSearchBar_hide {
+  display:none;
+}
+
+.MarketGroupAndSearchBar_iconButton {
+  width:var(--spacing-lg4);
+  height:var(--spacing-lg4);
+  max-width:var(--spacing-lg4);
+}
+
+.SportsAds_root {
+  border-radius:var(--radius-md);
+  flex-direction:column;
+  width:var(--side-panel-width);
+  align-self:baseline;
+  display:none;
+  background:var(--color-gray900);
+}
+
+.SportsAds_root.SportsAds_live {
+  width:100%;
+}
+
+.SportsAds_root[open]>summary>img {
+  transform:rotate(180deg);
+}
+
+.SportsAds_root>summary {
+  -webkit-user-select:none;
+  user-select:none;
+  font-style:normal;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  padding:var(--spacing-md2);
+  font-size:var(--text-lg);
+  text-transform:capitalize;
+}
+
+.SportsAds_root>summary::-webkit-details-marker {
+  display:none;
+}
+
+.SportsAds_root>summary>img {
+  transition:var(--animation-duration) all;
+  margin-left:auto;
+}
+
+.SportsAds_root>summary::marker {
+  display:none;
+  content:"";
+}
+
+.SportsAds_root .SportsAds_content {
+  padding:var(--spacing-md2);
+  display:grid;
+  grid-template:"a a a" "b b b" "c c c";
+  grid-gap:.8125rem;
+  gap:.8125rem;
+  border-top:1px solid var(--color-gray700);
+  border-bottom:1px solid var(--color-gray700);
+}
+
+.SportsAds_root a.SportsAds_footer {
+  color:var(--color-primaryViolet);
+  padding:var(--spacing-md2);
+  display:inline-block;
+  font-size:var(--text-lg);
+  font-style:normal;
+  font-weight:400;
+  line-height:150%;
+}
+
+@media(hover:hover) {
+
+  .SportsAds_root a.SportsAds_footer:hover {
+    text-decoration:underline;
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only .SportsAds_root {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only .SportsAds_root {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened .SportsAds_root {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened .SportsAds_root {
+    display:flex;
+  }
+
+}
+
+div.SportsAds_tile:hover>div {
+  transform:translateY(-5px)!important;
+}
+
+.SportsAds_loader {
+  margin:10.25rem auto;
+}
+
+.SportRadarWidget_root {
+  position:relative;
+}
+
+.SportRadarWidget_loader {
+  position:absolute;
+  inset:0;
+  min-height:10rem;
+  background:var(--color-gray900);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:var(--animation-slow-duration) opacity;
+}
+
+.SportRadarWidget_hidden {
+  opacity:0;
+  pointer-events:none;
+}
+
+.SportRadarWidget_container {
+  width:100%;
+  min-height:11.25rem;
+  position:relative;
+}
+
+.SportsEventAside_sidePanel {
+  gap:var(--spacing-md2);
+  flex-direction:column;
+  position:sticky;
+  top:var(--spacing-md2);
+  right:0;
+  height:min-content;
+  width:var(--side-panel-width);
+  display:none;
+}
+
+.SportsEventAside_sidePanel.SportsEventAside_live {
+  width:100%;
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only .SportsEventAside_sidePanel {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only .SportsEventAside_sidePanel {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened .SportsEventAside_sidePanel {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened .SportsEventAside_sidePanel {
+    display:flex;
+  }
+
+}
+
+.SportsEventAside_iframe {
+  width:var(--side-panel-width);
+  border:0;
+  border-radius:var(--radius-md);
+}
+
+.SportsEventAside_iframe.SportsEventAside_live {
+  width:100%;
+}
+
+div.SportsEventAside_loader {
+  border:1px solid var(--color-gray700);
+}
+
+@media(min-width:768px) {
+
+  .SportsEventBanner_wrapper {
+    border-radius:var(--radius-md);
+    overflow:hidden;
+  }
+
+}
+
+.SportsEventBanner_sportsEventBackground {
+  position:relative;
+  background-repeat:no-repeat;
+  padding:var(--spacing-md2);
+  background-size:cover;
+  background-position:50%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  max-width:80rem;
+  margin:0 var(--spacing-md2-neg);
+  min-height:13rem;
+}
+
+@media(min-width:768px) {
+
+  .SportsEventBanner_sportsEventBackground {
+    min-height:20.625rem;
+    margin:0 auto;
+    padding:var(--spacing-md2);
+  }
+
+}
+
+.SportsEventBanner_videoWrapper {
+  aspect-ratio:16/9;
+}
+
+section.SportsEventBanner_videoContainer {
+  margin-bottom:0!important;
+  border-radius:0!important;
+}
+
+.SportsEventStreamSwitch_root {
+  margin:0 var(--spacing-lg1-neg);
+}
+
+@media(min-width:768px) {
+
+  .SportsEventStreamSwitch_root {
+    margin:0;
+  }
+
+}
+
+.SportsEventStreamSwitch_switch {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:var(--color-gray900);
+  height:var(--spacing-lg5);
+  padding:0 var(--spacing-sm3);
+  padding:0 var(--spacing-sm5);
+  font-size:var(--text-lg);
+  font-style:normal;
+  font-weight:400;
+  line-height:150%;
+  width:auto;
+}
+
+.SportsEventStreamSwitch_disabled {
+  opacity:.6;
+}
+
+.SportsEventStreamSwitch_clickable {
+  cursor:pointer;
+  -webkit-user-select:none;
+  user-select:none;
+}
+
+@media(hover:hover) {
+
+  .SportsEventStreamSwitch_clickable:hover {
+    transition:var(--animation-duration) all;
+    color:var(--color-primaryViolet);
+  }
+
+}
+
+.SportsEventStreamSwitch_clickable:active {
+  transition:var(--animation-duration) all;
+  transform:var(--active-state-sm);
+}
+
+.PreLiveCompetitor_preLiveCompetitorWrapper {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  gap:var(--spacing-md);
+  flex:1 1;
+  height:17.5rem;
+  position:relative;
+}
+
+.PreLiveCompetitor_competitionIcon {
+  width:6.875rem;
+  height:6.875rem;
+  background:var(--color-gray900);
+  border-radius:var(--radius-md);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.PreLiveCompetitor_preLiveCompetitorFallback {
+  font-weight:700;
+  font-size:3.125rem;
+  line-height:1.5;
+  color:#4e3b9d;
+  font-family:var(--font-accent);
+}
+
+.PreLiveCompetitor_preLiveCompetitorName {
+  font-weight:700;
+  font-size:var(--text-h4);
+  text-align:center;
+  max-width:12.5rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only .PreLiveCompetitor_preLiveCompetitorName {
+    max-width:20rem;
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only .PreLiveCompetitor_preLiveCompetitorName {
+    max-width:20rem;
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened .PreLiveCompetitor_preLiveCompetitorName {
+    max-width:20rem;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened .PreLiveCompetitor_preLiveCompetitorName {
+    max-width:20rem;
+  }
+
+}
+
+.PreLiveCompetitor_smallFontSize {
+  font-size:1.875rem;
+}
+
+.PreLiveFixtureDate_wrapper {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  flex:.8 1;
+  height:13.0625rem;
+}
+
+.PreLiveFixtureDate_versusBlock {
+  width:14rem;
+  height:6.875rem;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+}
+
+.PreLiveFixtureDate_versusText {
+  font-weight:700;
+  font-size:var(--text-h1);
+  font-family:var(--font-accent);
+  text-align:center;
+}
+
+.PreLiveFixtureDate_preLiveStartDate {
+  font-weight:400;
+  font-size:var(--text-md);
+  line-height:1.5;
+  color:var(--color-gray300);
+  padding:0 var(--spacing-sm4);
+  text-align:center;
+  text-wrap:wrap;
+}
+
+@media(min-width:992px) {
+
+  .PreLiveFixtureDate_preLiveStartDate {
+    font-size:var(--text-lg);
+    text-align:center;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .PreLiveFixtureDate_preLiveStartDate {
+    padding:0;
+  }
+
+}
+
+.PreLiveFixtureDate_countdownText {
+  color:var(--color-success);
+}
+
+.PreLiveFixtureDate_delayedStartText {
+  color:var(--color-warning);
+}
+
+.PreLiveFixtureDate_startTimeCountdown {
+  display:flex;
+  gap:var(--spacing-sm5);
+  align-items:center;
+}
+
+.PreLiveWidget_sportsEventWidget {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only .PreLiveWidget_sportsEventWidget {
+    display:none;
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only .PreLiveWidget_sportsEventWidget {
+    display:none;
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened .PreLiveWidget_sportsEventWidget {
+    display:none;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened .PreLiveWidget_sportsEventWidget {
+    display:none;
+  }
+
+}
+
+.PreLiveWidget_preLiveWrapper {
+  background:var(--color-gray900);
+  border-radius:var(--radius-md);
+  width:100%;
+  z-index:var(--z-overlay);
+}
+
+.PreLiveWidget_preLiveWrapper .sr-bb {
+  border-top-left-radius:0!important;
+  border-top-right-radius:0!important;
+  background:none!important;
+}
+
+.PreLiveWidget_preLiveContent {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:var(--spacing-md) var(--spacing-md2);
+}
+
+.PreLiveWidget_preLiveStartTimeContent {
+  box-shadow:0 1px var(--color-gray700);
+  padding:var(--spacing-md2);
+}
+
+.PreLiveWidget_preLiveDesktop {
+  display:none;
+  justify-content:space-between;
+  align-items:center;
+  position:absolute;
+  width:100%;
+  top:var(--spacing-lg1);
+  max-width:calc(100% - 5rem);
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only .PreLiveWidget_preLiveDesktop {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only .PreLiveWidget_preLiveDesktop {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened .PreLiveWidget_preLiveDesktop {
+    display:flex;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened .PreLiveWidget_preLiveDesktop {
+    display:flex;
+  }
+
+}
+
+.PreLiveWidget_preLiveStartDate {
+  font-weight:400;
+  font-size:var(--text-md);
+  line-height:1.5;
+  text-align:left;
+  color:var(--color-gray300);
+}
+
+@media(min-width:992px) {
+
+  .PreLiveWidget_preLiveStartDate {
+    text-align:center;
+  }
+
+}
+
+.PreLiveWidget_countdownText {
+  color:var(--color-success);
+}
+
+.PreLiveWidget_delayedStartText {
+  color:var(--color-warning);
+}
+
+.PreLiveWidget_startTimeCountdown {
+  display:flex;
+  gap:var(--spacing-sm5);
+  align-items:center;
+}
+
+section.SportsFixtureContentLayout_root {
+  gap:var(--spacing-md2);
+  min-height:var(--min-container-height-sm);
+}
+
+@media(min-width:768px) {
+
+  section.SportsFixtureContentLayout_root {
+    gap:var(--spacing-lg1);
+  }
+
+}
+
+@media(min-width:1500px) {
+
+  .magic-container.right-side-opened-only .SportsFixtureContentLayout_containerLive {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 23.4375rem;
+    grid-auto-rows:auto;
+    grid-gap:var(--spacing-lg1);
+    gap:var(--spacing-lg1);
+  }
+
+  .magic-container.right-side-opened-only .SportsFixtureContentLayout_containerLive.SportsFixtureContentLayout_theatreMode {
+    grid-template-columns:unset;
+  }
+
+}
+
+@media(min-width:1315px) {
+
+  .magic-container.left-side-opened-only .SportsFixtureContentLayout_containerLive {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 23.4375rem;
+    grid-auto-rows:auto;
+    grid-gap:var(--spacing-lg1);
+    gap:var(--spacing-lg1);
+  }
+
+  .magic-container.left-side-opened-only .SportsFixtureContentLayout_containerLive.SportsFixtureContentLayout_theatreMode {
+    grid-template-columns:unset;
+  }
+
+}
+
+@media(min-width:1675px) {
+
+  .magic-container.both-side-opened .SportsFixtureContentLayout_containerLive {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 23.4375rem;
+    grid-auto-rows:auto;
+    grid-gap:var(--spacing-lg1);
+    gap:var(--spacing-lg1);
+  }
+
+  .magic-container.both-side-opened .SportsFixtureContentLayout_containerLive.SportsFixtureContentLayout_theatreMode {
+    grid-template-columns:unset;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .magic-container.no-side-opened .SportsFixtureContentLayout_containerLive {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 23.4375rem;
+    grid-auto-rows:auto;
+    grid-gap:var(--spacing-lg1);
+    gap:var(--spacing-lg1);
+  }
+
+  .magic-container.no-side-opened .SportsFixtureContentLayout_containerLive.SportsFixtureContentLayout_theatreMode {
+    grid-template-columns:unset;
+  }
+
+}
+
+.SportsFixtureContentLayout_main,.SportsFixtureContentLayout_main>div {
+  flex:1 1;
+}
+
+.SportsFixtureContentLayout_main>details {
+  align-self:baseline;
+}
+
+.SportsFixtureContentLayout_mainContent {
+  flex:1 1;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SportsFixtureContentLayout_mainContent {
+    gap:var(--spacing-lg1);
+    width:calc(100% - 18.4375rem - 7rem);
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SportsFixtureContentLayout_mainContent {
+    gap:var(--spacing-lg1);
+    width:calc(100% - 18.4375rem - 7rem);
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SportsFixtureContentLayout_mainContent {
+    gap:var(--spacing-lg1);
+    width:calc(100% - 18.4375rem - 7rem);
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SportsFixtureContentLayout_mainContent {
+    gap:var(--spacing-lg1);
+    width:calc(100% - 18.4375rem - 7rem);
+  }
+
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SportsFixtureContentLayout_liveContent {
+    width:unset;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SportsFixtureContentLayout_liveContent {
+    width:unset;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SportsFixtureContentLayout_liveContent {
+    width:unset;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SportsFixtureContentLayout_liveContent {
+    width:unset;
+  }
+
+}
+
+.SportsFixtureContentLayout_sportsEventContentWrapper {
+  position:relative;
+  min-height:10rem;
+  max-width:100%;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SportsFixtureContentLayout_sportsEventContentWrapper {
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SportsFixtureContentLayout_sportsEventContentWrapper {
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SportsFixtureContentLayout_sportsEventContentWrapper {
+    margin-bottom:0;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SportsFixtureContentLayout_sportsEventContentWrapper {
+    margin-bottom:0;
+  }
+
+}
+
+.SportsFixtureContentLayout_markListWrapper {
+  min-height:10rem;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SportsFixtureContentLayout_searchMarketsLive {
+    gap:var(--spacing-lg1);
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SportsFixtureContentLayout_searchMarketsLive {
+    gap:var(--spacing-lg1);
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SportsFixtureContentLayout_searchMarketsLive {
+    gap:var(--spacing-lg1);
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SportsFixtureContentLayout_searchMarketsLive {
+    gap:var(--spacing-lg1);
+  }
+
+}
+
+.SportsFixtureContentLayout_customBetIcon {
+  filter:none!important;
+}
+
+.Switch_switchWrapper {
+  display: flex;
+  background: none;
+  border: none;
+  align-items: center;
+  gap: var(--spacing-sm5);
+  flex-direction: row;
+  justify-content: flex-start;
+  color: inherit;
+  cursor: pointer;
+}
+
+.Switch_switchWrapper:has(.Switch_hiddenCheckbox:disabled):not(.Switch_keepEnabledStyle) .Switch_darkSwitchElement, .Switch_switchWrapper:has(.Switch_hiddenCheckbox:disabled):not(.Switch_keepEnabledStyle) .Switch_switchElement {
+  cursor: default;
+  background: var(--color-gray300);
+}
+
+.Switch_switchWrapper.Switch_keepEnabledStyle:has(.Switch_hiddenCheckbox:disabled) .Switch_darkSwitchElement, .Switch_switchWrapper.Switch_keepEnabledStyle:has(.Switch_hiddenCheckbox:disabled) .Switch_switchElement {
+  cursor: default;
+}
+
+.Switch_switchWrapper:active:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_darkSwitchElement, .Switch_switchWrapper:active:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_switchElement {
+  background: var(--color-primaryViolet);
+}
+
+@media(hover:hover) {
+
+  .Switch_switchWrapper:hover:not(:has(.Switch_hiddenCheckbox: disabled)) .Switch_darkSwitchElement, .Switch_switchWrapper:hover:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_switchElement {
+    box-shadow:0 0 0 1px #fff;
+  }
+
+}
+
+.Switch_labelFloat {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.Switch_spacedLayout {
+  justify-content: space-between;
+}
+
+.Switch_spacedLayout .Switch_label {
+  color: #fff;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: 150%;
+}
+
+.Switch_label {
+  font-size: var(--text-md);
+}
+
+.Switch_hiddenCheckbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.Switch_switchElement {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--spacing-lg1);
+  width: 2.625rem;
+  transition: var(--animation-duration);
+  background: var(--color-gray700);
+  border-radius: var(--radius-rounded);
+  cursor: pointer;
+}
+
+.Switch_darkSwitchElement {
+  background: var(--color-black900);
+}
+
+.Switch_checked {
+  background: var(--color-primaryNeonPurple);
+}
+
+.Switch_checked .Switch_knob {
+  transform: translateX(1.125rem);
+}
+
+.Switch_knob {
+  position: absolute;
+  left: var(--spacing-sm2);
+  transition: transform var(--animation-duration);
+  transform: translateX(0);
+  width: var(--spacing-md1);
+  height: var(--spacing-md1);
+  border-radius: var(--radius-full);
+  background: #fff;
+}
+
+.Visible_hide {
+  display: none;
+}
+
+.SandboxedIframe_iframe {
+  border: 0;
+  display: block;
+}
+
+/* The stats widget placeholder the reference shows when the third-party frame
+   fails to load. */
+
+.StatsWidgetFrameErrorPlaceholder_root {
+  padding:var(--spacing-lg4) var(--spacing-md2);
+  background:var(--color-gray800);
+}
+
+.StatsWidgetFrameErrorPlaceholder_icon {
+  width:var(--spacing-lg2);
+  height:var(--spacing-lg2);
+}
+
+.StatsWidgetFrameErrorPlaceholder_message {
+  font-size:var(--text-lg);
+}
+
+/* The fixture breadcrumb dropdown: the popup list, its date headings and items. */
+
+.BreadcrumbPopupList_dropdownList {
+  pointer-events:none;
+  list-style-type:none;
+  margin:0;
+  padding:0;
+  position:absolute;
+  top:2.8125rem;
+  background:var(--color-gray800);
+  color:var(--color-white);
+  flex-direction:column;
+  border-radius:var(--radius-sm1);
+  z-index:var(--z-overlay-above);
+  overflow-y:auto;
+  max-height:23.438rem;
+  border:1px solid var(--color-gray600);
+  min-width:9.375rem;
+  max-width:90vw;
+  opacity:0;
+  transform-origin:0 50%;
+  scale:.95;
+  transform:translateX(-50%);
+  left:50%;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .BreadcrumbPopupList_dropdownList {
+    transition:opacity var(--animation-fast-duration) var(--animation-standard-ease),scale var(--animation-fast-duration) var(--animation-standard-ease);
+  }
+
+  .magic-container.right-side-opened-only .BreadcrumbPopupList_dropdownList.BreadcrumbPopupList_alignRight {
+    left:auto;
+    right:0;
+    transform:none;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .BreadcrumbPopupList_dropdownList {
+    transition:opacity var(--animation-fast-duration) var(--animation-standard-ease),scale var(--animation-fast-duration) var(--animation-standard-ease);
+  }
+
+  .magic-container.left-side-opened-only .BreadcrumbPopupList_dropdownList.BreadcrumbPopupList_alignRight {
+    left:auto;
+    right:0;
+    transform:none;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .BreadcrumbPopupList_dropdownList {
+    transition:opacity var(--animation-fast-duration) var(--animation-standard-ease),scale var(--animation-fast-duration) var(--animation-standard-ease);
+  }
+
+  .magic-container.both-side-opened .BreadcrumbPopupList_dropdownList.BreadcrumbPopupList_alignRight {
+    left:auto;
+    right:0;
+    transform:none;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .BreadcrumbPopupList_dropdownList {
+    transition:opacity var(--animation-fast-duration) var(--animation-standard-ease),scale var(--animation-fast-duration) var(--animation-standard-ease);
+  }
+
+  .magic-container.no-side-opened .BreadcrumbPopupList_dropdownList.BreadcrumbPopupList_alignRight {
+    left:auto;
+    right:0;
+    transform:none;
+  }
+
+}
+
+.BreadcrumbPopupList_dropdownList>li:last-child {
+  border-bottom:0;
+}
+
+.BreadcrumbPopupList_show {
+  opacity:1;
+  scale:1;
+  pointer-events:auto;
+}
+
+.BreadcrumbDropdownItem_dropdownItem {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:var(--color-gray800);
+  cursor:pointer;
+  font-size:var(--text-lg);
+  border-bottom:1px solid var(--color-gray600);
+  min-height:var(--spacing-lg4);
+}
+
+.BreadcrumbDropdownItem_dropdownItem a {
+  padding:var(--spacing-md) var(--spacing-md2);
+  width:100%;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  overflow-x:hidden;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .BreadcrumbDropdownItem_dropdownItem a {
+    white-space:pre;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .BreadcrumbDropdownItem_dropdownItem a {
+    white-space:pre;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .BreadcrumbDropdownItem_dropdownItem a {
+    white-space:pre;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .BreadcrumbDropdownItem_dropdownItem a {
+    white-space:pre;
+  }
+
+}
+
+.BreadcrumbDropdownItem_dropdownItem a:active>span {
+  transition:var(--animation-duration);
+  transform:var(--active-state-sm);
+}
+
+@media(hover:hover) {
+
+  .BreadcrumbDropdownItem_dropdownItem a:hover {
+    border-radius:0;
+    color:var(--color-primaryViolet);
+  }
+
+  .BreadcrumbDropdownItem_dropdownItem:hover {
+    background:var(--color-gray600);
+    border-radius:0;
+    color:var(--color-primaryViolet);
+  }
+
+}
+
+.SportsBreadcrumbDropdown_date {
+  display:flex;
+  align-items:center;
+  background:var(--color-gray700);
+  padding:var(--spacing-sm4) var(--spacing-md2);
+  font-size:var(--text-md);
+  color:var(--color-gray400);
+  border-bottom:1px solid var(--color-gray600);
+  height:1.875rem;
+}
+
+.SportsBreadcrumbDropdown_dropdownOptions {
+  list-style-type:none;
+  margin:0;
+  padding:0;
+}
+
+.SportsBreadcrumbDropdown_dropdownOptions>li:last-child {
+  border-bottom:0;
+}
+
+.SportsBreadcrumbDropdown_flag {
+  display:inline-flex;
+  align-items:center;
+}
+
+/* Outright tournament pages (e.g. NFL 26/27) put the tournament name in the
+   banner instead of two competitors, and their market headers carry icons. */
+
+.MarketHeaderIcons_headerIcons {
+  display:flex;
+  align-items:center;
+  gap:var(--spacing-sm2);
+  pointer-events:auto;
+}
+
+.MarketHeaderIcons_icon {
+  margin-right:var(--spacing-sm1);
+}
+
+.PreMatchRaceWinner_wrapper {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  flex:1 1;
+  height:17.5rem;
+  position:relative;
+}
+
+.PreMatchRaceWinner_preMatchLogo {
+  width:6.875rem;
+  height:6.875rem;
+  background:var(--color-gray900);
+  border-radius:var(--radius-md);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-weight:700;
+  font-size:3.125rem;
+  line-height:1.5;
+  color:#4e3b9d;
+  font-family:var(--font-accent);
+  margin-bottom:var(--spacing-sm5);
+}
+
+.PreMatchRaceWinner_preMatchName {
+  font-weight:700;
+  font-size:var(--text-h4);
+  text-align:center;
+  white-space:nowrap;
+  max-width:12.5rem;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  margin-bottom:var(--spacing-sm1);
+}
+
+@media(min-width:1140px) {
+
+  .PreMatchRaceWinner_preMatchName {
+    max-width:unset;
+  }
+
+}
+
+.PreMatchRaceWinner_preLiveStartDate {
+  font-weight:400;
+  font-size:var(--text-md);
+  line-height:1.5;
+  color:var(--color-gray300);
+  padding:0 var(--spacing-sm4);
+  text-align:center;
+  text-wrap:wrap;
+}
+
+@media(min-width:992px) {
+
+  .PreMatchRaceWinner_preLiveStartDate {
+    font-size:var(--text-lg);
+    text-align:center;
+  }
+
+}
+
+@media(min-width:1140px) {
+
+  .PreMatchRaceWinner_preLiveStartDate {
+    padding:0;
+  }
+
+}
+
+.PreMatchRaceWinner_countdownText {
+  color:var(--color-success);
+}
+
+.PreMatchRaceWinner_delayedStartText {
+  color:var(--color-warning);
+}
+
+.PreMatchRaceWinner_startTimeCountdown {
+  display:flex;
+  gap:var(--spacing-sm5);
+  align-items:center;
+}
+
+/* Same-Game Multi tab: the sub-group filter row and the bet-builder odds bar. */
+
+div.SportsCustomBetSection_collapseRoot {
+  position:fixed;
+  bottom:var(--spacing-xl);
+  z-index:var(--z-above);
+  transition:var(--animation-duration);
+  background:var(--color-gray800);
+  overflow:hidden;
+  width:100%;
+  left:0;
+  border-radius:0;
+  border-top:1px solid var(--color-gray700);
+}
+
+@media(min-width:768px) {
+
+  div.SportsCustomBetSection_collapseRoot {
+    border-radius:var(--radius-md);
+    border:1px solid var(--color-gray900);
+    width:unset;
+    position:sticky;
+    left:unset;
+    bottom:unset;
+    box-shadow:0 0 var(--spacing-lg) 0 #000;
+    top:var(--spacing-sm4);
+  }
+
+  div.SportsCustomBetSection_collapseRoot.SportsCustomBetSection_collapseRootBorder {
+    border:1px solid var(--color-primaryViolet);
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only div.SportsCustomBetSection_collapseRoot {
+    position:sticky;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only div.SportsCustomBetSection_collapseRoot {
+    position:sticky;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened div.SportsCustomBetSection_collapseRoot {
+    position:sticky;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened div.SportsCustomBetSection_collapseRoot {
+    position:sticky;
+  }
+
+}
+
+.SportsCustomBetSection_collapseHeader {
+  font-size:var(--text-lg);
+  font-style:normal;
+  font-weight:700;
+  background:var(--color-gray900);
+  flex-wrap:wrap;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SportsCustomBetSection_collapseHeader {
+    flex-wrap:nowrap;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SportsCustomBetSection_collapseHeader {
+    flex-wrap:nowrap;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SportsCustomBetSection_collapseHeader {
+    flex-wrap:nowrap;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SportsCustomBetSection_collapseHeader {
+    flex-wrap:nowrap;
+  }
+
+}
+
+div.SportsCustomBetSection_collapseBody {
+  background:var(--color-gray800);
+  padding-top:0;
+  padding-bottom:0;
+  max-height:40vh;
+  overflow-y:auto;
+}
+
+.SportsCustomBetSection_collapseButton {
+  cursor:pointer;
+}
+
+.SportsCustomBetSection_collapseButton:disabled {
+  outline:none;
+}
+
+.SportsCustomBetSection_oddsAmount {
+  color:var(--color-success);
+}
+
+.SportsCustomBetSection_buttonsGroup {
+  margin-right:var(--spacing-md2);
+  white-space:nowrap;
+  display:none;
+}
+
+.SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+  display:flex;
+  margin-right:0;
+  width:100%;
+  margin-top:var(--spacing-md1);
+}
+
+.SportsCustomBetSection_buttonsGroup button {
+  color:#fff;
+  white-space:nowrap;
+}
+
+@media(hover:hover) {
+
+  .SportsCustomBetSection_buttonsGroup button:hover {
+    color:#fff;
+  }
+
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SportsCustomBetSection_buttonsGroup {
+    display:flex;
+  }
+
+  .magic-container.right-side-opened-only .SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+    display:none;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SportsCustomBetSection_buttonsGroup {
+    display:flex;
+  }
+
+  .magic-container.left-side-opened-only .SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+    display:none;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SportsCustomBetSection_buttonsGroup {
+    display:flex;
+  }
+
+  .magic-container.both-side-opened .SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+    display:none;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SportsCustomBetSection_buttonsGroup {
+    display:flex;
+  }
+
+  .magic-container.no-side-opened .SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+    display:none;
+  }
+
+}
+
+.SportsCustomBetSection_errorMessage {
+  padding:var(--spacing-md2);
+  position:relative;
+  z-index:var(--z-above);
+}
+
+.SportsCustomBetSection_collapseRightContent {
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+}
+
+.SportsCustomBetSection_collapseContainer {
+  overflow-y:hidden;
+}
+
+.SportsCustomBetSection_skeletonLoader {
+  width:1.66rem;
+  height:var(--spacing-md2);
+  border-radius:var(--radius-md);
+}
+
+div.SportsCustomBetSection_showBorderBottom[aria-expanded=false] {
+  border-bottom:1px solid var(--color-gray700);
+}
+
+.SgmSubGroupTabs_filterGroup {
+  display:flex;
+  align-items:center;
+  gap:var(--spacing-sm5);
+  overflow:auto;
+  scrollbar-width:none;
+}
+
+.SgmSubGroupTabs_filterGroup::-webkit-scrollbar {
+  display:none;
+}
+
+.SgmSubGroupTabs_filterButton {
+  flex-shrink:0;
+}
+
+.SgmSubGroupTabs_filterButton .SgmSubGroupTabs_filterButtonContent {
+  color:var(--color-white);
+  border:1px solid var(--color-gray800);
+  background-color:var(--color-gray800);
+}
+
+.SgmSubGroupTabs_filterButton.SgmSubGroupTabs_active .SgmSubGroupTabs_filterButtonContent {
+  color:var(--color-primaryViolet);
+  border-color:var(--color-primaryViolet);
+}
+
+.SgmSubGroupTabs_filterButton.SgmSubGroupTabs_active .SgmSubGroupTabs_filterIcon {
+  filter:var(--filter-primaryViolet);
+}
+
+div.SportsCustomBetSection_collapseRoot {
+  position: fixed;
+  bottom: var(--spacing-xl);
+  z-index: var(--z-above);
+  transition: var(--animation-duration);
+  background: var(--color-gray800);
+  overflow: hidden;
+  width: 100%;
+  left: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--color-gray700);
+}
+
+@media(min-width:768px) {
+
+  div.SportsCustomBetSection_collapseRoot {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-gray900);
+    width: unset;
+    position: sticky;
+    left: unset;
+    bottom: unset;
+    box-shadow: 0 0 var(--spacing-lg) 0 #000;
+    top: var(--spacing-sm4);
+  }
+
+  div.SportsCustomBetSection_collapseRoot.SportsCustomBetSection_collapseRootBorder {
+    border: 1px solid var(--color-primaryViolet);
+  }
+
+}
+
+@media(min-width:1352px) {
+
+  .magic-container.right-side-opened-only div.SportsCustomBetSection_collapseRoot {
+    position: sticky;
+  }
+
+}
+
+@media(min-width:1167px) {
+
+  .magic-container.left-side-opened-only div.SportsCustomBetSection_collapseRoot {
+    position: sticky;
+  }
+
+}
+
+@media(min-width:1527px) {
+
+  .magic-container.both-side-opened div.SportsCustomBetSection_collapseRoot {
+    position: sticky;
+  }
+
+}
+
+@media(min-width:992px) {
+
+  .magic-container.no-side-opened div.SportsCustomBetSection_collapseRoot {
+    position: sticky;
+  }
+
+}
+
+.SportsCustomBetSection_collapseHeader {
+  font-size: var(--text-lg);
+  font-style: normal;
+  font-weight: 700;
+  background: var(--color-gray900);
+  flex-wrap: wrap;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SportsCustomBetSection_collapseHeader {
+    flex-wrap: nowrap;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SportsCustomBetSection_collapseHeader {
+    flex-wrap: nowrap;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SportsCustomBetSection_collapseHeader {
+    flex-wrap: nowrap;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SportsCustomBetSection_collapseHeader {
+    flex-wrap: nowrap;
+  }
+
+}
+
+div.SportsCustomBetSection_collapseBody {
+  background: var(--color-gray800);
+  padding-top: 0;
+  padding-bottom: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.SportsCustomBetSection_collapseButton {
+  cursor: pointer;
+}
+
+.SportsCustomBetSection_collapseButton:disabled {
+  outline: none;
+}
+
+.SportsCustomBetSection_oddsAmount {
+  color: var(--color-success);
+}
+
+.SportsCustomBetSection_buttonsGroup {
+  margin-right: var(--spacing-md2);
+  white-space: nowrap;
+  display: none;
+}
+
+.SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+  display: flex;
+  margin-right: 0;
+  width: 100%;
+  margin-top: var(--spacing-md1);
+}
+
+.SportsCustomBetSection_buttonsGroup button {
+  color: #fff;
+  white-space: nowrap;
+}
+
+@media(hover:hover) {
+
+  .SportsCustomBetSection_buttonsGroup button:hover {
+    color: #fff;
+  }
+
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SportsCustomBetSection_buttonsGroup {
+    display: flex;
+  }
+
+  .magic-container.right-side-opened-only .SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+    display: none;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SportsCustomBetSection_buttonsGroup {
+    display: flex;
+  }
+
+  .magic-container.left-side-opened-only .SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+    display: none;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SportsCustomBetSection_buttonsGroup {
+    display: flex;
+  }
+
+  .magic-container.both-side-opened .SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+    display: none;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SportsCustomBetSection_buttonsGroup {
+    display: flex;
+  }
+
+  .magic-container.no-side-opened .SportsCustomBetSection_buttonsGroup.SportsCustomBetSection_buttonsGroupMobile {
+    display: none;
+  }
+
+}
+
+.SportsCustomBetSection_errorMessage {
+  padding: var(--spacing-md2);
+  position: relative;
+  z-index: var(--z-above);
+}
+
+.SportsCustomBetSection_collapseRightContent {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.SportsCustomBetSection_collapseContainer {
+  overflow-y: hidden;
+}
+
+.SportsCustomBetSection_skeletonLoader {
+  width: 1.66rem;
+  height: var(--spacing-md2);
+  border-radius: var(--radius-md);
+}
+
+div.SportsCustomBetSection_showBorderBottom[aria-expanded=false] {
+  border-bottom: 1px solid var(--color-gray700);
+}

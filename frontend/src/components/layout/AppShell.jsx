@@ -24,7 +24,10 @@ export default function AppShell({ children }) {
   const [navState, setNav] = useState(null);
   // Promotion articles that are not pinned in the rail still light up the Promotions group.
   // The sportsbook sections (Upcoming, Bet Live) live on `/sports` behind a query string.
-  const nav = navIdForPath(path + search) || navIdForPath(path) || (/^\/(sports\/)?promotions\//.test(path) ? "promotions" : navState) || "home";
+  // The category chips append `?sport=...`, which is not a rail destination, so the
+  // lookup keeps the section only.
+  const sectionParam = new URLSearchParams(search).get("section");
+  const nav = navIdForPath(sectionParam ? `${path}?section=${sectionParam}` : path) || navIdForPath(path) || (/^\/(sports\/)?promotions\//.test(path) ? "promotions" : navState) || "home";
   // The reference trims the rail to the site-wide links on non-casino routes and clears the product tab.
   // Site-wide (non-casino) routes: lottery, VIP, blog and affiliate; the sportsbook gets its own rail.
   const isSports = /^\/sports(\/|$)/.test(path);

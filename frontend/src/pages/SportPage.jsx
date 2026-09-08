@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import { cx } from "../lib/carousel";
 import { navigate, useSearch } from "../lib/router";
-import { MatchGroup, SportsHeading } from "./SportsPage";
-import { groupsForSport } from "../lib/sportsData";
+import { LoadMoreButton, MatchGroup, MatchRow, SportsHeading } from "./SportsPage";
+import { groupsForSport, outrightsForSport } from "../lib/sportsData";
 import pageData from "../data/sports-pages.json";
+import upcomingData from "../data/sports-upcoming.json";
+import liveData from "../data/sports-live.json";
 
 /**
  * A single sport, e.g. `/sports/soccer` — reference layout: breadcrumb, the
@@ -19,27 +21,60 @@ import pageData from "../data/sports-pages.json";
 export function SportsBreadcrumb({ items }) {
   const [open, setOpen] = useState(false);
   const last = items.length - 1;
+  // The reference's back arrow climbs the trail rather than stepping through history.
+  const parentHref = (items[last - 1] && items[last - 1].href) || "/sports";
   return (
     <section className="LayoutContainer_root LayoutContainer_mobile-top-lg LayoutContainer_mobile-bottom-lg LayoutContainer_tablet-top-lg1 LayoutContainer_tablet-bottom-lg1 LayoutContainer_column">
       <div className="SportsBreadcrumbLayout_breadcrumbRoot">
-        <button aria-label="back" className="SportsBreadcrumbLayout_backBtn" type="button" onClick={() => window.history.back()}>
+        <button aria-label="back" className="SportsBreadcrumbLayout_backBtn" type="button" onClick={() => navigate(parentHref)}>
           <img alt="arrow left" src="/icons/arrow-left.svg" />
         </button>
         <ul className="BreadcrumbList_list">
           {items.map((item, i) => {
             const isLast = i === last;
             const sep = !isLast && <li key={`${item.label}-sep`} className="BreadcrumbSeparator_separator SportsBreadcrumb_hideOnMobile" />;
-            if (isLast && item.icon) {
+            // The competition crumb carries a badge; a fixture's own crumb instead
+            // opens the list of that competition's other fixtures, grouped by day.
+            if (isLast && (item.icon || item.dropdown)) {
               return (
                 <li key={item.label} className="BreadcrumbDropdownList_root">
                   <div>
                     <button className="BreadcrumbDropdownList_dropdownBtn" type="button" onClick={() => setOpen((o) => !o)}>
-                      <div className="ImageWithFallback_imageContainer" style={{ width: 16, height: 16 }}>
-                        <img alt={item.label} height="16" loading="lazy" src={item.icon} width="16" />
-                      </div>
+                      {item.icon && (
+                        <div className="ImageWithFallback_imageContainer" style={{ width: 16, height: 16 }}>
+                          <img alt={item.label} height="16" loading="lazy" src={item.icon} width="16" />
+                        </div>
+                      )}
                       <span>{item.label}</span>
                       <img alt="chevron" className={cx("BreadcrumbDropdownList_chevronIcon", open && "BreadcrumbDropdownList_chevronOpen")} src="/icons/chevron.svg" />
                     </button>
+                    {item.dropdown && (
+                      <ul className={cx("BreadcrumbPopupList_dropdownList", open && "BreadcrumbPopupList_show")}>
+                        {item.dropdown.map((group) => (
+                          <Fragment key={group.dateLabel}>
+                            <li className="SportsBreadcrumbDropdown_date">{group.dateLabel}</li>
+                            <li>
+                              <ul className="SportsBreadcrumbDropdown_dropdownOptions">
+                                {group.items.map((opt) => (
+                                  <li key={opt.href} className="BreadcrumbDropdownItem_dropdownItem">
+                                    <a
+                                      href={opt.href}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        setOpen(false);
+                                        navigate(opt.href);
+                                      }}
+                                    >
+                                      {opt.label}
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            </li>
+                          </Fragment>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </li>
               );
@@ -149,7 +184,7 @@ export function SectionTabs({ tabs, active, base }) {
         <div className="TabViewOutline_root">
           <div className="TabViewOutline_tabOutlineWrapper">
             {tabs.map(([id, label, counter]) => {
-              const href = id === "featured" ? base : `${base}?section=${id}`;
+              const href = `${base}?section=${id}`;
               return (
                 <a
                   key={id}
@@ -183,6 +218,25 @@ export function SectionTabs({ tabs, active, base }) {
   );
 }
 
+/** Sport slug to category chip code, e.g. `table-tennis` -> `TABLE_TENNIS`. */
+function codeForSlug(slug) {
+  return slug.replace(/-/g, "_").toUpperCase();
+}
+
+/** The flat, market-labelled list the Upcoming tab shows. */
+function UpcomingList({ rows }) {
+  return (
+    <div className="MatchEventTileGroup_root">
+      <div className="MatchEventTileGroup_matchEventBody MatchEventTileGroup_matchEventBodyWithoutCollapse MatchEventTileGroup_matchEventBodyWithLoadMore">
+        {rows.map((f) => (
+          <MatchRow key={f.href} f={f} market={f.m} noTopMargin />
+        ))}
+        {rows.length >= 10 && <LoadMoreButton />}
+      </div>
+    </div>
+  );
+}
+
 export default function SportPage({ slug }) {
   const search = useSearch();
   const section = new URLSearchParams(search).get("section");
@@ -190,20 +244,33 @@ export default function SportPage({ slug }) {
   if (!page) return null;
   const tabs = page.tabs;
   const active = tabs.some((t) => t[0] === section) ? section : "featured";
-  const groups = groupsForSport(slug, page);
+  const code = codeForSlug(slug);
   const toolbar = <SportFilters markets={page.markets} regions={pageData.regions} />;
+  // Each tab draws on the capture that belongs to it: the sport's own upcoming page,
+  // its live competitions, and the outright markets held among the featured groups.
+  const featured = groupsForSport(slug, page);
+  let body;
+  if (active === "upcoming") {
+    body = <UpcomingList rows={upcomingData.bySport[code] || []} />;
+  } else if (active === "bet-live") {
+    const live = liveData.sports[code];
+    body = (live ? live.groups : []).map((g) => <MatchGroup key={g.compHref} g={g} />);
+  } else if (active === "outrights") {
+    body = outrightsForSport(slug).map((g) => <MatchGroup key={g.compHref} g={g} />);
+  } else if (active === "all") {
+    // The reference's league directory is its own module, not yet reconstructed.
+    body = null;
+  } else {
+    body = featured.filter((g) => !g.outright).map((g) => <MatchGroup key={g.compHref} g={g} />);
+  }
   return (
     <div>
       <SportsBreadcrumb items={[{ label: "Home", href: "/sports" }, { label: page.title }]} />
       <section className="LayoutContainer_root LayoutContainer_mobile-bottom-md LayoutContainer_column">
-        <SportsHeading alt={page.title} icon={page.icon} title={page.title} toolbar={toolbar} />
+        <SportsHeading alt={page.title} icon={page.icon} noMargin title={page.title} toolbar={toolbar} />
       </section>
       <SectionTabs active={active} base={`/sports/${slug}`} tabs={tabs} />
-      <section className="LayoutContainer_root LayoutContainer_mobile-top-md LayoutContainer_column">
-        {groups.map((g) => (
-          <MatchGroup key={g.compHref} g={g} />
-        ))}
-      </section>
+      <section className="LayoutContainer_root LayoutContainer_mobile-top-md LayoutContainer_column">{body}</section>
       <ActivityBoard />
     </div>
   );

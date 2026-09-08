@@ -2,12 +2,12 @@ import { CarouselHeader, SwipeTrack } from "../ui/Carousel";
 import { cx, useCarousel } from "../../lib/carousel";
 import { useReveal } from "../../lib/useReveal";
 
-export function GameCard({ game, index = 0, indicator, hidden = false }) {
+export function GameCard({ game, index = 0, indicator, hidden = false, className }) {
   const [ref, shown] = useReveal();
   return (
     <a
       ref={ref}
-      className={cx("TallGameCard_root", hidden ? "TallGameCard_hide" : "TallGameCard_reveal", !hidden && shown && "TallGameCard_show")}
+      className={cx("TallGameCard_root", hidden ? "TallGameCard_hide" : "TallGameCard_reveal", !hidden && shown && "TallGameCard_show", className)}
       style={{ "--card-i": index }}
       data-testid={game.name}
       href={game.href}

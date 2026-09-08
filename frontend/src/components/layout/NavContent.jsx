@@ -196,8 +196,10 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   const casino = variant === "casino";
   const sportsbook = variant === "sports";
   const [promosOpen, setPromosOpen] = useState(false);
-  const [sportsOpen, setSportsOpen] = useState(false);
-  const [esportsOpen, setEsportsOpen] = useState(false);
+  // The two sport directories behave as one accordion: opening either closes the
+  // other, so only one long list is ever pushed into the rail at a time.
+  const [openDirectory, setOpenDirectory] = useState(null);
+  const toggleDirectory = (id) => setOpenDirectory((cur) => (cur === id ? null : id));
 
   return (
     // The reference applies `isExpanded` here only while the rail is collapsed
@@ -264,8 +266,8 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
           {sportsbook && sportsFeatured.map((l) => <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={onSelect} />)}
           {sportsbook && (
             <div className={cx("NavigationLineBreakWrapper_root", expanded && "NavigationLineBreakWrapper_expanded")}>
-              <ExpandableGroup expanded={expanded} icon="all-sports" label="All sports" links={allSports} active={active} onSelect={onSelect} open={sportsOpen} onToggle={() => setSportsOpen((o) => !o)} />
-              <ExpandableGroup expanded={expanded} icon="esports" label="All Esports" links={allEsports} active={active} onSelect={onSelect} open={esportsOpen} onToggle={() => setEsportsOpen((o) => !o)} />
+              <ExpandableGroup expanded={expanded} icon="all-sports" label="All sports" links={allSports} active={active} onSelect={onSelect} open={openDirectory === "sports"} onToggle={() => toggleDirectory("sports")} />
+              <ExpandableGroup expanded={expanded} icon="esports" label="All Esports" links={allEsports} active={active} onSelect={onSelect} open={openDirectory === "esports"} onToggle={() => toggleDirectory("esports")} />
             </div>
           )}
 
