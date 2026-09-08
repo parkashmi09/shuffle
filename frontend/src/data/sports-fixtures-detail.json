@@ -20661,5 +20661,47 @@
     ]
    }
   ]
+ },
+ "/sports/mma/1089-ufc/196720-dana-whites-contender-series-season-10-week-5/74250014-loud-colton-vs-natividad-christian": {
+  "sport": "mma",
+  "sportIcon": "/icons/sports/mma.svg",
+  "categoryHref": "/sports/mma/1089-ufc",
+  "competitionHref": "/sports/mma/1089-ufc/196720-dana-whites-contender-series-season-10-week-5",
+  "home": [
+   "Loud, Colton",
+   null
+  ],
+  "away": [
+   "Natividad, Christian",
+   null
+  ],
+  "date": "Sep 09, 4:30 AM",
+  "dateLabel": "Wednesday, September 09",
+  "tabs": [
+   "Top Markets"
+  ],
+  "crumbs": {
+   "categoryLabel": "UFC",
+   "categoryFlag": "/icons/globe.svg",
+   "competitionLabel": "Dana Whites Contender Series: Season 10, Week 5",
+   "competitionLogo": "/images/sports/logos/d4637c4c-1461-474c-929a-eeb9c7cffb42.png"
+  },
+  "markets": [
+   {
+    "title": "Winner",
+    "layout": "default",
+    "cols": 2,
+    "sels": [
+     [
+      "Loud, Colton",
+      "3.20"
+     ],
+     [
+      "Natividad, Christian",
+      "1.34"
+     ]
+    ]
+   }
+  ]
  }
 }

@@ -88,7 +88,8 @@ export function fixtureRowFor(href) {
  * `sports-<slug>`, but the esports files are named after the game rather than the
  * slug (`cs2` is `esports-counter-strike-2`, `lol` is `esports-league-of-legends`)
  * and a few others differ too, so the exceptions are listed rather than derived.
- * Sports absent here have no banner on the reference either.
+ * Names vary enough that they are listed rather than derived: the esports files
+ * are named after the game, and a couple carry suffixes or capitals.
  */
 const BANNERS = {
   dota2: "esports-dota2",
@@ -106,11 +107,12 @@ const BANNERS = {
   ml: "esports-mobile-legends",
   w3: "esports-warcraft",
   "rugby-union": "sports-rugby",
+  ebasketball: "esports-NBA-2K",
+  mma: "sports-mma1",
 };
 
-/** Background image for a sport's banner, or null when it has none. */
+/** Background image for a sport's banner. Every sport with a page has one. */
 export function bannerForSport(slug) {
-  const NONE = new Set(["ebasketball", "mma"]);
-  if (!slug || NONE.has(slug)) return null;
+  if (!slug) return null;
   return `/images/sports/banner/${BANNERS[slug] || `sports-${slug}`}.webp`;
 }
