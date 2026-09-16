@@ -45,7 +45,7 @@ const EXTENSIONS = {
   Users: {
     wager_multiplier: { type: DataTypes.DECIMAL(10, 4), allowNull: true, defaultValue: 3, field: 'wager_multiplier' },
     lock_targetx: { type: DataTypes.BOOLEAN, allowNull: true, defaultValue: false, field: 'lock_targetx' },
-    // ── migration 039-user-withdrawal-whitelist ────────────────────────
+    // ── migration 043-user-withdrawal-whitelist ────────────────────────
     // The master switch for whitelist-only withdrawals. Undeclared, this file's
     // own warning came true exactly: `Users.update({ withdraw_whitelist_only })`
     // reported success, wrote nothing, and the next read answered `false` — the
@@ -56,7 +56,7 @@ const EXTENSIONS = {
       defaultValue: false,
       field: 'withdraw_whitelist_only',
     },
-    // ── migration 040-withdraw-cooldown-after-password-change ──────────
+    // ── migration 044-withdraw-cooldown-after-password-change ──────────
     // The 24-hour withdrawal freeze that follows a self-service password
     // change. Declared here for the same reason the line above it is: an
     // undeclared column is written by a silently-successful UPDATE, and this
@@ -183,6 +183,27 @@ const EXTENSIONS = {
     /** Legacy recorded nothing — the upload route had no authentication. */
     uploaded_by: { type: DataTypes.BIGINT, allowNull: true, field: 'uploaded_by' },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'is_active' },
+
+    /**
+     * Migration 037 — the slide fields.
+     *
+     * Before these, a banner could only ever be a picture, so the home hero
+     * stayed a nine-slide fixture in the front end: pointing it at this table
+     * would have discarded the title, subtitle and CTA on every slide.
+     *
+     * All nullable. An image-only banner is still valid and every row that
+     * predates the migration is one.
+     */
+    title: { type: DataTypes.STRING(160), allowNull: true, field: 'title' },
+    subtitle: { type: DataTypes.STRING(300), allowNull: true, field: 'subtitle' },
+    cta_label: { type: DataTypes.STRING(60), allowNull: true, field: 'cta_label' },
+    cta_href: { type: DataTypes.STRING(500), allowNull: true, field: 'cta_href' },
+    /**
+     * Position within a placement. Several rows may share a `type` now — that
+     * is what turns a placement into a carousel — and this is the only thing
+     * that makes their order deterministic.
+     */
+    sort_order: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, field: 'sort_order' },
   },
 
   // Migration 032. Same move as banners, and for the same reason — legacy wrote
@@ -244,7 +265,7 @@ const EXTENSIONS = {
     home_livesports: {
       type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'home_livesports',
     },
-    // ── migration 037-siteconfig-eur-flag ──────────────────────────────
+    // ── migration 041-siteconfig-eur-flag ──────────────────────────────
     //
     // ADDED LATE, AND ITS ABSENCE MADE 037 A NO-OP FOR WRITES. The migration
     // created the column and the service's `PUBLIC_FLAGS` lists it, so the

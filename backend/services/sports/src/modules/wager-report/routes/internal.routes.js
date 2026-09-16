@@ -22,9 +22,34 @@ const params = {
   }),
 };
 
+/**
+ * A race's window. Required, not optional: unlike `/turnover/:userId`, where an
+ * absent pair means all history, a race IS a window — defaulting would answer
+ * with every bet ever placed under one day's heading.
+ */
+const raceWindow = {
+  query: z
+    .object({
+      from: z.string().trim().min(8).max(35),
+      to: z.string().trim().min(8).max(35),
+    })
+    .strict(),
+};
+
 module.exports = function internalRoutes(deps) {
   const service = new WagerReportService(deps);
   const router = Router();
+
+  /**
+   * Every player's sports turnover in a window. Internal for a stronger reason
+   * than its neighbour: this is not scoped to one player, it is the platform's
+   * whole stake volume for a period.
+   */
+  router.get(
+    '/race-points',
+    validate(raceWindow),
+    asyncHandler(async (req, res) => response.ok(res, await service.racePoints(req.query)))
+  );
 
   router.get(
     '/turnover/:userId',

@@ -67,14 +67,47 @@ const { execFileSync } = require('child_process');
 const BACKEND = path.resolve(__dirname, '..');
 const REPO = path.resolve(BACKEND, '..');
 
+/**
+ * Where each front end actually is.
+ *
+ * ── THIS PATH HAS BEEN WRONG TWICE, THE SAME WAY BOTH TIMES ──────────────
+ *
+ * It was first written as `<repo>/adminpanel`, then corrected to
+ * `test-automation-and-updated-admin/adminpanel`. The operator console now
+ * sits BESIDE the player app, as `<workspace>/adminpanel` — a sibling of
+ * `stake-site` rather than anything under it.
+ *
+ * Each time, the symptom was the same and it is the reason this comment keeps
+ * growing: the tool printed `✗ no registry at …` and carried on, so it checked
+ * ZERO of the console's endpoints while still exiting green on the ones it
+ * could find. A check that fails for a path reason rather than a routing one
+ * is a check nobody reads — it always failed the same way, so it stopped
+ * meaning anything.
+ *
+ * If this breaks again, fix the path rather than deleting the entry.
+ */
+const WORKSPACE = path.resolve(REPO, '..');
+const LEGACY = path.join(REPO, 'test-automation-and-updated-admin');
+
 const REGISTRIES = [
-  { app: 'adminpanel', file: path.join(REPO, 'adminpanel/src/services/endpoints.ts') },
-  { app: 'Addaplay', file: path.join(REPO, 'Addaplay/src/services/api/endpoints.js') },
+  { app: 'adminpanel', file: path.join(WORKSPACE, 'adminpanel/src/services/endpoints.ts') },
+  { app: 'Addaplay', file: path.join(LEGACY, 'Addaplay/src/services/api/endpoints.js') },
+  /**
+   * This app — the third target Phase 10 asks for.
+   *
+   * Its registry is the ONLY way it addresses the API: every call goes through
+   * `request(ENDPOINTS.x.y)`, so there are no hardcoded paths for the call-site
+   * pass to catch. That is the stronger position to be in, and it is why the
+   * registry pass matters more here than it did for the two apps above — a
+   * renamed route breaks the registry, and the registry breaks every caller.
+   */
+  { app: 'stake-site', file: path.join(REPO, 'src/api/endpoints.js') },
 ];
 
 /** Source trees walked for `apiFetch('/literal-path')` call sites. */
 const SOURCES = [
-  { app: 'adminpanel', dir: path.join(REPO, 'adminpanel/src') },
+  { app: 'adminpanel', dir: path.join(WORKSPACE, 'adminpanel/src') },
+  { app: 'stake-site', dir: path.join(REPO, 'src') },
 ];
 
 /** Mount the four services and read back every concrete route they expose. */

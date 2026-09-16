@@ -23,11 +23,31 @@ const TEST_DB = process.env.TEST_DB_NAME || 'ibitplay_test';
 
 let connection;
 
+/**
+ * The client tests below are about CLIENT MECHANICS — where the credential
+ * goes, what the cache keys on, what a timeout produces — and those are the
+ * same whichever provider is behind the url. `scoreswift` is the passthrough
+ * dialect, so one logical call is one upstream request and the assertions can
+ * name a single `calls[0]`.
+ *
+ * ── AND IT HAS TO BE SAID OUT LOUD ──────────────────────────────────────
+ *
+ * It was omitted, and `FeedClient` defaults to `diamond`. Under that dialect
+ * `/inplay` fans out across nineteen sports and `/highlighthomePrivate` is an
+ * upstream path rather than a logical call, so twelve tests here stopped
+ * testing anything the day the dialect layer landed — including the two that
+ * cover the credential. They failed with `FEED_CAPABILITY_MISSING` and
+ * `19 == 1`, which reads as a broken feed rather than a stale test.
+ *
+ * The diamond block at the end of this file covers what the dialect itself
+ * changes, since diamond is what production runs.
+ */
 const baseConfig = {
   SERVICE_NAME: 'sports-service',
   SPORTS_FEED_URL: 'https://feed.test/api',
   SPORTS_FEED_KEY: 'feed-key',
   SPORTS_FEED_TIMEOUT_MS: 500,
+  SPORTS_FEED_DIALECT: 'scoreswift',
 };
 
 test('sports feed', async (t) => {
@@ -232,6 +252,71 @@ test('sports feed', async (t) => {
     assert.equal(v.byDate.params.safeParse({ dateType: 'today' }).success, true);
     assert.equal(v.byDate.params.safeParse({ dateType: 'tomorrow' }).success, true);
     assert.equal(v.byDate.params.safeParse({ dateType: 'yesterday' }).success, false);
+  });
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  The diamond dialect — what PRODUCTION runs
+  // ══════════════════════════════════════════════════════════════════════
+
+  /**
+   * `SPORTS_FEED_DIALECT` is unset in every deployment so far, and
+   * `FeedClient` falls back to `diamond`. Everything above deliberately opts
+   * out of it to test the client rather than the translation; these three
+   * pin the translation itself.
+   */
+  const diamondConfig = { ...baseConfig, SPORTS_FEED_DIALECT: 'diamond' };
+
+  await t.test('diamond drops a caller-supplied `key` before the url is built', async () => {
+    /**
+     * The SECOND credential guard, and the stronger one.
+     *
+     * Above, the url builder appends the real key last so a caller's `key`
+     * cannot win. Here the dialect never forwards it at all — it names the
+     * parameters this provider takes, and `key` is not one of them. Two
+     * independent reasons an attacker-chosen credential cannot reach the
+     * feed, which is what you want on the parameter that authenticates you.
+     */
+    const { fetchImpl, calls } = stubFetch([]);
+    const client = new FeedClient({ config: diamondConfig, logger, fetchImpl });
+
+    await client.get('/GetLineMarket', { key: 'attacker-chosen', etid: 4 });
+
+    const url = new URL(calls[0].url);
+    assert.equal(url.searchParams.get('key'), 'feed-key');
+    assert.equal(url.searchParams.get('etid'), '4');
+  });
+
+  await t.test('a whole-board read fans out across the configured sports', async () => {
+    /**
+     * The diamond feed serves one sport per request, so `/inplay` is N calls,
+     * not one. A test that assumes otherwise reports a working feed as broken
+     * — which is exactly what happened to `a burst for one url` above.
+     */
+    const { fetchImpl, calls } = stubFetch([]);
+    const client = new FeedClient({ config: diamondConfig, logger, fetchImpl });
+
+    await client.get('/inplay');
+
+    assert.ok(calls.length > 1, `expected a fan-out, got ${calls.length} call(s)`);
+    for (const call of calls) {
+      assert.ok(call.url.includes('/highlighthomePrivate'), 'every leg hits the one endpoint');
+      assert.equal(new URL(call.url).searchParams.get('key'), 'feed-key', 'every leg carries the credential');
+    }
+  });
+
+  await t.test('a capability this provider lacks is a named 501, not an empty board', async () => {
+    /**
+     * The failure mode this dialect exists to prevent: returning `[]` for
+     * something the provider cannot serve looks like a quiet day, forever.
+     */
+    const { fetchImpl, calls } = stubFetch([]);
+    const client = new FeedClient({ config: diamondConfig, logger, fetchImpl });
+
+    await assert.rejects(
+      () => client.get('/GetResult', { etid: 4 }),
+      (err) => err.code === 'FEED_CAPABILITY_MISSING' && err.status === 501
+    );
+    assert.equal(calls.length, 0, 'and it does not call upstream to find out');
   });
 
   // ══════════════════════════════════════════════════════════════════════

@@ -279,6 +279,41 @@ const LITERAL_EVENTS = Object.freeze({
 });
 
 /**
+ * Names this project added. NOT part of the legacy protocol.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * A SEPARATE TABLE ON PURPOSE
+ *
+ * `EVENTS` and `LITERAL_EVENTS` are a RECORD of what legacy speaks — every
+ * entry in either traces to a shipped client, which is why neither may be
+ * renamed. Putting a new name in one of them would make that record false.
+ *
+ * So new events live here, and the boundary stays readable: anything above is
+ * archaeology, anything here is ours and may be changed as long as this
+ * project's own clients change with it.
+ * ═════════════════════════════════════════════════════════════════════════
+ */
+const PLATFORM_EVENTS = Object.freeze({
+  /**
+   * A casino round settled — pushed to every client on the casino socket.
+   *
+   * The live bets ticker, the leaderboard and `LAST_BETS` are all PULL: they
+   * answer a request with the most recent rows and nothing tells a client that
+   * new rows exist. Legacy had no push for it either — its board only moved
+   * when the page asked again.
+   *
+   * The reference product's feed moves on its own, so this exists to make that
+   * possible without polling. It carries the settled round, so a client can
+   * prepend a row rather than re-reading the whole feed.
+   *
+   * NOTE: without `REDIS_URL` a broadcast reaches only the clients attached to
+   * the emitting process. One casino process is the dev default, so this works
+   * there and needs the Redis adapter before it works behind more than one.
+   */
+  BET_SETTLED: 'betSettled',
+});
+
+/**
  * Reverse lookup: wire name -> the readable key, for logs and errors.
  *
  * ONE wire name is shared by two keys: `ERROR_CLASSIC_DICE` and
@@ -295,8 +330,12 @@ const NAME_OF = Object.freeze(
   Object.fromEntries(
     // Literals first, so a hashed name always wins a collision — there is none
     // today, and if one ever appeared the constant table is the authority.
-    [...Object.entries(LITERAL_EVENTS), ...Object.entries(EVENTS)].map(([key, wire]) => [wire, key])
+    [
+      ...Object.entries(PLATFORM_EVENTS),
+      ...Object.entries(LITERAL_EVENTS),
+      ...Object.entries(EVENTS),
+    ].map(([key, wire]) => [wire, key])
   )
 );
 
-module.exports = { EVENTS, LITERAL_EVENTS, NAME_OF };
+module.exports = { EVENTS, LITERAL_EVENTS, PLATFORM_EVENTS, NAME_OF };

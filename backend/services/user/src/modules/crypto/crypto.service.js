@@ -13,6 +13,7 @@ const {
   CCPAYMENT_OK,
 } = require('./crypto.constants');
 const { WalletService } = require('../wallet/wallet.service');
+const { createHttpClient } = require('../psp/providers/http');
 const { REASON } = require('../wallet/wallet.constants');
 
 /**
@@ -29,7 +30,17 @@ class CryptoService {
     this.db = db;
     this.logger = logger;
     this.config = config;
-    this.http = http;
+    /**
+     * The container does not provide `http`, and never did — so this was
+     * `undefined`, and every CCPayment read died on
+     * `Cannot read properties of undefined (reading 'raw')`: a 500 where a
+     * 502/503 belonged, on public routes like `GET /crypto/chains`.
+     *
+     * `payment-orders` and `psp` already build their own client this way when
+     * the dependency is absent. This module was the one that assumed it would
+     * be handed one.
+     */
+    this.http = http ?? createHttpClient({ logger, timeoutMs: Number(config?.PSP_TIMEOUT_MS ?? 10_000) });
     this.wallet = new WalletService(deps);
   }
 
@@ -367,17 +378,17 @@ class CryptoService {
   /** A signed read against CCPayment. */
   async #ccpayment(path, payload = null) {
     /**
-     * REFUSE BEFORE REACHING FOR THE CLIENT. `http` is not injected when the
-     * deployment has no provider, and `CCPAYMENT_APP_ID` / `APP_SECRET` are
-     * empty in the same case, so every caller of this method used to die on
-     * `this.http.raw` with a 500 — see `PROVIDER_DISABLED`. All three are
-     * checked rather than just the one that happens to be missing today,
-     * because a half-configured deployment is the case that would otherwise
-     * fail somewhere less obvious.
+     * Refuse before building a URL out of `undefined`.
+     *
+     * All three settings are checked together because a partial
+     * configuration fails later and less clearly — a base url with no
+     * secret signs every request with `''` and gets a 401 the caller then
+     * has to interpret.
      */
-    if (!this.http || !this.config.CCPAYMENT_APP_ID || !this.config.CCPAYMENT_APP_SECRET) {
-      throw errors.PROVIDER_DISABLED({ path });
-    }
+    const missing = ['CCPAYMENT_BASE_URL', 'CCPAYMENT_APP_ID', 'CCPAYMENT_APP_SECRET']
+      .filter((name) => !this.config?.[name]);
+    if (!this.http) missing.push('http client');
+    if (missing.length) throw errors.NOT_CONFIGURED({ missing });
 
     const body = payload ? JSON.stringify(payload) : '';
     const timestamp = Math.floor(Date.now() / 1000);

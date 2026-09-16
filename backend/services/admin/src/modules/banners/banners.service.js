@@ -35,7 +35,7 @@ class BannersService {
    * The bytes are inspected BEFORE anything is written, and `contentType` comes
    * from the signature that matched — not from the request.
    */
-  async putBanner({ staff, type, label, file }) {
+  async putBanner({ staff, type, label, title, subtitle, ctaLabel, ctaHref, sortOrder, file }) {
     const image = inspect(file);
 
     /**
@@ -54,6 +54,25 @@ class BannersService {
         byte_size: image.byteSize,
         uploaded_by: staff?.id ?? null,
         is_active: true,
+
+        /**
+         * The slide copy — migration 037.
+         *
+         * `?? null` and not `|| null`: an operator clearing a headline sends
+         * an empty string, and that must overwrite the old one. Coalescing on
+         * falsiness would keep whatever was there and make "delete this text"
+         * silently do nothing.
+         *
+         * An upload that names none of these blanks them, which is the same
+         * replace-the-placement semantics the image already has: this is one
+         * operation that writes a whole banner, not a patch.
+         */
+        title: title ?? null,
+        subtitle: subtitle ?? null,
+        cta_label: ctaLabel ?? null,
+        cta_href: ctaHref ?? null,
+        sort_order: sortOrder ?? 0,
+
         updated_at: new Date(),
         created_at: new Date(),
       },
@@ -115,7 +134,9 @@ class BannersService {
     const rows = await this.models.Banners.findAll({
       where: includeInactive ? {} : { is_active: true },
       attributes: this.#metaColumns(),
-      order: [['type', 'ASC']],
+      /* Slide order, then placement — see migration 037. Ordering on `type`
+         alone puts hero-10 before hero-2. */
+      order: [['sort_order', 'ASC'], ['type', 'ASC']],
       raw: true,
     });
     return { total: rows.length, rows: rows.map((r) => this.#describe(r, { includeUrl: true })) };
@@ -136,7 +157,9 @@ class BannersService {
   async listWithImages({ includeInactive = false }) {
     const rows = await this.models.Banners.findAll({
       where: includeInactive ? {} : { is_active: true },
-      order: [['type', 'ASC']],
+      /* Slide order, then placement — see migration 037. Ordering on `type`
+         alone puts hero-10 before hero-2. */
+      order: [['sort_order', 'ASC'], ['type', 'ASC']],
       raw: true,
     });
 
@@ -189,9 +212,17 @@ class BannersService {
    * Listing banners must not drag megabytes of image through the query — legacy
    * read every file from disk on every list call, which is the same mistake
    * with a different backing store.
+   *
+   * The slide fields (migration 037) are here rather than only on the binary
+   * read for the same reason in reverse: a carousel needs the copy to lay a
+   * slide out, and should not have to pull every image to get at it.
    */
   #metaColumns() {
-    return ['id', 'type', 'image', 'content_type', 'byte_size', 'uploaded_by', 'is_active', 'created_at', 'updated_at'];
+    return [
+      'id', 'type', 'image', 'content_type', 'byte_size', 'uploaded_by', 'is_active',
+      'title', 'subtitle', 'cta_label', 'cta_href', 'sort_order',
+      'created_at', 'updated_at',
+    ];
   }
 
   #describe(row, { includeUrl = false } = {}) {
@@ -203,6 +234,24 @@ class BannersService {
       byteSize: row.byte_size ?? null,
       active: row.is_active !== false,
       uploadedBy: row.uploaded_by ?? null,
+
+      /**
+       * The slide, when there is one — migration 037.
+       *
+       * All four are null on an image-only banner, which is what every row
+       * written before that migration is. A consumer that needs copy checks
+       * for it; the hero carousel falls back to its captured slides rather
+       * than rendering a headline-shaped blank.
+       *
+       * `cta` is one object or null rather than two loose fields, because a
+       * label without an href is a button that goes nowhere — the pair is only
+       * meaningful together, and this makes that impossible to get half right.
+       */
+      title: row.title ?? null,
+      subtitle: row.subtitle ?? null,
+      cta: row.cta_label && row.cta_href ? { label: row.cta_label, href: row.cta_href } : null,
+      sortOrder: row.sort_order ?? 0,
+
       createdAt: row.created_at ?? null,
       updatedAt: row.updated_at ?? null,
       /**

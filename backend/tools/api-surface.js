@@ -30,6 +30,28 @@
 
 const fs = require('fs');
 const path = require('path');
+const { toLf, sameContent, writeKeepingEol } = require('./lib/eol');
+
+/**
+ * A repo-relative path with forward slashes, on every platform.
+ *
+ * `path.relative` yields backslashes on Windows, so the same commit generated
+ * `services/admin/...` on macOS and `services\admin\...` here. Both are
+ * correct paths and neither matches the other, which is enough to make a
+ * committed artifact unreproducible and its diff unreadable.
+ */
+const repoPath = (abs) => path.relative(ROOT, abs).split(path.sep).join('/');
+
+/**
+ * Source, always LF.
+ *
+ * Several fields here are CHARACTER OFFSETS into a source file — every
+ * `responses[].index`. On a CRLF working tree each preceding line contributes
+ * an extra , so the same commit produced offset 211 on macOS and 215 here.
+ * Normalising at the read makes every offset, and therefore the whole
+ * artifact, identical on any platform.
+ */
+const readSource = (file) => toLf(fs.readFileSync(file, 'utf8'));
 
 const ROOT = path.resolve(__dirname, '..');
 const SERVICES_DIR = path.join(ROOT, 'services');
@@ -157,7 +179,7 @@ function readManifest(moduleDir) {
   const indexPath = path.join(moduleDir, 'index.js');
   if (!fs.existsSync(indexPath)) return null;
 
-  const src = stripComments(fs.readFileSync(indexPath, 'utf8'));
+  const src = stripComments(readSource(indexPath));
   const name = src.match(/name:\s*'([^']+)'/)?.[1] || path.basename(moduleDir);
   const service = src.match(/service:\s*'([^']+)'/)?.[1] || null;
   const basePath = src.match(/basePath:\s*'([^']*)'/)?.[1] ?? '';
@@ -177,7 +199,16 @@ function readManifest(moduleDir) {
 
   const hasSockets = fs.existsSync(path.join(moduleDir, 'sockets.js'));
 
-  return { name, service, basePath, audiences, socketOnly, hasSockets, dir: moduleDir };
+  /**
+   * Repo-relative, like every other path in this file.
+   *
+   * It was the absolute `moduleDir`, so the committed `api-surface.json`
+   * carried the generating machine's home directory — 66 of them — and every
+   * developer who regenerated it produced a 5KB diff of nothing but their own
+   * paths. A generated artifact that cannot be reproduced byte-for-byte on a
+   * second machine is one nobody can check.
+   */
+  return { name, service, basePath, audiences, socketOnly, hasSockets, dir: repoPath(moduleDir) };
 }
 
 // ── Handler bodies ─────────────────────────────────────────────────────
@@ -585,7 +616,7 @@ function loadPermissionValues() {
   };
 
   const authFile = path.join(ROOT, 'packages', 'auth', 'src', 'permissions.js');
-  if (fs.existsSync(authFile)) record(stripComments(fs.readFileSync(authFile, 'utf8')), 'PERMISSIONS');
+  if (fs.existsSync(authFile)) record(stripComments(readSource(authFile)), 'PERMISSIONS');
 
   for (const service of fs.readdirSync(SERVICES_DIR)) {
     const modulesDir = path.join(SERVICES_DIR, service, 'src', 'modules');
@@ -594,7 +625,7 @@ function loadPermissionValues() {
     for (const entry of fs.readdirSync(modulesDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
       for (const file of listFiles(path.join(modulesDir, entry.name), (f) => f.endsWith('.constants.js'))) {
-        const src = stripComments(fs.readFileSync(file, 'utf8'));
+        const src = stripComments(readSource(file));
         // Module-local grant maps are named the same way everywhere.
         for (const name of ['PERMISSION', 'PERMISSIONS']) record(src, name);
       }
@@ -668,7 +699,7 @@ function fileWideMiddleware(src, aliases) {
 }
 
 function parseRouteFile(filePath, audience, manifest, handlerIndex, serviceHelpers = new Map()) {
-  const raw = fs.readFileSync(filePath, 'utf8');
+  const raw = readSource(filePath);
   const src = stripComments(raw);
   const localHandlers = collectHandlers(src);
   const routeLocals = new Map([...serviceHelpers, ...collectLocalFunctions(src)]);
@@ -740,7 +771,7 @@ function parseRouteFile(filePath, audience, manifest, handlerIndex, serviceHelpe
       responses: extractResponses(body),
       thrown: extractThrownErrors(body),
       resolved: Boolean(body),
-      file: path.relative(ROOT, filePath),
+      file: repoPath(filePath),
     });
   }
 
@@ -750,7 +781,7 @@ function parseRouteFile(filePath, audience, manifest, handlerIndex, serviceHelpe
 // ── Error catalogues ───────────────────────────────────────────────────
 
 function parseErrorCatalogue(filePath) {
-  const src = stripComments(fs.readFileSync(filePath, 'utf8'));
+  const src = stripComments(readSource(filePath));
   const at = src.indexOf('defineErrors(');
   if (at === -1) return null;
 
@@ -770,7 +801,7 @@ function parseErrorCatalogue(filePath) {
     return { key, code: `${namespace}_${key}`, status, message: message.replace(/\\'/g, "'") };
   }).filter(Boolean);
 
-  return { namespace, codes, file: path.relative(ROOT, filePath) };
+  return { namespace, codes, file: repoPath(filePath) };
 }
 
 // ── Collection ─────────────────────────────────────────────────────────
@@ -792,7 +823,7 @@ function collectServiceHelpers(modulesDir) {
 
     const moduleDir = path.join(modulesDir, entry.name);
     for (const file of listFiles(moduleDir, (f) => f !== 'index.js')) {
-      const src = stripComments(fs.readFileSync(file, 'utf8'));
+      const src = stripComments(readSource(file));
       // Only files that talk to `res` can be responders; skipping the rest
       // keeps unrelated names out of the fallback index.
       if (!/\bres\s*\.\s*(json|send|end|setHeader|status)|\.pipe\s*\(\s*res\s*\)/.test(src)) continue;
@@ -840,7 +871,7 @@ function collect() {
       // call usually lives.
       const handlerIndex = new Map();
       for (const controllerFile of listFiles(path.join(moduleDir, 'controllers'))) {
-        const src = stripComments(fs.readFileSync(controllerFile, 'utf8'));
+        const src = stripComments(readSource(controllerFile));
         // File-local names shadow the service-wide fallback, so a module's own
         // `ok` helper is never confused with another module's.
         const locals = new Map([...serviceHelpers, ...collectLocalFunctions(src)]);
@@ -995,7 +1026,7 @@ function main() {
   const surface = collect();
 
   if (args.includes('--json') || args.includes('--all') || args.length === 0) {
-    fs.writeFileSync(JSON_OUT, `${JSON.stringify(surface, null, 2)}\n`);
+    writeKeepingEol(JSON_OUT, `${JSON.stringify(surface, null, 2)}\n`);
   }
 
   if (args.includes('--json')) {
@@ -1015,7 +1046,15 @@ function main() {
   const next = `${doc.slice(0, begin + BEGIN.length)}\n${renderMarkdown(surface)}\n${doc.slice(end)}`;
 
   if (args.includes('--check')) {
-    if (next !== doc) {
+    /**
+     * Compared on CONTENT, not bytes.
+     *
+     * `renderMarkdown` joins on `\n`; the working tree is CRLF wherever this
+     * is cloned with `core.autocrlf = true`, which is how it is cloned. A
+     * `!==` here therefore failed on every Windows checkout and reported the
+     * docs stale when they were identical — see tools/lib/eol.js.
+     */
+    if (!sameContent(next, doc)) {
       console.error('docs/API-ROUTES.md is out of date — run: node tools/api-surface.js');
       process.exit(1);
     }
@@ -1023,7 +1062,9 @@ function main() {
     return;
   }
 
-  fs.writeFileSync(DOC, next);
+  // In the ending the file already uses, so regenerating does not rewrite
+  // every line of the working copy.
+  writeKeepingEol(DOC, next);
   console.log(
     `Wrote docs/API-ROUTES.md — ${surface.routes.length} routes, `
     + `${surface.modules.length} modules, ${surface.catalogues.length} error catalogues`

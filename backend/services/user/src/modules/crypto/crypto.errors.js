@@ -19,6 +19,19 @@ module.exports = defineErrors('CRYPTO', {
 
   PROVIDER_ERROR: { status: 502, message: 'The payment provider rejected the request' },
 
+  /**
+   * CCPayment is not set up in this deployment.
+   *
+   * 503, and named — not the 500 these routes used to answer. Without
+   * `CCPAYMENT_BASE_URL` the client built the string
+   * `undefined/ccpayment/v2/getChainList` and threw `Invalid URL`, which
+   * reached the player as "Something went wrong" and told an operator
+   * nothing about which setting was missing.
+   *
+   * Same shape as CATALOGUE_NOT_CONFIGURED and SPORTSBOOK_NOT_CONFIGURED:
+   * an unconfigured integration is a deployment fact, not a server fault.
+   */
+  NOT_CONFIGURED: { status: 503, message: 'The crypto payment provider is not configured' },
   PROVIDER_DISABLED: {
     /**
      * 503, matching `payment-orders`' error of the same name and the game

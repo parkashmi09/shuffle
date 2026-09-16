@@ -25,6 +25,18 @@ module.exports = function publicRoutes(deps) {
   );
 
   /**
+   * The "N playing" counts — distinct players per game over a recent window.
+   *
+   * Public for the same reason the ticker is, and safer: it is an aggregate.
+   * No player id is in the response because none survives the GROUP BY.
+   */
+  router.get(
+    '/activity',
+    validate(v.activity),
+    asyncHandler(async (req, res) => response.ok(res, await service.activity(req.query)))
+  );
+
+  /**
    * @legacy SOCKET `C.TOP_WINNERS` — gap 13.
    *
    * The same query the internal `/top-winners` runs, at the public audience and

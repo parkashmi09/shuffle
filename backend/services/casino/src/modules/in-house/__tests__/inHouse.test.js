@@ -19,16 +19,25 @@ const blackjack = require('../games/blackjack');
 const authority = require('../engine/serverAuthority');
 const classicDice = require('../games/classicDice');
 const magicWheel = require('../games/magicWheel');
+const wheel = require('../games/wheel');
+const singleKeno = require('../games/singleKeno');
 const diamond = require('../games/diamond');
 
 /**
  * The in-house games.
  *
- * The game arithmetic is legacy's, ported as-is — so these tests PIN what it
- * does rather than assert what it should do. Several of them document
- * behaviour that is almost certainly a bug; they are written that way on
- * purpose, so that changing the behaviour later fails a test and is a
+ * Most of the game arithmetic is legacy's, ported as-is — so most of these
+ * tests PIN what it does rather than assert what it should do. Several of them
+ * document behaviour that is almost certainly a bug; they are written that way
+ * on purpose, so that changing the behaviour later fails a test and is a
  * decision rather than an accident.
+ *
+ * FOUR OF THOSE PINS HAVE NOW BEEN RELEASED. Magic Wheel, High Low, Wheel and
+ * Single Keno did not depend on chance at all — three won every round and one
+ * could not win — and they have been fixed. Their tests now assert the fixed
+ * behaviour, and each says what it used to pin. The distinction still holds
+ * everywhere else: a test SHOUTING in capitals is pinning a defect, not
+ * endorsing it. See `BACKEND-INTEGRATION.md` §8.6.
  *
  * The engine tests are different: the stake path is not ported as-is, and
  * those assert the guarantee.
@@ -109,24 +118,141 @@ test('the ported game arithmetic', async (t) => {
     assert.equal(anyWin, true);
   });
 
-  await t.test('MAGIC WHEEL ALWAYS WINS — the condition compares an array to a number', () => {
+  await t.test('MAGIC WHEEL loses on the landed symbol, and pays the fair 0.25', () => {
     /**
      * ═══════════════════════════════════════════════════════════════════
-     *     if (result !== 24) { isWinner = true; profit = (amount*3 - amount/2)/4; }
+     * This test used to pin the OPPOSITE — "every round wins, 0.625 × stake,
+     * every time" — with a note that it was pinned "so that fixing it is a
+     * deliberate change with a failing test in front of it". That fix has now
+     * been made deliberately, so the pin is released and reversed.
      *
-     * `result` is the three-element ARRAY from `makeResult`. An array is never
-     * strictly equal to `24`, so every round wins and pays `0.625 × stake`.
-     * Presumably `result[0] !== 24` was meant.
-     *
-     * Ported as written, on instruction. Pinned so that fixing it is a
-     * deliberate change with a failing test in front of it.
+     * `play()` compares `result[0]`, the landed symbol, against 24. One of
+     * five symbols loses, so the player wins four rounds in five, and the
+     * payout is the fair profit at that chance rather than legacy's 0.625.
      * ═══════════════════════════════════════════════════════════════════
      */
-    for (let i = 0; i < 100; i += 1) {
-      const outcome = magicWheel.play({ amount: 100, canProfit: false });
-      assert.equal(outcome.isWinner, true, 'every round wins');
-      assert.equal(Number(outcome.profit), 62.5, '0.625 × stake, every time');
+    let wins = 0;
+    const rounds = 4000;
+
+    for (let i = 0; i < rounds; i += 1) {
+      const outcome = magicWheel.play({ amount: 100, canProfit: true });
+      const landed = Number(outcome.result[0]);
+
+      assert.equal(outcome.isWinner, landed !== 24, 'the landed symbol decides it');
+
+      if (outcome.isWinner) {
+        wins += 1;
+        assert.ok(Math.abs(Number(outcome.profit) - 25) < 1e-9, '0.25 × stake on a win');
+      } else {
+        assert.equal(Number(outcome.profit), -100, 'the stake on a loss');
+      }
     }
+
+    // Five symbols, one of them losing. Generous bounds — this is a smoke test
+    // for "not always", not a test of the RNG's uniformity.
+    const rate = wins / rounds;
+    assert.ok(rate > 0.75 && rate < 0.85, `win rate ${rate} should sit near 0.8`);
+  });
+
+  await t.test('HIGH LOW rolls uniformly over 0–999, so both calls can win', () => {
+    /**
+     * The roll used to be the shared `0.98/(1 − U)` curve scaled by 1000, whose
+     * minimum is 980 — so `high` (`> 500`) won every round and `low` (`< 500`)
+     * could not win at all. Measured live: 40/40 on `high`.
+     */
+    let high = 0;
+    let low = 0;
+    const rounds = 4000;
+
+    for (let i = 0; i < rounds; i += 1) {
+      const roll = highLow.play({ amount: 100, type: 'high', canProfit: true });
+      assert.ok(roll.result >= 0 && roll.result <= 999, 'inside 0–999');
+      if (roll.isWinner) high += 1;
+      if (highLow.play({ amount: 100, type: 'low', canProfit: true }).isWinner) low += 1;
+    }
+
+    assert.ok(high / rounds > 0.45 && high / rounds < 0.55, `high ${high / rounds}`);
+    assert.ok(low / rounds > 0.45 && low / rounds < 0.55, `low ${low / rounds}`);
+  });
+
+  await t.test('WHEEL can land on the losing pocket, and ignores a client risk', () => {
+    /**
+     * The draw used to be `min(round(curve), segments − 1)` with a curve whose
+     * minimum rounds to 1, so pocket 0 was unreachable and `result > 0` was
+     * every round. Measured live: 40/40 at segment 8. Payout came from a
+     * client-supplied `risk` divisor.
+     */
+    let losses = 0;
+    const rounds = 4000;
+
+    for (let i = 0; i < rounds; i += 1) {
+      // A risk that would have paid 10,000× under the old arithmetic.
+      const outcome = wheel.play({ amount: 100, segment: 8, risk: 0.0001, canProfit: true });
+      if (!outcome.isWinner) losses += 1;
+      else assert.ok(Math.abs(Number(outcome.profit) - 100 / 7) < 1e-9, 'stake / (segments − 1)');
+    }
+
+    assert.ok(losses > 0, 'pocket 0 is reachable');
+    assert.ok(losses / rounds > 0.08 && losses / rounds < 0.17, `loss rate ${losses / rounds}`);
+
+    // The house switch must select the LOSING pocket, not a winning one.
+    assert.equal(wheel.play({ amount: 100, segment: 8, canProfit: false }).isWinner, false);
+    // A segment count legacy would have thrown a TypeError on.
+    assert.ok(wheel.play({ amount: 100, segment: 12, canProfit: true }));
+    // And one there is nothing to land on.
+    assert.equal(wheel.play({ amount: 100, segment: 1, canProfit: true }), null);
+  });
+
+  await t.test('SINGLE KENO draws plain numbers, so a pick can match', () => {
+    /**
+     * `createNums` runs twice and wraps each element as `{num, hash}`, so the
+     * single `.map(m => m.num)` returned objects and `picks.includes(object)`
+     * was never true. Measured live: 0 wins in 40. The house switch was also
+     * inverted, stripping the player's picks from the pool on the normal path.
+     */
+    const picks = [1, 2, 3, 4, 5];
+    let wins = 0;
+    const rounds = 3000;
+
+    for (let i = 0; i < rounds; i += 1) {
+      const outcome = singleKeno.play({ amount: 100, numbers: picks, canProfit: true });
+
+      assert.equal(outcome.result.length, 10);
+      for (const drawn of outcome.result) {
+        assert.equal(typeof drawn, 'number', 'a drawn number, not a wrapper object');
+      }
+      assert.equal(outcome.isWinner, outcome.matches >= 3);
+      if (outcome.isWinner) wins += 1;
+    }
+
+    // Hypergeometric says 8.9%; the digest-rotation shuffle biases it to ~11%.
+    // Bounded loosely — the point is that it is neither 0 nor most rounds.
+    const rate = wins / rounds;
+    assert.ok(rate > 0.04 && rate < 0.2, `win rate ${rate} should be a real minority`);
+  });
+
+  await t.test('SINGLE KENO refuses a card bigger than ten', () => {
+    /**
+     * Ten numbers are drawn and three matches win, at a flat `stake / 3`
+     * however many are marked — so an unbounded card was a standing edge for
+     * the player. Measured before the cap: 13 marks turned the round positive
+     * (+1.2%), 20 marks paid +30.5% and 40 marks won every time.
+     *
+     * The cap is the control, so it is pinned rather than left to the board.
+     */
+    const card = (n) => Array.from({ length: n }, (_unused, i) => i + 1);
+
+    assert.ok(singleKeno.play({ amount: 100, numbers: card(10), canProfit: true }), '10 is allowed');
+    assert.equal(singleKeno.play({ amount: 100, numbers: card(11), canProfit: true }), null);
+    assert.equal(singleKeno.play({ amount: 100, numbers: card(40), canProfit: true }), null);
+
+    // And the rest of what makes a card a card.
+    assert.equal(singleKeno.play({ amount: 100, numbers: [], canProfit: true }), null, 'empty');
+    assert.equal(singleKeno.play({ amount: 100, numbers: [1, 1, 2], canProfit: true }), null, 'dupes');
+    assert.equal(singleKeno.play({ amount: 100, numbers: [41], canProfit: true }), null, 'off pool');
+    assert.equal(singleKeno.play({ amount: 100, numbers: [0], canProfit: true }), null, 'zero');
+    assert.equal(singleKeno.play({ amount: 100, numbers: [2.5], canProfit: true }), null, 'fraction');
+    assert.equal(singleKeno.play({ amount: 100, numbers: 'all', canProfit: true }), null, 'not a list');
   });
 
   await t.test('DIAMOND wins on ADJACENT pairs only, and pays a third of the stake', () => {

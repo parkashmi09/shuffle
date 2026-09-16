@@ -2,6 +2,10 @@
 
 const { z } = require('@ibitplay/common');
 
+// The display-name rules already live with the profile module; a name
+// chosen at signup and a name chosen later must not be able to disagree.
+const { username } = require('../profile/profile.validators');
+
 /**
  * Auth request schemas.
  *
@@ -26,6 +30,34 @@ const login = {
       // Present only when the account has 2FA enabled.
       twoFactorCode: z.string().trim().regex(/^\d{6}$/, 'the code is 6 digits').optional(),
       deviceLabel: z.string().trim().max(100).optional(),
+    })
+    .strict(),
+};
+
+/**
+ * Registration.
+ *
+ * The service method behind this has existed since the port; only the HTTP
+ * route was missing, so the sole way to create an account was the socket
+ * event `REGISTER_USER` — whose reply carries no tokens, leaving a client to
+ * register and then immediately log in with the password it still had in
+ * memory. One POST now does both.
+ *
+ * `referredBy` is somebody ELSE's referral code. It is not `referalcode`,
+ * which is the column holding this account's own — the two are one letter
+ * apart in the database and mean opposite things.
+ */
+const register = {
+  body: z
+    .object({
+      username,
+      password,
+      // Optional because the platform allows phone-only accounts, and the
+      // uniqueness constraint covers whichever is supplied.
+      email: z.string().trim().toLowerCase().email('that is not a valid email address').max(160).optional(),
+      phone: z.string().trim().max(30).optional(),
+      country: z.string().trim().max(80).optional(),
+      referredBy: z.string().trim().max(64).optional(),
     })
     .strict(),
 };
@@ -55,37 +87,6 @@ const changePassword = {
       message: 'The new password must be different from the current one',
       path: ['newPassword'],
     }),
-};
-
-/**
- * Registration.
- *
- * `username` is `min(3).max(60)`, which is the rule the admin players module
- * already applies to the same column — duplicated rather than shared for the
- * reason `registration.constants.js` gives about those two services.
- *
- * The socket handler coerces every field (`String(x ?? '').trim()`) because a
- * socket payload is untyped. A validated body does not need that, so the
- * controller passes `req.body` through and the coercion stays where it is
- * needed. `email` is lower-cased HERE rather than in the service, matching
- * what the socket did before calling it.
- *
- * `.strict()` like every other schema in this file: an unexpected key is a
- * client bug and silently dropping it is how a typo'd `referalCode` becomes a
- * referral that never happened.
- */
-const register = {
-  body: z
-    .object({
-      username: z.string().trim().min(3, 'username must be at least 3 characters').max(60),
-      password,
-      email: z.string().trim().toLowerCase().email('a valid email is required').max(255),
-      // Nullable rather than absent: `register` writes `phone ?? null`.
-      phone: z.string().trim().max(30).optional(),
-      referredBy: z.string().trim().max(60).optional(),
-      country: z.string().trim().max(60).optional(),
-    })
-    .strict(),
 };
 
 /**

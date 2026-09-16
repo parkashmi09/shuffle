@@ -19,11 +19,27 @@ const BONUS_TYPE_NAMES = Object.freeze(Object.keys(BONUS_TYPES));
 /**
  * Which balance a bonus is paid into.
  *
- * `bjb` — the bonus balance, separate from a player's cash. Legacy credited it
- * directly with `UPDATE credits SET bjb = COALESCE(bjb,0) + $1` and wrote no
- * ledger row, so a bonus payment appeared on no statement anywhere.
+ * `usdt` — the player's cash balance. Bonuses are paid in the same currency
+ * they play and withdraw in, so a claimed bonus is spendable money rather than
+ * a second number that has to be swapped before it is worth anything.
+ *
+ * It used to be `BJB`, a bonus-only balance held in its own `credits` column.
+ * Two things came with that and are worth stating, because this change removes
+ * both:
+ *
+ *   - A BJB balance was ring-fenced by virtue of being a different currency.
+ *     A USDT bonus is not. Withdrawal is gated by the deposit-based wagering
+ *     target in `../wager` and by nothing else, so a bonus is withdrawable as
+ *     soon as that target is met.
+ *   - Existing BJB balances are untouched by this. Nothing migrates them; they
+ *     stay where they are and remain swappable at 0% (`swap.constants.js`).
+ *
+ * Legacy credited the bonus column directly with
+ * `UPDATE credits SET bjb = COALESCE(bjb,0) + $1` and wrote no ledger row, so a
+ * bonus payment appeared on no statement anywhere. Every payment below goes
+ * through `wallet.credit` and lands in the ledger, whichever column it targets.
  */
-const BONUS_CURRENCY = 'BJB';
+const BONUS_CURRENCY = 'USDT';
 
 /** Redeem code states, shared with the spin wheel. */
 const CODE_STATUS = Object.freeze({

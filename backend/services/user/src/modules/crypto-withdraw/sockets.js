@@ -213,6 +213,31 @@ function register({ on, deps }) {
    * `SELECT` too — it does not call out to a wallet daemon, so there is no
    * generation path here and an unallocated coin answers plainly rather than
    * inventing one.
+   *
+   * ─────────────────────────────────────────────────────────────────────
+   * `wallets` HAS NO `chain` COLUMN
+   *
+   *   CREATE TABLE public.wallets (address text, uid bigint, coin text, date …)
+   *
+   * That is the whole table, in the baseline schema and after every migration.
+   * This handler used to put `chain` in the WHERE and read `row.chain` back
+   * out, so any caller that supplied one produced
+   * `42703 column "chain" does not exist`, the handler threw, and the client
+   * got a bare `SOCKET_HANDLER_FAILED` — "That action could not be completed"
+   * — with nothing anywhere naming the column.
+   *
+   * Nothing had ever called the event, so nothing had ever hit it. Found on
+   * 3 Sep 2026 wiring the cashier's deposit panel (gap report §3.1), which is
+   * the first caller and passes a chain because a USDT address is only
+   * meaningful with one.
+   *
+   * Allocation on this schema is per (uid, coin), so that is what is looked
+   * up. The requested chain is echoed back for the client to label the address
+   * with — it is the caller's own value, not a fact from the row, and saying
+   * so is better than dropping it and letting the panel print an address under
+   * whichever network happens to be selected. `chain` belongs to
+   * `withdrawals`, which does have the column; it was borrowed here in error.
+   * ─────────────────────────────────────────────────────────────────────
    */
   on(EVENTS.GET_ADDRESS, {
     audience: AUDIENCE.USER,
@@ -223,17 +248,13 @@ function register({ on, deps }) {
       if (!COIN_COLUMNS[currency]) return refuse(errors.UNSUPPORTED_COIN({ coin: currency }));
 
       const row = await models.Wallets.findOne({
-        where: {
-          uid: context.userId,
-          coin: currency.toLowerCase(),
-          ...(chain ? { chain } : {}),
-        },
+        where: { uid: context.userId, coin: currency.toLowerCase() },
         raw: true,
       });
 
       if (!row) return ok({ coin: currency, chain, address: null, allocated: false });
 
-      return ok({ coin: currency, chain: row.chain ?? chain, address: row.address, allocated: true });
+      return ok({ coin: currency, chain, address: row.address, allocated: true });
     },
   });
 

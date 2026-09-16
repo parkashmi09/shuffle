@@ -113,7 +113,7 @@ test('bonus', async (t) => {
     await connection.models.Users.destroy({ where: { id: uid } });
 
     await connection.models.Users.create({ id: uid, name: `bonus-${uid}`, password: 'x', status: 'active' });
-    await connection.models.Credits.create({ uid, bjb: '0' });
+    await connection.models.Credits.create({ uid, usdt: '0' });
     await connection.models.Userwager.create({ uid, wager });
     await service.createRecord({ userId: uid, name: `bonus-${uid}` });
   };
@@ -129,9 +129,10 @@ test('bonus', async (t) => {
       is_unclaimable: false,
     });
 
+  /* Bonuses are paid in USDT — the cash column — so that is what to read. */
   const bonusBalance = async (uid) => {
     const row = await connection.models.Credits.findOne({ where: { uid }, raw: true });
-    return money.toDecimalString(money.toMinor(row?.bjb ?? '0'));
+    return money.toDecimalString(money.toMinor(row?.usdt ?? '0'));
   };
 
   await t.test('two simultaneous claims pay ONCE — legacy paid twice', async () => {
@@ -358,7 +359,8 @@ test('bonus', async (t) => {
     assert.equal(await bonusBalance(uid), '12.50000000');
 
     // Legacy wrote NO ledger row for this — `UPDATE credits SET bjb = bjb + $1`
-    // and nothing else, so the grant appeared on no statement anywhere.
+    // and nothing else, so the grant appeared on no statement anywhere. The
+    // column has since moved to `usdt`; the ledger row is the part that matters.
     const ledger = await connection.models.CreditsLedger.count({ where: { user_id: String(uid) } });
     assert.equal(ledger, 1);
   });
@@ -529,7 +531,7 @@ test('bonus', async (t) => {
       userId: uid,
       idempotencyKey: `grant-${uid}-inject`,
       dailybonus: '3',
-      'bjb" = 999999, "dailybonus': '1',
+      'usdt" = 999999, "dailybonus': '1',
     });
 
     assert.equal(result.granted, '3.00000000');

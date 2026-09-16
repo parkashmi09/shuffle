@@ -64,6 +64,21 @@ module.exports = function userRoutes(deps) {
     )
   );
 
+  /**
+   * The games this player last played — the "Continue Playing" row.
+   *
+   * Companion to `casino/games/recently-played`, not a replacement: that route
+   * covers provider games and is permanently empty for in-house ones, because
+   * nothing in the engine writes to `gis_recently_played`. See the service.
+   */
+  router.get(
+    '/recent-games',
+    validate(v.recentGames),
+    asyncHandler(async (req, res) =>
+      response.ok(res, await service.recentGames({ ...req.query, userId: req.user.id }))
+    )
+  );
+
   /** Where the caller sits on the contest board — gap 7. */
   router.get(
     '/leaderboard/me',

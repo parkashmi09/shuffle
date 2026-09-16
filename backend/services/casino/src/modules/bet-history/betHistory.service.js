@@ -609,8 +609,167 @@ class BetHistoryService {
    * `SELECT *` from `bets`, which put every player's id and full row on a page
    * anyone could load.
    */
+  /**
+   * Who is playing what, right now.
+   *
+   * ═══════════════════════════════════════════════════════════════════════
+   * THIS IS THE "N PLAYING" NUMBER, AND NOTHING ELSE COULD ANSWER IT
+   *
+   * `BACKEND-GAP-REPORT.md` §6 item 4 proposed `casino/games/stats` for the
+   * per-tile player counts. That route counts the CATALOGUE —
+   * `total_games`, `total_providers`, `total_types` — and cannot answer
+   * "how many people are on this game". The live ticker below is the closest
+   * thing that existed, and it is a list of bets with no player on it (by
+   * design: it is public).
+   *
+   * So this counts DISTINCT players with a settled round on each game inside a
+   * recent window. That is a real activity number rather than a proxy for one.
+   *
+   * ── IT IS AN AGGREGATE, WHICH IS WHY IT CAN BE PUBLIC ────────────────
+   *
+   * `COUNT(DISTINCT uid)` — the ids do the grouping and never leave the
+   * database. The ticker below had to strip the player off every row to be
+   * publishable; there is nothing here to strip.
+   *
+   * Same `where` as the ticker: an open round has no outcome and a refunded
+   * one never happened, so neither is somebody playing.
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  async activity({ minutes }) {
+    const since = new Date(Date.now() - minutes * 60_000);
+
+    const rows = await this.models.Bets.findAll({
+      where: {
+        created: { [Op.gte]: since },
+        [Op.and]: literal(`"result" IS NOT NULL AND "result"::text <> '"refunded"'`),
+      },
+      attributes: [
+        'game',
+        [fn('COUNT', fn('DISTINCT', col('uid'))), 'players'],
+        [fn('COUNT', col('id')), 'rounds'],
+      ],
+      group: ['game'],
+      order: [[fn('COUNT', fn('DISTINCT', col('uid'))), 'DESC']],
+      raw: true,
+    });
+
+    const games = rows
+      .filter((row) => row.game)
+      .map((row) => ({
+        game: row.game,
+        players: Number(row.players) || 0,
+        rounds: Number(row.rounds) || 0,
+      }));
+
+    return {
+      windowMinutes: minutes,
+      since: since.toISOString(),
+      /**
+       * The platform total is NOT the sum of the per-game counts — one player
+       * on three games is three of those and one of these. Counted separately
+       * rather than added up, because a lobby header showing the sum would
+       * inflate itself every time somebody switched game.
+       */
+      players: await this.#distinctPlayersSince(since),
+      games,
+    };
+  }
+
+  /**
+   * The games this player last played — the "Continue Playing" row.
+   *
+   * ═══════════════════════════════════════════════════════════════════════
+   * WHY THIS EXISTS BESIDE `casino/games/recently-played`
+   *
+   * That route is the right one and it is not going away: it reads
+   * `gis_recently_played`, which the GIS provider flow writes when a player
+   * opens a provider game. On a deployment with those credentials it is the
+   * answer.
+   *
+   * It is also **permanently empty for in-house games**, and always will be:
+   * nothing in the in-house engine writes to that table. Twenty of the
+   * twenty-two originals are played over the casino socket and the only trace
+   * they leave is a row in `bets`. So on this platform — where the aggregator
+   * is unconfigured (§5.2) and the originals are the whole catalogue —
+   * `recently-played` answers `[]` for every player who has ever played.
+   *
+   * This is the same question asked of the table that actually has the rows.
+   * The client tries the provider route first and falls back to this, so both
+   * kinds of game appear in one row and neither needs the other configured.
+   * ═══════════════════════════════════════════════════════════════════════
+   *
+   * Scoped to the caller — there is no parameter for a player id, like
+   * everything else on this router.
+   */
+  async recentGames({ userId, limit }) {
+    const rows = await this.models.Bets.findAll({
+      where: {
+        uid: userId,
+        /* Same rule as the ticker and `activity`: an open round has no outcome
+           and a refunded one never happened, so neither is something the
+           player played. */
+        [Op.and]: literal(`"result" IS NOT NULL AND "result"::text <> '"refunded"'`),
+      },
+      attributes: [
+        'game',
+        [fn('MAX', col('created')), 'last_played'],
+        [fn('COUNT', col('id')), 'rounds'],
+      ],
+      group: ['game'],
+      /* Most recently played first — which is what "continue" means. */
+      order: [[fn('MAX', col('created')), 'DESC']],
+      limit,
+      raw: true,
+    });
+
+    return {
+      games: rows
+        .filter((row) => row.game)
+        .map((row) => ({
+          game: row.game,
+          lastPlayedAt: row.last_played,
+          rounds: Number(row.rounds) || 0,
+        })),
+    };
+  }
+
+  /** DISTINCT players across every game in the window. See `activity`. */
+  async #distinctPlayersSince(since) {
+    const [row] = await this.models.Bets.findAll({
+      where: {
+        created: { [Op.gte]: since },
+        [Op.and]: literal(`"result" IS NOT NULL AND "result"::text <> '"refunded"'`),
+      },
+      attributes: [[fn('COUNT', fn('DISTINCT', col('uid'))), 'players']],
+      raw: true,
+    });
+    return Number(row?.players) || 0;
+  }
+
   async liveFeed({ limit }) {
     const rows = await this.models.Bets.findAll({
+      /**
+       * ═══════════════════════════════════════════════════════════════════
+       * VOIDED AND OPEN ROUNDS ARE NOT PUBLIC RESULTS
+       *
+       * This had no `where` at all, so the ticker showed two kinds of row it
+       * should not:
+       *
+       *   `result IS NULL`        a round still open — no outcome yet, and
+       *                           publishing one implies there is.
+       *   `result = "refunded"`   a round the engine VOIDED and gave the
+       *                           stake back (`GameEngine.refund`). Its
+       *                           `profit` is `0`, and `classify()` reads a
+       *                           zero profit as `PUSH` — so a bet that never
+       *                           happened appeared publicly as a tie.
+       *
+       * Nine such rows existed here at the time of writing, all from rejected
+       * Single Keno cards (§8.8). `result` is a `json` column and the marker
+       * is stored as the JSON string `"refunded"`, hence the `::text` compare
+       * rather than an equality on the column.
+       * ═══════════════════════════════════════════════════════════════════
+       */
+      where: literal(`"result" IS NOT NULL AND "result"::text <> '"refunded"'`),
       attributes: ['gid', 'amount', 'profit', 'coin', 'created', 'game'],
       order: [['created', 'DESC']],
       limit,

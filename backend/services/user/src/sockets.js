@@ -132,6 +132,21 @@ function attachSockets({ server, container }) {
 
   const socketServer = createSocketServer({ io, authenticate, authenticateStaff, logger, config });
 
+  /**
+   * Publish the transport to the container.
+   *
+   * `modules/presence` derives the online count from this server's own room
+   * table — there is no presence table, deliberately. The HTTP routes were
+   * built by `createContainer()` before this function ran, so the presence
+   * service reads `deps.io` LAZILY on each request rather than capturing it;
+   * assigning here is what makes that read find something.
+   *
+   * Nothing else should reach for this. A module that wants to push should
+   * register a socket event and use the `context.socket` it is handed, which
+   * is scoped to one connection instead of to every one of them.
+   */
+  container.io = io;
+
   for (const module of SOCKET_MODULES) {
     module.register({ on: socketServer.on, deps: container });
   }

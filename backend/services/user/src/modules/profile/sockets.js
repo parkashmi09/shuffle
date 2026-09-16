@@ -315,8 +315,28 @@ function register({ on, deps }) {
   on(EVENTS.NOTIFICATION, {
     audience: AUDIENCE.PUBLIC,
     handle: async () => {
+      /**
+       * ═══════════════════════════════════════════════════════════════════
+       * FIXED — THIS ORDERED BY A COLUMN THE TABLE DOES NOT HAVE
+       *
+       * `order: [['id', 'DESC']]` produced
+       *
+       *     SELECT "title", "content", "date" FROM "notifications"
+       *     ORDER BY "Notifications"."id" DESC LIMIT 20
+       *     → 42703  column Notifications.id does not exist
+       *
+       * `notifications` is three columns — `title`, `content`, `date` — with
+       * no key of any kind, and the model selects exactly those three. So
+       * every call to this event answered `SOCKET_HANDLER_FAILED`, and it
+       * would have done so from the first request: nothing about it depends
+       * on data. The table is also empty, which is why an empty widget looked
+       * like an empty feed rather than a broken one.
+       *
+       * Ordered by `date`, which is the only orderable column there is.
+       * ═══════════════════════════════════════════════════════════════════
+       */
       const rows = await models.Notifications.findAll({
-        order: [['id', 'DESC']],
+        order: [['date', 'DESC']],
         limit: 20,
         raw: true,
       });

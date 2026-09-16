@@ -65,6 +65,75 @@ class WagerReportService {
     };
   }
 
+  /**
+   * Every player's sports turnover in a window — the sports half of the
+   * wagering race's leaderboard input.
+   *
+   * ── ONE BUCKET, AND ALREADY IN USD ───────────────────────────────────
+   *
+   * Casino's counterpart returns per-currency amounts split across five game
+   * buckets, because a casino bet could be any of them and casino-service
+   * cannot price a currency. Neither applies here: every row is the `sports`
+   * bucket, and `usd_amount` was converted when the stake was risked. Handing
+   * back `original_amount` for the caller to convert at today's rate would
+   * make a player's race points drift with the exchange rate after the bets
+   * were placed.
+   *
+   * ── AND SETTLED BETS ONLY, WHICH IS A REAL RESTRICTION ───────────────
+   *
+   * `result_status IN ('won','loss')`, matching `turnover()` above: an OPEN
+   * bet has been staked but not resolved, and a VOID one was refunded and
+   * never really risked. For a race that means a bet placed inside the window
+   * on a match that settles after it scores nothing — correct, since a player
+   * could otherwise stake into a market they expect to be voided and collect
+   * points for free, but worth knowing when a leaderboard looks thin on a
+   * day with late fixtures.
+   */
+  async racePoints({ from, to, maxRows = 50_000 }) {
+    const start = new Date(from);
+    const end = new Date(to);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      // Returning [] for a bad window would present a caller bug as "nobody
+      // bet", which is how a broken race looks correct.
+      throw new Error(`racePoints: invalid window ${String(from)} .. ${String(to)}`);
+    }
+
+    const rows = await this.models.SportsBet.findAll({
+      where: {
+        result_status: ['won', 'loss'],
+        created_at: { [Op.gte]: start, [Op.lt]: end },
+      },
+      attributes: [
+        'user_id',
+        [fn('SUM', col('usd_amount')), 'total'],
+        [fn('COUNT', col('id')), 'count'],
+      ],
+      group: ['user_id'],
+      limit: maxRows,
+      raw: true,
+    });
+
+    if (rows.length >= maxRows) {
+      this.logger?.warn({ maxRows, from: start, to: end }, 'racePoints hit its row cap — leaderboard may be incomplete');
+    }
+
+    return {
+      from: start.toISOString(),
+      to: end.toISOString(),
+      rows: rows.map((r) => ({
+        userId: String(r.user_id),
+        bucket: 'sports',
+        // The one source that is already priced. `USD` rather than a wallet
+        // currency code, so a caller cannot mistake it for something to
+        // convert a second time.
+        currency: 'USD',
+        usd: money.toDecimalString(money.toMinor(r.total ?? '0')),
+        bets: Number(r.count ?? 0),
+      })),
+    };
+  }
+
   /** Half-open, for the reasons given in the casino module. */
   #window(from, to) {
     if (!from && !to) return null;

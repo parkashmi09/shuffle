@@ -130,21 +130,13 @@ class ProfileService {
       gamesPlayed: user.games_played,
       lastLoginAt: user.last_login_at,
       /**
-       * `created`, NOT `created_estimated`.
-       *
-       * The two names sit next to each other and only one is a date:
-       * `created` is `timestamp with time zone`, `created_estimated` is a
-       * BOOLEAN saying whether that date is exact or was inferred during the
-       * legacy import. This mapped the flag, so every account answered
-       * `joinedAt: false` and a client coercing it got 0 — a join date of
-       * 1 January 1970, or nothing at all for a client that checked.
-       *
-       * The flag is fetched but not returned: whether a date is estimated is
-       * import provenance, and no player-facing screen asks the question.
-       * It stays in `attributes` so the next reader sees the pair and the
-       * comment rather than rediscovering the trap.
+       * `created`, the timestamp — NOT `created_estimated`, which is the
+       * BOOLEAN flag saying whether that timestamp is a guess. This returned
+       * `joinedAt: false` for every account.
        */
       joinedAt: user.created,
+      /** Whether `joinedAt` is an estimate rather than a recorded signup. */
+      joinedAtEstimated: Boolean(user.created_estimated),
     };
   }
 

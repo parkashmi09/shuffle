@@ -15,7 +15,7 @@ measured against. It is not deployed and not on the require path.
 | Legacy HTTP ported | 555 / 577 (96.2%) |
 | Legacy sockets ported | 77 / 79 (97.5%) |
 | Models | 163 |
-| Migrations | 33 |
+| Migrations | 37 |
 | Tests | 1095 |
 
 Every number above is a verifier's output, not a claim. `npm run verify:*`
@@ -97,7 +97,7 @@ Requires Node ≥ 20 and PostgreSQL ≥ 14.
                     │            every balance change routes here
                     ▼
               ┌───────────────────────────────────────────────┐
-              │      PostgreSQL — one database, 165 tables    │
+              │      PostgreSQL — one database, 165 tables (163 models)    │
               └───────────────────────────────────────────────┘
 ```
 
@@ -117,7 +117,7 @@ Requires Node ≥ 20 and PostgreSQL ≥ 14.
 | Package | Contents |
 | --- | --- |
 | `@ibitplay/common` | Env loading + validation, logger, error taxonomy, module loader, middleware (request context, validation, rate limit, error handler, internal auth, activity), response envelope, `ServiceClient`, `WalletClient`, exact-decimal `money`, image upload |
-| `@ibitplay/db` | Sequelize connection, **163 models** across six domains, associations, 33 migrations, seeders, transaction/locking helpers |
+| `@ibitplay/db` | Sequelize connection, **163 models** across six domains, associations, 37 migrations, seeders, transaction/locking helpers |
 | `@ibitplay/auth` | JWT (player / refresh / staff), bcrypt, TOTP 2FA, `authenticate` / `requireActive` / `requirePermission`, RBAC |
 | `@ibitplay/socket` | Socket.io transport, the 157-name wire table, audience guards, per-event rate limiting |
 
@@ -444,7 +444,7 @@ A rewrite would imply the capability moved somewhere. It did not.
 every model matches             npm run verify:models
 no committed secret present     npm run verify:secrets
 1095 tests, 0 failing           npm test
-33 migrations, 0 pending        npm run db:status
+37 migrations, 0 pending        npm run db:status
 ```
 
 The remaining gaps are decisions, documented where they are:

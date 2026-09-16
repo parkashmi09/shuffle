@@ -24,6 +24,29 @@ const config = loadEnv(
     ...serviceDiscoveryEnvShape,
     CASINO_SERVICE_PORT: coercers.int(4003),
 
+    /**
+     * Whether the four client-authoritative games settle on the SERVER's
+     * outcome instead of the number in the player's message.
+     *
+     * ═════════════════════════════════════════════════════════════════════
+     * THIS WAS READ IN TWO PLACES AND DECLARED IN NEITHER
+     *
+     * `in-house/sockets.js` and `engine/crashLoop.js` both do
+     *
+     *     config?.INHOUSE_SERVER_AUTHORITY === true || … === 'true'
+     *
+     * and `loadEnv` only exposes keys a shape DECLARES — the same failure the
+     * comment above `cacheEnvShape` records for `REDIS_URL`. So the flag was
+     * `undefined` whatever `.env` said, the switch could not be thrown, and
+     * plinko, videopoker, blackjack and crash paid on numbers supplied by the
+     * client. `bonus: 1000000` on a stake of 1 pays 999,999.
+     *
+     * Declared here, so setting it in `.env` does what the file says it does.
+     * See `engine/serverAuthority.js` for what each game computes instead.
+     * ═════════════════════════════════════════════════════════════════════
+     */
+    INHOUSE_SERVER_AUTHORITY: coercers.bool(false),
+
     // ── Seamless wallet (the casino provider's bet/win callbacks) ─────
     // The key was hard-coded in legacy/index.js:2376 and is in the repository
     // history — rotate it with the provider before this goes live.

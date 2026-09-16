@@ -206,7 +206,38 @@ class GameEngine {
     if (!column) throw errors.UNSUPPORTED_COIN({ coin: currency });
 
     const stake = money.toMinor(String(amount ?? '0'));
-    const won = money.toMinor(String(profit ?? '0'));
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════════
+     * `toMinorQuantised`, NOT `toMinor` — AND THIS IS NOT THE CASE THAT
+     * FUNCTION'S HEADER WARNS ABOUT
+     *
+     * Every game computes its profit in JS floats and stringifies the result:
+     *
+     *     profit = stake * target - stake      // games/limbo.js
+     *     return { …, profit: String(profit) }
+     *
+     * For a 10 stake at 1.02× that is `0.19999999999999928` — SEVENTEEN
+     * decimal places. `toMinor` refuses anything over eight, correctly, so the
+     * round threw `BAD_REQUEST: amount supports at most 8 decimal places`
+     * after the stake had been taken. `sockets.js` caught it and refunded, so
+     * no money was lost — but the round died, and it died for most
+     * multipliers rather than a rare few. 2.00× settles; 1.02× never did.
+     *
+     * `toMinorQuantised`'s header says it is for reading stored balances and
+     * NEVER for a request body. This is neither. The over-precision here is an
+     * artifact of arithmetic THIS SERVER just performed on its own numbers —
+     * `0.19999999999999928` is a float's way of writing `0.20`, not a claim to
+     * precision the platform cannot hold, and not something a player supplied.
+     * Rounding it half-away-from-zero to the platform's scale is what the value
+     * already meant. Refusing it only loses the round.
+     *
+     * The stake above stays on strict `toMinor`: that one DOES come from the
+     * player's message, and an over-precise stake is exactly the input the
+     * strict parser exists to reject.
+     * ═══════════════════════════════════════════════════════════════════════
+     */
+    const won = money.toMinorQuantised(String(profit ?? '0'), { field: 'profit' });
 
     /**
      * Legacy's payout arithmetic, kept:
@@ -385,10 +416,39 @@ class GameEngine {
     return round;
   }
 
-  /** Record a step. The outcome stays hidden until the round ends. */
-  async stepRound({ round, selected, profit }) {
+  /**
+   * Record a step. The outcome stays hidden until the round ends.
+   *
+   * ═════════════════════════════════════════════════════════════════════════
+   * `state` IS PART OF A STEP, AND DROPPING IT BROKE HILO COMPLETELY
+   *
+   * Only `selected` and `profit` were written here. Most of the multi-step
+   * games do not care — Mines, Tower, Goal and Snake & Ladders decide a click
+   * against a board that was fixed when the round opened, so their state never
+   * changes.
+   *
+   * HiLo's does. `games/hilo.js` `step` returns
+   *
+   *     state: { ...state, result, next: next + 1 }
+   *
+   * and that `next` is the position in the deck. Discarded, `next` stayed `0`,
+   * so every turn of the round compared `result[0]` against `result[1]` — the
+   * same two cards, forever. Which means the round was decided by the deal:
+   *
+   *   `result[0] >= result[1]`  every turn wins, the round NEVER ends, and
+   *                             each one pays another `stake / 3`. A player who
+   *                             kept clicking was minting money.
+   *   otherwise                 the first turn loses, always.
+   *
+   * Roughly half of all rounds were the first kind. Persisting what the game
+   * returns is the whole fix; `?? round.state` keeps the games that return
+   * nothing exactly as they were.
+   * ═════════════════════════════════════════════════════════════════════════
+   */
+  async stepRound({ round, selected, profit, state }) {
     await round.update({
       selected,
+      state: state ?? round.state,
       steps: round.steps + 1,
       profit: profit !== undefined ? String(profit) : round.profit,
       updated_at: new Date(),

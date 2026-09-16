@@ -26,6 +26,18 @@ const config = loadEnv(
     ...internalKeysEnvShape,
     ...serviceDiscoveryEnvShape,
     USER_SERVICE_PORT: coercers.int(4001),
+    USER_WORKER_PORT: coercers.int(4101),
+
+    /**
+     * Whose day a race runs on.
+     *
+     * The implementation this was ported from hardcoded `Asia/Kolkata` in five
+     * places — an offset constant, three cron schedules and a front-end helper —
+     * with nothing tying them together, so changing the operator's day meant
+     * finding all five and missing one meant a window and its settlement running
+     * on different days. One value, read once, passed down.
+     */
+    RACE_TIMEZONE: coercers.str('Asia/Kolkata'),
 
     // Where identity documents are written. Outside the repo and outside any
     // directory a web server serves — the only way to read one is through the
@@ -82,6 +94,32 @@ const config = loadEnv(
     UPI_BASE_URL: coercers.optionalStr(),
     UPI_REDIRECT_URL: coercers.optionalStr(),
     UPI_CUSTOMER_EMAIL: coercers.optionalStr(),
+
+    /**
+     * CCPayment — the crypto deposit provider.
+     *
+     * ═══════════════════════════════════════════════════════════════════
+     * THESE WERE READ BUT NEVER DECLARED, SO THEY COULD NOT BE SET
+     *
+     * `crypto.service.js` and `payment-orders/gateways/index.js` both read
+     * `config.CCPAYMENT_*`, and `loadEnv` returns ONLY what a shape declares —
+     * an undeclared variable is absent from `config` however the `.env` reads.
+     * So every CCPayment call saw `undefined` and answered NOT_CONFIGURED, and
+     * every webhook was refused, no matter what the operator put in the file.
+     * There was nothing to put in the file either: none of the three appear in
+     * `.env.example`.
+     *
+     * Exactly the failure `cacheEnvShape` in packages/common/src/env.js
+     * describes for `REDIS_URL`.
+     *
+     * Optional, like every other provider here — a blank secret refuses
+     * callbacks rather than accepting unverified ones, which is the behaviour
+     * this deployment already has and should keep until real credentials land.
+     * ═══════════════════════════════════════════════════════════════════
+     */
+    CCPAYMENT_APP_ID: coercers.optionalStr(),
+    CCPAYMENT_APP_SECRET: coercers.optionalStr(),
+    CCPAYMENT_BASE_URL: coercers.optionalStr(),
 
     // Where providers should send their callbacks. Ours, always — legacy read
     // this from the request body, which let the caller redirect the result of

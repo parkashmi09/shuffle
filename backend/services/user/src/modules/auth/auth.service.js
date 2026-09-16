@@ -251,7 +251,7 @@ class AuthService {
       attributes: [
         'id', 'name', 'email', 'phone', 'country', 'avatar', 'level',
         'status', 'two_fa_status', 'referalcode', 'referral_link',
-        'last_login_at', 'created_estimated',
+        'last_login_at', 'created', 'created_estimated',
       ],
       raw: true,
     });
@@ -421,6 +421,24 @@ class AuthService {
     );
 
     return { id: created.id, name: created.name, email: created.email };
+  }
+
+  /**
+   * Register, then open the session — the HTTP signup path.
+   *
+   * `register()` returns a plain summary rather than the model instance,
+   * because the socket caller only ever wanted the id and the name. The row
+   * is re-read here so `#issueSession` gets the same shape `login` hands it,
+   * rather than one assembled from two different places.
+   *
+   * Token minting stays inside the service. A controller that called
+   * `register()` and then `login()` would send the password over a second
+   * code path and re-run the rate limiter against a brand-new account.
+   */
+  async registerAndSignIn(input, context = {}) {
+    const account = await this.register(input, context);
+    const user = await this.models.Users.findByPk(account.id);
+    return this.#issueSession(user, context);
   }
 
   /**

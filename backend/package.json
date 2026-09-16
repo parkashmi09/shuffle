@@ -35,6 +35,7 @@
     "start:sports": "node services/sports/src/index.js",
     "start:gateway": "node gateway/src/index.js",
     "start:sports-worker": "node services/sports/src/worker.js",
+    "start:user-worker": "node services/user/src/worker.js",
     "dev:mono": "node scripts/dev-mono.js",
     "verify:security": "node tools/verify-security.js",
     "verify:security:all": "node tools/verify-security.js --all",

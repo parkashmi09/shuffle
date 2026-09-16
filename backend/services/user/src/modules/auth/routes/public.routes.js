@@ -29,22 +29,32 @@ module.exports = function publicRoutes(deps) {
   });
 
   /**
-   * Registration and reset each send mail to an address the CALLER names, and
-   * registration makes a row. Both were metered on the socket at 5 an hour
-   * (`limit: { windowMs: 60 * 60_000, max: 5 }`) and carry the same budget
-   * here — unmetered, `forgot-password` is a way to have this platform email
-   * somebody repeatedly, and `register` is a way to fill `users`.
+   * Metered harder than login, and separately.
    *
-   * ONE LIMITER SHARED BY THE TWO RESET ROUTES, not one each: they are two
-   * halves of one flow, and giving `reset-password` its own budget would let a
-   * caller burn through tokens it obtained under the first.
+   * Registration is unauthenticated and creates rows, so it is the cheaper
+   * thing to abuse. Legacy had no captcha here and no limiter at all, which
+   * made bulk account creation free.
+   *
+   * ── WHY THIS IS CONFIGURABLE, AND WHY IT IS NOT 5 ────────────────────────
+   *
+   * It was hardcoded at 5/hour to match the socket path. That is too tight for
+   * an HTTP form: the limit is per IP, and a household, an office or a mobile
+   * carrier is ONE IP to this service. Five signups an hour is a plausible
+   * evening for a shared connection, and the sixth person gets a 429 with
+   * nothing they can do about it.
+   *
+   * Twenty an hour still makes bulk creation expensive without punishing NAT.
+   * Both values are settable per deployment, because how many people sit behind
+   * one address is a fact about the network rather than about the product.
    */
-  const signupLimiter = createRateLimiter({
+  const registerLimiter = createRateLimiter({
     name: 'auth:register',
-    windowMs: 60 * 60_000,
-    max: 5,
+    windowMs: Number(deps.config.REGISTER_RATE_LIMIT_WINDOW_MS ?? 60 * 60_000),
+    max: Number(deps.config.REGISTER_RATE_LIMIT_MAX ?? 20),
     enabled: deps.config.RATE_LIMIT_ENABLED !== false,
   });
+
+  router.post('/register', registerLimiter, validate(v.register), ctrl.register);
 
   const resetLimiter = createRateLimiter({
     name: 'auth:reset',
@@ -69,7 +79,6 @@ module.exports = function publicRoutes(deps) {
    * The paths are the ones the front-end already declares in
    * `src/services/endpoints.js`.
    */
-  router.post('/register', signupLimiter, validate(v.register), ctrl.register);
   router.post(
     '/forgot-password',
     resetLimiter,

@@ -369,16 +369,68 @@ class JsGamesService {
   async listGamesV1({ vendor, page, per_page: perPage }) {
     const where = { is_active: true, ...(vendor ? { vendor } : {}) };
 
-    const { rows, count } = await this.models.JsGames.findAndCountAll({
-      where,
+    const priority = vendor ? await this.#vendorPriority(vendor) : [];
+
+    if (!priority.length) {
+      const { rows, count } = await this.models.JsGames.findAndCountAll({
+        where,
+        order: [['id', 'ASC']],
+        limit: perPage,
+        offset: (page - 1) * perPage,
+        raw: true,
+      });
+      return { rows, total: count };
+    }
+
+    const total = await this.models.JsGames.count({ where });
+    return { rows: await this.#pageWithPriority({ where, priority, page, perPage }), total };
+  }
+
+  /**
+   * A page of the listing with the curated games ordered first.
+   *
+   * ── CURATION USED TO APPLY TO PAGE 1 AND ONLY WITHIN IT ─────────────────
+   *
+   * `#promote` sorted the rows the query had ALREADY returned. So a curated
+   * game that happened to fall on page 3 of the catalogue stayed on page 3 —
+   * the one place the ordering was supposed to move it away from — and an
+   * operator who put six games at the top of a vendor's list saw them move only
+   * if they were already inside the first `per_page` rows by id. On the lobby's
+   * default page size the whole feature was invisible for any vendor with more
+   * than fifty games, which is most of them.
+   *
+   * Two disjoint sets walked as if they were one list, which is the shape
+   * `GamesService.#pageWithPriority` settled on for the aggregator side: the
+   * curated block first, in the operator's order, then everything else by id
+   * with the curated ones excluded so nothing appears twice.
+   */
+  async #pageWithPriority({ where, priority, page, perPage }) {
+    const offset = (page - 1) * perPage;
+
+    // Only curated games that survive the current filters hold a slot — a uid
+    // for a game that has since been switched off must not leave a gap.
+    const promotedRows = await this.models.JsGames.findAll({
+      where: { ...where, game_uid: { [Op.in]: priority } },
+      raw: true,
+    });
+    const byUid = new Map(promotedRows.map((row) => [row.game_uid, row]));
+    const promoted = priority.map((uid) => byUid.get(uid)).filter(Boolean);
+
+    const head = promoted.slice(offset, offset + perPage);
+    if (head.length === perPage) return head;
+
+    // How far into the remainder this page reaches: whatever the curated block
+    // did not supply.
+    const restOffset = Math.max(0, offset - promoted.length);
+    const rest = await this.models.JsGames.findAll({
+      where: { ...where, game_uid: { [Op.notIn]: priority } },
       order: [['id', 'ASC']],
-      limit: perPage,
-      offset: (page - 1) * perPage,
+      limit: perPage - head.length,
+      offset: restOffset,
       raw: true,
     });
 
-    const priority = vendor ? await this.#vendorPriority(vendor) : [];
-    return { rows: priority.length ? this.#promote(rows, priority, page) : rows, total: count };
+    return [...head, ...rest];
   }
 
   /** @legacy GET /jsGames/games/search */
@@ -676,32 +728,28 @@ class JsGamesService {
     return Boolean(user?.casino_locked || user?.system_locked);
   }
 
-  /** The curated ordering for a vendor, if one is configured. */
-  async #vendorPriority(vendor) {
-    const row = await this.models.PrioritizedGames.findOne({ where: { vendor }, raw: true });
-    if (!row?.game_ids) return [];
-    return String(row.game_ids)
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter(Number.isInteger);
-  }
-
   /**
-   * Float the curated games to the top of page 1.
+   * The curated ordering for a vendor, if one is configured.
    *
-   * Legacy computed an `adjustedOffset` for later pages that could go negative
-   * and was clamped to zero, which repeated the same rows. Priority applies to
-   * page 1 only here, and later pages are the plain ordering — simpler, and it
-   * cannot duplicate.
+   * ── IT READS `js_game_curation`, AND IT RETURNS uids ───────────────────
+   *
+   * This read `prioritized_games`, whose `game_ids` is a CSV of `js_games.id`.
+   * Those are surrogate keys in a table the provider sync RELOADS, so a sync
+   * renumbered them and the curated list silently became a different set of
+   * games — the order stayed valid-looking and pointed somewhere else.
+   *
+   * `game_uid` is the provider's own identifier and is what the launcher takes,
+   * so it survives a re-sync. Migration 040 translates the existing rows across
+   * and the admin panel writes uids; nothing writes `prioritized_games` now.
    */
-  #promote(rows, priorityIds, page) {
-    if (page !== 1) return rows;
-    const rank = new Map(priorityIds.map((id, index) => [id, index]));
-    return [...rows].sort((a, b) => {
-      const ra = rank.has(a.id) ? rank.get(a.id) : Number.MAX_SAFE_INTEGER;
-      const rb = rank.has(b.id) ? rank.get(b.id) : Number.MAX_SAFE_INTEGER;
-      return ra - rb || a.id - b.id;
-    });
+  async #vendorPriority(vendor) {
+    const row = await this.models.JsGameCuration.findOne(
+      { where: { scope: 'vendor', key: vendor }, raw: true }
+    );
+    return String(row?.game_uids ?? '')
+      .split(',')
+      .map((uid) => uid.trim())
+      .filter(Boolean);
   }
 
   async #upstream(call) {

@@ -28,6 +28,14 @@ const { loadModules, mountModules, collectJobs, collectDomains, AUDIENCES } = re
  * one screen and VIP 29 on another has found a bug in the platform's word.
  */
 const { VIP_LEVELS, vipLevelFor } = require('./vipLevels');
+/**
+ * The wagering race's game buckets. Shared for the same reason the VIP ladder
+ * is: THREE services read it — casino and sports classify their rows into
+ * these names, user-service multiplies each name by an operator's number — and
+ * a bucket one side emits that the other has no multiplier for scores nothing,
+ * silently, because a missing key reads as zero.
+ */
+const raceBuckets = require('./raceBuckets');
 
 const { requestContext, getContext, getRequestId, REQUEST_ID_HEADER } = require('./middleware/requestContext');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -61,6 +69,7 @@ module.exports = {
   money,
   VIP_LEVELS,
   vipLevelFor,
+  ...raceBuckets,
   createLogger,
   createApp,
   startServer,

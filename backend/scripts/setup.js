@@ -168,13 +168,27 @@ async function confirm(question, fallback = false) {
  * `shell: false` on purpose — every argument here is ours, and going through a
  * shell would only add a quoting bug waiting to happen.
  */
+/**
+ * Quote a command path for the Windows shell.
+ *
+ * `shell: true` on win32 hands the command line to cmd.exe, which splits on
+ * spaces before the program is resolved. `process.execPath` is
+ * `C:Program Files
+odejs
+ode.exe` on a default install, so every db and
+ * data step died with `'C:Program' is not recognized`. Quoting the
+ * program — and only the program, the args are ours and space-free — is what
+ * makes the shell treat it as one token.
+ */
+const shellSafe = (command) =>
+  process.platform === 'win32' && /s/.test(command) ? `"${command}"` : command;
+
 function run(command, commandArgs, { label, allowFailure = false } = {}) {
-  const useShell = process.platform === 'win32';
-  const result = spawnSync(useShell ? JSON.stringify(command) : command, commandArgs, {
+  const result = spawnSync(shellSafe(command), commandArgs, {
     cwd: ROOT,
     stdio: 'inherit',
     env: process.env,
-    shell: useShell,
+    shell: process.platform === 'win32',
   });
 
   if (result.error) {
@@ -637,12 +651,11 @@ function applyGrants() {
 
 /** Run something and keep its output, optionally echoing it as it goes. */
 function capture(command, commandArgs, { echo = false } = {}) {
-  const useShell = process.platform === 'win32';
-  const result = spawnSync(useShell ? JSON.stringify(command) : command, commandArgs, {
+  const result = spawnSync(shellSafe(command), commandArgs, {
     cwd: ROOT,
     encoding: 'utf8',
     env: process.env,
-    shell: useShell,
+    shell: process.platform === 'win32',
   });
 
   const stdout = result.stdout || '';

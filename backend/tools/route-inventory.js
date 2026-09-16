@@ -19,6 +19,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { writeKeepingEol } = require('./lib/eol');
 
 const ROOT = path.resolve(__dirname, '..');
 /**
@@ -346,7 +347,7 @@ function main() {
   const outDir = path.join(ROOT, 'docs');
   fs.mkdirSync(outDir, { recursive: true });
 
-  fs.writeFileSync(
+  writeKeepingEol(
     path.join(outDir, 'route-manifest.json'),
     `${JSON.stringify({ generatedFrom: 'legacy/', total: legacyRoutes.length, ported: done, routes: legacyRoutes }, null, 2)}\n`
   );
@@ -387,7 +388,7 @@ function main() {
     }
   }
 
-  fs.writeFileSync(path.join(outDir, 'ROUTE-PORT-CHECKLIST.md'), `${lines.join('\n')}\n`);
+  writeKeepingEol(path.join(outDir, 'ROUTE-PORT-CHECKLIST.md'), `${lines.join('\n')}\n`);
 
   /**
    * Splice the same inventory into the appendix of API-ROUTES.md, between the
@@ -419,7 +420,7 @@ function main() {
         ...lines.slice(lines.findIndex((l) => l.startsWith('## '))),
       ].join('\n');
 
-      fs.writeFileSync(apiDocPath, `${doc.slice(0, from + START.length)}\n${appendix}\n${doc.slice(to)}`);
+      writeKeepingEol(apiDocPath, `${doc.slice(0, from + START.length)}\n${appendix}\n${doc.slice(to)}`);
       console.log('Updated the appendix in docs/API-ROUTES.md');
     }
   }

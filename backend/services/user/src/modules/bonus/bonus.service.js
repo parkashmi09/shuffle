@@ -492,7 +492,7 @@ class BonusService {
    * @legacy PUT /bonus/bonusgame
    *
    * Grant bonus from one or more sources: add to the counters and pay the
-   * total into the player's bonus balance.
+   * total into the player's `BONUS_CURRENCY` balance.
    *
    * ─────────────────────────────────────────────────────────────────────
    * THIS ENDPOINT GRANTS MONEY, AND LEGACY GATED IT ON A SHARED HEADER

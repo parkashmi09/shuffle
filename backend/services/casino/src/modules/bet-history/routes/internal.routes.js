@@ -2,12 +2,29 @@
 
 const { Router } = require('express');
 const { response, asyncHandler, validate, z } = require('@ibitplay/common');
-const { Op, fn, col } = require('sequelize');
+const { Op, fn, col, literal } = require('sequelize');
 const { money } = require('@ibitplay/common');
 
 /* Only `/player/:userId/stats` uses it — the rest of this file queries the
    models directly, which is how it was written. */
 const { BetHistoryService } = require('../betHistory.service');
+
+/**
+ * A round with a public outcome.
+ *
+ * Excludes two kinds of row that the feeds used to carry:
+ *
+ *   `result IS NULL`       still open — no outcome yet, and showing one
+ *                          implies there is.
+ *   `result = "refunded"`  VOIDED by `GameEngine.refund`, stake returned. Its
+ *                          `profit` is `0`, which `classify()` reads as a
+ *                          PUSH — so a round that never happened appeared as
+ *                          a tie in the public ticker and in `LAST_BETS`.
+ *
+ * `bets.result` is a `json` column and the marker is the JSON string
+ * `"refunded"`, so the comparison is on `::text` rather than the column.
+ */
+const SETTLED = literal(`"result" IS NOT NULL AND "result"::text <> '"refunded"'`);
 
 /**
  * Bet reads for user-service's socket transport.
@@ -179,7 +196,10 @@ module.exports = function internalRoutes(deps) {
     }),
     asyncHandler(async (req, res) => {
       const rows = await models.Bets.findAll({
-        where: req.query.game ? { game: req.query.game } : {},
+        /* Settled, non-voided rounds only — same reasoning as `liveFeed`. An
+           open round has no outcome to publish, and a refunded one is a round
+           that did not happen, whose zero profit reads as a PUSH. */
+        where: req.query.game ? { [Op.and]: [{ game: req.query.game }, SETTLED] } : SETTLED,
         attributes: ['id', 'uid', 'game', 'amount', 'profit', 'coin', 'created'],
         order: [['id', 'DESC']],
         limit: req.query.limit,
@@ -195,7 +215,10 @@ module.exports = function internalRoutes(deps) {
     validate({ query: z.object({ limit }).strict() }),
     asyncHandler(async (req, res) => {
       const rows = await models.Bets.findAll({
-        where: { profit: { [Op.gt]: 0 } },
+        /* `profit > 0` already excludes a refund (its profit is 0), but not an
+           open round, so `SETTLED` is applied here too rather than relying on
+           one filter to imply the other. */
+        where: { [Op.and]: [{ profit: { [Op.gt]: 0 } }, SETTLED] },
         attributes: ['id', 'uid', 'game', 'amount', 'profit', 'coin', 'created'],
         order: [['profit', 'DESC']],
         limit: req.query.limit,

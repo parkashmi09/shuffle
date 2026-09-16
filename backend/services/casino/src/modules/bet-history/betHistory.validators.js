@@ -58,6 +58,31 @@ const liveFeed = {
   query: z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }).strict(),
 };
 
+/**
+ * The "N playing" window.
+ *
+ * Capped at a day. A window of a week would let a caller ask this server to
+ * `COUNT(DISTINCT uid)` over the whole bets table on a public route — the same
+ * shape of problem as the unpaginated `SELECT *` this module was built to
+ * replace. Fifteen minutes is what "playing" means; the ceiling is there so
+ * nobody can turn it into "has ever played".
+ */
+const activity = {
+  query: z
+    .object({ minutes: z.coerce.number().int().min(1).max(1440).default(15) })
+    .strict(),
+};
+
+/**
+ * The "Continue Playing" row.
+ *
+ * A short list by nature — it is a row of tiles, not a history page, and the
+ * player's own bet history is already available in full on `/bet-history`.
+ */
+const recentGames = {
+  query: z.object({ limit: z.coerce.number().int().min(1).max(50).default(12) }).strict(),
+};
+
 /** A bet id is a bigint on the wire, so it arrives as a digit string. */
 const myBet = {
   params: z.object({ betId: z.string().trim().regex(/^\d+$/, 'betId must be numeric') }),
@@ -102,6 +127,8 @@ module.exports = {
   userParam,
   myTimedRounds,
   liveFeed,
+  activity,
+  recentGames,
   myHistory,
   myBet,
   topWins,

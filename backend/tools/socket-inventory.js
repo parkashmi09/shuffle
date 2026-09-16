@@ -28,6 +28,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { writeKeepingEol } = require('./lib/eol');
 
 const ROOT = path.resolve(__dirname, '..');
 /**
@@ -126,6 +127,39 @@ function collectClaims() {
 }
 
 function main() {
+  /**
+   * ═════════════════════════════════════════════════════════════════════
+   * NO `legacy/`, NO ANSWER — AND CERTAINLY NO MANIFEST
+   *
+   * Everything below counts the legacy surface. Without it every collector
+   * returns empty, and the arithmetic still "works": 0 events, 0 ported,
+   * `0/0` rendered as 0.0%. The tool then wrote that over
+   * `docs/socket-manifest.json` — replacing a real 79-event inventory with
+   * an empty one — and exited 0.
+   *
+   * So the check destroyed the record it exists to produce, and reported
+   * success while doing it. `route-inventory.js` reads the same missing
+   * directory and dies; that is the correct shape, and this is now the same
+   * shape with a better message.
+   *
+   * The guard is here rather than in `loadConstants()` because the absence
+   * only matters once, at the top, and a caller who has read this far should
+   * not have to know which of the three collectors noticed first.
+   * ═════════════════════════════════════════════════════════════════════
+   */
+  if (!fs.existsSync(LEGACY)) {
+    process.stderr.write(
+      `\nCannot take a socket inventory: no legacy source at ${LEGACY}\n` +
+        '\n`legacy/` is a SIBLING of `backend/`, not a child — the monolith this port\n' +
+        'replaces sits beside it at the repository root. Without it there is nothing\n' +
+        'to count, and writing docs/socket-manifest.json anyway would replace a real\n' +
+        'inventory with an empty one.\n\n' +
+        'Restore legacy/, or skip this check — do not treat a 0/0 result as a pass.\n\n'
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const constants = loadConstants();
   const events = collectLegacy(constants);
   const claimed = collectClaims();
@@ -156,7 +190,7 @@ function main() {
   }
 
   const manifest = { generatedFrom: 'legacy/', total: rows.length, ported, events: rows };
-  fs.writeFileSync(path.join(ROOT, 'docs', 'socket-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  writeKeepingEol(path.join(ROOT, 'docs', 'socket-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   process.stdout.write('Wrote docs/socket-manifest.json\n');
 }
 

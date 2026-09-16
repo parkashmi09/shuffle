@@ -1,6 +1,6 @@
 'use strict';
 
-const { EVENTS, AUDIENCE } = require('@ibitplay/socket');
+const { EVENTS, AUDIENCE, PLATFORM_EVENTS, encode } = require('@ibitplay/socket');
 
 const { GameEngine } = require('./engine/gameEngine');
 const { CrashLoop } = require('./engine/crashLoop');
@@ -97,6 +97,54 @@ const refuse = (error) => ({
   code: error.code,
 });
 
+/**
+ * Tell every connected client that a round settled.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * WHY THIS EXISTS
+ *
+ * `LAST_BETS`, `TOP_WINNERS` and `GET casino/bet-history/live` are all PULL —
+ * they answer a request with the most recent rows, and nothing tells a client
+ * that new rows exist. Legacy had no push either; its board moved only when
+ * the page asked again. So a live bets feed could only ever be a poll.
+ *
+ * `BET_SETTLED` is this project's own event (see `PLATFORM_EVENTS` — it is
+ * deliberately NOT in the legacy tables) and carries the settled round, so a
+ * feed can prepend a row instead of re-reading itself on a timer.
+ *
+ * ── `nsp.emit`, NOT `socket.broadcast.emit` ─────────────────────────────
+ *
+ * Chat excludes the sender because their own message is already in the reply
+ * they get. A bets feed is different: the player who just bet should see their
+ * round arrive in the ticker like everyone else's, and the ack that drives
+ * their game board is a different surface. So this reaches the sender too.
+ *
+ * ── FAILURE HERE MUST NOT UNDO A SETTLED ROUND ──────────────────────────
+ *
+ * The money has already moved by the time this runs. A throw would reach the
+ * handler's catch, which refunds — turning a broadcast problem into a paid
+ * round being taken back. So it never throws.
+ * ═════════════════════════════════════════════════════════════════════════
+ */
+function announceSettled({ context, game, coin, amount, settled, logger }) {
+  try {
+    context.socket.nsp.emit(
+      PLATFORM_EVENTS.BET_SETTLED,
+      encode({
+        game,
+        coin: String(coin ?? '').toLowerCase(),
+        amount: String(amount ?? '0'),
+        profit: String(settled?.profit ?? '0'),
+        win: Boolean(settled?.isWinner),
+        reference: String(settled?.betId ?? ''),
+        at: new Date().toISOString(),
+      })
+    );
+  } catch (error) {
+    logger?.warn({ err: error, game }, 'Could not announce a settled round');
+  }
+}
+
 function register({ on, deps }) {
   const engine = new GameEngine(deps);
   const { logger, config } = deps;
@@ -180,6 +228,15 @@ function register({ on, deps }) {
             amount: bet.stake,
           });
 
+          announceSettled({
+            context,
+            game: game.key,
+            coin: bet.currency,
+            amount: bet.stake,
+            settled,
+            logger,
+          });
+
           /**
            * Legacy emitted twice — `{command:"play", …}` immediately and
            * `{command:"busted", …}` after `H.wait(50)`, a timer that served no
@@ -251,7 +308,28 @@ function register({ on, deps }) {
               hash: opened?.hash,
             });
 
-            return { command: 'play', hash: opened?.hash, roundId: round.roundId, balance: round.balance };
+            /**
+             * `state` is what the client is ALLOWED to see of the round.
+             *
+             * Several of these games cannot be played without it — Video Poker
+             * asks which of five cards to hold, Blackjack shows a hand against
+             * an up card — and the open reply carried none of it, so a board
+             * had nothing to draw and no basis for the decision the next
+             * message asks for.
+             *
+             * A game opts in with `publicState`, and what it leaves out is the
+             * point: `deck` is every card still to come, and a client holding
+             * it knows the outcome before it chooses. A game with no projection
+             * sends nothing, which is right for Mines and Three Card Monte —
+             * their whole state IS the answer.
+             */
+            return {
+              command: 'play',
+              hash: opened?.hash,
+              roundId: round.roundId,
+              balance: round.balance,
+              state: game.publicState ? game.publicState(opened?.state ?? {}) : undefined,
+            };
           }
 
           const round = await engine.openRoundFor({ userId: context.userId, game: game.key });
@@ -269,6 +347,9 @@ function register({ on, deps }) {
               isWinner: outcome.isWinner,
             });
 
+            announceSettled({
+              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger,
+            });
             return { command: 'busted', ...settled, win: settled.isWinner };
           }
 
@@ -279,7 +360,26 @@ function register({ on, deps }) {
             const settled = await engine.closeRound({
               round, profit: outcome.profit, result: outcome.result, isWinner: outcome.isWinner,
             });
-            return { command: 'busted', ...settled, win: settled.isWinner };
+            announceSettled({
+              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger,
+            });
+            /**
+             * `slot` and `path` are Plinko's, and they only exist once the ball
+             * has landed — so sending them is not a leak, it is the settlement.
+             *
+             * `closeRound` keeps `profit`, `result` and `isWinner` and drops the
+             * rest of the outcome, which left a client with a multiplier and no
+             * way to know which of the four slots paying it the ball reached.
+             * Without that the drop can only be animated from a guess, and a
+             * board animating a guess is exactly the shape of the bug this game
+             * already had.
+             */
+            return {
+              command: 'busted',
+              ...settled,
+              win: settled.isWinner,
+              ...(outcome.slot !== undefined ? { slot: outcome.slot, path: outcome.path } : {}),
+            };
           }
 
           const stepped = stepFn({
@@ -302,6 +402,9 @@ function register({ on, deps }) {
               isWinner: false,
               status: 'lost',
             });
+            announceSettled({
+              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger,
+            });
             return { command: 'busted', ...settled, win: false };
           }
 
@@ -309,6 +412,8 @@ function register({ on, deps }) {
             round,
             selected: stepped.selected ?? round.selected,
             profit: stepped.profit,
+            // HiLo advances its position in the deck here. See `stepRound`.
+            state: stepped.state,
           });
 
           return { command: 'clicked', profit: stepped.profit, id: payload?.land ?? payload?.id, card: stepped.card };
