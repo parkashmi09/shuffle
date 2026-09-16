@@ -1,7 +1,7 @@
 'use strict';
 
 const { EVENTS, AUDIENCE } = require('@ibitplay/socket');
-const { money } = require('@ibitplay/common');
+const { money, sitePolicy } = require('@ibitplay/common');
 const { verifyPassword } = require('@ibitplay/auth');
 const { Op, literal } = require('sequelize');
 
@@ -71,6 +71,8 @@ function register({ on, deps }) {
       const currency = String(coin ?? '').toUpperCase();
 
       try {
+        // A crypto payout request is reviewed and sent by the cashier team — the manual route.
+        await sitePolicy.assertAllowed(models, 'withdrawal_mode', 'manual', logger);
         if (BLOCKED.includes(currency)) throw errors.UNSUPPORTED_COIN({ coin: currency });
 
         const column = COIN_COLUMNS[currency];
@@ -159,7 +161,8 @@ function register({ on, deps }) {
 
         return ok({ id: result.id, amount: decimal, coin: currency, state: 'pending' });
       } catch (error) {
-        if (error.code?.startsWith('CRYPTOWITHDRAW_')) return refuse(error);
+        // The site's own policy refusal is an answer for the player, not a server fault.
+        if (error.code?.startsWith('CRYPTOWITHDRAW_') || error.code?.startsWith('SITE_POLICY_')) return refuse(error);
         throw error;
       }
     },
@@ -244,6 +247,13 @@ function register({ on, deps }) {
     handle: async (payload, context) => {
       const currency = String(payload?.coin ?? '').toUpperCase();
       const chain = payload?.chain ? String(payload.chain) : null;
+
+      // A deposit address is the gateway route: the provider credits it by callback.
+      try {
+        await sitePolicy.assertAllowed(models, 'deposit_mode', 'automatic', logger);
+      } catch (error) {
+        return refuse(error);
+      }
 
       if (!COIN_COLUMNS[currency]) return refuse(errors.UNSUPPORTED_COIN({ coin: currency }));
 

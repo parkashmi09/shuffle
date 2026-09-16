@@ -7,7 +7,7 @@ const errors = require('./features.errors');
 const { SiteConfigService } = require('../site-config/siteConfig.service');
 const { OneSignalProvider } = require('../notifications/providers/onesignal');
 
-const { FEATURES, TEMPLATES, featureByKey, variantOf } = featureCatalogue;
+const { FEATURES, TEMPLATES, featureByKey, variantOf, defaultVariantOf, isPolicy } = featureCatalogue;
 
 /** The row that remembers which template the site was last set from. */
 const TEMPLATE_ROW = '_template';
@@ -46,6 +46,8 @@ class FeaturesService {
         key: f.key,
         label: f.label,
         category: f.category,
+        kind: f.kind ?? 'feature',
+        defaultVariant: defaultVariantOf(f.key),
         flag: f.flag,
         variants: f.variants.map((v) => ({
           key: v.key,
@@ -73,14 +75,18 @@ class FeaturesService {
       template,
       features: FEATURES.map((f) => {
         const row = rows.get(f.key);
-        const variant = row?.variant ?? 'none';
+        const policy = isPolicy(f.key);
+        const variant = row?.variant ?? defaultVariantOf(f.key);
         const spec = variantOf(f.key, variant);
         return {
           feature: f.key,
           label: f.label,
           category: f.category,
+          kind: policy ? 'policy' : 'feature',
+          // A policy is always in force; its "off" is the `none` variant.
+          enabled: policy ? variant !== 'none' : Boolean(row?.enabled),
+          isDefault: !row,
           flag: f.flag,
-          enabled: Boolean(row?.enabled),
           variant,
           variantLabel: spec?.label ?? variant,
           config: row?.config ?? {},
@@ -101,6 +107,9 @@ class FeaturesService {
     const rows = await this.#rows();
     return FEATURES.flatMap((f) => {
       const row = rows.get(f.key);
+      // A policy is always published — a front end needs to know a cashier is
+      // CLOSED as much as which kind it is, so `none` is listed too.
+      if (isPolicy(f.key)) return [{ feature: f.key, kind: 'policy', variant: row?.variant ?? defaultVariantOf(f.key) }];
       if (!row?.enabled || row.variant === 'none') return [];
       const spec = variantOf(f.key, row.variant);
       const publicFields = spec?.publicFields ?? [];
@@ -139,7 +148,8 @@ class FeaturesService {
     if (!f) throw errors.UNKNOWN_FEATURE({ feature });
 
     const current = await this.models.SiteFeature.findByPk(feature, { raw: true });
-    const variant = patch.variant ?? current?.variant ?? 'none';
+    const policy = isPolicy(feature);
+    const variant = patch.variant ?? current?.variant ?? defaultVariantOf(feature);
     if (!variantOf(feature, variant)) {
       throw errors.UNKNOWN_VARIANT({ feature, variant, allowed: f.variants.map((v) => v.key) });
     }
@@ -165,6 +175,8 @@ class FeaturesService {
 
     let enabled = patch.enabled ?? current?.enabled ?? false;
     if (variant === 'none') enabled = false;
+    // A policy has no switch: it is in force at whatever variant it holds.
+    if (policy) enabled = variant !== 'none';
 
     // Refuse to switch an integration on without what it needs to run.
     if (enabled) {
@@ -191,6 +203,8 @@ class FeaturesService {
       {
         staffId: staff?.id,
         feature,
+        policy,
+        from: current?.variant ?? defaultVariantOf(feature),
         variant,
         enabled,
         configKeys: Object.keys(config),
@@ -221,6 +235,9 @@ class FeaturesService {
 
     const applied = [];
     for (const [feature, variant] of Object.entries(t.variants)) {
+      // Business policies are set on purpose, one at a time. A template that
+      // reopened a cashier someone had closed would fail in the worst direction.
+      if (isPolicy(feature)) continue;
       const current = await this.models.SiteFeature.findByPk(feature, { raw: true });
       // Never let a template silently change an integration someone keyed in.
       if (featureByKey(feature)?.category === 'integration' && current && current.variant !== 'none') continue;

@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-const { money } = require('@ibitplay/common');
+const { money, sitePolicy } = require('@ibitplay/common');
 
 const errors = require('./paymentOrders.errors');
 const { FLOW, userIdFor } = require('./paymentOrders.constants');
@@ -103,6 +103,7 @@ class PaymentOrdersService {
    * ─────────────────────────────────────────────────────────────────────
    */
   async createDeposit({ userId, provider: providerName, currency, amount, method, returnUrl, phone, userName, chain }) {
+    await sitePolicy.assertAllowed(this.models, 'deposit_mode', 'automatic', this.logger);
     const gateway = this.#gateway(providerName);
 
     if (!gateway.supports(currency, FLOW.PAY_IN, this.config)) {
@@ -184,6 +185,9 @@ class PaymentOrdersService {
    * a different one — see the note at the top of this file.
    */
   async createWithdrawal({ userId, provider: providerName, currency, amount, method, details }) {
+    // Two gates, and both must be open: the site's chosen mode (the owner panel)
+    // and the deployment's kill switch (the backend's own env).
+    await sitePolicy.assertAllowed(this.models, 'withdrawal_mode', 'automatic', this.logger);
     if (!this.config.AUTO_WITHDRAWALS_ENABLED) {
       // A kill switch that does not require a deploy. Automatic payouts are the
       // single most damaging thing to leave running during an incident.

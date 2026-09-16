@@ -12,6 +12,9 @@ export type CatalogueFeature = {
   key: string
   label: string
   category: string
+  /** `policy` — always in force, no switch; its "off" is the `none` variant. */
+  kind: 'feature' | 'policy'
+  defaultVariant: string
   flag: string | null
   variants: Variant[]
 }
@@ -24,6 +27,9 @@ export type SiteFeature = {
   feature: string
   label: string
   category: string
+  kind: 'feature' | 'policy'
+  /** Nothing stored — reading the permissive default. */
+  isDefault: boolean
   flag: string | null
   enabled: boolean
   variant: string
@@ -39,6 +45,7 @@ export type SiteFeatures = { template: string | null; features: SiteFeature[] }
 export type FeaturesResponse = { catalogue: Catalogue; current: SiteFeatures }
 
 export const CATEGORY_LABELS: Record<string, string> = {
+  business: 'Business & payments',
   engagement: 'Engagement',
   wallet: 'Wallet',
   casino: 'Casino',
@@ -46,4 +53,4 @@ export const CATEGORY_LABELS: Record<string, string> = {
   integration: 'Integrations'
 }
 
-export const CATEGORY_ORDER = ['engagement', 'wallet', 'casino', 'content', 'integration']
+export const CATEGORY_ORDER = ['business', 'engagement', 'wallet', 'casino', 'content', 'integration']

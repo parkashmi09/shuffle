@@ -514,7 +514,61 @@ const PUSH_NOTIFICATIONS = {
   ],
 };
 
-const FEATURES = Object.freeze([...GENERATED, PUSH_NOTIFICATIONS]);
+/**
+ * Business policies — hand-written, like the integration above.
+ *
+ * `kind: 'policy'` means always in force: there is no on/off switch, only the
+ * variant, and a site that never chose one reads `defaultVariant` — which is
+ * today's behaviour, so adding these closed nobody's cashier. `none` closes
+ * the channel. Templates never set these; a template silently reopening a
+ * cashier an operator had closed is the wrong direction to fail in.
+ * Enforced in the services by packages/common/src/sitePolicy.js.
+ */
+const POLICIES = [
+  {
+    key: 'business_model',
+    label: 'Business model',
+    category: 'business',
+    kind: 'policy',
+    flag: null,
+    defaultVariant: 'hybrid',
+    variants: [
+      { key: 'b2c', label: 'B2C — direct players', description: 'Anyone may sign up and use the cashier themselves.' },
+      { key: 'b2b', label: 'B2B — agent network', description: 'Public sign-up is closed. Players are created by agents in the staff tree and funded by transfer.' },
+      { key: 'hybrid', label: 'Hybrid', description: 'Public sign-up is open, and agents may also create and fund players. The default.' },
+    ],
+  },
+  {
+    key: 'deposit_mode',
+    label: 'Deposits',
+    category: 'business',
+    kind: 'policy',
+    flag: null,
+    defaultVariant: 'both',
+    variants: [
+      { key: 'automatic', label: 'Automatic only', description: 'Gateway and crypto deposits, credited by the provider callback. Manual transfer submissions are refused.' },
+      { key: 'manual', label: 'Manual only', description: 'The player submits a transfer reference and screenshot; staff approve it. Gateway and crypto deposits are refused.' },
+      { key: 'both', label: 'Automatic and manual', description: 'Both routes are open. The default.' },
+      { key: 'none', label: 'Closed', description: 'No new deposits. Pending ones can still be approved, and provider callbacks still credit.' },
+    ],
+  },
+  {
+    key: 'withdrawal_mode',
+    label: 'Withdrawals',
+    category: 'business',
+    kind: 'policy',
+    flag: null,
+    defaultVariant: 'both',
+    variants: [
+      { key: 'automatic', label: 'Automatic only', description: 'Paid out by the gateway (needs AUTO_WITHDRAWALS_ENABLED on the backend). Manual requests are refused.' },
+      { key: 'manual', label: 'Manual only', description: 'The player requests; the cashier team reviews and pays by hand. Gateway payouts are refused.' },
+      { key: 'both', label: 'Automatic and manual', description: 'Both routes are open. The default.' },
+      { key: 'none', label: 'Closed', description: 'No new withdrawal requests. Pending ones can still be decided.' },
+    ],
+  },
+];
+
+const FEATURES = Object.freeze([...POLICIES, ...GENERATED, PUSH_NOTIFICATIONS]);
 
 /**
  * Site templates — the dropdown when a site is created. Each is the set of
@@ -601,6 +655,10 @@ const TEMPLATES = Object.freeze({
 const FEATURE_KEYS = Object.freeze(FEATURES.map((f) => f.key));
 const TEMPLATE_KEYS = Object.freeze(Object.keys(TEMPLATES));
 
+/** The variant a feature reads when nothing is stored. */
+const defaultVariantOf = (key) => featureByKey(key)?.defaultVariant ?? 'none';
+const isPolicy = (key) => featureByKey(key)?.kind === 'policy';
+
 const featureByKey = (key) => FEATURES.find((f) => f.key === key) ?? null;
 const variantOf = (featureKey, variantKey) =>
   featureByKey(featureKey)?.variants.find((v) => v.key === variantKey) ?? null;
@@ -615,4 +673,4 @@ for (const [name, template] of Object.entries(TEMPLATES)) {
   }
 }
 
-module.exports = { FEATURES, TEMPLATES, FEATURE_KEYS, TEMPLATE_KEYS, featureByKey, variantOf };
+module.exports = { FEATURES, TEMPLATES, FEATURE_KEYS, TEMPLATE_KEYS, featureByKey, variantOf, defaultVariantOf, isPolicy };

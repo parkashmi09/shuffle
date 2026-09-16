@@ -38,6 +38,8 @@ const { VIP_LEVELS, UNRANKED, vipLevelName, vipLevelFor } = require('./vipLevels
 const raceBuckets = require('./raceBuckets');
 /** The feature menu and site templates — read by admin-service and the owner panel. */
 const featureCatalogue = require('./featureCatalogue');
+/** Business settings a site's owner chooses, enforced where money and accounts are created. */
+const sitePolicy = require('./sitePolicy');
 
 const { requestContext, getContext, getRequestId, REQUEST_ID_HEADER } = require('./middleware/requestContext');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -75,6 +77,7 @@ module.exports = {
   vipLevelFor,
   ...raceBuckets,
   featureCatalogue,
+  sitePolicy,
   createLogger,
   createApp,
   startServer,

@@ -1,6 +1,6 @@
 'use strict';
 
-const { money } = require('@ibitplay/common');
+const { money, sitePolicy } = require('@ibitplay/common');
 const { Op } = require('@ibitplay/db');
 
 const errors = require('./fiatWithdraw.errors');
@@ -50,6 +50,7 @@ class FiatWithdrawService {
    * @legacy POST /createFiatWithdrawal
    */
   async create({ userId, details }) {
+    await sitePolicy.assertAllowed(this.models, 'withdrawal_mode', 'manual', this.logger);
     if (money.lt(details.amount, this.minimum)) {
       throw errors.BELOW_MINIMUM({ minimum: this.minimum, amount: details.amount });
     }

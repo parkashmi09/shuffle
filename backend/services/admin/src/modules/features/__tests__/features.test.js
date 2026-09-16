@@ -39,7 +39,8 @@ test('features', async (t) => {
   });
 
   await t.test('every feature can be switched off', () => {
-    for (const f of featureCatalogue.FEATURES) {
+    // Policies are exempt: a site always HAS a business model; closing a cashier is its own variant.
+    for (const f of featureCatalogue.FEATURES.filter((x) => x.kind !== 'policy')) {
       assert.ok(f.variants.some((x) => x.key === 'none'), `${f.key} has no Off variant`);
     }
   });
@@ -271,6 +272,59 @@ test('features', async (t) => {
       /MISSING_FIELD|needs a value/i
     );
     await service.update({ feature: 'push_notifications', patch: { enabled: false }, staff });
+  });
+
+  // ── Business policies ────────────────────────────────────────────────
+
+  await t.test('an unset policy reads as its permissive default and is published', async () => {
+    await connection.models.SiteFeature.destroy({ where: { feature: ['business_model', 'deposit_mode', 'withdrawal_mode'] } });
+    const { features } = await service.list();
+    const deposit = features.find((f) => f.feature === 'deposit_mode');
+    assert.equal(deposit.kind, 'policy');
+    assert.equal(deposit.variant, 'both');
+    assert.equal(deposit.isDefault, true);
+    const pub = await service.publicList();
+    assert.deepEqual(pub.find((f) => f.feature === 'business_model'), { feature: 'business_model', kind: 'policy', variant: 'hybrid' });
+  });
+
+  await t.test('a policy has no switch — closing it is the none variant, and it is still published', async () => {
+    await service.update({ feature: 'withdrawal_mode', patch: { variant: 'none', enabled: true }, staff });
+    const { features } = await service.list();
+    assert.equal(features.find((f) => f.feature === 'withdrawal_mode').enabled, false);
+    const pub = await service.publicList();
+    assert.equal(pub.find((f) => f.feature === 'withdrawal_mode').variant, 'none', 'a closed cashier must be visible to the page');
+    await service.update({ feature: 'withdrawal_mode', patch: { variant: 'both' }, staff });
+  });
+
+  await t.test('a template never reopens a cashier someone closed', async () => {
+    await service.update({ feature: 'deposit_mode', patch: { variant: 'manual' }, staff });
+    await service.applyTemplate({ template: 'stake', enable: true, staff });
+    const row = await connection.models.SiteFeature.findByPk('deposit_mode', { raw: true });
+    assert.equal(row.variant, 'manual');
+  });
+
+  await t.test('manual-only refuses a gateway deposit and keeps the transfer route', async () => {
+    const { sitePolicy } = require('@ibitplay/common');
+    await service.update({ feature: 'deposit_mode', patch: { variant: 'manual' }, staff });
+    await assert.rejects(() => sitePolicy.assertAllowed(connection.models, 'deposit_mode', 'automatic'), /manual deposits only/);
+    assert.equal(await sitePolicy.assertAllowed(connection.models, 'deposit_mode', 'manual'), 'manual');
+    await service.update({ feature: 'deposit_mode', patch: { variant: 'both' }, staff });
+  });
+
+  await t.test('B2B refuses public sign-up through the real registration path', async () => {
+    let AuthService;
+    try {
+      ({ AuthService } = require('../../../../../user/src/modules/auth/auth.service'));
+    } catch (error) {
+      return t.skip(`auth service not loadable here: ${error.message}`);
+    }
+    await service.update({ feature: 'business_model', patch: { variant: 'b2b' }, staff });
+    const auth = new AuthService({ models: connection.models, db: connection, logger, config: { ...config, JWT_ACCESS_SECRET: 'x'.repeat(40), JWT_REFRESH_SECRET: 'y'.repeat(40) } });
+    await assert.rejects(
+      () => auth.register({ username: `b2b_probe_${Date.now()}`, password: 'Probe#12345' }),
+      (error) => error.code === 'SITE_POLICY_CHANNEL_CLOSED' && /invitation/.test(error.message)
+    );
+    await service.update({ feature: 'business_model', patch: { variant: 'hybrid' }, staff });
   });
 
   await t.test('an empty string clears a stored secret', async () => {

@@ -10,6 +10,7 @@ import ErrorState from '@/components/shared/ErrorState'
 import FormDialog from '@/components/shared/FormDialog'
 import { TextField } from '@/components/shared/FormField'
 import PageHeader from '@/components/shared/PageHeader'
+import PolicySelect from '@/components/shared/PolicySelect'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -138,7 +139,7 @@ const Features = () => {
     <div>
       <PageHeader
         title='Features'
-        description='Which variant of each feature this site offers. Choosing Off hides the feature and switches its legacy flag off too.'
+        description='This site’s business model, how it takes and pays money, and which variant of each feature it offers. Business settings are enforced by the backend on the next request.'
       />
       {error && <ErrorState error={error} />}
       {!rows.length && !error && <Skeleton className='h-96' />}
@@ -199,7 +200,16 @@ const Features = () => {
                       <span className='text-muted-foreground block max-w-md truncate text-xs'>{spec.variants.find(v => v.key === cur.variant)?.description}</span>
                     </TableCell>
                     <TableCell>
-                      {spec.category === 'integration' ? (
+                      {spec.kind === 'policy' ? (
+                        <PolicySelect
+                          label={spec.label}
+                          value={cur.variant}
+                          variants={spec.variants}
+                          isDefault={cur.isDefault}
+                          disabled={!canWrite}
+                          onChange={v => update.mutateAsync({ feature: spec.key, body: { variant: v } })}
+                        />
+                      ) : spec.category === 'integration' ? (
                         <Integration feature={spec} current={cur} canWrite={canWrite} />
                       ) : (
                         <Select value={cur.variant} disabled={!canWrite} onValueChange={v => v && update.mutate({ feature: spec.key, body: { variant: v, enabled: v !== 'none' } })}>
@@ -217,11 +227,15 @@ const Features = () => {
                       )}
                     </TableCell>
                     <TableCell className='pr-4'>
+                      {spec.kind === 'policy' ? (
+                        <span className='text-muted-foreground text-xs'>always on</span>
+                      ) : (
                       <Switch
                         checked={cur.enabled}
                         disabled={!canWrite || cur.variant === 'none'}
                         onCheckedChange={enabled => update.mutate({ feature: spec.key, body: { enabled } })}
                       />
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

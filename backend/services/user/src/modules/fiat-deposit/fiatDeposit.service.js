@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs/promises');
 const crypto = require('crypto');
 
-const { money } = require('@ibitplay/common');
+const { money, sitePolicy } = require('@ibitplay/common');
 const { Op: SequelizeOp } = require('@ibitplay/db');
 
 const errors = require('./fiatDeposit.errors');
@@ -76,6 +76,8 @@ class FiatDepositService {
    * @legacy POST /api/deposit/create
    */
   async create({ userId, details, screenshot }) {
+    // Before anything is written: a refused submission must leave no file behind.
+    await sitePolicy.assertAllowed(this.models, 'deposit_mode', 'manual', this.logger);
     if (!screenshot) throw errors.SCREENSHOT_REQUIRED();
 
     // A bank reference identifies one real transfer. Two deposits claiming the

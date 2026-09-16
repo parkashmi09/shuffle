@@ -14,6 +14,7 @@ const {
 } = require('@ibitplay/auth');
 
 const errors = require('./auth.errors');
+const { sitePolicy } = require('@ibitplay/common');
 /**
  * The player role id and the empty wallet blob, shared with `admin/players`
  * so an operator-created account and a self-registered one are the same shape.
@@ -366,6 +367,11 @@ class AuthService {
    * ═════════════════════════════════════════════════════════════════════
    */
   async register({ username, password, email, phone, referredBy, country }, context = {}) {
+    // Self-registration only. Staff-created players (admin `players` module)
+    // write their own row and never reach this, so a B2B site's agents can
+    // still open accounts while the public cannot.
+    await sitePolicy.assertAllowed(this.models, 'business_model', 'public_signup', this.logger);
+
     const clash = await this.models.Users.findOne({
       where: { [Op.or]: [{ name: username }, ...(email ? [{ email }] : [])] },
       attributes: ['id', 'name', 'email'],
