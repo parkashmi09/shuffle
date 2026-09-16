@@ -1,0 +1,142 @@
+/*
+ * Toasts — reference `Alerts` / `AlertAction` / `Alert`.
+ *
+ * The site's one feedback channel. Every failed call, every confirmed action
+ * and every pushed notification arrives here: a coloured icon block, the
+ * message, a close cross, and a bar that drains over five seconds and then
+ * dismisses the toast.
+ *
+ * Read off the live stylesheets. The colour of the left block is set inline
+ * per type by the component (`--color-success|error|warning|info|primaryViolet`),
+ * which is what the reference does, so there is no per-type rule here.
+ */
+
+.Alerts_root {
+  position: fixed;
+  z-index: var(--z-alert);
+  top: 6.25rem;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  left: var(--spacing-md2);
+  gap: var(--spacing-md2);
+}
+
+@media (min-width: 768px) {
+  .Alerts_root {
+    width: fit-content;
+    left: 1.625rem;
+  }
+}
+
+.AlertAction_root {
+  animation: AlertAction_enter var(--animation-slow-duration) ease forwards;
+}
+
+.AlertAction_exiting {
+  animation: AlertAction_exit var(--animation-slow-duration) ease forwards;
+}
+
+@keyframes AlertAction_enter {
+  0% { opacity: 0; transform: translateX(-1.5625rem); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes AlertAction_exit {
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-1.5625rem); }
+}
+
+/* The whole toast is the dismiss button — clicking anywhere closes it. */
+.Alert_root {
+  display: flex;
+  align-items: stretch;
+  background: var(--color-gray700);
+  border-radius: var(--radius-md);
+  width: calc(100% - var(--spacing-lg2));
+  border: 0;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--animation-slow-duration);
+}
+
+@media (min-width: 600px) {
+  .Alert_root {
+    width: 21.25rem;
+  }
+}
+
+.Alert_root:not(:last-of-type) {
+  margin-bottom: 0.9375rem;
+}
+
+.Alert_root:hover {
+  background: var(--color-gray600);
+}
+
+.Alert_root:active {
+  transform: var(--active-state-sm);
+}
+
+.Alert_leftContainer {
+  width: 2.8125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.Alert_rightContainer {
+  padding: 0.95rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1 1 0%;
+  position: relative;
+}
+
+.Alert_text {
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  color: #fff;
+  margin-right: var(--spacing-md);
+}
+
+.Alert_multiMessage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm4);
+}
+
+/*
+ * The dismiss timer. It is the animation that ends the toast — the component
+ * listens for `animationend` on this bar rather than running a timer of its
+ * own, which is why hovering (below) genuinely postpones the dismissal.
+ */
+.Alert_percentageBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 0.1875rem;
+  background: var(--color-gray500);
+  transition: 5s;
+  width: 100%;
+  transform-origin: left center;
+}
+
+.Alert_startPercentageAnimation {
+  transform: scaleX(1);
+  animation: Alert_widthAnimation 5s ease 0s 1 normal forwards;
+}
+
+.Alert_root:hover .Alert_percentageBar {
+  animation-play-state: paused;
+}
+
+@keyframes Alert_widthAnimation {
+  0% { transform: scaleX(1); }
+  100% { transform: scaleX(0); }
+}

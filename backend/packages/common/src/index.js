@@ -27,7 +27,7 @@ const { loadModules, mountModules, collectJobs, collectDomains, AUDIENCES } = re
  * an operator. A second copy would drift, and a player told they are VIP 30 on
  * one screen and VIP 29 on another has found a bug in the platform's word.
  */
-const { VIP_LEVELS, vipLevelFor } = require('./vipLevels');
+const { VIP_LEVELS, UNRANKED, vipLevelName, vipLevelFor } = require('./vipLevels');
 /**
  * The wagering race's game buckets. Shared for the same reason the VIP ladder
  * is: THREE services read it — casino and sports classify their rows into
@@ -68,6 +68,8 @@ module.exports = {
   // helpers
   money,
   VIP_LEVELS,
+  UNRANKED,
+  vipLevelName,
   vipLevelFor,
   ...raceBuckets,
   createLogger,

@@ -8,7 +8,8 @@ import AirdropTile from "../components/casino/AirdropTile";
 import TournamentsCarousel from "../components/casino/TournamentsCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import SeoArticle from "../components/casino/SeoArticle";
-import { banners, providers, sections } from "../data/catalog";
+import { sections } from "../data/catalog";
+import { useBanners, useLobbySection, useProviders } from "../lib/catalogue";
 
 const bySlug = Object.fromEntries(sections.map((s) => [s.id, s]));
 const row = (id) => bySlug[id];
@@ -30,6 +31,17 @@ export default function CasinoHome() {
   const [tab, setTab] = useState("LOBBY");
   const category = tab === "LOBBY" ? null : categories[tab];
 
+  // Each of these reads its route and keeps the capture when the table is
+  // empty — see `lib/catalogue.js`. The lobby renders identically either way.
+  const { banners } = useBanners("home");
+  const { providers } = useProviders();
+  const slots = useLobbySection("slots");
+  const liveCasino = useLobbySection("live-casino");
+  const gameShows = useLobbySection("game-shows");
+  const shuffleGames = useLobbySection("shuffle-games");
+  const shufflePicks = useLobbySection("shuffle-picks");
+  const latestReleases = useLobbySection("latest-releases");
+
   return (
     <>
       <HeroBanners banners={banners} />
@@ -41,14 +53,15 @@ export default function CasinoHome() {
             <CategoryGrid {...category} />
           ) : (
             <div className="HomeTabLobby_homeTabLobbyWrapper">
-              <GameCarousel section={row("shuffle-games")} />
-              <GameCarousel section={row("slots")} />
-              <GameCarousel section={row("live-casino")} />
+              {/* No View all card on this row — removed on request. */}
+              <GameCarousel section={shuffleGames} viewAll={false} />
+              <GameCarousel section={slots} />
+              <GameCarousel section={liveCasino} />
               <ProviderCarousel providers={providers} />
               <AirdropTile />
-              <GameCarousel section={row("game-shows")} />
-              <GameCarousel section={row("shuffle-picks")} />
-              <GameCarousel section={row("latest-releases")} />
+              <GameCarousel section={gameShows} />
+              <GameCarousel section={shufflePicks} />
+              <GameCarousel section={latestReleases} />
               <TournamentsCarousel />
             </div>
           )}

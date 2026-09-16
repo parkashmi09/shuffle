@@ -47,7 +47,7 @@
  * not exist is worse than no entry, because it reads as coverage.
  */
 const INTERNAL_SURFACE = Object.freeze({
-  'user-service': ['/internal/user/wallet', '/internal/user/exchange-rate'],
+  'user-service': ['/internal/user/wallet', '/internal/user/exchange-rate', '/internal/user/rakeback'],
   'admin-service': [
     '/internal/admin/audit',
     '/internal/admin/auth',
@@ -131,6 +131,12 @@ const INTERNAL_ACL = Object.freeze({
     '/internal/admin/site-config',
     '/internal/admin/staff-directory',
     '/internal/user/exchange-rate',
+    /**
+     * Rakeback is accrued from the jsGames settlement callback. The figure is
+     * computed here; the column it lands on is user-service's, and this is the
+     * only way to reach it.
+     */
+    '/internal/user/rakeback',
     '/internal/user/wallet',
   ],
 

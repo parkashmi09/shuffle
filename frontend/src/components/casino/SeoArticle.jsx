@@ -14,7 +14,7 @@ export default function SeoArticle() {
   const [open, setOpen] = useState(false);
 
   return (
-    <section className="LayoutContainer_root LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-lg4 LayoutContainer_column">
+    <section className="LayoutContainer_root LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-lg4 LayoutContainer_column SEOArticle_section">
       <div className={cx("SEOArticle_articleContent", open && "SEOArticle_showMore")}>
         <div dangerouslySetInnerHTML={{ __html: inner }} />
         {open ? (

@@ -1,15 +1,25 @@
 import { useEffect, useRef } from "react";
 import { navigate } from "../lib/router";
-import vipHtml from "../data/vip.html?raw";
+import { useSession } from "../lib/sessionContext";
 import affiliateHtml from "../data/affiliate.html?raw";
 
 /**
- * Pages the reference renders entirely on the server (VIP program, affiliate
- * program). The captured markup is rendered as-is; accordions, internal links
- * and the call-to-action buttons are wired up after mount.
+ * Pages the reference renders entirely on the server. The captured markup is
+ * rendered as-is; accordions, internal links and the call-to-action buttons
+ * are wired up after mount.
+ *
+ * Only the affiliate page is left on this path. `/vip-program` used to be here
+ * too and is now `pages/VipPage.jsx` — it needed a second, signed-in layout
+ * that reads the player's standing, which a static blob cannot have.
  */
-export function HtmlPage({ html, cta = "register" }) {
+export function HtmlPage({ html, cta = "register", onCta }) {
   const ref = useRef(null);
+  // Read through a ref: the handler is bound once per `html`, and a caller that
+  // passes an inline arrow would otherwise rebind it on every render.
+  const cta_ref = useRef(onCta);
+  useEffect(() => {
+    cta_ref.current = onCta;
+  }, [onCta]);
   useEffect(() => {
     const root = ref.current;
     if (!root) return;
@@ -26,7 +36,11 @@ export function HtmlPage({ html, cta = "register" }) {
       }
       const cta_ = e.target.closest("button.ButtonVariants_root");
       if (cta_ && root.contains(cta_) && !cta_.closest("a")) {
-        window.dispatchEvent(new CustomEvent("shuffle:auth", { detail: cta }));
+        // Signed in, the captured call-to-action means something else: the
+        // reference sends a member to their own dashboard rather than asking
+        // them to register again. `onCta` is how the page says so.
+        if (cta_ref.current) cta_ref.current();
+        else window.dispatchEvent(new CustomEvent("shuffle:auth", { detail: cta }));
         return;
       }
       const a = e.target.closest("a[href]");
@@ -45,20 +59,16 @@ export function HtmlPage({ html, cta = "register" }) {
   return <div ref={ref} style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-/** Reference `/vip-program`. */
-export function VipPage() {
-  return (
-    <div>
-      <HtmlPage html={vipHtml} cta="register" />
-    </div>
-  );
-}
-
 /** Reference `/affiliate`. */
 export function AffiliatePage() {
+  const { signedIn } = useSession();
   return (
     <div>
-      <HtmlPage html={affiliateHtml} cta="register" />
+      <HtmlPage
+        html={affiliateHtml}
+        cta="register"
+        onCta={signedIn ? () => navigate("/affiliate/overview") : undefined}
+      />
     </div>
   );
 }

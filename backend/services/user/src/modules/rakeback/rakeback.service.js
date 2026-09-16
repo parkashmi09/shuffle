@@ -98,6 +98,85 @@ class RakebackService {
   }
 
   /**
+   * Accrue rakeback earned on a stake.
+   *
+   * @legacy the `UPDATE users SET rakeamount = rakeamount + $1` inside
+   *         `jsgamesv2`'s bet callback.
+   *
+   * ── WHY THIS IS A ROUTE AND NOT A QUERY IN CASINO-SERVICE ────────────
+   *
+   * `users` belongs to this service, and so does every other operation on this
+   * balance — reading it, claiming it, zeroing it under a row lock. A second
+   * service writing the same column from its own callback is how the legacy
+   * code ended up with an accrual nobody could account for.
+   *
+   * casino-service computes the figure, because only it knows the stake and
+   * the rate. It posts it here, because only this service writes the column.
+   *
+   * ── EXACTLY ONCE ─────────────────────────────────────────────────────
+   *
+   * The accrual row goes in FIRST, inside the transaction. If `(source, ref)`
+   * has been seen the unique index rejects it, the transaction unwinds, and
+   * the total is not touched — so a retried internal call, which
+   * `ServiceClient` will make on any 5xx or timeout, adds nothing the second
+   * time.
+   */
+  async accrue({ userId, amount, source, ref }) {
+    const value = money.toDecimalString(money.toMinor(amount));
+
+    // A zero or negative accrual is not a thing to record. Rakeback is a share
+    // of a stake; there is no such thing as a negative share of one.
+    if (!money.gt(value, '0')) throw errors.ACCRUAL_NOT_POSITIVE({ amount: String(amount) });
+
+    try {
+      return await this.db.transaction(async (transaction) => {
+        const user = await this.models.Users.findByPk(userId, {
+          attributes: ['id', ACCRUED_COLUMN],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+        if (!user) throw errors.USER_NOT_FOUND({ userId: String(userId) });
+
+        await this.models.RakebackAccrual.create(
+          { user_id: userId, amount: value, currency: RAKEBACK_CURRENCY, source, ref: String(ref) },
+          { transaction }
+        );
+
+        /**
+         * Relative, not absolute.
+         *
+         * The row is locked above, so an absolute write computed from the read
+         * would also be correct — but a relative one stays correct if that lock
+         * is ever dropped, and it costs nothing.
+         */
+        await this.models.Users.increment(ACCRUED_COLUMN, {
+          by: value,
+          where: { id: userId },
+          transaction,
+        });
+
+        const accrued = money.toDecimalString(
+          money.add(user[ACCRUED_COLUMN] ?? '0', value)
+        );
+
+        this.logger?.info({ userId, source, ref, amount: value }, 'Rakeback accrued');
+        return { accrued, amount: value, currency: RAKEBACK_CURRENCY, duplicate: false };
+      });
+    } catch (error) {
+      if (error?.name !== 'SequelizeUniqueConstraintError') throw error;
+
+      /**
+       * Already accrued. This is a SUCCESS — the caller asked for this stake to
+       * be accrued and it has been. Answering with an error would make a
+       * retried callback look like a failure and invite another retry.
+       */
+      this.logger?.info({ userId, source, ref }, 'Duplicate rakeback accrual ignored');
+      const current = await this.amount({ userId });
+      return { accrued: current.amount, amount: '0.00000000', currency: RAKEBACK_CURRENCY, duplicate: true };
+    }
+  }
+
+  /**
    * Claim it.
    *
    * @legacy SOCKET k2089ht7ae660578ed9gffgh8hkk7vxj (C.ADD_RAKEBACK)

@@ -1,0 +1,314 @@
+/* ==========================================================================
+   `/transactions` — the six-tab account history.
+
+   Another signed-in chunk a signed-out visitor never fetches, so none of it is
+   in the capture. Every rule below was read off the live page's stylesheets
+   with the module hashes stripped.
+
+   What is NOT here, because the captured stylesheets already carry it and the
+   live page shares it: `Tab_*`, `Table_*` (including `Table_noResult`),
+   `TableSkeleton_*`, `SkeletonPlaceholder_*`, `LayoutContainer_*`, `Select_*`
+   and `ButtonVariants_*`.
+
+   The widths are the reference's `magic-container` scheme: a table is two
+   columns wide until the content column clears the breakpoint the open rails
+   leave it, and only then do the remaining columns appear.
+   ========================================================================== */
+
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+
+.Transactions_root {
+  padding-top: var(--spacing-lg1);
+}
+
+.Transactions_flexCell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.Transactions_transactionViewTabsWrapper {
+  width: 100%;
+  margin-bottom: var(--spacing-md2);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+@media (min-width: 992px) {
+  .Transactions_transactionViewTabsWrapper {
+    flex-direction: row;
+    margin-bottom: var(--spacing-lg2);
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+/*
+ * The Filter button is desktop-only; below that width the icon in the title row
+ * takes over. Both toggle the same panel.
+ */
+.Transactions_selectRowWrapper {
+  display: none;
+  width: 100%;
+  align-items: center;
+  justify-content: end;
+  gap: var(--spacing-sm5);
+}
+
+.Transactions_mobileIcons {
+  display: flex;
+  margin-top: var(--spacing-md2-neg);
+}
+
+.Transactions_buttonIcon {
+  width: var(--spacing-lg3);
+  height: var(--spacing-lg3);
+}
+
+.Transactions_buttonIcon.Transactions_active > span {
+  background: var(--color-primaryNeonPurple);
+}
+
+.Transactions_chevron {
+  display: flex;
+  width: var(--spacing-sm5);
+  height: var(--spacing-sm5);
+  margin-left: var(--spacing-md);
+  transition: transform 0.1s;
+}
+
+.Transactions_chevron.Transactions_chevronOpen { transform: rotate(-180deg); }
+.Transactions_chevron.Transactions_chevronClosed { transform: rotate(0deg); }
+
+.Transactions_sortByOptionsLabelElement {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  font-size: var(--text-lg);
+}
+
+.Transactions_sortByOptionsLabelElement span {
+  margin-right: var(--spacing-md2);
+  color: var(--color-primaryViolet);
+  font-weight: 700;
+}
+
+/* ── The filter panel ───────────────────────────────────────────────────── */
+
+.TransactionFilterOptions_filterWrapper {
+  margin-bottom: var(--spacing-md2);
+  padding: 0 var(--spacing-sm4);
+  border-radius: var(--radius-md);
+  background: var(--color-gray900);
+}
+
+.TransactionFilterOptions_filterWrapper h3 {
+  margin-bottom: var(--spacing-md2);
+}
+
+.TransactionFilterOptions_filterContent {
+  position: relative;
+  width: 100%;
+  padding: var(--spacing-lg1);
+  background: var(--color-gray900);
+}
+
+.TransactionFilterOptions_filterContent.TransactionFilterOptions_filterContentOpen {
+  display: block;
+  visibility: visible;
+}
+
+.TransactionFilterOptions_filterContent.TransactionFilterOptions_filterContentClosed {
+  display: none;
+  visibility: hidden;
+}
+
+.TransactionFilterOptions_filterTabsWrapper {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md2);
+}
+
+.TransactionFilterOptions_filterOptions {
+  width: inherit;
+}
+
+/* ── The six tables ─────────────────────────────────────────────────────── */
+
+.DepositTransactions_data,
+.DepositTransactions_header,
+.WithdrawalTransactions_data,
+.WithdrawalTransactions_header,
+.OtherTransactions_data,
+.OtherTransactions_header,
+.TipRainTransactions_data,
+.TipRainTransactions_header,
+.SportsBetsTransactions_header {
+  word-break: keep-all;
+}
+
+.DepositTransactions_table td,
+.BetTransactions_table td,
+.OtherTransactions_table td,
+.TipRainTransactions_table td {
+  width: 50%;
+}
+
+.WithdrawalTransactions_table td {
+  width: 33.33%;
+}
+
+/* Columns that only exist once the content column is wide enough. */
+.BetTransactions_row,
+.OtherTransactions_row,
+.WithdrawalTransactions_row {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .BetTransactions_row,
+  .OtherTransactions_row,
+  .WithdrawalTransactions_row {
+    display: table-cell;
+  }
+}
+
+.BetTransactions_currency { padding-left: var(--spacing-sm1); }
+.BetTransactions_betIdLink { text-decoration: underline; }
+.BetTransactions_dateTooltipTrigger,
+.DepositTransactions_tooltipContent,
+.WithdrawalTransactions_tooltipTrigger,
+.SportsBetsTransactions_tooltipTrigger {
+  width: min-content;
+  white-space: nowrap;
+}
+
+.OtherTransactions_success { color: var(--color-success); }
+
+.TipRainTransactions_currencyWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+}
+
+.TipRainTransactions_userName {
+  display: flex;
+  gap: var(--spacing-sm4);
+  cursor: pointer;
+}
+
+.SportsBetsTransactions_data {
+  padding: var(--spacing-sm1) 0;
+  word-break: keep-all;
+}
+
+.SportsBetsTransactions_fixtureName {
+  max-width: 11.25rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.SportsBetsTransactions_sportsBetText {
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.SportsBetsTransactions_statusNoReturn { color: var(--color-gray300); }
+.SportsBetsTransactions_statusNA { color: var(--color-gray400); }
+
+.SportsBetsTransactions_transactionAmount {
+  display: block;
+  max-width: 6.25rem;
+  overflow: hidden;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.SportsBetsTransactions_table td {
+  overflow: auto;
+  white-space: nowrap;
+}
+
+.SportsBetsTransactions_table td > span {
+  display: flex;
+  gap: var(--spacing-sm4);
+}
+
+/*
+ * The rail-aware breakpoints. `magic-container` carries the state class, so a
+ * table widens when the content column widens rather than when the window does
+ * — which is why opening the notification panel narrows these back to two
+ * columns exactly as it does on the live page.
+ */
+@media (min-width: 1352px) {
+  .magic-container.right-side-opened-only .Transactions_selectRowWrapper { display: flex; flex-direction: row; width: auto; margin-top: unset; }
+  .magic-container.right-side-opened-only .Transactions_selectRowWrapper > button { width: max-content; }
+  .magic-container.right-side-opened-only .Transactions_mobileIcons { display: none; }
+  .magic-container.right-side-opened-only .TransactionFilterOptions_filterTabsWrapper { flex-direction: row; gap: var(--spacing-lg2); padding-top: 0; padding-bottom: 0; }
+  .magic-container.right-side-opened-only .DepositTransactions_table td,
+  .magic-container.right-side-opened-only .WithdrawalTransactions_table td,
+  .magic-container.right-side-opened-only .BetTransactions_table td,
+  .magic-container.right-side-opened-only .OtherTransactions_table td,
+  .magic-container.right-side-opened-only .TipRainTransactions_table td { width: auto; }
+  .magic-container.right-side-opened-only .SportsBetsTransactions_fixtureName { max-width: 15rem; }
+}
+
+@media (min-width: 1167px) {
+  .magic-container.left-side-opened-only .Transactions_selectRowWrapper { display: flex; flex-direction: row; width: auto; margin-top: unset; }
+  .magic-container.left-side-opened-only .Transactions_selectRowWrapper > button { width: max-content; }
+  .magic-container.left-side-opened-only .Transactions_mobileIcons { display: none; }
+  .magic-container.left-side-opened-only .TransactionFilterOptions_filterTabsWrapper { flex-direction: row; gap: var(--spacing-lg2); padding-top: 0; padding-bottom: 0; }
+  .magic-container.left-side-opened-only .DepositTransactions_table td,
+  .magic-container.left-side-opened-only .WithdrawalTransactions_table td,
+  .magic-container.left-side-opened-only .BetTransactions_table td,
+  .magic-container.left-side-opened-only .OtherTransactions_table td,
+  .magic-container.left-side-opened-only .TipRainTransactions_table td { width: auto; }
+  .magic-container.left-side-opened-only .SportsBetsTransactions_fixtureName { max-width: 15rem; }
+}
+
+@media (min-width: 1527px) {
+  .magic-container.both-side-opened .Transactions_selectRowWrapper { display: flex; flex-direction: row; width: auto; margin-top: unset; }
+  .magic-container.both-side-opened .Transactions_selectRowWrapper > button { width: max-content; }
+  .magic-container.both-side-opened .Transactions_mobileIcons { display: none; }
+  .magic-container.both-side-opened .TransactionFilterOptions_filterTabsWrapper { flex-direction: row; gap: var(--spacing-lg2); padding-top: 0; padding-bottom: 0; }
+  .magic-container.both-side-opened .DepositTransactions_table td,
+  .magic-container.both-side-opened .WithdrawalTransactions_table td,
+  .magic-container.both-side-opened .BetTransactions_table td,
+  .magic-container.both-side-opened .OtherTransactions_table td,
+  .magic-container.both-side-opened .TipRainTransactions_table td { width: auto; }
+  .magic-container.both-side-opened .SportsBetsTransactions_fixtureName { max-width: 15rem; }
+}
+
+@media (min-width: 992px) {
+  .magic-container.no-side-opened .Transactions_selectRowWrapper { display: flex; flex-direction: row; width: auto; margin-top: unset; }
+  .magic-container.no-side-opened .Transactions_selectRowWrapper > button { width: max-content; }
+  .magic-container.no-side-opened .Transactions_mobileIcons { display: none; }
+  .magic-container.no-side-opened .TransactionFilterOptions_filterTabsWrapper { flex-direction: row; gap: var(--spacing-lg2); padding-top: 0; padding-bottom: 0; }
+  .magic-container.no-side-opened .DepositTransactions_table td,
+  .magic-container.no-side-opened .WithdrawalTransactions_table td,
+  .magic-container.no-side-opened .BetTransactions_table td,
+  .magic-container.no-side-opened .OtherTransactions_table td,
+  .magic-container.no-side-opened .TipRainTransactions_table td { width: auto; }
+  .magic-container.no-side-opened .SportsBetsTransactions_fixtureName { max-width: 15rem; }
+}
+
+@media (min-width: 1128px) {
+  .magic-container.right-side-opened-only .Transactions_root { padding-top: var(--spacing-lg2); }
+}
+@media (min-width: 943px) {
+  .magic-container.left-side-opened-only .Transactions_root { padding-top: var(--spacing-lg2); }
+}
+@media (min-width: 1303px) {
+  .magic-container.both-side-opened .Transactions_root { padding-top: var(--spacing-lg2); }
+}
+@media (min-width: 768px) {
+  .magic-container.no-side-opened .Transactions_root { padding-top: var(--spacing-lg2); }
+}

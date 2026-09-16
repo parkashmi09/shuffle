@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { cx } from "../lib/carousel";
+import { useSession } from "../lib/sessionContext";
 import ActivityBoard from "../components/casino/ActivityBoard";
+import TokenAirdropOverview from "../components/token/TokenAirdropOverview";
 import data from "../data/airdrop.json";
 
 /**
@@ -38,6 +40,10 @@ function Faq({ q, a, defaultOpen }) {
 }
 
 export default function AirdropPage() {
+  // The Token Overview block is signed-in only on the reference — see the note
+  // in `TokenAirdropOverview`.
+  const { signedIn } = useSession();
+
   return (
     <div>
       <section className="LayoutContainer_root LayoutContainer_mobile-top-md2 LayoutContainer_mobile-bottom-md2 LayoutContainer_desktop-top-lg1 LayoutContainer_desktop-bottom-0 LayoutContainer_column">
@@ -79,6 +85,8 @@ export default function AirdropPage() {
           </div>
 
           <LineDash />
+
+          {signedIn && <TokenAirdropOverview />}
 
           <section className="Flex_root Flex_column Flex_lg1 Flex_center">
             <h2 className="Heading_root Heading_center Heading_heading2 PromotionTile_heading">AIRDROP OVERVIEW</h2>

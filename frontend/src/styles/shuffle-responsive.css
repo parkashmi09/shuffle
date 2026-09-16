@@ -1,0 +1,164 @@
+/* ==========================================================================
+   Narrow-viewport corrections.
+
+   Everything in this file is inside a `max-width` media query, so nothing here
+   can reach the desktop layout: above the breakpoint the rules simply do not
+   exist. That is deliberate — the desktop view is already matched against the
+   reference and must not move.
+
+   Two breakpoints only, both taken from the reference's own `media-query.scss`:
+
+     sm   768px   the phone/tablet line. Below it the left rail is a drawer,
+                  the bottom bar is the navigation, and `.magic-container` is
+                  always `no-side-opened`, so no state-class guard is needed.
+     md   992px   the tablet/desktop line, only used where the reference
+                  itself changes something between 768 and 992.
+
+   Each rule says which reference measurement it is reproducing. The reference
+   was read at 320, 360, 390, 430, 500, 600, 700, 767, 768, 800, 900, 943, 992,
+   1100, 1140, 1200, 1303 and 1400px.
+
+   One trap worth knowing before adding to this file: a media query contributes
+   nothing to specificity, and the captured stylesheets are full of `tag.Class`
+   selectors (`div.IconMenu_root`, `button.HeaderWalletActions_walletBtn`,
+   `.a .b`). A bare class here loses to them and the rule silently does nothing
+   — no warning, no error, it just never applies. Match the original selector's
+   shape rather than adding `!important`, which would leak past the media query
+   the moment anything else needs to override it.
+   ========================================================================== */
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  /* The reference's `userActions` holds exactly one child below `sm` — the
+     account avatar. The bet slip, VIP and chat buttons are not in the DOM at
+     all; they overflow the bar here, which is what pushed the whole document
+     to 440px of scroll width at a 390px viewport. Hidden rather than
+     unmounted so the desktop bar is untouched.
+
+     `div.IconMenu_root` and not `.IconMenu_root`: the captured stylesheet sets
+     `display: block` through `div.IconMenu_root`, and a media query adds no
+     specificity, so the bare class loses (0,1,0) to (0,1,1) and the rule
+     silently does nothing. Match the element qualifier and win on source
+     order instead of reaching for `!important`. */
+  div.IconMenu_root {
+    display: none;
+  }
+
+  /* The account panel is 260px wide and anchored to the right of a 40px
+     avatar. With the bar no longer overflowing it lands inside the viewport,
+     but on a 320px screen 260px + the 8px overhang does not fit, so the
+     overhang is dropped and the panel is clamped to the column. */
+  .ExpandMenuElement_menuWrapper {
+    right: 0;
+  }
+
+  .ExpandMenuElement_expandMenu {
+    max-width: calc(100vw - var(--spacing-md2) * 2);
+  }
+}
+
+/* ── Category toolbar ───────────────────────────────────────────────────── */
+
+@media (max-width: 991.98px) {
+  /*
+   * The search control on the reference's compact category toolbar. It is the
+   * only one of the three that has no captured rule — the provider and sort
+   * buttons already have `SelectMultiple_mobileButton` and
+   * `Select_mobileButton`, and this matches them: 42px square, `gray800`,
+   * `radius-sm1`, no border. Measured on the live toolbar at 390px
+   * (42×42, rgb(42,46,56), 6px radius, 16px icon).
+   *
+   * It lives inside the query because the button only exists below `md` —
+   * above it the reference renders a full search field instead.
+   */
+  .IconButton_root {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    width: 2.625rem;
+    height: 2.625rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm1);
+    background-color: var(--color-gray800);
+    color: inherit;
+    cursor: pointer;
+  }
+}
+
+/* ── Bets board ─────────────────────────────────────────────────────────── */
+
+/* 899px, not 899.98px: this pairs with the captured `.split50` rule, whose own
+   query is `max-width: $breakpoint-sm1 - 1px` → 899px. Same number so the two
+   can never disagree — hiding three cells at a width where `width: 50%` had
+   not yet applied (or the reverse) would lay the table out wrong. */
+@media (max-width: 899px) {
+  /*
+   * The bets feed drops to two columns — Game and Payout.
+   *
+   * The captured `Table.module.scss` already carries the other half of this:
+   *
+   *     .split50 { @media (max-width: $breakpoint-sm1 - 1px) { td { width: 50% } } }
+   *
+   * which only makes sense against a two-column row. With all five columns
+   * still rendered, `width: 50%` each summed to 250% and the table laid out
+   * at 774px inside a 343px column, leaving four columns behind a horizontal
+   * scroll with no affordance. The reference's own `ActivityBaseTable` in
+   * `_app-0f5bed9d4b913f1d.js` settles which two survive — its header list is
+   *
+   *     tblUser        isHidden: W
+   *     tblGame
+   *     tblBetAmount   isHidden: W
+   *     tblMultiplier  isHidden: W
+   *     tblPayout
+   *
+   * with `W = useBreakpoint({ breakpoint: SM1 })`, and its loading skeleton
+   * switches to exactly two columns on the same flag.
+   *
+   * Done in CSS rather than by dropping the cells in `ActivityBoard`: the
+   * breakpoint here is the viewport, matching `.split50`'s own query, whereas
+   * the reference measures the *content column* — so a desktop with both rails
+   * open collapses there and not here. Hiding the cells keeps that difference
+   * confined to a stylesheet that stops existing at 900px, instead of putting
+   * a second, subtly different breakpoint into the component.
+   *
+   * Scoped to `.Table_split50`, which `ActivityBoard` sets only on the bets
+   * feed — the race and airdrop boards have four columns of their own and are
+   * not `split50`.
+   */
+  .Table_split50 tr > td:nth-child(1),
+  .Table_split50 tr > td:nth-child(3),
+  .Table_split50 tr > td:nth-child(4) {
+    display: none;
+  }
+
+  /*
+   * The reference caps the game title on the same flag — the cell renders
+   * `style={{ maxWidth: W ? 150 : 200 }}`. Without it the longest game name in
+   * the feed sets the column's min-content width and the two remaining
+   * columns still total more than the 343px available, so `width: 50%` never
+   * takes effect. 150px is the reference's number.
+   */
+  .Table_split50 .ActivityBaseTable_gameTitle {
+    max-width: 150px;
+  }
+}
+
+/* ── Right rail ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  /*
+   * Below `sm` the rail's inner container is `position: fixed`, so it escapes
+   * the closed aside's `overflow: hidden` and paints over the whole page even
+   * though the aside itself measures 0 wide. The reference has no such
+   * element while the rail is shut — it unmounts the panel — so the closed
+   * state is taken out of the paint here instead. Above `sm` the container is
+   * `display: contents` and the aside's own margin does the sliding, which is
+   * why this is a phone-only rule.
+   */
+  .CasinoAside_disableMobileView .AnimateMobileView_animateContainer {
+    display: none;
+  }
+}

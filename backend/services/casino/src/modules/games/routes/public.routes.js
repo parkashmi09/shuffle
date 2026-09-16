@@ -37,5 +37,23 @@ module.exports = function publicRoutes(deps) {
    */
   router.get('/collections/:collection', validate(v.readCollection), ctrl.collection);
 
+  /**
+   * One game, by uuid — the game screen's read.
+   *
+   * ── WHY THIS IS NOT `GET /:uuid` ─────────────────────────────────────
+   *
+   * It was, declared last so the specific routes above it won. That is enough
+   * WITHIN this file and nowhere near enough across the module: the loader
+   * mounts `public` before `user`, both on `/casino/games`, so a bare
+   * `/:uuid` also sat in front of every route in `user.routes.js`.
+   * `/favourites` and `/recently-played` arrived here as uuids and answered
+   * `404 Game not found` — a player's starred games came back empty on every
+   * page load, which looked like favourites not persisting.
+   *
+   * A segment of its own cannot shadow anything, in this file or a later one,
+   * and does not depend on declaration order to be correct.
+   */
+  router.get('/detail/:uuid', validate(v.uuidParam), ctrl.byUuid);
+
   return router;
 };

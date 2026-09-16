@@ -1,0 +1,800 @@
+/* ==========================================================================
+   The signed-in header.
+
+   Compiled by hand from the reference's own SCSS modules, which the capture
+   in `assets/webpack---_N_E/src/components/Header/` preserved through the
+   site's source maps:
+
+     Header.module.scss              → already in shuffle-home.css
+     HeaderWalletActions.module.scss → already in shuffle-home.css
+     HeaderBalanceSelector.module.scss
+     Balance/BalanceSelect.module.scss
+     Balance/BalancePopup.module.scss
+     Balance/BalanceItem.module.scss
+     Balance/BalanceTypeSearch.module.scss
+     IconMenu/IconMenu.module.scss
+     IconMenu/IconMenuItem.module.scss
+     UserMenu/UserMenu.module.scss
+     UserMenu/ExpandMenuElement.module.scss
+
+   The first two are already in the captured CSS because they ship in the
+   signed-out bundle; the rest are only pulled in once a session exists, so the
+   signed-out capture never contained them. Everything below is the same
+   declarations in the same order — only the `@include media-query.*` mixins
+   are expanded, using the real definitions from `src/styles/media-query.scss`:
+
+     media-sm-and-up(true)   768 → +360 right, +175 left, +535 both, 768 none
+     media-md-and-up(true)   992 → 1352 / 1167 / 1527 / 992
+     media-md-and-up()       @media (min-width: 992px)
+     media-xs-and-up()       @media (min-width: 600px)
+     media-400-and-up()      @media (min-width: 400px)
+     media-500-down-either-side-open   max 860 right, max 675 left
+     mobile-landscape        max-width 992, max-height 768, landscape
+
+   `(true)` is the reference's stand-in for a container query: the breakpoint
+   shifts by the width of whichever rails are open, which is what the
+   `.magic-container` state class on <main> encodes.
+   ========================================================================== */
+
+/* ── Balance select ─────────────────────────────────────────────────────── */
+
+.BalanceSelect_root {
+  position: relative;
+  display: flex;
+  gap: var(--spacing-sm4);
+}
+
+.BalanceSelect_selectContainer {
+  width: 100%;
+}
+
+.BalanceSelect_balanceBtn {
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--color-gray700);
+  /* `--grayscale-gray-800` is undefined in the reference too — it is not in its
+     own colors.css. The declaration is therefore invalid at computed-value
+     time and the button paints transparent, which is what the live header
+     shows: a bordered pill on the black bar. Reproduced rather than
+     "corrected", because correcting it would change the design. */
+  background: var(--grayscale-gray-800);
+  height: var(--spacing-lg4);
+  gap: var(--spacing-sm4);
+  padding: var(--spacing-md) var(--spacing-md2);
+  border-radius: var(--radius-sm1);
+  width: 100%;
+  cursor: pointer;
+  transition: var(--animation-slow-duration);
+  text-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.BalanceSelect_balanceBtn .BalanceSelect_amount {
+  max-width: 8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 860px) {
+  .magic-container.right-side-opened-only .BalanceSelect_balanceBtn .BalanceSelect_amount {
+    max-width: 3.75rem;
+  }
+}
+
+@media (max-width: 675px) {
+  .magic-container.left-side-opened-only .BalanceSelect_balanceBtn .BalanceSelect_amount {
+    max-width: 3.75rem;
+  }
+}
+
+/* Source order: this follows the clamp above, so above 400px it wins. */
+@media (min-width: 400px) {
+  .BalanceSelect_balanceBtn .BalanceSelect_amount {
+    max-width: none;
+  }
+}
+
+.BalanceSelect_balanceBtn > * {
+  pointer-events: none;
+}
+
+.BalanceSelect_balanceBtn img {
+  transition: var(--animation-slow-duration);
+}
+
+@media (hover: hover) {
+  .BalanceSelect_balanceBtn:hover {
+    border: 1px solid var(--color-primaryViolet);
+  }
+}
+
+.BalanceSelect_balanceBtn:active {
+  transform: var(--active-state);
+}
+
+.BalanceSelect_balanceBtn p {
+  margin-right: var(--spacing-md2);
+}
+
+@media (hover: hover) {
+  .BalanceSelect_balanceBtn:hover {
+    background-color: var(--color-gray600);
+  }
+}
+
+.BalanceSelect_skeleton {
+  width: 5rem;
+  height: var(--spacing-md1);
+  border-radius: var(--radius-sm1);
+}
+
+.BalanceSelect_buttonGroup {
+  display: flex;
+  flex-flow: row;
+}
+
+.BalanceSelect_arrow {
+  margin-left: auto;
+}
+
+.BalanceSelect_arrowDown {
+  transform: rotateX(180deg);
+}
+
+/* ── The currency popup ─────────────────────────────────────────────────── */
+
+.BalancePopup_root {
+  position: absolute;
+  top: 3.5rem;
+  left: 50%;
+  background: var(--color-gray800);
+  color: white;
+  opacity: 0;
+  transform: translateX(-50%) var(--active-state);
+  /* The reference sets only `flex-direction` here; the element is a flex
+     container in its own right, so the display it implies is spelled out. */
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-sm1);
+  z-index: var(--z-overlay);
+  border: 1px solid var(--color-gray600);
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-width: 14rem;
+  transition: var(--animation-fast-duration) var(--animation-standard-ease);
+}
+
+@media only screen and (max-width: 992px) and (max-height: 768px) and (orientation: landscape) {
+  .BalancePopup_root {
+    max-height: 50vh;
+  }
+}
+
+.BalancePopup_container {
+  overflow: hidden;
+  overflow-y: auto;
+  background: var(--color-gray800);
+  max-height: 20rem;
+}
+
+.BalancePopup_container > button:last-child {
+  border-bottom: 0;
+}
+
+.BalancePopup_balanceItemWrapper {
+  overflow: hidden;
+  height: var(--spacing-lg3);
+}
+
+.BalancePopup_animate {
+  transform: translateX(-50%) scale(1);
+  opacity: 1;
+}
+
+/* ── One currency row ───────────────────────────────────────────────────── */
+
+.BalanceItem_root {
+  overflow: hidden;
+  height: var(--spacing-lg3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.57rem var(--spacing-md2);
+  font-weight: 400;
+  cursor: pointer;
+  font-size: var(--text-lg);
+  color: white;
+  background: none;
+  border: 0;
+  width: 100%;
+  transition: var(--animation-slow-duration);
+  background: var(--color-gray800);
+  border-bottom: 1px solid var(--color-gray600);
+}
+
+@media (hover: hover) {
+  .BalanceItem_root:hover {
+    background: var(--color-gray600);
+  }
+}
+
+.BalanceItem_root:active {
+  background: var(--color-gray900);
+}
+
+.BalanceItem_active {
+  background: var(--color-gray600);
+  font-weight: 700;
+}
+
+.BalanceItem_cryptoIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--spacing-sm5);
+  gap: var(--spacing-sm4);
+  pointer-events: none;
+}
+
+.BalanceItem_amount {
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.BalanceItem_currencyText {
+  text-align: left;
+  width: 2.25rem;
+  line-height: 1;
+}
+
+/* ── The popup's filter box ─────────────────────────────────────────────── */
+
+.BalanceTypeSearch_root {
+  padding: 0.8rem var(--spacing-md2);
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.BalanceTypeSearch_root input {
+  border: 1px solid var(--color-gray700);
+  height: var(--spacing-lg3);
+  background: var(--color-gray900);
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) var(--spacing-lg2);
+}
+
+.BalanceTypeSearch_root img {
+  width: var(--spacing-md1);
+  height: var(--spacing-md1);
+}
+
+.BalanceTypeSearch_wrapper {
+  position: relative;
+}
+
+/*
+ * The magnifier.
+ *
+ * The reference gets it from its shared `Input` component, which the capture
+ * does not include — only the space it occupies, as the `padding-left:
+ * var(--spacing-lg2)` on the input above. This places the mark in that space;
+ * the sizing beside it (`--spacing-md1`) is the reference's own.
+ */
+.BalanceTypeSearch_searchIcon {
+  position: absolute;
+  top: 50%;
+  left: var(--spacing-md);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.BalanceTypeSearch_cleanButton {
+  background: none;
+  border: 0;
+  position: absolute;
+  top: 0.8125rem;
+  padding: 0;
+  right: var(--spacing-sm5);
+  transition: var(--animation-duration) all;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .BalanceTypeSearch_cleanButton:hover {
+    opacity: 0.8;
+  }
+}
+
+.BalanceTypeSearch_cleanButton:active {
+  opacity: 1;
+  transform: var(--active-state);
+}
+
+.BalanceTypeSearch_hideButton {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── The icon row (notifications, chat) ─────────────────────────────────── */
+
+div.IconMenu_root {
+  display: block;
+}
+
+.IconMenu_menuWrapper {
+  display: flex;
+}
+
+@media (min-width: 600px) {
+  .IconMenu_menuWrapper {
+    column-gap: var(--spacing-sm5);
+  }
+}
+
+.IconMenu_menu {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-sm4);
+}
+
+@media (hover: hover) {
+  .IconMenu_menu:hover .IconMenu_expandMenuWrapper {
+    display: flex;
+  }
+
+  .IconMenu_menu:hover .IconMenu_expandMenuWrapper .IconMenu_expandMenuWrapperInner {
+    flex-direction: column;
+    gap: var(--spacing-md2);
+    align-items: flex-start;
+  }
+
+  .IconMenu_menu:hover .IconMenu_arrowIcon {
+    transform: rotate(180deg);
+    filter: var(--filter-primaryViolet);
+  }
+}
+
+.IconMenu_expandMenuWrapper {
+  position: absolute;
+  padding-top: var(--spacing-md2);
+  top: var(--spacing-lg2);
+  display: none;
+  left: var(--spacing-sm5-neg);
+}
+
+@media (hover: hover) {
+  .IconMenu_expandMenuWrapper:hover {
+    display: flex;
+  }
+}
+
+.IconMenu_expandMenuWrapperInner {
+  border-radius: var(--radius-md);
+  background-color: var(--color-gray900);
+  padding: var(--spacing-sm5);
+  display: flex;
+}
+
+.IconMenu_arrowIcon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: var(--animation-duration) transform;
+}
+
+.IconMenuItem_badgeWrapper {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* ── The account menu ───────────────────────────────────────────────────── */
+
+.UserMenu_root {
+  position: relative;
+}
+
+.UserMenu_root .UserMenu_userMenuWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  gap: var(--spacing-sm5);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  color: white;
+  transition: var(--animation-duration);
+}
+
+.UserMenu_root .UserMenu_userMenuWrapper:active {
+  transform: var(--active-state-sm);
+}
+
+.UserMenu_root .UserMenu_userMenuWrapper > div {
+  pointer-events: none;
+}
+
+.UserMenu_root .UserMenu_userMenuWrapper:focus ~ div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.UserMenu_root .UserMenu_userMenuWrapper .UserMenu_avatarButton {
+  width: var(--spacing-lg3);
+  height: var(--spacing-lg3);
+  background-color: var(--color-gray700);
+}
+
+.UserMenu_root .UserMenu_userMenuWrapper .UserMenu_avatarButton img {
+  width: var(--spacing-md2);
+  height: var(--spacing-md2);
+}
+
+@media (hover: hover) {
+  .UserMenu_root .UserMenu_userMenuWrapper:hover .UserMenu_avatarButton {
+    background: var(--color-gray600);
+  }
+}
+
+.UserMenu_root .UserMenu_userMenuWrapper:focus .UserMenu_avatarButton {
+  background-color: var(--color-primaryNeonPurple);
+}
+
+.UserMenu_root:hover .UserMenu_userMenuWrapper ~ div,
+.UserMenu_root:focus-within .UserMenu_userMenuWrapper ~ div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.UserMenu_disable {
+  pointer-events: none;
+}
+
+/*
+ * Touch has no hover, and `:focus-within` does not survive a tap on a child
+ * button on every mobile browser. The component toggles this class on tap so
+ * the same panel opens; it is additive and leaves the rules above untouched.
+ */
+.UserMenu_root.UserMenu_open .ExpandMenuElement_menuWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── The dropdown panel ─────────────────────────────────────────────────── */
+
+.ExpandMenuElement_expandMenu {
+  min-width: 16.25rem;
+  width: 100%;
+  padding: var(--spacing-md2);
+  background-color: var(--color-gray900);
+  border: 1px solid var(--color-gray600);
+  border-radius: var(--radius-md);
+  max-height: 72vh;
+  overflow-y: scroll;
+  list-style-type: none;
+  margin: 0;
+}
+
+@media (min-width: 992px) {
+  .ExpandMenuElement_expandMenu {
+    max-height: 90vh;
+  }
+}
+
+.ExpandMenuElement_menuItem {
+  display: flex;
+  width: 100%;
+  height: var(--spacing-lg4);
+  border-radius: var(--radius-sm1);
+  align-items: center;
+  justify-content: flex-start;
+  padding: var(--spacing-md);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  color: white;
+  font-size: var(--text-lg);
+  text-align: left;
+  transition: var(--animation-duration);
+}
+
+@media (hover: hover) {
+  .ExpandMenuElement_menuItem:hover {
+    background-color: var(--color-gray800);
+  }
+}
+
+.ExpandMenuElement_menuItem:active {
+  transform: var(--active-state);
+}
+
+/*
+ * Not in the reference — every item there goes somewhere. Ours mostly cannot
+ * yet (§4.3), and an item that looks live and answers nothing is worse than one
+ * that says so on hover. The appearance is left alone deliberately: only the
+ * cursor changes, so the panel still matches the capture. Delete this rule as
+ * the screens behind the items get built.
+ */
+.ExpandMenuElement_menuItem:disabled {
+  cursor: not-allowed;
+}
+
+.ExpandMenuElement_menuIcon {
+  width: var(--spacing-md2);
+  height: var(--spacing-md2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: var(--spacing-sm5);
+}
+
+.ExpandMenuElement_menuWrapper {
+  position: absolute;
+  padding-top: var(--spacing-md2);
+  transition: var(--animation-duration) opacity;
+  z-index: var(--z-overlay);
+  opacity: 0;
+  right: calc(var(--spacing-sm1) * -1);
+  top: var(--spacing-lg2);
+  pointer-events: none;
+}
+
+@media (min-width: 992px) {
+  .ExpandMenuElement_menuWrapper {
+    right: 0;
+  }
+}
+
+div.ExpandMenuElement_hide {
+  display: none;
+}
+
+.ExpandMenuElement_endIcon {
+  margin-left: var(--spacing-sm5);
+}
+
+/* ── The avatar ─────────────────────────────────────────────────────────
+   Read from the live site's stylesheet rather than the capture: `Avatar` is
+   not one of the modules the source maps preserved, and the signed-out bundle
+   never loads it. */
+
+.Avatar_root {
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.Avatar_background {
+  width: var(--spacing-lg4);
+  height: var(--spacing-lg4);
+  background: var(--color-gray600);
+}
+
+.Avatar_background img {
+  width: 1.75rem;
+}
+
+.Avatar_large {
+  width: 5.9375rem;
+  height: 5.9375rem;
+}
+
+.Avatar_large > img {
+  width: 4rem;
+}
+
+/* ── The VIP card at the top of the account menu ────────────────────────── */
+
+.UserMenuVipCard_userMenuVipWrapper {
+  background-color: var(--color-gray800);
+  border-radius: var(--radius-sm1);
+  padding: var(--spacing-md2);
+  margin-bottom: var(--spacing-md2);
+  font-size: var(--text-md);
+  line-height: 0;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm4);
+  transition: var(--animation-duration);
+}
+
+@media (hover: hover) {
+  .UserMenuVipCard_userMenuVipWrapper:hover {
+    background-color: var(--color-gray700);
+  }
+}
+
+.UserMenuVipCard_userMenuVipWrapper:active {
+  transform: var(--active-state);
+}
+
+.UserMenuVipCard_name {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+}
+
+.UserMenuVipCard_username {
+  font-weight: 500;
+  font-size: var(--text-xl);
+}
+
+.UserMenuVipCard_lineBreak {
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-image: none;
+  border-top: 1px solid var(--color-gray600);
+  width: 100%;
+  margin: var(--spacing-sm4) 0;
+}
+
+.UserMenuVipCard_userMenuVipProgress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm4);
+}
+
+.UserMenuVipCard_levelPercentage {
+  color: #fff;
+  font-size: var(--text-md);
+}
+
+/*
+ * `ProgressBarSection_graphContent` is the shared VIP-progress block and carries
+ * `padding: var(--spacing-lg1)` on a `--color-gray900` ground — right on the VIP
+ * page, wrong inside a 260px menu card, where it draws a dark inset box around
+ * the bar. The reference cancels both with:
+ *
+ *     div.UserMenuVipCard_progressBarContent { padding: 0; background: none; }
+ *
+ * ── WHY THAT SELECTOR IS NOT ENOUGH HERE ─────────────────────────────────
+ *
+ * `shuffle-home.css` also carries four container-scoped copies of the padding,
+ * e.g. `.magic-container.left-side-opened-only .ProgressBarSection_graphContent`
+ * — three classes, which outranks the reference's two-class-plus-element
+ * override and puts the 24px back.
+ *
+ * They do not collide on the live site because its CSS modules are split per
+ * route: those media blocks ship with the VIP page's chunk and are simply not
+ * present when you are on the home page. This clone concatenates every
+ * stylesheet into one bundle, so they are always live and the override has to
+ * outrank them. Same two declarations, one class heavier.
+ */
+.ExpandMenuElement_expandMenu div.UserMenuVipCard_progressBarContent.ProgressBarSection_graphContent {
+  padding: 0;
+  background: none;
+}
+
+/* ── The mobile balance bar, below the header ───────────────────────────── */
+
+.HeaderBalanceSelector_root {
+  position: sticky;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--color-gray700);
+  border-bottom: 1px solid var(--color-gray700);
+  color: white;
+  top: var(--height-header);
+  height: var(--spacing-lg3);
+  z-index: var(--z-header);
+}
+
+@media (min-width: 1128px) {
+  .magic-container.right-side-opened-only .HeaderBalanceSelector_root {
+    display: none;
+  }
+}
+
+@media (min-width: 943px) {
+  .magic-container.left-side-opened-only .HeaderBalanceSelector_root {
+    display: none;
+  }
+}
+
+@media (min-width: 1303px) {
+  .magic-container.both-side-opened .HeaderBalanceSelector_root {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .magic-container.no-side-opened .HeaderBalanceSelector_root {
+    display: none;
+  }
+}
+
+.HeaderBalanceSelector_open {
+  border-top: 1px solid var(--color-primaryViolet);
+  border-bottom: 1px solid var(--color-primaryViolet);
+}
+
+.HeaderBalanceSelector_skeleton {
+  width: 5rem;
+  margin: auto 0;
+  height: var(--spacing-md1);
+  border-radius: var(--radius-sm1);
+}
+
+.HeaderBalanceSelector_balanceBtn {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  background-color: var(--color-gray800);
+  padding-left: var(--spacing-md2);
+  padding-right: var(--spacing-md2);
+}
+
+.HeaderBalanceSelector_arrow {
+  margin-left: auto;
+  transition: var(--animation-duration);
+  pointer-events: none;
+}
+
+.HeaderBalanceSelector_arrowDown {
+  transform: rotateX(180deg);
+}
+
+.HeaderBalanceSelector_popup {
+  max-width: 80%;
+}
+
+.HeaderBalanceSelector_content {
+  pointer-events: none;
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+/* ── The rail's grouped-section divider ─────────────────────────────────
+   `NavigationLineBreakWrapper` boxes a group of nav links between two hairlines
+   and separates the groups inside it. `NavContent.jsx` has always used the
+   class — for the two sport directories, and now for the signed-in Profile
+   group — but the capture never carried its rules, so nothing drew. Read off
+   the live stylesheet.
+
+   The `> div` selectors are the reference's own: each direct child group gets a
+   bottom hairline and 10px of breathing room, and the last one drops its rule
+   so the wrapper's own bottom border is not doubled. */
+
+.NavigationLineBreakWrapper_root {
+  margin: var(--spacing-sm1) 0;
+  border-top: 1px solid var(--color-gray700);
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.NavigationLineBreakWrapper_root > div {
+  border-bottom: 1px solid var(--color-gray700);
+  padding-top: var(--spacing-sm5);
+  padding-bottom: var(--spacing-sm5);
+}
+
+.NavigationLineBreakWrapper_root > div:last-child {
+  border-bottom: 0;
+}
+
+.NavigationLineBreakWrapper_expanded {
+  margin: var(--spacing-sm5) 0;
+}

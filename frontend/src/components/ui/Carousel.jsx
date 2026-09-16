@@ -1,4 +1,17 @@
 import { cx } from "../../lib/carousel";
+import { navigate } from "../../lib/router";
+
+/**
+ * Follow a heading's link through the router.
+ *
+ * `href` is the real route either way — it is what the anchor carries for a
+ * middle click or a copied link — but a plain navigation would reload the app.
+ * A header with no destination (`#`) keeps the anchor inert.
+ */
+const follow = (href) => (e) => {
+  e.preventDefault();
+  if (href && href !== "#") navigate(href);
+};
 
 /** Section heading row: icon + title link on the left, view-all + arrows on the right. */
 export function CarouselHeader({
@@ -18,7 +31,7 @@ export function CarouselHeader({
     <div className={cx("Flex_root Flex_spaced", className)}>
       <h3 className="Heading_root Heading_h3 CarouselHeader_heading">
         {children || (
-          <a className="TextLink_root" href={href} onClick={(e) => e.preventDefault()}>
+          <a className="TextLink_root" href={href} onClick={follow(href)}>
             <img alt={title} className={iconClass} height={iconSize || undefined} src={icon} width={iconSize || undefined} />
             <span>{title}</span>
           </a>
@@ -29,7 +42,7 @@ export function CarouselHeader({
           <a
             className={cx("TextLink_root CarouselHeader_viewAllButton", alwaysVisible && "CarouselHeader_viewAllButtonAlwaysVisible")}
             href={viewAllHref || href}
-            onClick={(e) => e.preventDefault()}
+            onClick={follow(viewAllHref || href)}
           >
             {viewAll}
           </a>

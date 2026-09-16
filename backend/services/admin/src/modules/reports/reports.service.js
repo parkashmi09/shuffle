@@ -1192,8 +1192,14 @@ class ReportsService {
        */
       vip: {
         level: vip.level,
+        // The rank as a person reads it — "Bronze 5", "Unranked". An operator
+        // looking at a report should not have to know that level 6 is Bronze 5,
+        // and the number alone stopped being self-explanatory when the ladder
+        // gained named tiers.
+        name: vip.name,
         card: vip.card,
         nextLevel: vip.nextLevel,
+        nextName: vip.nextName,
         wagerToNextLevel: vip.wagerToNextLevel,
         progressPct: vip.progressPct,
       },

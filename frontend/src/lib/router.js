@@ -44,7 +44,11 @@ export const routes = {
   home: "/",
   lottery: "/lottery",
   airdrop: "/airdrop",
+  // The reference serves this one off the ROOT, not under /casino — the
+  // sidebar link is `/favourites`. `/casino/favourites` 404s there.
+  favourites: "/favourites",
   latest: "/casino/categories/latest-releases",
+  recent: "/casino/recently-played",
   challenges: "/challenges",
   promotions: "/promotions",
   originals: "/casino/categories/originals",
@@ -107,6 +111,8 @@ export const routes = {
   vip: "/vip-program",
   blog: "/blog",
   affiliate: "/affiliate",
+  transactions: "/transactions",
+  "shuffle-wise": "/shuffle-wise/self-exclusion",
   "promo-race": "/promotions/100000-weekly-race",
   "promo-freak": "/promotions/freak-show",
   "promo-level": "/promotions/level-up",

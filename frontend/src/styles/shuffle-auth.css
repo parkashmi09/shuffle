@@ -77,15 +77,6 @@ label.Checkbox_root.Checkbox_missingLabel {
   display: block;
 }
 
-.FormControlWrapper_root {
-  text-align: left;
-  width: 100%;
-  transition: opacity var(--animation-duration);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm1);
-}
-
 .Label_root {
   display: inline-flex;
   font-size: var(--text-md);
@@ -244,22 +235,6 @@ label.Checkbox_root.Checkbox_missingLabel {
   font-weight: 500;
 }
 
-.Input_root {
-  height: var(--spacing-lg4);
-  background-color: var(--color-gray800);
-  border-radius: var(--radius-sm1);
-  width: 100%;
-  color: #fff;
-  display: block;
-  text-align: left;
-  font-size: var(--text-lg);
-  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) var(--spacing-md2);
-  box-sizing: border-box;
-  border: 1px solid rgba(0, 0, 0, 0);
-  text-overflow: ellipsis;
-  transition: opacity var(--animation-duration);
-}
-
 .Input_root:focus {
   outline: none;
   border: 1px solid var(--color-primaryViolet);
@@ -291,11 +266,6 @@ label.Checkbox_root.Checkbox_missingLabel {
   border: 1px solid var(--color-primaryViolet) !important;
 }
 
-.Input_outline {
-  background-color: rgba(0, 0, 0, 0);
-  border: 1px solid var(--color-gray700);
-}
-
 .Input_outline:-webkit-autofill {
   -webkit-box-shadow: inset 0 0 0 var(--spacing-lg4) rgba(0, 0, 0, 0), inset 0 0 0 var(--spacing-lg4) rgba(0, 0, 0, 0), inset 0 0 0 var(--spacing-lg4) rgba(0, 0, 0, 0), inset 0 0 0 var(--spacing-lg4) rgba(0, 0, 0, 0);
 }
@@ -304,38 +274,10 @@ label.Checkbox_root.Checkbox_missingLabel {
   border: 1px solid var(--color-gray700);
 }
 
-.Input_hasPrefix {
-  padding-left: 2.25rem;
-}
-
-.Input_warning {
-  border: 1px solid var(--color-warning);
-}
-
-.Input_hasError {
-  border: 1px solid var(--color-error);
-}
-
-.Input_isValid {
-  border: 1px solid var(--color-success);
-}
-
 .Input_readOnly, .Input_readOnly:read-only {
   border: 1px solid var(--color-gray700);
   cursor: default;
   background: none;
-}
-
-.Input_hasRightIcon {
-  padding-right: var(--spacing-lg4);
-}
-
-.InputWrapper_root {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  transition: opacity var(--animation-duration);
 }
 
 .SingleDateInput_fieldRow {
@@ -405,19 +347,6 @@ label.Checkbox_root.Checkbox_missingLabel {
   border: 1px solid var(--color-gray700);
 }
 
-.TextInput_formControlWrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  text-align: left;
-  gap: var(--spacing-sm1);
-}
-
-.TextInput_labelBlock {
-  display: flex;
-  flex-direction: row;
-}
-
 .TextInput_hasRightLabel {
   width: auto;
 }
@@ -425,41 +354,6 @@ label.Checkbox_root.Checkbox_missingLabel {
 .TextInput_label, .TextInput_rightLabel {
   font-weight: 500;
   font-size: var(--text-md);
-}
-
-.TextInput_rightLabel {
-  color: var(--color-gray300);
-}
-
-.TextInput_inputPrefix {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  left: var(--spacing-md);
-}
-
-.TextInput_labelGroup {
-  display: flex;
-  justify-content: space-between;
-}
-
-.TextInput_warning {
-  color: var(--color-warning);
-}
-
-.TextInput_icon {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: var(--spacing-lg4);
-  background: rgba(0, 0, 0, 0);
-  height: var(--spacing-lg4);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
 }
 
 .ModalBackButton_backButton {
@@ -659,7 +553,14 @@ label.Checkbox_root.Checkbox_missingLabel {
   align-items: center;
 }
 
-.ModalHeader_heading {
+/*
+ * `Heading_root` is on the same element, and `.Heading_h3` is declared in a
+ * sheet imported after this one — so the plain `.ModalHeader_heading` loses the
+ * font size to it and the dialog heading renders at h3 (22px) where the
+ * reference uses h2 (26px). Qualifying with `.Heading_root` matches the markup
+ * the reference itself emits and wins on specificity rather than on order.
+ */
+.Heading_root.ModalHeader_heading {
   font-size: var(--text-h3);
   line-height: 130%;
   margin-bottom: var(--spacing-sm4);
@@ -667,7 +568,7 @@ label.Checkbox_root.Checkbox_missingLabel {
 
 @media(min-width:768px) {
 
-  .ModalHeader_heading {
+  .Heading_root.ModalHeader_heading {
     font-size: var(--text-h2);
   }
 
@@ -685,6 +586,47 @@ label.Checkbox_root.Checkbox_missingLabel {
   font-size: var(--text-lg);
   font-style: normal;
   font-weight: 400;
+}
+
+/*
+ * The generic confirmation dialog — reference `GenericModal`, which is what the
+ * account menu's Logout opens. One shell serves every "are you sure": an icon,
+ * a heading, optional body copy, and a cancel/confirm pair.
+ */
+
+.GenericModal_generalModalContainer {
+  margin-top: var(--spacing-md2);
+}
+
+@media (min-width: 992px) {
+  .GenericModal_generalModalContainer {
+    margin-top: 0;
+  }
+}
+
+.ButtonGroup_root {
+  margin-top: var(--spacing-lg2);
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: var(--spacing-md2);
+}
+
+.ButtonGroup_root button {
+  max-width: 13.875rem;
+  white-space: nowrap;
+}
+
+/* A dialog with only a confirm button gives it the whole row. */
+.ButtonGroup_root button:only-child {
+  max-width: 100%;
+}
+
+/* The optional paragraph between the heading and the buttons. */
+.body_root {
+  font-size: var(--text-lg);
+  text-align: center;
+  margin-bottom: var(--spacing-md2);
 }
 
 .SocialLinks_social {

@@ -1243,3 +1243,181 @@ div.GameProviders_cardGridElement {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/*
+ * The mark beside a page title.
+ *
+ * A category's is a square glyph and a provider's is a wide wordmark, so the
+ * box is bound by height and lets the width follow rather than forcing both
+ * into 24×24 and squashing the logo.
+ */
+.PageHeader_icon {
+  height: var(--spacing-lg1);
+  width: auto;
+  max-width: 14rem;
+  object-fit: contain;
+  flex-shrink: 0;
+  /* `Flex_root` sets no `align-items`, so the default `stretch` drops a
+     fixed-height image at the top of a line box the heading makes taller. */
+  align-self: center;
+  /* The row's `Flex_md2` gap is one space for every pair in it. The mark and
+     the title it belongs to want to sit closer than that without pulling the
+     back button in with them, so the mark pays the difference back. */
+  margin-right: calc(var(--spacing-sm4) - var(--spacing-md2));
+}
+
+/* Below `md` the title moves into the toolbar, and the mark with it. */
+.GamesToolbar_root .Heading_truncate {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+}
+
+.GamesToolbar_root .PageHeader_icon {
+  height: var(--spacing-md2);
+  max-width: 10rem;
+}
+
+/*
+ * The empty state on a per-player game list — reference `CardGridEmpty`.
+ *
+ * A dashed panel that holds the grid's place, NOT the centred icon-and-blurb
+ * the right rail uses. `MyGamesPage` reached for `RightSidebarEmptyState_*`
+ * because it was the only empty state in the project; that component is sized
+ * for a 22rem sidebar and reads as a stray paragraph across a full page.
+ *
+ * The height drops to 21.875rem once a side panel is open, at the width each
+ * panel actually opens — which is why there are three rules and three
+ * different breakpoints rather than one.
+ */
+.CardGridEmpty_root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.625rem;
+  height: 28rem;
+  border: 1px dashed var(--color-gray700);
+  border-radius: var(--radius-md);
+  background-color: var(--color-gray900);
+}
+
+.CardGridEmpty_root p {
+  color: #fff;
+  font-size: var(--text-title);
+  font-weight: 700;
+}
+
+@media (min-width: 943px) {
+
+  .magic-container.left-side-opened-only .CardGridEmpty_root {
+    height: 21.875rem;
+  }
+
+}
+
+@media (min-width: 1128px) {
+
+  .magic-container.right-side-opened-only .CardGridEmpty_root {
+    height: 21.875rem;
+  }
+
+}
+
+@media (min-width: 1303px) {
+
+  .magic-container.both-side-opened .CardGridEmpty_root {
+    height: 21.875rem;
+  }
+
+}
+
+/*
+ * The open dropdown panel for the toolbar's filter and sort controls.
+ *
+ * NOT from the capture. The reference renders both panels in a portal, lazily,
+ * on a real pointer event — so every button class exists in the captured CSS
+ * (`SelectButton_open`, `SelectMultiple_labelTextOpen`, `SelectMultiple_up`)
+ * and no panel rule does. This is the smallest panel that behaves, drawn from
+ * the same tokens as the surfaces around it; replace it wholesale if the real
+ * one is ever captured.
+ */
+.SelectMenu_panel {
+  position: absolute;
+  z-index: var(--z-overlay-above);
+  top: calc(100% + var(--spacing-sm2));
+  left: 0;
+  min-width: 100%;
+  /* Roughly eight rows, then scroll — the provider list is 14 long and the
+     sort list is 4, and a panel taller than the grid behind it is worse than
+     a scrollbar. */
+  max-height: 21rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--spacing-sm2);
+  list-style: none;
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-md);
+  background-color: var(--color-gray800);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+/* The sort control sits at the right edge of the toolbar, so its panel hangs
+   from that edge instead of running off the page. */
+.SelectMenu_panelRight {
+  left: auto;
+  right: 0;
+}
+
+.SelectMenu_option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm2);
+  width: 100%;
+  padding: var(--spacing-sm3) var(--spacing-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-gray300);
+  font-size: var(--text-md);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.SelectMenu_option:hover {
+  background-color: var(--color-gray700);
+  color: #fff;
+}
+
+.SelectMenu_optionActive {
+  color: #fff;
+}
+
+.SelectMenu_optionCount {
+  color: var(--color-gray400);
+  font-weight: 500;
+}
+
+/*
+ * Game card artwork: cover, not stretch.
+ *
+ * The reference's own `.nimg-fill` sets width and height to 100% and no
+ * `object-fit`, so the default `fill` applies — and it never shows, because
+ * every image shuffle.com serves is already the card's 0.711 ratio (155x218).
+ *
+ * This catalogue's artwork comes from sixteen different provider CDNs at
+ * whatever shape each vendor exported: square, 16:9, banner. Under `fill`
+ * those are stretched to the card and the distortion is obvious.
+ *
+ * `cover` fills the same box and crops the overflow instead — a tight crop is
+ * a worse crop than the vendor intended, a stretched logo is a broken-looking
+ * tile. Scoped to the card image so nothing else that uses `.nimg-fill`
+ * changes.
+ */
+.TallGameCard_root .SkeletonPlaceholder_imageVariant > img.nimg-fill {
+  object-fit: cover;
+  object-position: center;
+}

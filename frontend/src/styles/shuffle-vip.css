@@ -1,0 +1,850 @@
+/*
+ * The signed-in VIP page.
+ *
+ * Lifted from the reference's own stylesheet (`_next/static/css/fbe8cdf1…css`)
+ * with the CSS-module hash suffixes stripped — `VipPageOverview_root__wN9xh`
+ * becomes `VipPageOverview_root`, which is the same convention the rest of
+ * `styles/` uses. Nothing here is reconstructed by eye.
+ *
+ * The `.magic-container` variants are the reference's responsive scheme, not a
+ * quirk: the layout's breakpoints move with the rails, so a two-column grid
+ * turns on at 992px with both rails shut and only at 1527px with both open.
+ * `AppShell` already puts `magic-container` + the side state on `<main>`, so
+ * they apply unchanged.
+ *
+ * `Card_*`, `UserBadgeBlock_*` and `TitlePage_root` are shared components that
+ * happened to be first needed here; they are not VIP-specific, and belong to
+ * whichever file grows to need them second.
+ *
+ * The public (signed-out) half of this page lives in `shuffle-static.css`,
+ * which already carried `VipPagePublic_*`, `Advantages_*`, `Faqs_*` and
+ * `Accordion_*` from the earlier HTML capture.
+ */
+
+.Card_root {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md2);
+    gap: var(--spacing-md2);
+    align-items: center;
+    flex-grow: 1;
+    font-size: var(--text-md);
+    background-color: var(--color-gray900);
+    border: 1px solid var(--color-gray700);
+    position: relative
+}
+
+.Card_root>img,
+.Card_root>svg {
+    height: var(--spacing-lg4)
+}
+
+.Card_root .Card_heading {
+    font-size: var(--text-lg)
+}
+
+.Card_root.Card_pageVariant {
+    padding: var(--spacing-lg1)
+}
+
+.Card_root.Card_pageVariant>img {
+    height: 5rem
+}
+
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .Card_root {
+        width: auto
+  }
+}
+
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .Card_root {
+        width: auto
+  }
+}
+
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .Card_root {
+        width: auto
+  }
+}
+
+@media(min-width:768px) {
+  .magic-container.no-side-opened .Card_root {
+        width: auto
+  }
+}
+
+.Card_content {
+    align-items: center
+}
+
+.Card_content img {
+    width: var(--spacing-lg4);
+    height: var(--spacing-lg4)
+}
+
+.Card_content.Card_pageVariant img {
+    width: 5rem;
+    height: 5rem
+}
+
+.Card_modalVariant .Card_description {
+    font-size: var(--text-lg)
+}
+
+.Card_header {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--spacing-lg)
+}
+
+.Card_description {
+    color: var(--color-gray200);
+    font-size: var(--text-md);
+    font-style: normal;
+    font-weight: 400;
+    text-align: center;
+    line-height: 150%
+}
+
+.Card_completed {
+    color: var(--color-success)
+}
+
+.Card_completed img {
+    filter: var(--filter-success)
+}
+
+.Card_completed .Card_description {
+    color: #fff
+}
+
+.Card_disabled {
+    color: var(--color-gray300)
+}
+
+.Card_disabled .Card_heading {
+    color: #fff
+}
+
+.Card_disabled img {
+    filter: var(--filter-gray300)
+}
+
+.Card_lastButton {
+    margin-top: auto
+}
+
+.TitlePage_root {
+    margin: 0 0 var(--spacing-lg1) 0
+}
+
+.UserBadgeBlock_root {
+    display: flex;
+    width: 100%;
+    gap: var(--spacing-md2);
+    flex-direction: row;
+    justify-content: unset;
+    align-items: unset
+}
+
+.UserBadgeBlock_profilesRoot {
+    flex-direction: column;
+    align-items: center;
+    padding-top: var(--spacing-md1)
+}
+
+@media(min-width:992px) {
+  .UserBadgeBlock_profilesRoot {
+        flex-direction: column;
+        align-items: center
+  }
+}
+
+.UserBadgeBlock_profilesRoot .UserBadgeBlock_badge {
+    align-items: center;
+    text-align: center;
+    gap: var(--spacing-sm4)
+}
+
+.UserBadgeBlock_profilesRoot .UserBadgeBlock_badge>h2 {
+    text-align: center;
+    line-height: 130%
+}
+
+@media(min-width:992px) {
+  div.UserBadgeBlock_avatarRoot,
+    div.UserBadgeBlock_avatarRoot>img {
+        width: var(--spacing-lg4);
+        height: var(--spacing-lg4)
+  }
+  div.UserBadgeBlock_avatarRootLarge,
+    div.UserBadgeBlock_avatarRootLarge>img {
+        width: 4rem;
+        height: 4rem
+  }
+  div.UserBadgeBlock_avatarRootXL,
+    div.UserBadgeBlock_avatarRootXL>img {
+        width: 5.9375rem;
+        height: 5.9375rem
+  }
+}
+
+.UserBadgeBlock_avatarContainer {
+    position: relative;
+    display: inline-block
+}
+
+.UserBadgeBlock_moderatorBadge {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: var(--z-above)
+}
+
+.UserBadgeBlock_badge {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--spacing-sm4);
+    text-align: left
+}
+
+.UserBadgeBlock_badge h2 {
+    font-weight: 700;
+    font-size: var(--text-xl);
+    line-height: var(--text-h4)
+}
+
+@media(min-width:992px) {
+  .UserBadgeBlock_badge h2 {
+        font-size: var(--text-h4)
+  }
+}
+
+.UserBadgeBlock_largeBadge h2 {
+    font-size: var(--text-lg);
+    line-height: var(--text-h3)
+}
+
+@media(min-width:992px) {
+  .UserBadgeBlock_largeBadge h2 {
+        font-size: var(--text-h3)
+  }
+}
+
+.UserBadgeBlock_profilesVipBadgeWrapper {
+    border-radius: var(--radius-rounded);
+    border: 1px solid var(--color-gray500);
+    background: var(--color-gray800);
+    padding: var(--spacing-sm4) var(--spacing-md2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center
+}
+
+.VipCurrentProgress_classNameRoot {
+    height: auto
+}
+
+.VipCurrentProgress_content {
+    padding: 0;
+    background: none;
+    height: auto
+}
+
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .VipCurrentProgress_content {
+        height: auto;
+        padding: 0
+  }
+}
+
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .VipCurrentProgress_content {
+        height: auto;
+        padding: 0
+  }
+}
+
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .VipCurrentProgress_content {
+        height: auto;
+        padding: 0
+  }
+}
+
+@media(min-width:768px) {
+  .magic-container.no-side-opened .VipCurrentProgress_content {
+        height: auto;
+        padding: 0
+  }
+}
+
+.VipCurrentProgress_title {
+    line-height: var(--spacing-lg1);
+    font-size: var(--text-lg);
+    font-weight: 700
+}
+
+.VipCurrentProgress_footer {
+    color: #fff
+}
+
+.VipPageOverview_root {
+    display: grid;
+    grid-gap: 1.125rem;
+    gap: 1.125rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    padding: var(--spacing-md2);
+    border-radius: var(--radius-md);
+    background-color: var(--color-gray900)
+}
+
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only .VipPageOverview_root {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: var(--spacing-lg2);
+        gap: var(--spacing-lg4)
+  }
+}
+
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only .VipPageOverview_root {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: var(--spacing-lg2);
+        gap: var(--spacing-lg4)
+  }
+}
+
+@media(min-width:1527px) {
+  .magic-container.both-side-opened .VipPageOverview_root {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: var(--spacing-lg2);
+        gap: var(--spacing-lg4)
+  }
+}
+
+@media(min-width:992px) {
+  .magic-container.no-side-opened .VipPageOverview_root {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: var(--spacing-lg2);
+        gap: var(--spacing-lg4)
+  }
+}
+
+h2.VipPageOverview_heading {
+    font-size: var(--text-xl)
+}
+
+.VipPageOverview_description {
+    font-weight: 400;
+    font-size: var(--text-md);
+    color: var(--color-lavenderBlue)
+}
+
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only .VipPageOverview_description {
+        font-size: var(--text-lg)
+  }
+}
+
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only .VipPageOverview_description {
+        font-size: var(--text-lg)
+  }
+}
+
+@media(min-width:1527px) {
+  .magic-container.both-side-opened .VipPageOverview_description {
+        font-size: var(--text-lg)
+  }
+}
+
+@media(min-width:992px) {
+  .magic-container.no-side-opened .VipPageOverview_description {
+        font-size: var(--text-lg)
+  }
+}
+
+.VipPageOverview_rewardWrapper {
+    position: absolute;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 65%;
+    height: 100%;
+    padding: var(--spacing-lg1);
+    z-index: var(--z-overlay)
+}
+
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only .VipPageOverview_rewardWrapper {
+        width: 49%
+  }
+}
+
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only .VipPageOverview_rewardWrapper {
+        width: 49%
+  }
+}
+
+@media(min-width:1527px) {
+  .magic-container.both-side-opened .VipPageOverview_rewardWrapper {
+        width: 49%
+  }
+}
+
+@media(min-width:992px) {
+  .magic-container.no-side-opened .VipPageOverview_rewardWrapper {
+        width: 49%
+  }
+}
+
+.VipPageOverview_vipPageOverviewDescription {
+    font-weight: 400;
+    font-size: var(--text-lg);
+    margin-top: var(--spacing-sm4)
+}
+
+.VipPageOverview_vipOverviewImage {
+    width: 100%;
+    min-height: 10rem;
+    overflow: hidden;
+    background-color: var(--color-gray800);
+    border-radius: var(--radius-sm1);
+    position: relative;
+    max-width: 40rem;
+    margin: auto;
+    display: none
+}
+
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only .VipPageOverview_vipOverviewImage {
+        display: block;
+        max-width: none
+  }
+}
+
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only .VipPageOverview_vipOverviewImage {
+        display: block;
+        max-width: none
+  }
+}
+
+@media(min-width:1527px) {
+  .magic-container.both-side-opened .VipPageOverview_vipOverviewImage {
+        display: block;
+        max-width: none
+  }
+}
+
+@media(min-width:992px) {
+  .magic-container.no-side-opened .VipPageOverview_vipOverviewImage {
+        display: block;
+        max-width: none
+  }
+}
+
+.VipPageOverview_image {
+    object-fit: fill
+}
+
+.VipPageOverview_listContent {
+    font-family: inherit;
+    white-space: pre-wrap;
+    margin: 0
+}
+
+.VipPageOverview_icon {
+    position: relative;
+    top: var(--spacing-sm)
+}
+
+.VipBenefits_headingWrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm5)
+}
+
+.VipBenefits_headingIcon {
+    width: var(--spacing-lg1);
+    height: var(--spacing-lg1);
+    margin: 0
+}
+
+.VipOverviewSectionWrapper_root {
+    margin-top: 1.375rem
+}
+
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only .VipOverviewSectionWrapper_root {
+        margin-top: var(--spacing-lg1)
+  }
+}
+
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only .VipOverviewSectionWrapper_root {
+        margin-top: var(--spacing-lg1)
+  }
+}
+
+@media(min-width:1527px) {
+  .magic-container.both-side-opened .VipOverviewSectionWrapper_root {
+        margin-top: var(--spacing-lg1)
+  }
+}
+
+@media(min-width:992px) {
+  .magic-container.no-side-opened .VipOverviewSectionWrapper_root {
+        margin-top: var(--spacing-lg1)
+  }
+}
+
+.VipSectionTitle_root {
+    font-weight: 700;
+    font-size: var(--text-h3);
+    line-height: 130%
+}
+
+.VipLevels_vipList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm5);
+    margin-top: var(--spacing-md2)
+}
+
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only .VipLevels_vipList {
+        gap: var(--spacing-lg)
+  }
+}
+
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only .VipLevels_vipList {
+        gap: var(--spacing-lg)
+  }
+}
+
+@media(min-width:1527px) {
+  .magic-container.both-side-opened .VipLevels_vipList {
+        gap: var(--spacing-lg)
+  }
+}
+
+@media(min-width:992px) {
+  .magic-container.no-side-opened .VipLevels_vipList {
+        gap: var(--spacing-lg)
+  }
+}
+
+div.VipLevels_accordionContent {
+    border-top: none;
+    padding: 0
+}
+
+.VipLevels_headingWrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm5)
+}
+
+.VipLevels_headingIcon {
+    filter: var(--filter-primaryViolet);
+    width: var(--spacing-lg1);
+    height: var(--spacing-lg1);
+    margin: 0
+}
+
+.VipLevelsTable_row {
+    display: none
+}
+
+@media(min-width:992px) {
+  .VipLevelsTable_row {
+        display: table-cell
+  }
+}
+
+.VipLevelsTable_cell {
+    font-size: var(--text-lg);
+    font-weight: 500;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+    height: 100%;
+    gap: var(--spacing-sm5)
+}
+
+.VipLevelsTable_table {
+    margin-bottom: var(--spacing-md2)
+}
+
+.VipLevelsTable_table td {
+    width: 50%
+}
+
+@media(min-width:992px) {
+  .VipLevelsTable_table td {
+        width: 33.3%
+  }
+}
+
+.VipLevelsTable_vipLevelStatusText {
+    font-weight: 400;
+    font-size: var(--text-lg);
+    line-height: 1.5;
+    color: #fff
+}
+
+.VipLevelsTable_incomplete {
+    color: var(--color-gray300)
+}
+
+.VipLevelsAccordion_vipLevelsAccordionHeader {
+    font-weight: 700;
+    font-size: var(--text-xl);
+    line-height: 1.5
+}
+
+.VipSidebarRewardBlock_vipRewardHeader {
+    font-size: var(--text-lg);
+    text-align: center;
+    width: 100%;
+    font-weight: 600
+}
+
+.VipSidebarRewardBlock_vipRewardHeader.VipSidebarRewardBlock_claimed {
+    color: var(--color-success)
+}
+
+.VipSidebarRewardBlock_vipRewardHeader.VipSidebarRewardBlock_locked {
+    color: var(--color-gray300)
+}
+
+.VipSidebarRewardBlock_vipStatusText {
+    font-size: var(--text-md);
+    font-weight: 500;
+    line-height: 1.5;
+    color: #fff
+}
+
+.VipSidebarRewardBlock_vipStatusText.VipSidebarRewardBlock_claimed {
+    color: var(--color-success)
+}
+
+.VipSidebarRewardBlock_vipStatusText.VipSidebarRewardBlock_locked {
+    color: var(--color-gray300)
+}
+
+.VipSidebarRewardBlock_vipAlternativeBtn {
+    height: var(--spacing-lg3);
+    background-color: rgba(0, 0, 0, 0);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--radius-sm1);
+    column-gap: var(--spacing-sm5);
+    font-weight: 500;
+    font-size: var(--text-lg);
+    line-height: 1.5;
+    gap: var(--spacing-sm5);
+    cursor: not-allowed;
+    pointer-events: none;
+    width: 100%
+}
+
+.VipSidebarRewardBlock_vipAlternativeBtn.VipSidebarRewardBlock_claimed {
+    color: var(--color-success);
+    border: 1px solid var(--color-success)
+}
+
+.VipSidebarRewardBlock_vipAlternativeBtn.VipSidebarRewardBlock_locked {
+    color: var(--color-gray300);
+    border: 1px solid var(--color-gray300)
+}
+
+.VipSidebarRewardBlock_giftIcon.VipSidebarRewardBlock_claimed {
+    filter: var(--filter-success)
+}
+
+.VipSidebarRewardBlock_giftIcon.VipSidebarRewardBlock_locked {
+    filter: var(--filter-gray300)
+}
+
+.VipSidebarRewardBlock_button {
+    margin-top: var(--spacing-sm1-neg)
+}
+
+div.VipRewardsCarousel_vipRewardBlockIconContainer {
+    padding-top: 0
+}
+
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only div.VipRewardsCarousel_vipClaimedBtn {
+        height: var(--spacing-lg4);
+        width: 100%
+  }
+}
+
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only div.VipRewardsCarousel_vipClaimedBtn {
+        height: var(--spacing-lg4);
+        width: 100%
+  }
+}
+
+@media(min-width:1527px) {
+  .magic-container.both-side-opened div.VipRewardsCarousel_vipClaimedBtn {
+        height: var(--spacing-lg4);
+        width: 100%
+  }
+}
+
+@media(min-width:992px) {
+  .magic-container.no-side-opened div.VipRewardsCarousel_vipClaimedBtn {
+        height: var(--spacing-lg4);
+        width: 100%
+  }
+}
+
+.VipRewardsCarousel_rewardsWrapper {
+    display: flex
+}
+
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .VipRewardsCarousel_rewardsWrapper {
+        min-width: 11rem
+  }
+}
+
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .VipRewardsCarousel_rewardsWrapper {
+        min-width: 11rem
+  }
+}
+
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .VipRewardsCarousel_rewardsWrapper {
+        min-width: 11rem
+  }
+}
+
+@media(min-width:768px) {
+  .magic-container.no-side-opened .VipRewardsCarousel_rewardsWrapper {
+        min-width: 11rem
+  }
+}
+
+.VipRewardsCarousel_headingWrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm5);
+    margin-bottom: var(--spacing-md2)
+}
+
+.VipRewardsCarousel_headingIcon {
+    filter: var(--filter-primaryViolet);
+    margin: 0
+}
+
+.VipRewardsCarousel_headingIcon,
+.VipRewardsCarousel_rewardsBadge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--spacing-lg1);
+    height: var(--spacing-lg1)
+}
+
+.VipRewardsCarousel_rewardsBadge {
+    border-radius: var(--radius-sm1);
+    background: var(--color-primaryViolet);
+    font-size: var(--text-lg);
+    font-weight: 700
+}
+
+.VipRewardsCarousel_rewardsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: var(--spacing-sm4);
+    gap: var(--spacing-sm4)
+}
+
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only .VipRewardsCarousel_rewardsGrid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-lg1)
+  }
+}
+
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only .VipRewardsCarousel_rewardsGrid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-lg1)
+  }
+}
+
+@media(min-width:1527px) {
+  .magic-container.both-side-opened .VipRewardsCarousel_rewardsGrid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-lg1)
+  }
+}
+
+@media(min-width:992px) {
+  .magic-container.no-side-opened .VipRewardsCarousel_rewardsGrid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-lg1)
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * NOT FROM THE REFERENCE'S STYLESHEET — everything above this line is.
+ *
+ * The public hero's heading and sub-heading fade up on load. In the reference
+ * that is framer-motion, not CSS: two `motion` elements with
+ * `{ opacity: 0, y: 10 } → { opacity: 1, y: 0 }`, a one-second spring, and
+ * delays of 0.5s and 0.7s. This app does not carry framer-motion, and pulling
+ * in an animation library for one entrance would be the wrong trade, so the
+ * same movement is written as a keyframe.
+ *
+ * The `shuffleRise` keyframe is the shared one from `shuffle-motion.css` —
+ * this is the reference's `Po` variant with the page's own overrides on top
+ * (a one-second spring instead of a linear 0.2s, and the two delays), which is
+ * exactly how the reference layers it. An `ease-out` cubic stands in for the
+ * spring, which overshoots very slightly where this does not.
+ *
+ * Measuring this page is what turned the animation up, and it is worth
+ * recording why: shuffle.com was being read in a background tab, where
+ * framer-motion's frame loop never runs, so both elements sat frozen at their
+ * `translateY(10px)` start. That read as a 10px layout difference until the
+ * transforms were checked.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.VipPagePublic_vipContentArea > div:first-child,
+.VipPagePublic_subHeading {
+  animation: shuffleRise 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.VipPagePublic_vipContentArea > div:first-child { animation-delay: 0.5s; }
+.VipPagePublic_subHeading { animation-delay: 0.7s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .VipPagePublic_vipContentArea > div:first-child,
+  .VipPagePublic_subHeading {
+    animation: none;
+  }
+}

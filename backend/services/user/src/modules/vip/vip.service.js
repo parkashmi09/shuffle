@@ -28,6 +28,10 @@ class VipService {
     const top = VIP_LEVELS[VIP_LEVELS.length - 1];
     return VIP_LEVELS.map((band) => ({
       level: band.level,
+      // The display form — "Bronze 1", "Wood". The VIP page prints it verbatim
+      // rather than rebuilding it from the card and an offset, which would go
+      // wrong on Wood: one level in its tier, and no number after the name.
+      name: band.name,
       minXp: String(band.minXp),
       maxXp: band.level === top.level ? null : String(band.maxXp),
       card: band.card,

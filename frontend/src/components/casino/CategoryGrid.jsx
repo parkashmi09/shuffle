@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { GameCard } from "./GameCarousel";
+import { navigate } from "../../lib/router";
 
 const PAGE = 28;
 
@@ -13,7 +14,7 @@ export default function CategoryGrid({ title, icon, href, games, total }) {
     <div>
       <div className="CardGrid_cardGridWrapper">
         <h3 className="Heading_root Heading_h3">
-          <a href={href} onClick={(e) => e.preventDefault()}>
+          <a href={href} onClick={(e) => { e.preventDefault(); navigate(href); }}>
             <div className="Flex_root Flex_sm4" style={{ alignItems: "center", justifyContent: "center" }}>
               <img alt={title} height="24" src={icon} width="24" />
               {title}

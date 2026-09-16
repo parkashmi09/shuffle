@@ -1,5 +1,6 @@
 import { CarouselHeader, SwipeTrack } from "../ui/Carousel";
 import { useCarousel } from "../../lib/carousel";
+import { navigate } from "../../lib/router";
 
 /** Provider logo rail — reference `ProviderCarousel`. */
 export default function ProviderCarousel({ providers }) {
@@ -19,10 +20,10 @@ export default function ProviderCarousel({ providers }) {
       <SwipeTrack trackRef={trackRef} carousel={carousel}>
         {providers.map((p) => (
           <div key={p.slug} className="ProviderCard_ProviderCardWrapper">
-            <a href={`/casino/providers/${p.slug}`} onClick={(e) => e.preventDefault()}>
+            <a href={`/casino/providers/${p.slug}`} onClick={(e) => { e.preventDefault(); navigate(`/casino/providers/${p.slug}`); }}>
               <div className="ProviderCard_providerCardBlock">
                 <div className="ProviderCard_providerCardElement">
-                  <img alt={p.name} className="nimg-fill nimg-contain" src={p.img} />
+                  <img alt={p.label || p.name} className="nimg-fill nimg-contain" src={p.img} />
                 </div>
               </div>
             </a>

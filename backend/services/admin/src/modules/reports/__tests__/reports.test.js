@@ -298,8 +298,10 @@ test('reports against a database', async (t) => {
     const expected = vipLevelFor('5500');
 
     assert.equal(report.vip.level, expected.level);
-    assert.equal(report.vip.level, 8, 'wager 5,500 sits in the 5000–6999 band');
-    assert.equal(report.vip.nextLevel, 9, 'and the NEXT level is named as such');
+    assert.equal(report.vip.level, 6, 'wager 5,500 sits in the 5000–9999 band');
+    assert.equal(report.vip.name, 'Bronze 5');
+    assert.equal(report.vip.nextLevel, 7, 'and the NEXT level is named as such');
+    assert.equal(report.vip.nextName, 'Silver 1');
   });
 
   await t.test('a wager string with thousands separators is parsed, not truncated', async () => {
@@ -308,7 +310,11 @@ test('reports against a database', async (t) => {
 
     const report = await service.playerReport({ staff: asA, userId: playerA });
     assert.equal(report.wager, '1234567');
-    assert.ok(report.vip.level > 30, 'a 1.2M wager is not VIP 1');
+    // 1,234,567 is Jade 1, whose band begins at 1,200,000. Asserted through
+    // the ladder as well as by name, so a future band change fails here loudly
+    // rather than quietly reporting the wrong rank to an operator.
+    assert.equal(report.vip.level, vipLevelFor('1234567').level);
+    assert.equal(report.vip.name, 'Jade 1');
 
     await models.Userwager.destroy({ where: { uid: playerA } });
   });

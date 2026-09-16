@@ -469,22 +469,8 @@ div.LotteryTicketsAndPrizesSection_tabView>div {
   width:fit-content;
 }
 
-.RichText_richTextBlock {
-  font-size:var(--text-xl);
-  white-space:pre-wrap;
-  line-height:var(--spacing-md2);
-}
-
 .RichText_richTextBlock p+richTextBlock ul {
   margin-top:var(--spacing-md2);
-}
-
-.RichText_paragraph {
-  font-weight:400;
-  font-size:var(--text-xl);
-  line-height:150%;
-  margin-bottom:var(--spacing-md2);
-  color:var(--color-gray200);
 }
 
 .RichText_richTextBlock p:last-child.RichText_paragraph {
@@ -556,22 +542,6 @@ div.LotteryTicketsAndPrizesSection_tabView>div {
   border-top:1px solid var(--color-gray600);
 }
 
-.RichText_heading1 {
-  padding-bottom:var(--spacing-lg2);
-}
-
-.RichText_bold {
-  color:#fff;
-}
-
-.RichText_italic {
-  font-style:italic;
-}
-
-.RichText_underline {
-  text-decoration:underline;
-}
-
 a.RichText_link {
   color:#fff;
   font-weight:700;
@@ -616,10 +586,6 @@ a.RichText_link {
   padding:var(--spacing-sm5);
 }
 
-.RichText_columns {
-  gap:var(--spacing-lg2);
-}
-
 .RichText_columns h1,.RichText_columns h2,.RichText_columns h3,.RichText_columns h4,.RichText_columns h5,.RichText_columns p {
   page-break-inside:avoid;
   break-inside:avoid;
@@ -655,10 +621,6 @@ a.RichText_link {
     column-count:2;
   }
 
-}
-
-.RichText_alignCenter {
-  text-align:center;
 }
 
 .DrawResult_root {
@@ -4212,22 +4174,8 @@ div.lottery_mobileModal {
   width: fit-content;
 }
 
-.RichText_richTextBlock {
-  font-size: var(--text-xl);
-  white-space: pre-wrap;
-  line-height: var(--spacing-md2);
-}
-
 .RichText_richTextBlock p+richTextBlock ul {
   margin-top: var(--spacing-md2);
-}
-
-.RichText_paragraph {
-  font-weight: 400;
-  font-size: var(--text-xl);
-  line-height: 150%;
-  margin-bottom: var(--spacing-md2);
-  color: var(--color-gray200);
 }
 
 .RichText_richTextBlock p:last-child.RichText_paragraph {
@@ -4299,22 +4247,6 @@ div.lottery_mobileModal {
   border-top: 1px solid var(--color-gray600);
 }
 
-.RichText_heading1 {
-  padding-bottom: var(--spacing-lg2);
-}
-
-.RichText_bold {
-  color: #fff;
-}
-
-.RichText_italic {
-  font-style: italic;
-}
-
-.RichText_underline {
-  text-decoration: underline;
-}
-
 a.RichText_link {
   color: #fff;
   font-weight: 700;
@@ -4359,10 +4291,6 @@ a.RichText_link {
   padding: var(--spacing-sm5);
 }
 
-.RichText_columns {
-  gap: var(--spacing-lg2);
-}
-
 .RichText_columns h1, .RichText_columns h2, .RichText_columns h3, .RichText_columns h4, .RichText_columns h5, .RichText_columns p {
   page-break-inside: avoid;
   break-inside: avoid;
@@ -4398,10 +4326,6 @@ a.RichText_link {
     column-count: 2;
   }
 
-}
-
-.RichText_alignCenter {
-  text-align: center;
 }
 
 .ModalListContainer_root, .SportsTournamentContent_progressBarContent {

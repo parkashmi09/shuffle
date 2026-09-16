@@ -34,6 +34,10 @@ const newUid = () => (nextUid += 1);
 let seq = 0;
 const newSerial = () => `S-${process.pid}-${(seq += 1)}`;
 
+/** A provider round id. Unique per test run, like the serials. */
+let rounds = 0;
+const newRound = () => `R-${process.pid}-${(rounds += 1)}`;
+
 test('jsGames', async (t) => {
   const logger = createLogger({ name: 'jsgames-test', level: 'silent' });
 
@@ -120,18 +124,45 @@ test('jsGames', async (t) => {
     };
   };
 
+  /**
+   * user-service, stubbed.
+   *
+   * Only the rakeback accrual and the USD rate behind it cross that boundary.
+   * `posted` is what the assertions read: the accrual must be a consequence of
+   * a settlement, not a precondition for one, so every test that does not care
+   * about it simply ignores the list.
+   */
+  const makeClients = () => {
+    const posted = [];
+    return {
+      posted,
+      user: {
+        async post(path, body) {
+          posted.push({ path, body });
+          return { accrued: body.amount, amount: body.amount, duplicate: false };
+        },
+        async get(_path, { query } = {}) {
+          // One INR = 0.012 USD, which is the only conversion these tests need.
+          return { usdValue: money.toDecimalString(money.multiply(query.amount, '0.012')) };
+        },
+      },
+    };
+  };
+
   const build = (balances, config = {}) => {
     const wallet = makeWallet(balances);
+    const clients = makeClients();
     const service = new JsGamesService({
       models,
       db: connection,
       logger,
       wallet,
+      clients,
       v1,
       v2,
       config: { SERVICE_NAME: 'casino-service', JSGAMES_MAX_SKEW_SECONDS: 300, ...config },
     });
-    return { service, wallet };
+    return { service, wallet, clients };
   };
 
   const seedPlayer = async (uid) => {
@@ -161,8 +192,36 @@ test('jsGames', async (t) => {
   };
 
   // ══════════════════════════════════════════════════════════════════════
-  //  v2 — the balance-from-the-body endpoint
+  //  v2 — round settlement
   // ══════════════════════════════════════════════════════════════════════
+
+  /**
+   * The provider's message: two amounts and a round id.
+   *
+   * There is no `transaction_type` and no `transaction_id` on the wire. An
+   * earlier pass of the handler required both and rejected every genuine
+   * callback with `Invalid transaction_type`; these helpers are shaped like the
+   * real thing so that cannot come back unnoticed.
+   */
+  const stake = (uid, round, amount, currency = 'USDT') => ({
+    user_id: uid,
+    game_uid: 'g-test',
+    game_round: round,
+    serial_number: newSerial(),
+    bet_amount: amount,
+    win_amount: '0',
+    currency,
+  });
+
+  const payout = (uid, round, amount, currency = 'USDT') => ({
+    user_id: uid,
+    game_uid: 'g-test',
+    game_round: round,
+    serial_number: newSerial(),
+    bet_amount: '0',
+    win_amount: amount,
+    currency,
+  });
 
   await t.test('v2 IGNORES a balance supplied in the request body', async () => {
     /**
@@ -179,14 +238,7 @@ test('jsGames', async (t) => {
     const { service } = build(balances);
 
     const result = await service.betCallbackV2(
-      v2Callback({
-        user_id: uid,
-        transaction_type: 'bet',
-        amount: '10',
-        currency: 'USDT',
-        balance: '99999999',
-        transaction_id: newSerial(),
-      })
+      v2Callback({ ...stake(uid, newRound(), '10'), balance: '99999999' })
     );
 
     assert.equal(result.success, true);
@@ -194,15 +246,96 @@ test('jsGames', async (t) => {
     assert.equal(result.new_balance, '90.00000000');
   });
 
+  await t.test('v2 settles a stake and then a payout on ONE round', async () => {
+    /**
+     * THE REGRESSION THIS FILE EXISTS FOR.
+     *
+     * Both messages carry the same `game_round`, because they are two halves of
+     * one spin. With the table keyed on that column ALONE the payout collided
+     * with the stake and was swallowed as a replay — the player was never paid,
+     * silently, and only ever in the direction that costs them money.
+     *
+     * The key is the PAIR: (round, settlement type).
+     */
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '100']]);
+    const { service } = build(balances);
+    const round = newRound();
+
+    const bet = await service.betCallbackV2(v2Callback(stake(uid, round, '10')));
+    assert.equal(bet.success, true);
+    assert.equal(balances.get(String(uid)), '90.00000000');
+
+    const win = await service.betCallbackV2(v2Callback(payout(uid, round, '25')));
+    assert.equal(win.success, true, 'the payout must not be mistaken for a replay of the stake');
+    assert.equal(balances.get(String(uid)), '115.00000000');
+
+    assert.equal(
+      await models.GameTransaction.count({ where: { external_transaction_id: round } }),
+      2,
+      'one round, two settlements'
+    );
+  });
+
+  await t.test('v2 names the settlement from the amounts, not from the body', async () => {
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '100']]);
+    const { service } = build(balances);
+    const round = newRound();
+
+    // A winning spin settled in ONE message: both amounts non-zero.
+    const result = await service.betCallbackV2(
+      v2Callback({
+        ...stake(uid, round, '10'),
+        win_amount: '30',
+        // The provider does not send this. If it ever did, it must not be read.
+        transaction_type: 'loss',
+      })
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(balances.get(String(uid)), '120.00000000', 'moved by win - bet');
+
+    const row = await models.GameTransaction.findOne({ where: { external_transaction_id: round }, raw: true });
+    assert.equal(row.transaction_type, 'bet_result');
+    assert.equal(row.amount, '20.00000000', 'the signed delta, not either amount alone');
+  });
+
+  await t.test('v2 refuses a win on a round that was never staked', async () => {
+    /**
+     * Without this, `bet_amount: 0` plus any `win_amount` mints credit. A
+     * signature proves who sent a message, not that it describes a real round.
+     */
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '0']]);
+    const { service } = build(balances);
+
+    const result = await service.betCallbackV2(v2Callback(payout(uid, newRound(), '1000')));
+
+    assert.equal(result.success, false);
+    assert.equal(result.error, 'No matching bet for this round');
+    assert.equal(balances.get(String(uid)), '0');
+  });
+
+  await t.test('v2 allows an unstaked win only when explicitly configured to', async () => {
+    // The switch exists for a provider confirmed to settle bonus rounds under a
+    // fresh round id. Off is the default; this proves the switch is real.
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '0']]);
+    const { service } = build(balances, { JSGAMES_REQUIRE_BET_FOR_WIN: false });
+
+    const result = await service.betCallbackV2(v2Callback(payout(uid, newRound(), '40')));
+
+    assert.equal(result.success, true);
+    assert.equal(balances.get(String(uid)), '40.00000000');
+  });
+
   await t.test('v2 refuses an unsigned callback', async () => {
     const uid = await seedPlayer(newUid());
     const balances = new Map([[String(uid), '100']]);
     const { service } = build(balances);
 
-    const result = await service.betCallbackV2({
-      body: { user_id: uid, transaction_type: 'win', amount: '5000', currency: 'USDT', transaction_id: newSerial() },
-      headers: {},
-    });
+    const result = await service.betCallbackV2({ body: stake(uid, newRound(), '10'), headers: {} });
 
     assert.equal(result.success, false);
     assert.equal(balances.get(String(uid)), '100');
@@ -213,14 +346,8 @@ test('jsGames', async (t) => {
     const balances = new Map([[String(uid), '100']]);
     const { service } = build(balances);
 
-    const honest = v2Callback({
-      user_id: uid,
-      transaction_type: 'win',
-      amount: '1',
-      currency: 'USDT',
-      transaction_id: newSerial(),
-    });
-    honest.body.amount = '5000';
+    const honest = v2Callback(payout(uid, newRound(), '1'));
+    honest.body.win_amount = '5000';
 
     const result = await service.betCallbackV2(honest);
     assert.equal(result.success, false);
@@ -233,65 +360,187 @@ test('jsGames', async (t) => {
     const { service } = build(balances);
 
     const result = await service.betCallbackV2(
-      v2Callback(
-        { user_id: uid, transaction_type: 'win', amount: '50', currency: 'USDT', transaction_id: newSerial() },
-        { at: Date.now() - 3600_000 }
-      )
+      v2Callback(stake(uid, newRound(), '50'), { at: Date.now() - 3600_000 })
     );
 
     assert.equal(result.success, false);
     assert.equal(balances.get(String(uid)), '100');
   });
 
-  await t.test("v2 refuses the literal transaction id 'unknown'", async () => {
-    // Legacy defaulted a missing id to that string, which would make every
+  await t.test("v2 refuses the literal round id 'unknown'", async () => {
+    // Legacy defaulted a missing key to that string, which would make every
     // callback omitting one collide with every other.
     const uid = await seedPlayer(newUid());
     const balances = new Map([[String(uid), '100']]);
     const { service } = build(balances);
 
-    for (const transaction_id of ['unknown', '', '   ']) {
-      const result = await service.betCallbackV2(
-        v2Callback({ user_id: uid, transaction_type: 'win', amount: '10', currency: 'USDT', transaction_id })
-      );
-      assert.equal(result.success, false, `${JSON.stringify(transaction_id)} must be refused`);
+    for (const game_round of ['unknown', '', '   ']) {
+      const result = await service.betCallbackV2(v2Callback({ ...stake(uid, 'x', '10'), game_round }));
+      assert.equal(result.success, false, `${JSON.stringify(game_round)} must be refused`);
     }
 
     assert.equal(balances.get(String(uid)), '100');
   });
 
-  await t.test('v2 pays a retried win ONCE', async () => {
+  await t.test('v2 takes a retried stake ONCE', async () => {
     const uid = await seedPlayer(newUid());
-    const balances = new Map([[String(uid), '0']]);
+    const balances = new Map([[String(uid), '100']]);
     const { service } = build(balances);
 
-    const transaction_id = newSerial();
-    const win = () =>
-      service.betCallbackV2(
-        v2Callback({ user_id: uid, transaction_type: 'win', amount: '200', currency: 'USDT', transaction_id })
-      );
+    const round = newRound();
+    const body = stake(uid, round, '20');
 
-    await win();
-    await win();
-    await win();
+    const first = await service.betCallbackV2(v2Callback(body));
+    const second = await service.betCallbackV2(v2Callback(body));
+    const third = await service.betCallbackV2(v2Callback(body));
 
-    assert.equal(balances.get(String(uid)), '200.00000000');
-    assert.equal(await models.GameTransaction.count({ where: { external_transaction_id: transaction_id } }), 1);
+    assert.equal(first.success, true);
+    assert.equal(second.duplicate, true, 'a replay reports success so the provider stops retrying');
+    assert.equal(second.success, true);
+    assert.equal(second.new_balance, '80.00000000', 'and it answers with the balance we hold');
+    assert.equal(third.duplicate, true);
+
+    assert.equal(balances.get(String(uid)), '80.00000000');
+    assert.equal(await models.GameTransaction.count({ where: { external_transaction_id: round } }), 1);
   });
 
   await t.test('v2 concurrent retries apply once', async () => {
     const uid = await seedPlayer(newUid());
-    const balances = new Map([[String(uid), '0']]);
+    const balances = new Map([[String(uid), '100']]);
     const { service } = build(balances);
 
-    const transaction_id = newSerial();
-    const win = () =>
-      service.betCallbackV2(
-        v2Callback({ user_id: uid, transaction_type: 'win', amount: '75', currency: 'USDT', transaction_id })
-      );
+    const body = stake(uid, newRound(), '75');
+    const send = () => service.betCallbackV2(v2Callback(body));
 
-    await Promise.all([win(), win(), win()]);
-    assert.equal(balances.get(String(uid)), '75.00000000');
+    await Promise.all([send(), send(), send()]);
+    assert.equal(balances.get(String(uid)), '25.00000000');
+  });
+
+  await t.test('v2 refuses a stake the balance will not cover', async () => {
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '5']]);
+    const { service } = build(balances);
+    const round = newRound();
+
+    const result = await service.betCallbackV2(v2Callback(stake(uid, round, '10')));
+
+    assert.equal(result.success, false);
+    assert.equal(result.error, 'Insufficient balance');
+    // Normalised to the wallet's scale, as on every other path.
+    assert.equal(result.new_balance, '5.00000000', 'the provider is told what we actually hold');
+    assert.equal(balances.get(String(uid)), '5');
+    assert.equal(
+      await models.GameTransaction.count({ where: { external_transaction_id: round } }),
+      0,
+      'a refused settlement leaves no row, so a corrected retry can still be made'
+    );
+  });
+
+  await t.test('v2 denormalises the game name onto the settlement', async () => {
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '100']]);
+    const { service } = build(balances);
+    const round = newRound();
+
+    const gameUid = `cat-${process.pid}-${Date.now()}`;
+    await models.JsGames.create({
+      game_uid: gameUid,
+      game_name: 'Catalogued Game',
+      game_type: 'Slot Game',
+      is_active: true,
+      vendor: 'testvendor',
+    });
+
+    try {
+      await service.betCallbackV2(v2Callback({ ...stake(uid, round, '10'), game_uid: gameUid }));
+
+      const row = await models.GameTransaction.findOne({ where: { external_transaction_id: round }, raw: true });
+      assert.equal(row.game_name, 'Catalogued Game');
+      assert.equal(row.game_type, 'Slot Game');
+    } finally {
+      await models.JsGames.destroy({ where: { game_uid: gameUid } });
+    }
+  });
+
+  await t.test('v2 settles a game the catalogue has never heard of', async () => {
+    // A provider retiring a game must not make its rounds unsettleable.
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '100']]);
+    const { service } = build(balances);
+    const round = newRound();
+
+    const result = await service.betCallbackV2(
+      v2Callback({ ...stake(uid, round, '10'), game_uid: 'never-catalogued' })
+    );
+
+    assert.equal(result.success, true);
+    const row = await models.GameTransaction.findOne({ where: { external_transaction_id: round }, raw: true });
+    assert.equal(row.game_name, null);
+  });
+
+  // ── Rakeback ──────────────────────────────────────────────────────────
+
+  await t.test('v2 accrues rakeback on the stake, in USD terms', async () => {
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '100']]);
+    const { service, clients } = build(balances);
+    const round = newRound();
+
+    await service.betCallbackV2(v2Callback(stake(uid, round, '50')));
+
+    assert.equal(clients.posted.length, 1);
+    assert.equal(clients.posted[0].path, '/internal/user/rakeback/accrue');
+    // 0.2% of 50 USDT.
+    assert.equal(clients.posted[0].body.amount, '0.10000000');
+    assert.equal(clients.posted[0].body.ref, round, 'keyed on the round, so a retry accrues nothing');
+  });
+
+  await t.test('v2 converts a non-USD stake before applying the rate', async () => {
+    /**
+     * Legacy applied 0.2% to the face value of any currency as though it were
+     * dollars — and its INR branch assigned the converted figure inside a query
+     * callback that ran after the value had been read, so INR accrued nothing
+     * at all while USDT accrued too much.
+     */
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '10000']]);
+    const { service, clients } = build(balances);
+
+    await service.betCallbackV2(v2Callback(stake(uid, newRound(), '1000', 'INR')));
+
+    // 1000 INR -> 12 USD -> 0.2% of that.
+    assert.equal(clients.posted[0].body.amount, '0.02400000');
+  });
+
+  await t.test('v2 does not accrue rakeback on a payout, or on a replay', async () => {
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '100']]);
+    const { service, clients } = build(balances);
+    const round = newRound();
+
+    await service.betCallbackV2(v2Callback(stake(uid, round, '10')));
+    assert.equal(clients.posted.length, 1);
+
+    // The replay of the stake, then the payout for the round.
+    await service.betCallbackV2(v2Callback(stake(uid, round, '10')));
+    await service.betCallbackV2(v2Callback(payout(uid, round, '30')));
+
+    assert.equal(clients.posted.length, 1, 'one stake, one accrual');
+  });
+
+  await t.test('v2 settles even when the rakeback accrual fails', async () => {
+    // Rakeback is a loyalty accrual. It does not get to fail a settlement.
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '100']]);
+    const { service, clients } = build(balances);
+    clients.user.post = async () => {
+      throw new Error('user-service is down');
+    };
+
+    const result = await service.betCallbackV2(v2Callback(stake(uid, newRound(), '10')));
+
+    assert.equal(result.success, true);
+    assert.equal(balances.get(String(uid)), '90.00000000');
   });
 
   // ══════════════════════════════════════════════════════════════════════
@@ -570,6 +819,34 @@ test('jsGames', async (t) => {
     assert.equal(v2.sign({ b: 2, a: 1, timestamp }), v2.sign({ a: 1, b: 2, timestamp }));
     assert.notEqual(v2.sign({ a: 1, timestamp }), v2.sign({ a: 2, timestamp }));
     assert.match(v2.sign({ a: 1, timestamp }), /^[0-9a-f]{64}$/);
+  });
+
+  /**
+   * The provider hashes the body it RECEIVED. `JSON.stringify` drops undefined
+   * and null, so signing them produced a digest over fields that were never
+   * sent, and every such launch came back as a bare `20004 Invalid signature`.
+   * Confirmed against the live endpoint: the same call signs and launches with
+   * `name` set, and was rejected with `name: undefined`.
+   */
+  await t.test('the v2 signature covers the body that is actually sent', async () => {
+    const timestamp = '1700000000000';
+    assert.equal(
+      v2.sign({ game_uid: 'g', name: undefined, timestamp }),
+      v2.sign({ game_uid: 'g', timestamp }),
+      'an undefined field must not enter the canonical string'
+    );
+    assert.equal(
+      v2.sign({ game_uid: 'g', name: null, timestamp }),
+      v2.sign({ game_uid: 'g', timestamp }),
+      'nor a null one'
+    );
+    // Empty string IS serialised, so it stays in — dropping it would recreate
+    // the same mismatch in the other direction.
+    assert.notEqual(
+      v2.sign({ game_uid: 'g', name: '', timestamp }),
+      v2.sign({ game_uid: 'g', timestamp }),
+      'an empty string is sent, so it must be signed'
+    );
   });
 
   await t.test('an unconfigured v2 client verifies nothing', async () => {

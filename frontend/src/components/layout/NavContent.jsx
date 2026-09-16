@@ -6,6 +6,8 @@ import { useState } from "react";
  */
 
 import { cx } from "../../lib/carousel";
+import { navigate } from "../../lib/router";
+import { useSession } from "../../lib/sessionContext";
 
 const casinoLinks = [
   { id: "originals", label: "Originals", icon: "original", href: "/casino/categories/originals" },
@@ -51,8 +53,36 @@ const allEsports = [
 const footerLinks = [
   { id: "vip", label: "VIP", icon: "vip", href: "/vip-program" },
   { id: "blog", label: "Blog", icon: "blog", href: "/blog" },
-  { id: "affiliate", label: "Affiliate", icon: "affiliate", href: "/affiliate" },
+  // `/affiliate` is the marketing page; a player belongs on their dashboard.
+  // The reference's rail switches this href with the session — read off the
+  // live sidebar, which serves `/affiliate` to a visitor and
+  // `/affiliate/overview` once signed in, exactly as the account menu does.
+  // The footer's "Affiliate Program" keeps pointing at the marketing page in
+  // both states, so it is deliberately not part of this.
+  { id: "affiliate", label: "Affiliate", icon: "affiliate", href: "/affiliate", signedInHref: "/affiliate/overview" },
 ];
+
+/**
+ * The account group the rail grows once a session exists.
+ *
+ * Read off the live signed-in sidebar, which puts it between Providers and VIP
+ * as an `ExpandableLinks` group — the same accordion the rail already uses for
+ * Promotions and the two sport directories.
+ *
+ * It is signed-in only, and that is verified rather than assumed: the
+ * signed-out capture in `assets/shuffle.com/index.html` renders its whole nav
+ * server-side and contains no `icons/profile.svg` and no Shuffle Wise link —
+ * "Shuffle Wise" appears there only as an entry in the i18n string table.
+ *
+ * None of the four has a screen yet (§4.3), so they render and do nothing, the
+ * same as their twins in the account menu.
+ */
+const profileLinks = [
+  { id: "profile-wallet", label: "Wallet", icon: "wallet", action: "wallet" },
+  { id: "profile-vault", label: "Vault", icon: "vault", action: "vault" },
+  { id: "profile-transactions", label: "Transactions", icon: "transactions", href: "/transactions" },
+  { id: "profile-settings", label: "Settings", icon: "setting" },
+].map((l) => ({ ...l, as: l.href ? "a" : "button" }));
 
 /** Wraps collapsed items in the reference's tooltip trigger span. */
 function Trigger({ expanded, children }) {
@@ -73,6 +103,7 @@ export function NavLink({
   linkClass,
   as: Tag = "a",
   onSelect,
+  action,
 }) {
   const hasCounter = counter != null;
 
@@ -87,10 +118,18 @@ export function NavLink({
     );
   }
 
+  const handleClick = (e) => {
+    if (href && href !== "#" && Tag === "a") {
+      e.preventDefault();
+      navigate(href);
+    }
+    onSelect?.(id, action, href);
+  };
+
   const props =
     Tag === "a"
-      ? { href, onClick: (e) => { e.preventDefault(); onSelect?.(id); } }
-      : { type: "button", onClick: () => onSelect?.(id) };
+      ? { href, onClick: handleClick }
+      : { type: "button", onClick: handleClick };
 
   return (
     <Trigger expanded={expanded}>
@@ -139,7 +178,7 @@ export function TokenCard({ expanded }) {
   return (
     <div className={cx("NavigationToken_token", !expanded && "NavigationToken_collapsed")}>
       <div className="NavigationToken_tokenInfo">
-        <a className="NavigationToken_iconLink" href="/token" onClick={(e) => e.preventDefault()}>
+        <a className="NavigationToken_iconLink" href="/token" onClick={(e) => { e.preventDefault(); navigate("/token"); }}>
           <img alt="token" src="/icons/token.svg" />
         </a>
         <div className="NavigationToken_textContainer">
@@ -156,7 +195,7 @@ export function TokenCard({ expanded }) {
         <a className="NavigationToken_linkBtn NavigationToken_linkBtnDisabled" href="/?modal=wallet">
           Convert
         </a>
-        <a className="NavigationToken_linkBtn" href="/token" onClick={(e) => e.preventDefault()}>
+        <a className="NavigationToken_linkBtn" href="/token" onClick={(e) => { e.preventDefault(); navigate("/token"); }}>
           Dashboard
         </a>
       </div>
@@ -182,6 +221,10 @@ function ExpandableGroup({ expanded, icon, label, links, active, onSelect, open,
         </button>
       </Trigger>
       <div className={cx("ExpandableLinks_navs", open ? "ExpandableLinks_show" : "ExpandableLinks_hidden")}>
+        {/* `onSelect` straight through, not a wrapper closing over
+            `handleSelect`: that name lives in `NavContent` and was never in
+            scope here, so every nested link — Promotions, All sports, Profile —
+            threw a ReferenceError on click. `NavLink` already passes `href`. */}
         {links.map((l) => (
           <NavLink key={l.id} {...l} counterClass={l.counter ? "Counter_text" : undefined} expanded={expanded} active={active === l.id} linkClass="ExpandableLinks_nestedLinks" onSelect={onSelect} />
         ))}
@@ -196,10 +239,24 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   const casino = variant === "casino";
   const sportsbook = variant === "sports";
   const [promosOpen, setPromosOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  // The account group only exists for a signed-in visitor, so the rail reads
+  // the session directly rather than having it threaded through two shells.
+  const { signedIn } = useSession();
   // The two sport directories behave as one accordion: opening either closes the
   // other, so only one long list is ever pushed into the rail at a time.
   const [openDirectory, setOpenDirectory] = useState(null);
   const toggleDirectory = (id) => setOpenDirectory((cur) => (cur === id ? null : id));
+
+  const handleSelect = (id, action) => {
+    if (action === "wallet") {
+      window.dispatchEvent(new CustomEvent("shuffle:wallet"));
+    } else if (action === "vault") {
+      window.dispatchEvent(new CustomEvent("shuffle:vault"));
+    } else {
+      onSelect?.(id);
+    }
+  };
 
   return (
     // The reference applies `isExpanded` here only while the rail is collapsed
@@ -210,14 +267,23 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
         <TokenCard expanded={expanded} />
 
         <div className={cx("NavList_root", expanded && "NavList_isExpanded")}>
-          <NavLink id={sportsbook ? "sports" : "home"} label="Home" icon="home" href={sportsbook ? "/sports" : "/"} expanded={expanded} active={active === (sportsbook ? "sports" : "home")} onSelect={onSelect} />
-          {sportsbook && sportsTop.map((l) => <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={onSelect} />)}
+          <NavLink id={sportsbook ? "sports" : "home"} label="Home" icon="home" href={sportsbook ? "/sports" : "/"} expanded={expanded} active={active === (sportsbook ? "sports" : "home")} onSelect={handleSelect} />
+          {sportsbook && sportsTop.map((l) => <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={handleSelect} />)}
+          {/* The reduced rail keeps My Bets directly under Home — on the live
+              site it is there on every account page (VIP, transactions,
+              settings, Shuffle Wise), where the casino categories are not. */}
+          {!casino && !sportsbook && (
+            <NavLink id="my-bets" label="My Bets" icon="sports-bet-slip" href="/sports?section=my-bets" expanded={expanded} active={active === "my-bets"} onSelect={handleSelect} />
+          )}
           {casino && (
             <>
-              <NavLink id="favourites" label="Favourites" icon="star" expanded={expanded} disabled />
-              <NavLink id="latest" label="Latest Releases" icon="latest-releases" href="/casino/categories/latest-releases" expanded={expanded} active={active === "latest"} onSelect={onSelect} />
-              <NavLink id="recent" label="Recently Played" icon="recent-played" expanded={expanded} disabled />
-              <NavLink id="challenges" label="Challenges" icon="challenge" href="/challenges" expanded={expanded} active={active === "challenges"} counter="26" onSelect={onSelect} />
+              {/* Both lists belong to an account. Signed out they have nothing
+                  to show, so the rail keeps the reference's disabled state
+                  rather than linking at a page that would bounce the visitor. */}
+              <NavLink id="favourites" label="Favourites" icon="star" href="/favourites" expanded={expanded} active={active === "favourites"} disabled={!signedIn} onSelect={handleSelect} />
+              <NavLink id="latest" label="Latest Releases" icon="latest-releases" href="/casino/categories/latest-releases" expanded={expanded} active={active === "latest"} onSelect={handleSelect} />
+              <NavLink id="recent" label="Recently Played" icon="recent-played" href="/casino/recently-played" expanded={expanded} active={active === "recent"} disabled={!signedIn} onSelect={handleSelect} />
+              <NavLink id="challenges" label="Challenges" icon="challenge" href="/challenges" expanded={expanded} active={active === "challenges"} counter="26" onSelect={handleSelect} />
             </>
           )}
 
@@ -234,7 +300,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
                 linkClass="NavigationLottery_lottery"
                 counter={<span className="NavigationLottery_date">5d</span>}
                 counterClass="Counter_text"
-                onSelect={onSelect}
+                onSelect={handleSelect}
               />
             </div>
             <div className="NavigationTokenAirdrop_root">
@@ -248,7 +314,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
                 greenDot
                 counter={<span className="NavigationTokenAirdrop_date">6d</span>}
                 counterClass="Counter_text"
-                onSelect={onSelect}
+                onSelect={handleSelect}
               />
             </div>
             <ExpandableGroup
@@ -257,29 +323,67 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
               label="Promotions"
               links={[...promoLinks, { id: "promotions", label: "All Promotions", icon: "promotions", href: "/promotions" }]}
               active={active}
-              onSelect={onSelect}
+              onSelect={handleSelect}
               open={promosOpen}
               onToggle={() => setPromosOpen((o) => !o)}
             />
           </div>
 
-          {sportsbook && sportsFeatured.map((l) => <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={onSelect} />)}
+          {sportsbook && sportsFeatured.map((l) => <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={handleSelect} />)}
           {sportsbook && (
             <div className={cx("NavigationLineBreakWrapper_root", expanded && "NavigationLineBreakWrapper_expanded")}>
-              <ExpandableGroup expanded={expanded} icon="all-sports" label="All sports" links={allSports} active={active} onSelect={onSelect} open={openDirectory === "sports"} onToggle={() => toggleDirectory("sports")} />
-              <ExpandableGroup expanded={expanded} icon="esports" label="All Esports" links={allEsports} active={active} onSelect={onSelect} open={openDirectory === "esports"} onToggle={() => toggleDirectory("esports")} />
+              <ExpandableGroup expanded={expanded} icon="all-sports" label="All sports" links={allSports} active={active} onSelect={handleSelect} open={openDirectory === "sports"} onToggle={() => toggleDirectory("sports")} />
+              <ExpandableGroup expanded={expanded} icon="esports" label="All Esports" links={allEsports} active={active} onSelect={handleSelect} open={openDirectory === "esports"} onToggle={() => toggleDirectory("esports")} />
             </div>
           )}
 
           {casino && casinoLinks.map((l) => (
-            <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={onSelect} />
+            <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={handleSelect} />
           ))}
 
-          {casino && <hr className={cx("NavDivider_root", expanded && "NavDivider_isExpanded")} />}
+          {/* Between Providers and VIP, exactly where the live rail puts it —
+              and inside a `NavigationLineBreakWrapper`, which is what draws the
+              hairline above the group. Same wrapper the sport directories use. */}
+          {signedIn && (
+            <div className={cx("NavigationLineBreakWrapper_root", expanded && "NavigationLineBreakWrapper_expanded")}>
+              <ExpandableGroup
+                expanded={expanded}
+                icon="profile"
+                label="Profile"
+                links={profileLinks}
+                active={active}
+                onSelect={handleSelect}
+                open={profileOpen}
+                onToggle={() => setProfileOpen((o) => !o)}
+              />
+            </div>
+          )}
 
-          {footerLinks.map((l) => (
-            <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={onSelect} />
+          {/*
+            Signed out, a plain rule separates the casino categories from the
+            site-wide links — that is what the capture has.
+
+            Signed in, the Profile wrapper above already closes the section with
+            its own `border-bottom`, and drawing this as well puts two hairlines
+            a few pixels apart. The live nav contains no `<hr>` at all in that
+            state: it goes `Providers → NavigationLineBreakWrapper → VIP`, and
+            the wrapper's two borders do all the dividing.
+          */}
+          {casino && !signedIn && <hr className={cx("NavDivider_root", expanded && "NavDivider_isExpanded")} />}
+
+          {footerLinks.map(({ signedInHref, ...l }) => (
+            <NavLink
+              key={l.id}
+              {...l}
+              href={(signedIn && signedInHref) || l.href}
+              expanded={expanded}
+              active={active === l.id}
+              onSelect={handleSelect}
+            />
           ))}
+          {signedIn && (
+            <NavLink id="shuffle-wise" label="Shuffle Wise" icon="shuffle-wise" href="/shuffle-wise/self-exclusion" expanded={expanded} active={active === "shuffle-wise"} onSelect={handleSelect} />
+          )}
           <NavLink id="support" label="Live Support" icon="live-support" expanded={expanded} as="button" onSelect={() => {}} />
         </div>
       </div>

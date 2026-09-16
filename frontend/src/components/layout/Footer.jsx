@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from "react";
+import { cx } from "../../lib/carousel";
+
 const columns = [
   {
     order: 2,
@@ -50,12 +53,37 @@ const columns = [
 const languages = ["English", "Français", "中文", "Español", "Português", "한국어", "日本語", "Deutsch", "Magyar", "Türkçe", "Pусский", "Tiếng Việt", "Srbija", "Polski", "Indonesian", "Norsk", "Italiano"];
 const odds = ["Decimal", "Fractional", "American", "Indonesian", "Hong Kong", "Malaysian"];
 
-function SelectButton({ label, options, value, children }) {
+/**
+ * One of the footer's two pickers — reference `Select` inside
+ * `LanguageAndOddSelectors`.
+ *
+ * The popup is the same `ActivityBoard_selectPopup` list the rest of the site's
+ * selects use (see `ActivityBoard`), flipped to open upwards: these sit at the
+ * very bottom of the page, so a downward list would open off-screen.
+ */
+function SelectButton({ label, options, value, onChange, children }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (!root.current?.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   return (
-    <div className="FormControlWrapper_root Select_formWrapper">
+    <div className="FormControlWrapper_root Select_formWrapper" ref={root}>
       <label className="sr-only">
         {label}
-        <select tabIndex={-1} name={label} defaultValue={value}>
+        <select tabIndex={-1} name={label} value={value} onChange={(e) => onChange(e.target.value)}>
           {options.map((o) => (
             <option key={o} value={o}>
               {o}
@@ -63,16 +91,67 @@ function SelectButton({ label, options, value, children }) {
           ))}
         </select>
       </label>
-      <button type="button" aria-label={label} aria-haspopup="listbox" aria-expanded="false" className="Select_button">
+      <button
+        type="button"
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={cx("Select_button", open && "Select_openBtn")}
+        onClick={() => setOpen((o) => !o)}
+      >
         <span className="Select_item">{children}</span>
-        <img alt="Toggle dropdown menu" className="Select_chevronIcon" src="/icons/chevron.svg" />
+        <img alt="Toggle dropdown menu" className={cx("Select_chevronIcon", open && "Select_up")} src="/icons/chevron.svg" />
       </button>
+      {open && (
+        <ul className="ActivityBoard_selectPopup Footer_selectPopup" role="listbox">
+          {options.map((o) => (
+            <li key={o}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={o === value}
+                className={cx("ActivityBoard_selectOption", o === value && "ActivityBoard_selectOptionSelected")}
+                onClick={() => {
+                  onChange(o);
+                  setOpen(false);
+                }}
+              >
+                {o}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The language and odds pickers. The reference renders this pair twice — once
+ * inside the footer's last column for tablet and up, and once as a row of its
+ * own below the link grid on mobile — and hides whichever does not apply. Both
+ * copies drive the same preference, so the state lives in `Footer`.
+ */
+function LanguageAndOddSelectors({ className, language, setLanguage, odd, setOdd }) {
+  return (
+    <div className={className}>
+      <SelectButton label="language" options={languages} value={language} onChange={setLanguage}>
+        <span className="Select_text">{language}</span>
+      </SelectButton>
+      <SelectButton label="odds" options={odds} value={odd} onChange={setOdd}>
+        <div className="OddsFormatPreference_selectedItem">
+          Odds: <span>{odd}</span>
+        </div>
+      </SelectButton>
     </div>
   );
 }
 
 /** Site footer — reference `Footer` module. */
 export default function Footer() {
+  const [language, setLanguage] = useState("English");
+  const [odd, setOdd] = useState("Decimal");
+
   return (
     <footer className="Footer_footerWrapper">
       <section className="LayoutContainer_root LayoutContainer_mobile-top-md2 LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-top-lg4 LayoutContainer_tablet-bottom-lg4 LayoutContainer_column">
@@ -107,18 +186,23 @@ export default function Footer() {
           ))}
 
           <div className="Footer_column Footer_columnOrder1">
-            <div className="LanguageAndOddSelectors_visibleOnlyMobileAbove">
-              <SelectButton label="language" options={languages} value="English">
-                <span className="Select_text">English</span>
-              </SelectButton>
-              <SelectButton label="odds" options={odds} value="Decimal">
-                <div className="OddsFormatPreference_selectedItem">
-                  Odds: <span>Decimal</span>
-                </div>
-              </SelectButton>
-            </div>
+            <LanguageAndOddSelectors
+              className="LanguageAndOddSelectors_visibleOnlyMobileAbove"
+              language={language}
+              setLanguage={setLanguage}
+              odd={odd}
+              setOdd={setOdd}
+            />
           </div>
         </div>
+
+        <LanguageAndOddSelectors
+          className="LanguageAndOddSelectors_visibleMobileOnly"
+          language={language}
+          setLanguage={setLanguage}
+          odd={odd}
+          setOdd={setOdd}
+        />
 
         <p className="Footer_description">
           Shuffle is owned and operated by Natural Nine B.V., Curaçao company registration number 160998, with its registered address at

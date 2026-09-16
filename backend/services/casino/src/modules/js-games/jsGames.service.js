@@ -11,7 +11,17 @@ const E = require('./jsGames.errors');
  * newest N" delete, which is exactly how two lists drift apart.
  */
 const { GamesService } = require('../games/games.service');
-const { CODE, MESSAGE, V1_CURRENCIES, V2_CURRENCIES, V2_TYPE, RAKEBACK_RATE } = require('./jsGames.constants');
+const {
+  CODE,
+  MESSAGE,
+  V1_CURRENCIES,
+  V2_CURRENCIES,
+  V2_SETTLEMENT,
+  V2_STAKED_TYPES,
+  settlementType,
+  RAKEBACK_RATE,
+  RAKEBACK_USD_CURRENCIES,
+} = require('./jsGames.constants');
 
 /**
  * The two jsGames integrations.
@@ -63,18 +73,25 @@ const { CODE, MESSAGE, V1_CURRENCIES, V2_CURRENCIES, V2_TYPE, RAKEBACK_RATE } = 
  * ── ON `users.rakeamount` ────────────────────────────────────────────────
  * Legacy accrued 0.2% of each stake onto that column from inside the v2
  * callback — and for INR it assigned the figure inside a query callback that
- * ran after the value had already been read, so INR players accrued nothing.
- * It is not written here: `users` belongs to user-service. Every stake now
- * leaves a ledger row, so the accrual is derivable, and `RAKEBACK_RATE` is
- * declared for whoever derives it.
+ * ran after the value had already been read, so INR players accrued nothing
+ * while USDT players accrued it.
+ *
+ * The accrual happens here, but the WRITE does not: `users` belongs to
+ * user-service, which already owns reading and claiming that balance. This
+ * service computes the figure and posts it to
+ * `POST /internal/user/rakeback/accrue`. Best effort, always after the
+ * settlement has been accepted — a rakeback that cannot be recorded must never
+ * be a reason a player's payout fails.
  */
 class JsGamesService {
-  constructor({ models, db, config, logger, wallet, v1, v2 }) {
+  constructor({ models, db, config, logger, wallet, clients, v1, v2 }) {
     this.models = models;
     this.db = db;
     this.config = config;
     this.logger = logger;
     this.wallet = wallet;
+    /** user-service, for the rakeback accrual and the USD rate behind it. */
+    this.clients = clients ?? {};
     this.v1 = v1;
     this.v2 = v2;
     /* Same service, same models — a plain collaborator, not an HTTP hop. */
@@ -518,13 +535,39 @@ class JsGamesService {
       launch_url: launchUrl,
     });
 
+    /**
+     * "Recently played" is a LAUNCH event — opening a game is what puts it in
+     * the list, not winning at it. No wager yet, so only the play is written.
+     *
+     * `launchV1` has done this since it was ported and v2 did not, so a player
+     * could open any number of provider games and their Recently Played page
+     * stayed empty. The list is fed from `recordActivity` and nothing else
+     * called it on this path.
+     */
+    await this.games.recordActivity({ userId, gameRef: gameUid });
+
     return { gameLaunchUrl: launchUrl, sessionToken };
   }
 
   /**
-   * @legacy POST /jsGamesv2/bet-callback
+   * @legacy POST /jsGamesv2/v2/bet-callback
    *
-   * The one that took the balance from the body. See the class note.
+   * The money path. See the class note for what it replaced.
+   *
+   * ── THE MESSAGE ──────────────────────────────────────────────────────
+   *
+   *   { user_id, game_uid, game_round, serial_number,
+   *     bet_amount, win_amount, currency, timestamp }
+   *
+   * `game_round` is the idempotency key and `bet_amount`/`win_amount` are the
+   * movement. There is NO `transaction_type` and NO `transaction_id` on the
+   * wire — an earlier pass of this handler required both, which rejected every
+   * genuine callback with `Invalid transaction_type` before it reached the
+   * ledger. The type is derived from the amounts by `settlementType`.
+   *
+   * Both amounts may be negative: that is the provider reversing a round it
+   * settled wrongly, and it is why the movement is one signed delta rather
+   * than a debit branch and a credit branch.
    */
   async betCallbackV2({ body, headers }) {
     try {
@@ -543,56 +586,110 @@ class JsGamesService {
       const userId = Number(body.user_id);
       if (!Number.isInteger(userId) || userId <= 0) return { success: false, error: 'Invalid payload' };
 
-      const type = String(body.transaction_type ?? '').toLowerCase();
-      if (!Object.values(V2_TYPE).includes(type)) return { success: false, error: 'Invalid transaction_type' };
-
       const settlement = V2_CURRENCIES[String(body.currency ?? '').toUpperCase()];
       if (!settlement) return { success: false, error: 'Unsupported currency' };
 
       /**
        * The idempotency key.
        *
-       * Legacy defaulted it to the literal string `'unknown'`, which would make
-       * every callback that omitted one collide with every other. A movement we
-       * cannot identify is a movement we cannot safely retry, so it is refused.
+       * Legacy defaulted the key to the literal string `'unknown'`, which would
+       * make every callback that omitted one collide with every other. A
+       * movement we cannot identify is a movement we cannot safely retry, so it
+       * is refused rather than given a name.
        */
-      const externalId = String(body.transaction_id ?? '').trim();
-      if (!externalId || externalId === 'unknown') return { success: false, error: 'transaction_id is required' };
+      const round = String(body.game_round ?? '').trim();
+      if (!round || round === 'unknown') return { success: false, error: 'game_round is required' };
 
       /**
-       * THE BALANCE IS COMPUTED, NOT ACCEPTED.
+       * THE MOVEMENT IS COMPUTED, NOT ACCEPTED.
        *
-       * `body.balance` is ignored entirely — it is the field that made this
-       * endpoint "post a number, own that balance".
+       * Any `balance` on the body is ignored entirely — it is the field that
+       * made this endpoint "post a number, own that balance".
        */
-      const magnitude = money.toMinor(String(body.amount ?? '0'));
-      if (magnitude < 0n) return { success: false, error: 'amount must be non-negative' };
-      const delta = type === V2_TYPE.WIN ? magnitude : -magnitude;
+      let bet;
+      let win;
+      try {
+        bet = money.toMinor(String(body.bet_amount ?? '0'));
+        win = money.toMinor(String(body.win_amount ?? '0'));
+      } catch {
+        return { success: false, error: 'Invalid amounts' };
+      }
+
+      const type = settlementType(bet, win);
+      const delta = win - bet;
+
+      /**
+       * A payout must belong to a round that was staked.
+       *
+       * Without this, `bet_amount: 0` plus any `win_amount` mints credit from
+       * nothing — the signature is the only other thing standing in front of
+       * it, and a signature proves who sent a message, not that the message
+       * describes a round that happened.
+       */
+      if (type === V2_SETTLEMENT.WIN && this.#requireBetForWin()) {
+        const staked = await this.models.GameTransaction.findOne({
+          where: {
+            user_id: userId,
+            external_transaction_id: round,
+            transaction_type: { [Op.in]: V2_STAKED_TYPES },
+          },
+          attributes: ['id'],
+          raw: true,
+        });
+        if (!staked) {
+          this.logger?.error({ userId, round }, 'REJECTED jsGames v2 callback: win with no matching bet');
+          return { success: false, error: 'No matching bet for this round' };
+        }
+      }
+
+      const catalogue = await this.#catalogueFacts(body.game_uid);
 
       const outcome = await this.#applyMovement({
         model: this.models.GameTransaction,
-        where: { external_transaction_id: externalId },
+        where: { external_transaction_id: round, transaction_type: type },
         record: {
           user_id: userId,
           game_uid: body.game_uid ?? null,
           transaction_type: type,
           amount: money.toDecimalString(delta),
           currency: settlement,
-          external_transaction_id: externalId,
+          external_transaction_id: round,
+          serial_number: body.serial_number ? String(body.serial_number) : null,
+          game_type: catalogue.gameType,
+          game_name: catalogue.gameName,
+          transaction_status: 'completed',
           additional_data: body,
         },
         userId,
         currency: settlement,
         delta,
-        refId: `v2:${externalId}`,
+        refId: `v2:${round}:${type}`,
       });
 
       if (outcome.duplicate) {
-        this.logger?.info({ externalId }, 'Duplicate jsGames v2 callback ignored');
-      } else if (outcome.insufficient) {
-        return { success: false, error: 'Insufficient balance' };
-      } else if (outcome.error) {
-        return { success: false, error: 'Server error' };
+        this.logger?.info({ round, type }, 'Duplicate jsGames v2 callback ignored');
+        const balance = (await this.#balanceOf(userId, settlement)) ?? '0';
+        return { success: true, duplicate: true, new_balance: String(balance) };
+      }
+
+      if (outcome.insufficient) {
+        const balance = (await this.#balanceOf(userId, settlement)) ?? '0';
+        return { success: false, error: 'Insufficient balance', new_balance: String(balance) };
+      }
+
+      if (outcome.error) return { success: false, error: 'Server error' };
+
+      /**
+       * The wager counters and the rakeback accrual, AFTER the movement has
+       * been accepted and only when it was not a duplicate — a provider
+       * retrying a callback must not count the same stake twice.
+       *
+       * `bet` and not `delta`: what was WAGERED is the stake, independent of
+       * whether it won, which is what a wagering requirement measures.
+       */
+      if (bet > 0n) {
+        await this.games.recordActivity({ userId, gameRef: body.game_uid ?? null, wagered: bet });
+        await this.#accrueRakeback({ userId, stake: bet, currency: settlement, round });
       }
 
       const balance = outcome.balance ?? (await this.#balanceOf(userId, settlement)) ?? '0';
@@ -623,13 +720,14 @@ class JsGamesService {
    */
   historyV2({ userId }) {
     if (!this.v2?.configured) throw E.NOT_CONFIGURED({ provider: 'jsgames-v2' });
-    return this.#upstream(() => this.v2.request('/user/history', { query: { user_id: userId } }));
+    // The USER api, not the GAME api — a different base. See `requestUser`.
+    return this.#upstream(() => this.v2.requestUser('/user/history', { query: { user_id: userId } }));
   }
 
   /** @legacy GET /jsGamesv2/historyAdmin */
   historyAllV2() {
     if (!this.v2?.configured) throw E.NOT_CONFIGURED({ provider: 'jsgames-v2' });
-    return this.#upstream(() => this.v2.request('/user/historyToClient'));
+    return this.#upstream(() => this.v2.requestUser('/historyToClient'));
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -683,6 +781,104 @@ class JsGamesService {
 
       this.logger?.error({ err: error, refId, where }, 'jsGames movement failed');
       return { error };
+    }
+  }
+
+  /**
+   * Is the "a win must have a matching bet" rule on?
+   *
+   * On by default. It is switchable only because a provider MAY settle a bonus
+   * round under a round id it never staked — if that is ever confirmed in
+   * writing, `JSGAMES_REQUIRE_BET_FOR_WIN=false` turns it off. Until then,
+   * leaving it on is what stops a signed message from minting credit.
+   */
+  #requireBetForWin() {
+    return this.config?.JSGAMES_REQUIRE_BET_FOR_WIN !== false;
+  }
+
+  /**
+   * `game_type` and `game_name`, copied onto the settlement row.
+   *
+   * Denormalised so bet history and the wager report read one table instead of
+   * joining a catalogue a provider may retire a game from. A miss is not a
+   * failure — an unknown game still settles, with nulls, because refusing the
+   * money over a missing catalogue row would be the wrong trade.
+   */
+  async #catalogueFacts(gameUid) {
+    if (!gameUid) return { gameType: null, gameName: null };
+    try {
+      const row = await this.models.JsGames.findOne({
+        where: { game_uid: String(gameUid) },
+        attributes: ['game_type', 'game_name'],
+        raw: true,
+      });
+      return { gameType: row?.game_type ?? null, gameName: row?.game_name ?? null };
+    } catch (error) {
+      this.logger?.warn({ err: error, gameUid }, 'jsGames catalogue lookup failed — settling without it');
+      return { gameType: null, gameName: null };
+    }
+  }
+
+  /**
+   * Accrue rakeback on a stake: `RAKEBACK_RATE` of it, in USD terms.
+   *
+   * ── WHY THE CONVERSION IS A WHITELIST AND NOT A RATE LOOKUP ──────────
+   *
+   * The rate is defined against USD. USDT and USD are USD terms already; INR
+   * is converted through `/internal/user/exchange-rate`. A currency that is
+   * neither accrues NOTHING rather than accruing its face value as though it
+   * were dollars — which is what legacy did, and what would pay a BTC staker
+   * roughly 100,000× what they are owed.
+   *
+   * Everything here is best effort. It runs after the settlement is already
+   * committed, and every failure is logged and swallowed: rakeback is a
+   * loyalty accrual, and it does not get to fail a payout.
+   */
+  async #accrueRakeback({ userId, stake, currency, round }) {
+    try {
+      if (!(stake > 0n)) return;
+
+      let usd = money.toDecimalString(stake);
+
+      if (!RAKEBACK_USD_CURRENCIES.includes(currency)) {
+        usd = await this.#usdValue(usd, currency);
+        // No rate, no guess.
+        if (usd == null) {
+          this.logger?.warn({ currency, round }, 'No USD rate — rakeback not accrued for this stake');
+          return;
+        }
+      }
+
+      const accrual = money.toDecimalString(money.multiply(usd, RAKEBACK_RATE));
+      if (money.isZero(accrual)) return;
+
+      await this.clients.user.post('/internal/user/rakeback/accrue', {
+        userId,
+        amount: accrual,
+        source: 'jsgames-v2',
+        ref: round,
+      });
+    } catch (error) {
+      this.logger?.error({ err: error, userId, round }, 'Rakeback accrual failed — settlement stands');
+    }
+  }
+
+  /**
+   * `amount` of `currency` in USD, or null when the platform has no rate.
+   *
+   * `/internal/user/exchange-rate/convert` already computes this — it is the
+   * same route sports uses to convert stakes, and `usdValue` is the leg of the
+   * conversion we want, before it is turned back into the target currency.
+   */
+  async #usdValue(amount, currency) {
+    try {
+      const result = await this.clients.user.get('/internal/user/exchange-rate/convert', {
+        query: { from: currency, to: 'USDT', amount },
+      });
+      return result?.usdValue == null ? null : String(result.usdValue);
+    } catch (error) {
+      this.logger?.warn({ err: error, currency }, 'Exchange-rate lookup failed');
+      return null;
     }
   }
 

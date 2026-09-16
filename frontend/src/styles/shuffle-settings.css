@@ -1,0 +1,655 @@
+/* ==========================================================================
+   `/settings/*` — the six-tab account settings.
+
+   A signed-in chunk a signed-out visitor never fetches, so none of it is in the
+   capture. Every rule below was read off the live pages' stylesheets with the
+   module hashes stripped.
+
+   What is NOT here, because the captured stylesheets already carry it and the
+   live pages share it: `Tab_*`, `Table_*`, `TableSkeleton_*`, `LayoutContainer_*`,
+   `Select_*`, `ButtonVariants_*`, `Input_*`, `Switch_*`, `Avatar_*`,
+   `UserBadgeBlock_*`, `VipBadge_*`, `Tag_*` and `Icon_*`.
+   ========================================================================== */
+
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+
+.Settings_settingsViewContainer {
+  margin-bottom: 5rem;
+}
+
+.Settings_settingsViewTabsWrapper {
+  display: flex;
+  padding-bottom: var(--spacing-lg1);
+  gap: var(--spacing-sm4);
+}
+
+.Settings_settingsViewTabsWrapper > div:first-child {
+  flex: 1 1 100%;
+}
+
+/*
+ * Six tabs do not fit a narrow content column, and the reference does not wrap
+ * them — it scrolls the strip sideways with the bar hidden.
+ */
+.ScrollableTab_root {
+  display: flex;
+  overflow: auto hidden;
+  flex-wrap: nowrap;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.ScrollableTab_root::-webkit-scrollbar {
+  display: none;
+}
+
+.Settings_label { font-size: var(--text-lg); }
+.Settings_switch { padding: 0 var(--spacing-sm3); }
+
+/* ── The panel every tab builds from ────────────────────────────────────── */
+
+.Panel_panelWrapper {
+  width: 100%;
+  padding: var(--spacing-lg1);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-md);
+  flex: 1 1 0%;
+}
+
+.Panel_panelHeading {
+  margin: 0 0 var(--spacing-md2);
+  color: var(--color-white);
+  font-size: var(--text-xl);
+  font-style: normal;
+  font-weight: 700;
+  line-height: 150%;
+}
+
+.Relative_root { position: relative; }
+
+.Spacer_root { position: relative; width: 100%; }
+.Spacer_sm { height: var(--spacing-sm); }
+.Spacer_sm1 { height: var(--spacing-sm1); }
+.Spacer_sm2 { height: var(--spacing-sm2); }
+.Spacer_sm3 { height: var(--spacing-sm3); }
+.Spacer_sm4 { height: var(--spacing-sm4); }
+.Spacer_sm5 { height: var(--spacing-sm5); }
+.Spacer_md { height: var(--spacing-md); }
+.Spacer_md1 { height: var(--spacing-md1); }
+.Spacer_md2 { height: var(--spacing-md2); }
+.Spacer_lg { height: var(--spacing-lg); }
+.Spacer_lg1 { height: var(--spacing-lg1); }
+.Spacer_lg2 { height: var(--spacing-lg2); }
+.Spacer_lg3 { height: var(--spacing-lg3); }
+.Spacer_lg4 { height: var(--spacing-lg4); }
+
+/* ── Account ────────────────────────────────────────────────────────────── */
+
+.UserInfoPanel_infoWrapper {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: var(--spacing-lg1);
+}
+
+.UserInfoPanel_userInfoCard {
+  padding: var(--spacing-lg1);
+  border-radius: var(--radius-md);
+  background: var(--color-gray800);
+  flex: 1 1 0%;
+}
+
+h2.UserInfoPanel_heading { font-size: var(--text-xl); }
+.UserInfoPanel_amount { margin-left: var(--spacing-sm4); }
+
+.UserInfoPanel_edit {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.StatisticsPanel_root {
+  padding: var(--spacing-lg1);
+  border-radius: var(--radius-md);
+  background: var(--color-gray800);
+}
+
+.StatisticsPanel_statisticsInfo {
+  display: flex;
+  margin-top: 0;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+/*
+ * Stacked, each figure is a label-and-value row with a rule under it; side by
+ * side, the rule becomes the divider between columns. The `::before`/`::after`
+ * pair paints over the stacked rule's ends so it stops short of the card's
+ * padding.
+ */
+.StatisticsPanel_infoItem {
+  position: relative;
+  display: flex;
+  padding: var(--spacing-md2) 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm1);
+  border-bottom: 1px solid var(--color-gray700);
+  flex: 1 1 0%;
+}
+
+.StatisticsPanel_infoItem:first-child { padding-top: 0; padding-left: 0; }
+
+.StatisticsPanel_infoItem:last-child {
+  padding-right: 0;
+  padding-bottom: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.StatisticsPanel_infoItem::after,
+.StatisticsPanel_infoItem::before {
+  content: "";
+  position: absolute;
+  right: calc(var(--spacing-sm2) * -1);
+  left: calc(var(--spacing-sm2) * -1);
+  border: 1px solid var(--color-gray800);
+  background: var(--color-gray800);
+}
+
+.StatisticsPanel_infoItem::before { bottom: 0; }
+.StatisticsPanel_infoItem::after { top: 0; }
+
+.StatisticsPanel_infoItemFitContent { min-width: 6rem; flex: 1 1 auto; }
+.StatisticsPanel_infoItemShrinkable { min-width: 2.5rem; flex: 1 6 auto; }
+
+.StatisticsPanel_betValueWrapper {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.StatisticsPanel_infoTitle {
+  color: var(--color-gray300);
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.StatisticsPanel_infoValue {
+  display: flex;
+  min-width: 0;
+  margin-top: 0;
+  align-items: center;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+/* The tick inside the email field's right edge. */
+.VerifiedStatus_root {
+  position: absolute;
+  right: var(--spacing-md2);
+  bottom: var(--spacing-lg1);
+  transform: translateY(50%);
+}
+
+.VerifiedStatus_root > img { width: 14px; height: 14px; }
+
+@media (min-width: 992px) {
+  .StatisticsPanel_statisticsInfo { flex-direction: row; justify-content: space-between; }
+  .StatisticsPanel_infoItem { padding: 0 var(--spacing-lg1); border-right: 1px solid var(--color-gray700); border-bottom: 0; }
+  .StatisticsPanel_infoItem:first-child { padding-bottom: 0; }
+  .StatisticsPanel_infoItem:last-child { padding-top: 0; }
+  .StatisticsPanel_betValueWrapper { flex-direction: column; }
+  .StatisticsPanel_infoValue { margin-top: var(--spacing-sm1); }
+}
+
+/* ── Verify ─────────────────────────────────────────────────────────────── */
+
+.Verify_verifyContainer { align-items: center; }
+.Verify_header { margin-bottom: var(--spacing-sm4); }
+
+.VerificationCard_root {
+  display: flex;
+  padding: var(--spacing-lg1);
+  flex-direction: column;
+  gap: var(--spacing-lg1);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-white);
+}
+
+.VerificationCard_root:disabled { color: var(--color-gray500); cursor: default; }
+
+.VerificationCard_cardSectionWrapper,
+.VerificationCard_cardWrapper {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--spacing-lg1);
+}
+
+.VerificationCard_cardWrapper { flex-wrap: wrap; justify-content: space-between; }
+
+.VerificationCard_headerLeft { display: flex; gap: var(--spacing-sm4); }
+
+.VerificationCard_headerLeft h4 {
+  font-size: var(--text-xl);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.VerificationCard_text { font-size: var(--text-lg); font-weight: 400; }
+.VerificationCard_tag { font-weight: 500; }
+.VerificationCard_buttonWrapper { display: flex; justify-content: flex-end; }
+.VerificationCard_button { display: flex; justify-content: center; }
+
+.SupportChatPrompt_root {
+  display: flex;
+  width: 100%;
+  padding: var(--spacing-lg4) var(--spacing-md2) var(--spacing-md2);
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md2);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-md);
+}
+
+.SupportChatPrompt_chatPromptSubtext {
+  font-size: var(--text-lg);
+  line-height: 21px;
+  text-align: center;
+}
+
+/* ── Security ───────────────────────────────────────────────────────────── */
+
+.PasswordAndSecurity_passwordAndSecurityPageWrapper {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-lg1);
+}
+
+@media (min-width: 992px) {
+  .PasswordAndSecurity_passwordAndSecurityPageWrapper { grid-template-columns: 1fr 1fr; }
+}
+
+.ChangePassword_passwordAndSecurityDescriptionText {
+  margin-bottom: var(--spacing-md2);
+  font-size: var(--text-md);
+  font-weight: 400;
+}
+
+.FeatureCard_passwordAndSecurityCardWrapper {
+  display: flex;
+  width: 100%;
+  padding: var(--spacing-lg1);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-gray900);
+  cursor: pointer;
+}
+
+.FeatureCard_passwordAndSecurityCardBody { display: flex; align-items: center; }
+
+.FeatureCard_passwordAndSecurityCardTitle {
+  margin-left: var(--spacing-md);
+  font-size: var(--text-h4);
+  font-weight: 700;
+}
+
+.FeatureCard_right { transform: rotate(-90deg); }
+
+.TwoFactorAuthentication_descriptionText {
+  margin-bottom: var(--spacing-md2);
+  font-size: var(--text-md);
+  font-weight: 400;
+}
+
+.TwoFactorAuthentication_featureCard {
+  display: flex;
+  padding: var(--spacing-lg1);
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius-md);
+  background: var(--color-gray900);
+}
+
+.TwoFactorAuthentication_iconTextWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.TwoFactorAuthentication_verifyIcon { width: var(--spacing-lg5); height: var(--spacing-lg5); }
+.TwoFactorAuthentication_totpStatusText { font-size: var(--text-h4); font-weight: 700; }
+.TwoFactorAuthentication_buttonWrapper { width: 6.25rem; }
+
+/*
+ * Spans one column, or both when it is alone on its row — the reference's own
+ * `:only-child` rule, which is what puts Linked Accounts full width under the
+ * two panels above it.
+ */
+.LinkedAccountsPanel_passwordAndSecurityLinkedAccountsPanel { grid-column: span 1; }
+.LinkedAccountsPanel_passwordAndSecurityLinkedAccountsPanel > form { height: 100%; }
+.LinkedAccountsPanel_passwordAndSecurityLinkedAccountsPanel:only-child { grid-column: span 2; }
+
+.LinkAccountCard_passwordAndSecurityAccountCardWrapper {
+  display: flex;
+  padding: var(--spacing-lg1);
+  align-items: center;
+  border-radius: var(--radius-md);
+  background: var(--color-gray900);
+  user-select: none;
+}
+
+.LinkAccountCard_passwordAndSecurityProviderName {
+  margin-right: auto;
+  margin-left: var(--spacing-sm4);
+  text-transform: capitalize;
+}
+
+.LinkAccountCard_passwordAndSecurityAccountCardWrapper > p,
+.LinkAccountCard_passwordAndSecurityAccountCardWrapper > svg { opacity: 1; }
+
+.LinkAccountCard_passwordAndSecurityAccountCardWrapper.LinkAccountCard_disabled > p,
+.LinkAccountCard_passwordAndSecurityAccountCardWrapper.LinkAccountCard_disabled > svg { opacity: 0.6; }
+
+.LinkAccountCard_switch { padding: 0 var(--spacing-sm3); }
+
+.Subheader_root {
+  display: flex;
+  margin-bottom: 2.875rem;
+  align-items: center;
+  font-size: var(--text-lg);
+}
+
+.ChangePasswordModal_root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+}
+
+button.ChangePasswordModal_button { margin-top: var(--spacing-sm4); }
+
+/* ── Preferences ────────────────────────────────────────────────────────── */
+
+.Preferences_root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg1);
+}
+
+@media (min-width: 1140px) {
+  .Preferences_root { flex-direction: row; align-items: start; }
+}
+
+.Preferences_heading { margin-bottom: var(--spacing-sm2); }
+
+/* The rows draw their own separators — no divider markup between them. */
+.Preferences_preferenceSwitchList > div:not(:last-child) {
+  padding-bottom: var(--spacing-md2);
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.Preferences_preferenceSwitchList > div:not(:first-child) {
+  position: relative;
+  display: flex;
+  padding-top: var(--spacing-md2);
+}
+
+.Preferences_preferenceSwitchList > div:last-child { padding-bottom: 0; }
+
+.SwitchGroup_switchLabelDesc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm2);
+  flex-grow: 1;
+}
+
+.SwitchGroup_switchLabelDesc p {
+  color: var(--color-gray400);
+  font-size: var(--text-md);
+}
+
+h5.SwitchGroup_heading { margin-bottom: 0; }
+.SwitchGroup_switch { padding: 0 var(--spacing-sm3); }
+
+.FiatPreference_fiatPreferenceWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-md2);
+}
+
+.FiatPreference_fiatPreferenceWrapper > :first-child { flex-grow: 1; }
+.FiatPreference_fiatPreferenceSelectWrapper { width: 100%; opacity: 1; }
+
+@media (min-width: 768px) {
+  .FiatPreference_fiatPreferenceWrapper { flex-direction: row; align-items: center; }
+  .FiatPreference_fiatPreferenceSelectWrapper { max-width: 8rem; }
+}
+
+.ReferenceContainer_root {
+  display: flex;
+  padding: var(--spacing-md2) 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-md2);
+}
+
+.ReferenceContainer_root .ReferenceContainer_content p {
+  color: var(--color-gray500);
+  font-size: var(--text-md);
+}
+
+.ReferenceContainer_content { flex: 1 1 0%; }
+.ReferenceContainer_actionContainer { width: 100%; opacity: 1; }
+
+/* ── Sessions ───────────────────────────────────────────────────────────── */
+
+.UserSessions_flexCell {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  color: var(--color-white);
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.UserSessions_userDeviceWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.UserSessions_deviceIcon {
+  display: flex;
+  margin-right: var(--spacing-md);
+  align-items: center;
+  justify-content: center;
+}
+
+.UserSessions_ipText {
+  overflow: hidden;
+  padding-right: var(--spacing-lg1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.UserSessions_removeBtn {
+  position: relative;
+  display: flex;
+  width: fit-content;
+  margin: 0;
+  padding: 0;
+  align-items: flex-start;
+  border: 0;
+  background: none;
+  color: var(--color-primaryViolet);
+  cursor: pointer;
+}
+
+.UserSessions_removeBtn::after {
+  content: "";
+  position: absolute;
+  bottom: -0.188rem;
+  width: 100%;
+  height: 0.063rem;
+  background-color: var(--color-primaryViolet);
+}
+
+.UserSessions_errorWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.UserSessions_loggedOutText {
+  color: var(--color-gray300);
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.Settings_sessionsButtonGroup { display: none; width: 100%; gap: var(--spacing-md2); }
+
+.Settings_toggleInactiveSession {
+  display: flex;
+  margin-right: 0;
+  padding: 0.469rem 0;
+  align-items: center;
+  flex-direction: row-reverse;
+  gap: var(--spacing-sm1);
+  white-space: nowrap;
+}
+
+.Settings_logoutAllSessionBtn {
+  display: flex;
+  height: var(--spacing-lg4);
+  padding: 0.469rem var(--spacing-md2);
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm1);
+  background-color: var(--color-gray700);
+  color: var(--color-white);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.Settings_logoutAllSessionBtn img { display: flex; margin-left: var(--spacing-sm5); }
+
+/* ── Ignored Users ──────────────────────────────────────────────────────── */
+
+.IgnoredUsers_header { font-size: var(--text-title); font-weight: 700; }
+.IgnoredUsers_flexCell { display: flex; column-gap: var(--spacing-sm4); }
+
+.IgnoredUsers_subheader {
+  margin-top: var(--spacing-md2);
+  margin-bottom: var(--spacing-lg2);
+  color: var(--color-gray200);
+  font-size: var(--text-lg);
+  font-weight: 400;
+}
+
+.IgnoredUsers_unignoreBtn {
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--color-primaryViolet);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.IgnoredUsers_userLink { display: flex; column-gap: var(--spacing-sm4); cursor: pointer; }
+
+/* ── The rail-aware breakpoints ─────────────────────────────────────────── */
+
+@media (min-width: 1352px) {
+  .magic-container.right-side-opened-only .UserInfoPanel_infoWrapper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .magic-container.right-side-opened-only .StatisticsPanel_infoItem { padding: 0 var(--spacing-lg1); border-right: 1px solid var(--color-gray700); border-bottom: 0; }
+  .magic-container.right-side-opened-only .StatisticsPanel_infoItem:first-child { padding-bottom: 0; }
+  .magic-container.right-side-opened-only .StatisticsPanel_infoItem:last-child { padding-top: 0; }
+  .magic-container.right-side-opened-only .Verify_verifyContainer { flex-direction: row; align-items: start; }
+  .magic-container.right-side-opened-only .SupportChatPrompt_root { min-width: 18rem; width: 18rem; }
+  .magic-container.right-side-opened-only .ReferenceContainer_actionContainer { max-width: 8rem; }
+  .magic-container.right-side-opened-only .Settings_toggleInactiveSession { margin-top: 0; flex-direction: row; width: fit-content; }
+  .magic-container.right-side-opened-only .Settings_logoutAllSessionBtn { margin-top: 0; width: fit-content; }
+}
+
+@media (min-width: 1167px) {
+  .magic-container.left-side-opened-only .UserInfoPanel_infoWrapper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .magic-container.left-side-opened-only .StatisticsPanel_infoItem { padding: 0 var(--spacing-lg1); border-right: 1px solid var(--color-gray700); border-bottom: 0; }
+  .magic-container.left-side-opened-only .StatisticsPanel_infoItem:first-child { padding-bottom: 0; }
+  .magic-container.left-side-opened-only .StatisticsPanel_infoItem:last-child { padding-top: 0; }
+  .magic-container.left-side-opened-only .Verify_verifyContainer { flex-direction: row; align-items: start; }
+  .magic-container.left-side-opened-only .SupportChatPrompt_root { min-width: 18rem; width: 18rem; }
+  .magic-container.left-side-opened-only .ReferenceContainer_actionContainer { max-width: 8rem; }
+  .magic-container.left-side-opened-only .Settings_toggleInactiveSession { margin-top: 0; flex-direction: row; width: fit-content; }
+  .magic-container.left-side-opened-only .Settings_logoutAllSessionBtn { margin-top: 0; width: fit-content; }
+}
+
+@media (min-width: 1527px) {
+  .magic-container.both-side-opened .UserInfoPanel_infoWrapper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .magic-container.both-side-opened .StatisticsPanel_infoItem { padding: 0 var(--spacing-lg1); border-right: 1px solid var(--color-gray700); border-bottom: 0; }
+  .magic-container.both-side-opened .StatisticsPanel_infoItem:first-child { padding-bottom: 0; }
+  .magic-container.both-side-opened .StatisticsPanel_infoItem:last-child { padding-top: 0; }
+  .magic-container.both-side-opened .Verify_verifyContainer { flex-direction: row; align-items: start; }
+  .magic-container.both-side-opened .SupportChatPrompt_root { min-width: 18rem; width: 18rem; }
+  .magic-container.both-side-opened .ReferenceContainer_actionContainer { max-width: 8rem; }
+  .magic-container.both-side-opened .Settings_toggleInactiveSession { margin-top: 0; flex-direction: row; width: fit-content; }
+  .magic-container.both-side-opened .Settings_logoutAllSessionBtn { margin-top: 0; width: fit-content; }
+}
+
+@media (min-width: 992px) {
+  .magic-container.no-side-opened .UserInfoPanel_infoWrapper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .magic-container.no-side-opened .StatisticsPanel_infoItem { padding: 0 var(--spacing-lg1); border-right: 1px solid var(--color-gray700); border-bottom: 0; }
+  .magic-container.no-side-opened .StatisticsPanel_infoItem:first-child { padding-bottom: 0; }
+  .magic-container.no-side-opened .StatisticsPanel_infoItem:last-child { padding-top: 0; }
+  .magic-container.no-side-opened .Verify_verifyContainer { flex-direction: row; align-items: start; }
+  .magic-container.no-side-opened .SupportChatPrompt_root { min-width: 18rem; width: 18rem; }
+  .magic-container.no-side-opened .ReferenceContainer_actionContainer { max-width: 8rem; }
+  .magic-container.no-side-opened .Settings_toggleInactiveSession { margin-top: 0; flex-direction: row; width: fit-content; }
+  .magic-container.no-side-opened .Settings_logoutAllSessionBtn { margin-top: 0; width: fit-content; }
+}
+
+@media (min-width: 1128px) {
+  .magic-container.right-side-opened-only .ReferenceContainer_root { flex-direction: row; align-items: center; }
+  .magic-container.right-side-opened-only .ReferenceContainer_actionContainer { width: unset; }
+}
+@media (min-width: 943px) {
+  .magic-container.left-side-opened-only .ReferenceContainer_root { flex-direction: row; align-items: center; }
+  .magic-container.left-side-opened-only .ReferenceContainer_actionContainer { width: unset; }
+}
+@media (min-width: 1303px) {
+  .magic-container.both-side-opened .ReferenceContainer_root { flex-direction: row; align-items: center; }
+  .magic-container.both-side-opened .ReferenceContainer_actionContainer { width: unset; }
+}
+@media (min-width: 768px) {
+  .magic-container.no-side-opened .ReferenceContainer_root { flex-direction: row; align-items: center; }
+  .magic-container.no-side-opened .ReferenceContainer_actionContainer { width: unset; }
+}
+
+@media (min-width: 960px) {
+  .magic-container.right-side-opened-only .Settings_sessionsButtonGroup { display: flex; align-items: center; justify-content: flex-end; }
+}
+@media (min-width: 775px) {
+  .magic-container.left-side-opened-only .Settings_sessionsButtonGroup { display: flex; align-items: center; justify-content: flex-end; }
+}
+@media (min-width: 1135px) {
+  .magic-container.both-side-opened .Settings_sessionsButtonGroup { display: flex; align-items: center; justify-content: flex-end; }
+}
+@media (min-width: 600px) {
+  .magic-container.no-side-opened .Settings_sessionsButtonGroup { display: flex; align-items: center; justify-content: flex-end; }
+}

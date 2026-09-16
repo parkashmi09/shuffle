@@ -95,6 +95,29 @@ class GamesService {
   }
 
   /**
+   * One game, by its catalogue uuid.
+   *
+   * The game screen's own read. Nothing else could answer it: `browse` pages a
+   * filtered list and `search` matches a NAME, so a page opened from a link —
+   * or reloaded, or shared — had no way to turn the uuid in its URL back into
+   * a game, and the only alternative was to carry the row through client-side
+   * navigation state and show nothing to anyone who arrived directly.
+   *
+   * `GAME_FIELDS` and not a narrower projection: this is the same row the
+   * lobby tile was built from, so the screen behind the tile can render the
+   * artwork and the provider without a second read.
+   */
+  async byUuid(uuid) {
+    const row = await this.models.Gisgamesnew.findOne({
+      where: { uuid },
+      attributes: [...GAME_FIELDS],
+      raw: true,
+    });
+    if (!row) throw E.NOT_FOUND({ uuid });
+    return row;
+  }
+
+  /**
    * @legacy GET /api/gis/gamesgis/provider/:provider — 500 on every request.
    */
   async browseByProvider({ provider, ...query }) {
@@ -160,13 +183,35 @@ class GamesService {
     return [];
   }
 
-  #filterClause({ provider, type, search, technology, has_lobby: hasLobby, has_freespins: hasFreespins }) {
+  #filterClause({ provider, type, category, search, technology, has_lobby: hasLobby, has_freespins: hasFreespins }) {
     const where = {};
 
     // Case-insensitive equality, as legacy's `LOWER(x) = LOWER(?)` was — a
     // vendor saved as "Evolution" must match a filter of "evolution".
     if (provider) where.provider = { [Op.iLike]: provider };
     if (type) where.type = { [Op.iLike]: type };
+
+    /**
+     * `category` is the NORMALISED type, and `type` is the provider's own.
+     *
+     * ── WHY BOTH EXIST ───────────────────────────────────────────────────
+     *
+     * `type` is an exact match against whatever the provider wrote, and this
+     * catalogue's providers wrote five different words for one thing:
+     * `Slot Game`, `Slots`, `Slot`, `slot`, `Video Slot`. So `?type=slots`
+     * matches 310 rows out of 1,362 that are slots, and no single value
+     * matches them all — which is why the browse pages could not be filtered
+     * by a category at all and fell back to captured lists.
+     *
+     * The import writes one normalised word per row into `tags` (see seeder
+     * 004): `slots`, `live`, `table`, `crash`, `arcade`, `fishing`, `lottery`,
+     * `lobby`, `other`. `category` matches THAT, so `?category=slots` is all
+     * 1,362 of them.
+     *
+     * `type` is left exactly as it was: an operator filtering on a provider's
+     * own word is a different question, and the admin pickers ask it.
+     */
+    if (category) where.tags = { [Op.contains]: [String(category).toLowerCase()] };
     if (technology) where.technology = { [Op.iLike]: technology };
     if (search) where.name = { [Op.iLike]: `%${search}%` };
     if (hasLobby !== undefined) where.has_lobby = hasLobby;
