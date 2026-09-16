@@ -3,6 +3,7 @@ import { ApiError, setAuthLostHandler, tokens } from "./api";
 import { auth as authApi, rates as ratesApi, wallet as walletApi } from "./endpoints";
 import { primaryBalance } from "./adapters";
 import { SessionContext } from "./sessionContext";
+import { pushLogin, pushLogout } from './onesignal.js';
 
 /**
  * Who is signed in, and what their wallet says.
@@ -91,6 +92,8 @@ export function SessionProvider({ children }) {
   }, []);
 
   const signOutLocal = useCallback(() => {
+    // Untie this browser from the player, so a shared machine stops receiving their pushes.
+    pushLogout();
     tokens.clear();
     setState(SIGNED_OUT);
   }, []);
@@ -123,6 +126,8 @@ export function SessionProvider({ children }) {
       try {
         const user = await authApi.me();
         if (cancelled) return;
+        // A reload restoring the session — tie the push subscription to the player again.
+        pushLogin(user?.id);
         setState({ user, balances: null, status: "authenticated" });
       } catch (error) {
         if (cancelled) return;
@@ -187,6 +192,7 @@ export function SessionProvider({ children }) {
   const login = useCallback(async (identifier, password, extra) => {
     const session = await authApi.login(identifier, password, extra);
     tokens.set(session);
+    pushLogin(session.user?.id);
     setState({ user: session.user, balances: null, status: "authenticated" });
     return session;
   }, []);

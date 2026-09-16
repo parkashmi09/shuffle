@@ -36,6 +36,8 @@ const { VIP_LEVELS, UNRANKED, vipLevelName, vipLevelFor } = require('./vipLevels
  * silently, because a missing key reads as zero.
  */
 const raceBuckets = require('./raceBuckets');
+/** The feature menu and site templates — read by admin-service and the owner panel. */
+const featureCatalogue = require('./featureCatalogue');
 
 const { requestContext, getContext, getRequestId, REQUEST_ID_HEADER } = require('./middleware/requestContext');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -72,6 +74,7 @@ module.exports = {
   vipLevelName,
   vipLevelFor,
   ...raceBuckets,
+  featureCatalogue,
   createLogger,
   createApp,
   startServer,

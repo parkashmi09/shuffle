@@ -5,6 +5,7 @@ const { Op, fn, col } = require('sequelize');
 const errors = require('./notifications.errors');
 const { NOTIFICATION_TYPES, MAX_BROADCAST_DEVICES, FCM_BATCH_SIZE } = require('./notifications.constants');
 const { descendantIds } = require('../staff-directory/staffDirectory.service');
+const { FeaturesService } = require('../features/features.service');
 
 /**
  * Sending a push, and the record of what was sent.
@@ -15,11 +16,18 @@ const { descendantIds } = require('../staff-directory/staffDirectory.service');
  * same statement path and recorded neither outcome.
  */
 class NotificationsService {
-  constructor({ models, db, logger, config, push }) {
+  constructor({ models, db, logger, config, push, features, fetchImpl }) {
     this.models = models;
     this.db = db;
     this.logger = logger;
     this.config = config;
+    /**
+     * Where the site's push INTEGRATION is read from — the owner panel's
+     * OneSignal keys, sealed in `site_features`. Looked up on every send, so
+     * keys entered in the panel apply to the next notification without a
+     * restart. A test may inject its own.
+     */
+    this.features = features ?? (models?.SiteFeature ? new FeaturesService({ models, logger, config, fetchImpl }) : null);
     /**
      * The transport. Injected so this service is testable without Firebase and
      * so a deployment with no credential still records notifications rather
@@ -128,9 +136,17 @@ class NotificationsService {
     const visible = await this.#visibleUserIds(staff);
     this.#assertVisible(visible, userId);
 
-    const tokens = await this.#tokensFor([userId]);
     const record = await this.#record([userId], { title, body, type, data });
 
+    const onesignal = await this.#oneSignal();
+    if (onesignal) {
+      const outcome = await onesignal.sendToUsers([userId], { title, body, type, data });
+      await this.#markDelivered(record, outcome);
+      this.logger?.info({ userId, staffId: staff?.id, provider: 'onesignal', accepted: outcome.accepted }, 'Notification sent to one player');
+      return { recorded: record.length, delivered: outcome.accepted, devices: null, provider: 'onesignal' };
+    }
+
+    const tokens = await this.#tokensFor([userId]);
     if (!tokens.length) {
       this.logger?.info({ userId, staffId: staff?.id }, 'Notification recorded — no registered device');
       return { recorded: record.length, delivered: 0, devices: 0 };
@@ -163,6 +179,31 @@ class NotificationsService {
    */
   async broadcast({ staff, title, body, type, data }) {
     const visible = await this.#visibleUserIds(staff);
+
+    /**
+     * OneSignal is addressed by PLAYER, so the broadcast names the caller's
+     * own tree rather than a OneSignal segment. A segment would reach every
+     * subscriber of the app — the same open relay this route was rebuilt to
+     * close, just one hop further away.
+     */
+    const onesignal = await this.#oneSignal();
+    if (onesignal) {
+      const recipients = [...new Set(visible.map(String))];
+      if (recipients.length > MAX_BROADCAST_DEVICES) {
+        throw errors.BROADCAST_TOO_LARGE({ players: recipients.length, max: MAX_BROADCAST_DEVICES });
+      }
+      const record = await this.#record(recipients, { title, body, type, data });
+      const outcome = recipients.length
+        ? await onesignal.sendToUsers(recipients, { title, body, type, data })
+        : { accepted: 0, failures: [] };
+      await this.#markDelivered(record, outcome);
+      this.logger?.warn(
+        { staffId: staff?.id, players: recipients.length, provider: 'onesignal', accepted: outcome.accepted },
+        'BROADCAST sent'
+      );
+      return { players: recipients.length, devices: null, recorded: record.length, delivered: outcome.accepted, provider: 'onesignal' };
+    }
+
     const tokens = await this.#tokensFor(visible);
 
     if (tokens.length > MAX_BROADCAST_DEVICES) {
@@ -366,11 +407,23 @@ class NotificationsService {
     return { delivered, failures };
   }
 
+  /** The OneSignal transport if this site has it switched on with keys, else null. */
+  async #oneSignal() {
+    if (!this.features) return null;
+    try {
+      return await this.features.pushProvider();
+    } catch (error) {
+      // A misconfigured integration must not stop the notification being recorded.
+      this.logger?.error({ err: error.message }, 'Could not build the push provider — recording only');
+      return null;
+    }
+  }
+
   async #markDelivered(ids, outcome) {
     if (!ids.length) return;
     await this.models.UserNotifications.update(
       {
-        delivered: outcome.delivered > 0,
+        delivered: Number(outcome.delivered ?? outcome.accepted ?? 0) > 0,
         delivery_error: outcome.failures?.length ? outcome.failures.join('; ').slice(0, 500) : null,
       },
       { where: { id: ids } }

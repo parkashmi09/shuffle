@@ -179,6 +179,7 @@ export const navItems: NavItem[] = [
         label: 'Site config',
         permission: 'config:read',
         childItems: [
+          { label: 'Features', href: '/site-config/features' },
           { label: 'Feature flags', href: '/site-config/flags' },
           { label: 'Affiliate rates', href: '/site-config/affiliate' },
           { label: 'Email (SMTP)', href: '/site-config/email' },
