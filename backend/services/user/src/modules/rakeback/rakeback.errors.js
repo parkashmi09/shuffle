@@ -29,6 +29,14 @@ module.exports = defineErrors('RAKEBACK', {
     message: 'Player not found',
   },
 
+  ACCRUAL_NOT_POSITIVE: {
+    status: 422,
+    // Rakeback is a share of a stake. A zero share is nothing to record and a
+    // negative one is not a share — either is a caller bug, said out loud
+    // rather than written to the balance.
+    message: 'A rakeback accrual must be a positive amount',
+  },
+
   CLAIM_IN_PROGRESS: {
     status: 409,
     // The guarded UPDATE is the real defence; this is what losing that race

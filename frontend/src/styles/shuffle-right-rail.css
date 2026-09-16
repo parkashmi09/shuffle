@@ -1,0 +1,178 @@
+/* ==========================================================================
+   The right rail — the notification panel, and whatever else docks there.
+
+   `CasinoAside_*`, `ToolbarGroup_*` and `ToolbarButton_*` are already in
+   `shuffle-sports.css` (the bet slip uses the same shell), so only the sidebar
+   chrome the notification panel adds is here. Read off the live panel with the
+   module hashes stripped.
+
+   The slide is `CasinoAside_rightSide`'s: the aside sits in the flex row with
+   `margin-right: calc(-1 * var(--side-panel-width))` and
+   `CasinoAside_showRightSide` takes that to zero, with
+   `CasinoAside_enableAnimation` supplying the transition. Nothing here needs to
+   position or animate anything; it only dresses the inside.
+   ========================================================================== */
+
+.RightSidebar_rightSidebarContent {
+  display: flex;
+  position: relative;
+  height: 100%;
+  flex-direction: column;
+}
+
+.RightSidebar_rightSidebarScrollable {
+  padding-bottom: var(--spacing-lg1);
+  overflow: hidden auto;
+  flex-grow: 1;
+}
+
+.RightSidebar_rightSidebarFooter {
+  position: relative;
+  z-index: var(--z-overlay);
+  margin-top: auto;
+  padding: var(--spacing-lg1);
+  border-top: 1px solid var(--color-gray700);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+/*
+ * 76px, the same height as the top bar, so the rail's rule lines up with the
+ * header's across the seam.
+ */
+.RightSidebarHeader_rightSidebarHeaderElement {
+  display: flex;
+  width: 100%;
+  min-height: 4.75rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-gray700);
+  background-color: var(--color-gray900);
+}
+
+.RightSidebarHeader_rightSidebarHeaderElement > h3 {
+  margin-right: var(--spacing-md);
+  font-size: var(--text-title);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.RightSidebarHeader_rightSidebarHeaderElement > span { line-height: 100%; }
+
+.RightSidebarHeader_sm { padding: 0 var(--spacing-sm); }
+.RightSidebarHeader_sm1 { padding: 0 var(--spacing-sm1); }
+.RightSidebarHeader_sm2 { padding: 0 var(--spacing-sm2); }
+.RightSidebarHeader_sm3 { padding: 0 var(--spacing-sm3); }
+.RightSidebarHeader_sm4 { padding: 0 var(--spacing-sm4); }
+.RightSidebarHeader_sm5 { padding: 0 var(--spacing-sm5); }
+.RightSidebarHeader_md { padding: 0 var(--spacing-md); }
+.RightSidebarHeader_md1 { padding: 0 var(--spacing-md1); }
+.RightSidebarHeader_md2 { padding: 0 var(--spacing-md2); }
+.RightSidebarHeader_lg { padding: 0 var(--spacing-lg); }
+.RightSidebarHeader_lg1 { padding: 0 var(--spacing-lg1); }
+.RightSidebarHeader_lg2 { padding: 0 var(--spacing-lg2); }
+.RightSidebarHeader_lg3 { padding: 0 var(--spacing-lg3); }
+.RightSidebarHeader_lg4 { padding: 0 var(--spacing-lg4); }
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.RightSidebarEmptyState_emptyStateContainer {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md2);
+  padding: var(--spacing-md2);
+}
+
+.RightSidebarEmptyState_emptyStateContainer button { max-width: 18rem; }
+.RightSidebarEmptyState_paddingBottom { padding-bottom: 20%; }
+
+.RightSidebarEmptyState_title {
+  font-size: var(--text-h3);
+  font-weight: 700;
+}
+
+.RightSidebarEmptyState_description {
+  color: var(--color-gray300);
+  text-align: center;
+}
+
+/* ── Notification header controls ───────────────────────────────────────── */
+
+.NotificationsSidebarHeader_buttonContainer { padding-right: var(--spacing-sm5); }
+
+.NotificationsSidebarHeader_iconButton {
+  width: var(--spacing-lg3);
+  max-width: var(--spacing-lg3);
+  height: var(--spacing-lg3);
+  max-height: var(--spacing-lg3);
+}
+
+.NotificationsSidebarHeader_formWrapper button {
+  width: var(--spacing-lg3);
+  max-width: var(--spacing-lg3);
+}
+
+.NotificationsSidebarHeader_filterActive button img {
+  filter: var(--filter-primaryViolet);
+}
+
+/*
+ * Below the tablet breakpoint the rail is a full-screen sheet rather than a
+ * docked column, so its inner container is fixed and the mobile nav keeps its
+ * strip at the bottom. At 768px and up it collapses to nothing — `display:
+ * contents` — and the aside itself becomes the column.
+ */
+.AnimateMobileView_animateContainer {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  height: calc(100% - var(--height-mobile-nav));
+  background: var(--color-gray900);
+}
+
+@media (min-width: 768px) {
+  .AnimateMobileView_animateContainer {
+    display: contents;
+    position: unset;
+  }
+}
+
+/* ==========================================================================
+   Header rules the right rail brings into play.
+
+   `HeaderLogo_*` was captured with only its `no-side-opened` and
+   `left-side-opened-only` cases, because a signed-out capture has no right rail
+   and those two states were the only ones the page could ever be in. With the
+   notification panel docking, `right-side-opened-only` and `both-side-opened`
+   became reachable and the header fell through to its mobile mark at full
+   desktop width. These six are the reference's own, read off the live page.
+   ========================================================================== */
+
+@media (min-width: 1352px) {
+  .magic-container.right-side-opened-only .HeaderLogo_mobileLogoWrapper { display: none; }
+  .magic-container.right-side-opened-only .HeaderLogo_desktopLogoWrapper {
+    display: flex;
+    margin-left: var(--spacing-lg1-neg);
+    padding: var(--spacing-lg1) 0 var(--spacing-lg1) var(--spacing-lg1);
+  }
+}
+
+@media (min-width: 1527px) {
+  .magic-container.both-side-opened .HeaderLogo_mobileLogoWrapper { display: none; }
+  .magic-container.both-side-opened .HeaderLogo_desktopLogoWrapper {
+    display: flex;
+    margin-left: var(--spacing-lg1-neg);
+    padding: var(--spacing-lg1) 0 var(--spacing-lg1) var(--spacing-lg1);
+  }
+}
+
+@media (min-width: 1128px) {
+  .magic-container.right-side-opened-only .HeaderLogo_partnerLogo { margin-right: 0; }
+}
+
+@media (min-width: 1303px) {
+  .magic-container.both-side-opened .HeaderLogo_partnerLogo { margin-right: 0; }
+}

@@ -31,6 +31,8 @@ const browse = {
       ...paging,
       provider: z.string().trim().max(120).optional(),
       type: z.string().trim().max(120).optional(),
+      /** The normalised type the import writes into `tags` — see `#filterClause`. */
+      category: z.string().trim().max(40).optional(),
       search: z.string().trim().max(120).optional(),
       technology: z.string().trim().max(60).optional(),
       has_lobby: triBool,
@@ -77,6 +79,24 @@ const writeCollection = {
       uuids: z.array(gameUuid).max(MAX_COLLECTION_SIZE),
     })
     .strict(),
+};
+
+/**
+ * The game screen's own read.
+ *
+ * A path segment, so it is narrowed beyond `gameUuid`: the catalogue's uuids
+ * are hex digests, and restricting the characters keeps a slash or a space in
+ * the URL from reaching the query at all.
+ */
+const uuidParam = {
+  params: z.object({
+    uuid: z
+      .string()
+      .trim()
+      .min(1)
+      .max(190)
+      .regex(/^[A-Za-z0-9._:-]+$/, 'A game uuid may contain letters, digits and . _ : - only'),
+  }),
 };
 
 const vendorParam = { params: z.object({ vendor: z.string().trim().min(1).max(120) }) };
@@ -184,6 +204,7 @@ const unfavouriteParam = { params: z.object({ gameRef }) };
 module.exports = {
   browse,
   byProvider,
+  uuidParam,
   readCollection,
   writeCollection,
   vendorParam,

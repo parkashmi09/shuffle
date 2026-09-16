@@ -1,0 +1,1632 @@
+<title>iBitPlay Backend Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap">
+
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   Tokens — full light palette on bare :root, redefined twice below.
+   Ledger stock: warm off-white with a faint green cast; oxblood rule
+   ink as the single accent; semantics carried by hue AND chip form.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --paper:      #F1EFE8;
+  --paper-sunk: #E9E6DC;
+  --paper-lift: #FBFAF6;
+  --ink:        #15171C;
+  --ink-soft:   #3B3D44;
+  --muted:      #6B695F;
+  --rule:       #D8D5C8;
+  --rule-soft:  #E4E1D6;
+  --accent:     #8C2F39;
+  --accent-wash:#F3E4E4;
+  --ok:         #2D6149;
+  --ok-wash:    #E1EBE3;
+  --warn:       #8A5A12;
+  --warn-wash:  #F2E8D6;
+  --code-bg:    #E7E4D9;
+
+  --measure: 68ch;
+  --step--1: 0.815rem;
+  --step-0:  1rem;
+  --step-1:  1.19rem;
+  --step-2:  1.48rem;
+  --step-3:  1.92rem;
+  --step-4:  2.55rem;
+  --step-5:  3.3rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #131519;
+    --paper-sunk: #0E1013;
+    --paper-lift: #1A1D22;
+    --ink:        #E7E4DB;
+    --ink-soft:   #C3C0B7;
+    --muted:      #8D8B82;
+    --rule:       #2B2E35;
+    --rule-soft:  #23262C;
+    --accent:     #CC6B76;
+    --accent-wash:#2A181B;
+    --ok:         #6BAE90;
+    --ok-wash:    #17241F;
+    --warn:       #C79A45;
+    --warn-wash:  #26200F;
+    --code-bg:    #1A1D22;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #131519;
+  --paper-sunk: #0E1013;
+  --paper-lift: #1A1D22;
+  --ink:        #E7E4DB;
+  --ink-soft:   #C3C0B7;
+  --muted:      #8D8B82;
+  --rule:       #2B2E35;
+  --rule-soft:  #23262C;
+  --accent:     #CC6B76;
+  --accent-wash:#2A181B;
+  --ok:         #6BAE90;
+  --ok-wash:    #17241F;
+  --warn:       #C79A45;
+  --warn-wash:  #26200F;
+  --code-bg:    #1A1D22;
+}
+
+/* ── base ─────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: var(--step-0);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: Newsreader, ui-serif, Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  text-wrap: balance;
+  line-height: 1.16;
+  margin: 0;
+}
+
+p { margin: 0; }
+
+a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
+}
+a:hover { text-decoration-color: var(--accent); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+code, kbd, samp, pre, .mono {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-ligatures: none;
+}
+
+/* ── shell ────────────────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 clamp(1.1rem, 4vw, 3rem);
+}
+
+@media (min-width: 1080px) {
+  .shell {
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+    gap: clamp(2.5rem, 5vw, 5rem);
+  }
+}
+
+/* ── masthead ─────────────────────────────────────────────────── */
+.masthead {
+  grid-column: 1 / -1;
+  border-bottom: 1px solid var(--rule);
+  padding: clamp(2.6rem, 6vw, 4.5rem) 0 clamp(1.8rem, 4vw, 2.6rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.masthead h1 {
+  font-size: clamp(2.6rem, 7vw, var(--step-5));
+  letter-spacing: -0.021em;
+  max-width: 16ch;
+}
+
+.masthead .standfirst {
+  font-family: Newsreader, ui-serif, Georgia, serif;
+  font-size: clamp(1.1rem, 2.4vw, var(--step-2));
+  line-height: 1.45;
+  color: var(--ink-soft);
+  max-width: 52ch;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.4rem;
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 1.2rem;
+  margin-top: 0.4rem;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0;
+}
+
+.fact b {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: var(--step-2);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.fact span {
+  font-size: var(--step--1);
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* ── nav rail ─────────────────────────────────────────────────── */
+.rail { display: none; }
+
+@media (min-width: 1080px) {
+  .rail {
+    display: block;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 2.6rem 0 3rem;
+    font-size: var(--step--1);
+  }
+  .rail ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .rail a {
+    display: grid;
+    grid-template-columns: 1.9rem 1fr;
+    gap: 0.25rem;
+    padding: 0.34rem 0.5rem 0.34rem 0;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    padding-left: 0.7rem;
+    line-height: 1.35;
+  }
+  .rail a:hover {
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+  .rail .num {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .rail .rail-head {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 0.7rem;
+    margin-bottom: 0.7rem;
+  }
+}
+
+/* ── main flow ────────────────────────────────────────────────── */
+main {
+  padding: 2.6rem 0 6rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4.2rem;
+}
+
+section { scroll-margin-top: 1.5rem; }
+
+.part-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-bottom: 1.4rem;
+  margin-bottom: 1.8rem;
+  border-bottom: 2px solid var(--accent);
+}
+
+.part-head .num {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+
+.part-head h2 {
+  font-size: clamp(1.75rem, 4vw, var(--step-4));
+  letter-spacing: -0.017em;
+}
+
+.part-head .dek {
+  color: var(--muted);
+  max-width: var(--measure);
+  font-size: var(--step-0);
+}
+
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  max-width: var(--measure);
+}
+
+.prose.wide { max-width: 88ch; }
+
+.prose h3 {
+  font-size: var(--step-2);
+  letter-spacing: -0.012em;
+  margin-top: 1.5rem;
+}
+
+.prose h4 {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  margin-top: 0.9rem;
+}
+
+.prose ul, .prose ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prose li::marker { color: var(--muted); }
+
+strong { font-weight: 600; }
+
+.lead {
+  font-family: Newsreader, ui-serif, Georgia, serif;
+  font-size: var(--step-1);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+code:not(pre code) {
+  background: var(--code-bg);
+  padding: 0.08em 0.34em;
+  border-radius: 2px;
+  font-size: 0.88em;
+  word-break: break-word;
+}
+
+/* ── code blocks ──────────────────────────────────────────────── */
+.block {
+  max-width: 88ch;
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  overflow-x: auto;
+}
+
+pre {
+  margin: 0;
+  padding: 1rem 1.2rem;
+  font-size: 0.82rem;
+  line-height: 1.62;
+  white-space: pre;
+  color: var(--ink-soft);
+}
+
+.block-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.55rem 1.2rem 0;
+}
+
+/* ── file reference ───────────────────────────────────────────── */
+.ref {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+.ref b { color: var(--ink-soft); font-weight: 500; }
+
+/* ── the rule component: the doc's core structural device ─────── */
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 88ch;
+  border-top: 1px solid var(--rule);
+}
+
+.rule-row {
+  display: grid;
+  gap: 0.3rem 1.1rem;
+  grid-template-columns: 1fr;
+  padding: 1.05rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+@media (min-width: 720px) {
+  .rule-row {
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.rule-row .claim { font-weight: 500; }
+.rule-row .where {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.76rem;
+  color: var(--muted);
+  word-break: break-all;
+  margin-top: 0.2rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+  align-self: start;
+}
+
+.chip::before {
+  content: "";
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: none;
+}
+
+.chip.hold  { background: var(--ok-wash);     color: var(--ok); }
+.chip.hold::before  { background: var(--ok); }
+.chip.except{ background: var(--warn-wash);   color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
+.chip.except::before{ background: var(--warn); }
+.chip.drift { background: var(--accent-wash); color: var(--accent); }
+.chip.drift::before { background: var(--accent); }
+
+/* ── tables ───────────────────────────────────────────────────── */
+.tablewrap {
+  max-width: 88ch;
+  overflow-x: auto;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875rem;
+  min-width: 34rem;
+}
+
+th {
+  text-align: left;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.7rem 1rem 0.7rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: bottom;
+}
+
+td {
+  padding: 0.62rem 1rem 0.62rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  line-height: 1.45;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+
+td.mono, th.mono { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; padding-right: 1.4rem; }
+th.num { text-align: right; padding-right: 1.4rem; }
+
+/* ── callouts ─────────────────────────────────────────────────── */
+.note {
+  max-width: 88ch;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.94rem;
+}
+
+.note.calm {
+  border-left-color: var(--muted);
+  background: var(--paper-sunk);
+}
+
+.note .tag {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 500;
+}
+.note.calm .tag { color: var(--muted); }
+
+/* ── legacy / port comparison ─────────────────────────────────── */
+.versus {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: 1fr;
+  max-width: 88ch;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+@media (min-width: 720px) { .versus { grid-template-columns: 1fr 1fr; } }
+
+.versus > div {
+  background: var(--paper);
+  padding: 0.95rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.versus h5 {
+  margin: 0;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--muted);
+}
+.versus .then h5 { color: var(--accent); }
+.versus .now  h5 { color: var(--ok); }
+.versus pre { padding: 0; background: none; font-size: 0.76rem; }
+
+/* ── topology diagram ─────────────────────────────────────────── */
+.topo {
+  max-width: 88ch;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+}
+
+.topo .tier {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(8.2rem, 1fr));
+}
+
+.topo .box {
+  border: 1px solid var(--rule);
+  background: var(--paper-lift);
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.topo .box b { font-weight: 500; font-size: 0.85rem; }
+.topo .box span { color: var(--muted); font-size: 0.7rem; line-height: 1.35; }
+
+.topo .box.edge   { border-color: var(--accent); border-width: 1px 1px 1px 3px; }
+.topo .box.store  { border-color: var(--ok); border-width: 1px 1px 1px 3px; }
+.topo .box.owner  { background: var(--paper-sunk); }
+
+.topo .down {
+  color: var(--muted);
+  text-align: center;
+  padding: 0.4rem 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+/* ── flow list (ordered pipeline) ─────────────────────────────── */
+.flow {
+  max-width: 88ch;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+}
+
+.flow li {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
+  gap: 0.9rem;
+  padding: 0.72rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+  align-items: baseline;
+}
+
+.flow .step {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.flow .what { font-size: 0.94rem; }
+.flow .why { color: var(--muted); font-size: 0.86rem; display: block; margin-top: 0.12rem; }
+
+/* ── footer ───────────────────────────────────────────────────── */
+.colophon {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--rule);
+  padding: 2rem 0 3.5rem;
+  color: var(--muted);
+  font-size: var(--step--1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 70ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="eyebrow">Codebase reference · D:\CFZ\shuffle\backend</div>
+    <h1>iBitPlay Backend Atlas</h1>
+    <p class="standfirst">A casino and sportsbook platform: five Node processes, one Postgres, sixty-nine self-declaring modules — and a legacy monolith kept alongside as the thing every line is measured against.</p>
+    <div class="facts">
+      <div class="fact"><b>5</b><span>processes + gateway</span></div>
+      <div class="fact"><b>69</b><span>modules</span></div>
+      <div class="fact"><b>165</b><span>models · 6 domains</span></div>
+      <div class="fact"><b>41</b><span>migrations</span></div>
+      <div class="fact"><b>71</b><span>test files</span></div>
+      <div class="fact"><b>4</b><span>shared packages</span></div>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Contents">
+    <div class="rail-head">Outside in</div>
+    <ol>
+      <li><a href="#topology"><span class="num">01</span><span>Topology</span></a></li>
+      <li><a href="#modules"><span class="num">02</span><span>The module system</span></a></li>
+      <li><a href="#request"><span class="num">03</span><span>Life of a request</span></a></li>
+      <li><a href="#money"><span class="num">04</span><span>The money spine</span></a></li>
+      <li><a href="#data"><span class="num">05</span><span>The data layer</span></a></li>
+      <li><a href="#user"><span class="num">06</span><span>user-service</span></a></li>
+      <li><a href="#admin"><span class="num">07</span><span>admin-service</span></a></li>
+      <li><a href="#casino"><span class="num">08</span><span>casino-service</span></a></li>
+      <li><a href="#sports"><span class="num">09</span><span>sports-service</span></a></li>
+      <li><a href="#sockets"><span class="num">10</span><span>Sockets</span></a></li>
+      <li><a href="#worker"><span class="num">11</span><span>The worker</span></a></li>
+      <li><a href="#invariants"><span class="num">12</span><span>Invariants &amp; exceptions</span></a></li>
+      <li><a href="#reading"><span class="num">13</span><span>Reading it yourself</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- ══════════════════════════════════════════════ 01 -->
+    <section id="topology">
+      <div class="part-head">
+        <div class="num">01</div>
+        <h2>Topology</h2>
+        <p class="dek">Five processes, one database, and a rule about who may write what.</p>
+      </div>
+
+      <div class="prose">
+        <p class="lead">Everything public enters through one gateway on :4000. Behind it, four Express services own disjoint slices of a single Postgres database, plus a sixth process running the sports crons.</p>
+      </div>
+
+      <div class="topo" style="margin: 1.8rem 0;">
+        <div class="tier"><div class="box edge"><b>gateway :4000</b><span>edge auth · header stripping · legacy path rewrites · health aggregation</span></div></div>
+        <div class="down">↓ routes by longest prefix match ↓</div>
+        <div class="tier">
+          <div class="box owner"><b>user :4001</b><span>33 modules · owns users, credits, credits_ledger, auth_*, p2p_*</span></div>
+          <div class="box owner"><b>admin :4002</b><span>16 modules · owns staff, roles, content, audit</span></div>
+          <div class="box owner"><b>casino :4003</b><span>13 modules · owns bets, catalogue, aggregator sessions</span></div>
+          <div class="box owner"><b>sports :4004</b><span>7 modules · owns SportsBet, user_exposures</span></div>
+        </div>
+        <div class="down">↓ internal API — <span class="mono">x-internal-key</span>, never proxied from the edge ↓</div>
+        <div class="tier"><div class="box store"><b>PostgreSQL</b><span>one database · 165 models across six domains · 41 migrations</span></div></div>
+        <div class="down">— and separately —</div>
+        <div class="tier"><div class="box"><b>sports-worker :4104</b><span>feed polling 2s/60s · results · settlement · housekeeping (health port only)</span></div></div>
+      </div>
+
+      <div class="prose">
+        <h3>One database, not one per service</h3>
+        <p>This is the load-bearing decision. A sports bet must debit a wallet in a single transaction; splitting those across databases trades a real ACID guarantee for a distributed-transaction problem. So the split is at the <em>service</em> boundary instead:</p>
+        <p><strong>Exactly one service writes a given table. Everyone else goes through its API.</strong></p>
+        <p>Each service loads only the model domains it owns, which is declared per module and collected at boot by <code>collectDomains()</code>:</p>
+      </div>
+
+      <div class="tablewrap" style="margin: 1.4rem 0;">
+        <table>
+          <thead><tr><th>Service</th><th>Domains loaded</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">user</td><td class="mono">core, payments, extended</td><td>owns identity and money</td></tr>
+            <tr><td class="mono">admin</td><td class="mono">all six</td><td>reports across everything</td></tr>
+            <tr><td class="mono">casino</td><td class="mono">casino, core, extended</td><td>needs users + bets, not fixtures</td></tr>
+            <tr><td class="mono">sports</td><td class="mono">sports, core, extended</td><td>needs users + exposures, not slots</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <h3>The internal surface</h3>
+        <p>Service-to-service calls go to <code>/internal/&lt;service&gt;/…</code> and are guarded twice. First the gateway <em>refuses to route them at all</em> — the check runs on the raw URL, before the legacy rewriter could synthesize such a path, and matches <code>/internal/</code> anywhere in the path rather than only at the start. Second, the receiving service requires a real internal key.</p>
+        <p>The key story is more interesting than "one shared secret", and <code>internalAcl.js</code> explains why it changed:</p>
+      </div>
+
+      <div class="versus" style="margin: 1.3rem 0;">
+        <div class="then">
+          <h5>Shared key</h5>
+          <p style="font-size:0.88rem">Every service holds the same <code>INTERNAL_API_KEY</code>, so <code>internalAuth</code> could only ask <em>"is this THE key?"</em> — always yes. Any service could call <code>POST /internal/user/wallet/credit</code>, which mints balance. The caller also self-declared its name in a header, and that header was written onto audit rows.</p>
+        </div>
+        <div class="now">
+          <h5>Per-service keys + ACL</h5>
+          <p style="font-size:0.88rem">Each service gets its own key, so the caller is identified by <em>which key verified</em>, not by what it claims. Audit attribution becomes a fact. Then a table decides what each caller may reach — casino and sports may credit, admin and user may not.</p>
+        </div>
+      </div>
+
+      <div class="note calm">
+        <div class="tag">Backwards compatible by design</div>
+        <p>With per-service keys unconfigured, the platform falls back to the shared key, the caller is <em>not</em> identified, and the ACL is skipped entirely — an unmigrated deployment behaves exactly as before. Enforcement is only possible where identity is real, so the two changes ship in that order.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 02 -->
+    <section id="modules">
+      <div class="part-head">
+        <div class="num">02</div>
+        <h2>The module system</h2>
+        <p class="dek">The central abstraction. A module declares itself and never mounts itself — which is what makes forgetting an auth guard impossible rather than unlikely.</p>
+      </div>
+
+      <div class="prose">
+        <p>A module is a self-contained feature folder exporting a manifest. Nothing outside it needs to know how it works, and it never requires the database or an upstream client directly.</p>
+      </div>
+
+      <div class="block" style="margin: 1.3rem 0;">
+        <div class="block-label">services/user/src/modules/bonus/index.js</div>
+        <pre>module.exports = {
+  name: 'bonus',
+  service: 'user',
+  basePath: '/bonus',
+  models: ['core', 'extended'],
+  routers: {
+    user:  require('./routes/user.routes'),
+    admin: require('./routes/admin.routes'),
+  },
+};</pre>
+      </div>
+
+      <div class="prose">
+        <p>Each router is a <strong>factory</strong> <code>(deps) =&gt; Router</code>, not a built Router. That is what keeps a module free of singletons: the same module can be mounted twice against two different containers in a test, and the whole platform can run as four microservices <em>or</em> as one modular monolith (<code>npm run dev:mono</code>) without a module knowing which it is in.</p>
+
+        <h3>Four audiences, four guards</h3>
+        <p>The router keys are audiences, and <strong>the loader — not the module — attaches the guard.</strong></p>
+      </div>
+
+      <div class="tablewrap" style="margin: 1.3rem 0;">
+        <table>
+          <thead><tr><th>Audience</th><th>Mounts at</th><th>Guard applied by loader</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">public</td><td class="mono">/api/v1/&lt;svc&gt;&lt;basePath&gt;</td><td>none</td></tr>
+            <tr><td class="mono">user</td><td class="mono">/api/v1/&lt;svc&gt;&lt;basePath&gt;</td><td class="mono">authenticate() → requireActive()</td></tr>
+            <tr><td class="mono">admin</td><td class="mono">/api/v1/admin/&lt;svc&gt;&lt;basePath&gt;</td><td class="mono">authenticateStaff() + per-route permission</td></tr>
+            <tr><td class="mono">internal</td><td class="mono">/internal/&lt;svc&gt;&lt;basePath&gt;</td><td class="mono">internalAuth(key) + ACL</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <p><code>public</code> and <code>user</code> mount at the <em>same path</em>. Audience is a guard level, not a URL segment.</p>
+
+        <h3>Three refusals at boot</h3>
+        <p>The loader does not trust the convention — it enforces it, and a violation stops the service from starting rather than producing a hole nobody notices.</p>
+      </div>
+
+      <div class="rules" style="margin: 1.3rem 0;">
+        <div class="rule-row">
+          <span class="chip hold">Boot refusal</span>
+          <div>
+            <div class="claim">A module declaring <code>admin</code> routes with no admin guard supplied refuses to mount.</div>
+            <div class="where">packages/common/src/moduleLoader.js:253 — "Refusing to mount an unauthenticated admin surface."</div>
+          </div>
+        </div>
+        <div class="rule-row">
+          <span class="chip hold">Boot refusal</span>
+          <div>
+            <div class="claim">Every admin route that <em>mutates</em> must carry a <code>requirePermission(...)</code>. A staff token proves identity, not authority.</div>
+            <div class="where">moduleLoader.js:171 findUnauthorizedWrites() — 8 of 48 admin route files had forgotten it; issuing vouchers and emailing every player were reachable by the least-privileged staff account.</div>
+          </div>
+        </div>
+        <div class="rule-row">
+          <span class="chip hold">Boot refusal</span>
+          <div>
+            <div class="claim">A module with no routers must say <code>socketOnly: true</code>. Silence is treated as the mistake it usually is.</div>
+            <div class="where">moduleLoader.js:81 validateManifest()</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <h3>How a guard is recognised — and why the obvious version failed</h3>
+        <p>To check "does this route carry authorization?", the loader has to identify authorization middleware inside an Express layer stack. The first implementation matched on <em>function name</em>. Three things break that, and the third bit immediately:</p>
+        <ul>
+          <li>a rename is invisible to the check</li>
+          <li><code>asyncHandler</code> erases the name of anything it wraps</li>
+          <li>a test that stubs <code>auth</code> with anonymous arrows produces guards the checker cannot see — so a correctly-guarded module failed to mount and the suite went red</li>
+        </ul>
+        <p>So a registry symbol is stamped instead, and anything unstamped is treated as <em>not</em> authorization — the safe direction to be wrong in.</p>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <div class="block-label">moduleLoader.js:139 — a tag is a contract</div>
+        <pre>const IS_AUTHORIZATION = Symbol.for('ibitplay.authorizationMiddleware');</pre>
+      </div>
+
+      <div class="prose">
+        <p><code>Symbol.for</code> rather than an imported constant, because <code>@ibitplay/common</code> cannot require <code>@ibitplay/auth</code> — auth depends on common, and the cycle would be real. A registry symbol is the same value in both packages without either importing the other.</p>
+        <p>There is one escape hatch, and it is deliberately a <em>sentence</em>: a router may set <code>router.authorizationReviewed = '&lt;why&gt;'</code>. It appears in the boot log, so an exemption is a claim somebody made and can be read back, not a silent boolean.</p>
+
+        <h3>Anatomy of a module folder</h3>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <pre>modules/&lt;module&gt;/
+├── index.js                the manifest — name, basePath, routers, models, jobs
+├── &lt;module&gt;.service.js     the logic. No Express, no SQL strings.
+├── &lt;module&gt;.repository.js  where SQL lives, when the module needs raw statements
+├── &lt;module&gt;.validators.js  zod shapes, .strict()
+├── &lt;module&gt;.errors.js      defineErrors('NAMESPACE', {...})
+├── &lt;module&gt;.constants.js   every literal that appeared twice
+├── controllers/            thin — unwrap the request, call the service
+├── routes/                 public | user | admin | internal
+├── sockets.js              socket events, if any
+└── __tests__/              against a real PostgreSQL, never mocked away</pre>
+      </div>
+
+      <div class="prose">
+        <p>The layering rule: <strong>routes wire, controllers unwrap, services decide, repositories touch SQL.</strong> A <code>.service.js</code> containing an Express reference or a SQL string is a smell — that is why <code>BonusService</code> and <code>WalletService</code> are directly unit-testable and why the same settlement code runs from both an HTTP request and a cron tick.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 03 -->
+    <section id="request">
+      <div class="part-head">
+        <div class="num">03</div>
+        <h2>Life of a request</h2>
+        <p class="dek">Tracing <code>POST /api/v1/user/bonus/claim/daily</code> from the socket to the ledger row.</p>
+      </div>
+
+      <div class="prose">
+        <h3>At the gateway</h3>
+        <p>The ordering here <em>is</em> the security boundary. Step 1 stops a client claiming an identity; step 3 stops it reaching the service-to-service surface.</p>
+      </div>
+
+      <ol class="flow" style="margin: 1.2rem 0;">
+        <li><span class="step">01</span><span class="what"><code>stripHeaders()</code><span class="why">Delete spoofable identity headers before anything downstream can read them.</span></span></li>
+        <li><span class="step">02</span><span class="what"><code>verifyToken()</code><span class="why">Verify the player JWT once at the edge, not four times in four services.</span></span></li>
+        <li><span class="step">03</span><span class="what">Block <code>/internal/*</code><span class="why">Tested on the raw URL, before any rewrite could produce such a path.</span></span></li>
+        <li><span class="step">04</span><span class="what">Legacy path rewrite<span class="why"><code>POST /api/gis/games/init → /api/v1/casino/gis/launch</code>. <code>verify:modules</code> fails the build if a rewrite points at a route that is not mounted, so the table cannot drift.</span></span></li>
+        <li><span class="step">05</span><span class="what">Proxy by longest prefix<span class="why">See the trap below.</span></span></li>
+      </ol>
+
+      <div class="note">
+        <div class="tag">The 161-route trap</div>
+        <p><code>/api/v1/admin/&lt;service&gt;/…</code> does <strong>not</strong> belong to admin-service. <code>admin</code> is an audience — the loader mounts every service's admin router under it. With only <code>/api/v1/admin → admin</code> in the routing table, <strong>161 admin routes answered 404 through the gateway</strong> (101 user, 33 casino, 27 sports) while working perfectly when called directly. Hence three longer, explicit prefixes sorted ahead of the fallback.</p>
+      </div>
+
+      <div class="prose">
+        <h3>Inside the service</h3>
+        <p><code>createApp()</code> builds the middleware stack every service shares, in an order where each position is argued for:</p>
+      </div>
+
+      <ol class="flow" style="margin: 1.2rem 0;">
+        <li><span class="step">01</span><span class="what"><code>trust proxy</code><span class="why">Otherwise every request appears to come from the gateway's IP and per-IP rate limiting collapses into one shared bucket.</span></span></li>
+        <li><span class="step">02</span><span class="what"><code>requestContext()</code><span class="why">Mint or propagate the request id <em>first</em>, so everything after it — including errors — can be correlated.</span></span></li>
+        <li><span class="step">03</span><span class="what">helmet + CORS<span class="why">The service <em>refuses to boot</em> if <code>CORS_ORIGIN</code> is <code>*</code> in production while credentials are on — with an origin callback that reflects any Origin, it is CSRF with the response body included.</span></span></li>
+        <li><span class="step">04</span><span class="what"><code>express.json()</code><span class="why">Keeps <code>req.rawBody</code>. Provider webhooks sign the <em>bytes</em>; re-serialising the parsed object can reorder keys and produce a different digest.</span></span></li>
+        <li><span class="step">05</span><span class="what"><code>pino-http</code><span class="why">After context, so the request id is on every line. Health checks excluded from logging.</span></span></li>
+        <li><span class="step">06</span><span class="what">Request timeout → 504<span class="why">A stuck upstream must not pin connections open until the process runs out of sockets.</span></span></li>
+        <li><span class="step">07</span><span class="what">Rate limiting<span class="why">After logging, so throttled calls are still visible.</span></span></li>
+        <li><span class="step">08</span><span class="what">Mounted module routes<span class="why">Guard → validate → controller → service.</span></span></li>
+        <li><span class="step">09</span><span class="what"><code>notFound()</code> → <code>errorHandler()</code><span class="why">Always last.</span></span></li>
+      </ol>
+
+      <div class="prose">
+        <h3>Validation replaces, it does not merely check</h3>
+        <p><code>validate()</code> swaps the parsed result into <code>req.body</code> / <code>req.query</code> / <code>req.params</code>. Because zod objects drop unknown keys and every schema is <code>.strict()</code>, an unrecognised field is a 400 rather than something silently ignored — <em>"which is how <code>user_id</code> in a request body became an account takeover in the source this replaces."</em></p>
+
+        <h3>The controller is deliberately trivial</h3>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <div class="block-label">modules/bonus/controllers/index.js</div>
+        <pre>claim: asyncHandler(async (req, res) =&gt;
+  response.ok(res, await service.claim({
+    userId: req.user.id,          // ← from the VERIFIED TOKEN
+    type: req.params.type,        //   never the body, never the query
+  }))
+),</pre>
+      </div>
+
+      <div class="prose">
+        <p>That single substitution — <code>req.user.id</code> instead of <code>req.body.userid</code> — is the fix for an entire class of legacy bug. The old platform authenticated with <code>checkRole</code>, which read a static <code>role-key</code> header and looked it up in <code>roles_keys</code>: <strong>one key per role, shared by every client</strong>. Holding it made you "a user", not "this user", and the player was then named by a query parameter.</p>
+
+        <h3>One envelope, declared errors</h3>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <pre>success → { success: true,  data: &lt;payload&gt;, meta?: { pagination: {...} } }
+failure → { success: false, error: { code, message, details? } }</pre>
+      </div>
+
+      <div class="prose">
+        <p>Errors are declared per module rather than thrown inline. <code>defineErrors('BONUS', {...})</code> builds factories with a status and a stable code, registers them in a global map at require-time, and throws at <strong>boot</strong> if two modules ship the same code with different meanings. The payoff: every failure a module can emit is readable in one file, so the API surface is documentable without grepping for <code>throw</code>.</p>
+      </div>
+
+      <div class="note calm">
+        <div class="tag">A bug worth knowing about, because it was silent</div>
+        <p><code>response.paginated()</code> originally took <code>findAndCountAll</code>'s <code>{rows, count}</code>. Most call sites passed the rows array plus a <code>total</code> instead. Destructuring <code>{rows, count}</code> from an array yields <code>undefined</code> for both, and the defaults turned that into a <strong>200 with <code>data: []</code></strong>. Every list endpoint written that way answered empty — no error, no log line. It now honours both shapes.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 04 -->
+    <section id="money">
+      <div class="part-head">
+        <div class="num">04</div>
+        <h2>The money spine</h2>
+        <p class="dek">Everything else orbits this. Four rules, all enforced in code rather than by convention.</p>
+      </div>
+
+      <div class="prose">
+        <p class="lead"><code>WalletService</code> is the one place a balance changes on the intended path. Casino and sports never run <code>UPDATE credits</code> — they call the internal API, so row locking, ledger writes and idempotency exist in exactly one implementation to get right and one to audit.</p>
+        <p>The invariant the whole design serves:</p>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0; border-left-color: var(--ok);">
+        <pre>credits.&lt;currency&gt;  ==  SUM(credits_ledger.amount)  for that user + currency</pre>
+      </div>
+
+      <div class="prose">
+        <p><code>GET /internal/wallet/:userId/reconcile</code> checks it. If it ever fails, money moved outside the primitive.</p>
+
+        <h3>Rule 1 — a currency code never reaches SQL</h3>
+        <p><code>credits</code> is column-per-currency: 28 columns, <code>btc</code>, <code>eth</code>, <code>usdt</code>, <code>inr</code>… Turning a code into a column name is an injection sink, and <code>UPDATE credits SET ${coin} = …</code> appeared four times in the legacy source.</p>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <div class="block-label">wallet.constants.js — the allow-list is the boundary</div>
+        <pre>function resolveColumn(currency) {
+  const code = String(currency || '').toUpperCase();
+  if (!Object.prototype.hasOwnProperty.call(CURRENCY_COLUMN, code)) {
+    throw ... // UNSUPPORTED_CURRENCY
+  }
+  return CURRENCY_COLUMN[code];
+}</pre>
+      </div>
+
+      <div class="prose">
+        <p>The <code>hasOwnProperty</code> guard is load-bearing: without it, <code>resolveColumn('constructor')</code> returns a function off the prototype chain. Callers pass the <em>result</em> into Sequelize, never the input.</p>
+
+        <h3>Rule 2 — lock before reading a balance</h3>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <pre>   NO LOCK                          WITH LOCK
+   A reads 100                      A locks, reads 100
+   B reads 100                      B blocks…
+   A writes 40                      A writes 40, commits, releases
+   B writes 40   ← wrong            B reads 40, rejects 60  ← correct</pre>
+      </div>
+
+      <div class="prose">
+        <p>Verified by test: ten simultaneous debits of 20 against a balance of 100 produce <strong>exactly five successes, five rejections, and a final balance of 0.00000000</strong>.</p>
+
+        <h3>Rule 3 — Postgres decides insufficient funds, not JavaScript</h3>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <div class="block-label">wallet.repository.js:178 — the row count is the answer</div>
+        <pre>UPDATE credits SET "btc" = "btc" - :amount
+ WHERE uid = :uid
+   AND COALESCE("btc", 0) &gt;= :amount
+ RETURNING "btc" AS balance</pre>
+      </div>
+
+      <div class="prose">
+        <p><strong>Zero rows returned is the insufficient-funds signal, and nothing was written.</strong> Legacy read the balance, compared it in JavaScript, then wrote — and separately clamped the number written to <em>history</em> at zero while decrementing the column unclamped, so history recorded 0 while the balance said −50.</p>
+
+        <h3>Rule 4 — every movement is idempotent and ledgered</h3>
+        <p><code>#move()</code> is the single implementation both directions share — <em>"a credit path that drifts from the debit path is how you end up with idempotency on one and not the other."</em></p>
+      </div>
+
+      <ol class="flow" style="margin: 1.2rem 0;">
+        <li><span class="step">01</span><span class="what">Replay check<span class="why"><code>findByIdempotencyKey</code> → return the <em>original</em> movement, shaped identically, and move nothing.</span></span></li>
+        <li><span class="step">02</span><span class="what">Lock the wallet<span class="why">Creates the row if crediting a player who has never held a balance. A debit against a missing wallet is insufficient-funds, not a 404 — that is what it means to the caller.</span></span></li>
+        <li><span class="step">03</span><span class="what">Guarded UPDATE<span class="why">Rule 3.</span></span></li>
+        <li><span class="step">04</span><span class="what">Write records<span class="why"><code>credits_ledger</code> (signed, so summing reconciles) + <code>wallet_history</code>, in the same transaction.</span></span></li>
+      </ol>
+
+      <div class="prose">
+        <p>Idempotency is checked <em>twice</em> on purpose: the lookup handles the common case cheaply, and a unique index handles two concurrent retries that both pass the lookup before either inserts. A key reused with <strong>different</strong> parameters is a 409, not a silent replay — that is a caller bug, and hiding it would be worse. The key is derived from the thing being paid for (<code>bonus:&lt;awardId&gt;</code>, <code>casino:dice:&lt;round&gt;:payout</code>), never from a timestamp — <em>a key that changes on retry is the same as having no key.</em></p>
+
+        <h3>Compensating refunds</h3>
+        <p>A stake is debited before a round resolves. If anything after that fails, the stake is refunded and the ledger records why. A rollback is itself a movement: its own ledger row, its own idempotency key, referencing the entry it reverses. The original row is never deleted.</p>
+        <p>If the refund <em>itself</em> fails there is nothing left to try in-process, so it is logged at <code>fatal</code> with everything needed to reconcile by hand:</p>
+      </div>
+
+      <div class="block" style="margin: 1.1rem 0; border-left-color: var(--accent);">
+        <pre>STAKE NOT REFUNDED — player was debited for a bet that never completed.</pre>
+      </div>
+
+      <div class="prose">
+        <p>Swallowing that would turn a visible inconsistency into a silent one.</p>
+
+        <h3>Money is never a float</h3>
+        <p><code>packages/common/src/money.js</code> works in <code>BigInt</code> minor units at scale 8 and converts to a decimal string only at the edges. The two parse functions are a real design decision, not a convenience:</p>
+      </div>
+
+      <div class="tablewrap" style="margin: 1.2rem 0;">
+        <table>
+          <thead><tr><th>Function</th><th>For</th><th>Behaviour on over-precision</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">toMinor()</td><td>request input</td><td><strong>Rejects.</strong> A write carrying more precision than the platform represents is a bug; truncating it silently would hide the bug and lose the money.</td></tr>
+            <tr><td class="mono">fromStored()<br>toMinorQuantised()</td><td>reading stored values</td><td><strong>Quantises</strong>, half away from zero. <code>credits</code> is bare <code>numeric</code> in the baseline, so live rows carry things like <code>−182800.00000000000206</code> — an accumulated float write, seen from the database.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <p>Keeping them separate and <em>named</em> rather than adding a flag is the point: quantising is a decision, and it should be visible at the call site which side of the boundary the caller is on. Getting this wrong was not hypothetical — <code>GET /admin/reports/players</code> and <code>GET /admin/accounts</code> both 400'd against production data because a read used the input parser.</p>
+
+        <h3>Underneath: <code>withTransaction</code></h3>
+        <ul>
+          <li><strong>A nested call joins the outer transaction</strong> rather than opening a second one — so approving a fiat deposit can flip the deposit row <em>and</em> credit the player atomically.</li>
+          <li><strong>Serialization failures and deadlocks are retried</strong> (<code>40001</code>, <code>40P01</code>) with exponential backoff plus jitter, "because under betting load two players hitting the same row is normal, not exceptional."</li>
+          <li><strong><code>lockRowsInOrder()</code> sorts keys before locking</strong>, so an A→B and a B→A transfer at the same instant cannot deadlock — one simply waits.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 05 -->
+    <section id="data">
+      <div class="part-head">
+        <div class="num">05</div>
+        <h2>The data layer</h2>
+        <p class="dek">165 models generated from the supplied DDL, six domains, and a verifier that checks both directions.</p>
+      </div>
+
+      <div class="prose">
+        <p>The schema arrives as <code>000_baseline_schema.sql</code>, applied by migration <code>000-baseline-schema</code>. Models were <strong>generated from that DDL</strong> rather than hand-written, so column types, defaults and constraints match exactly.</p>
+      </div>
+
+      <div class="tablewrap" style="margin: 1.3rem 0;">
+        <table>
+          <thead><tr><th>Domain</th><th class="num">Models</th><th>Holds</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">core</td><td class="num">40</td><td>users, credits, credits_ledger, auth, bonus, wager</td></tr>
+            <tr><td class="mono">casino</td><td class="num">44</td><td>bets, catalogue, provider sessions, in-house game state</td></tr>
+            <tr><td class="mono">extended</td><td class="num">39</td><td>tables added <em>after</em> the baseline — hand-written, so regeneration cannot remove them</td></tr>
+            <tr><td class="mono">admin</td><td class="num">15</td><td>staff, roles, hierarchy, activity log, content</td></tr>
+            <tr><td class="mono">sports</td><td class="num">14</td><td>SportsBet, user_exposures, fixtures, settlement queue</td></tr>
+            <tr><td class="mono">payments</td><td class="num">13</td><td>the four deposit gateways, withdrawals, PSP</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <p>Columns added to a <em>baseline</em> table go in <code>models/extensions.js</code> for the same reason: regeneration must not silently drop them.</p>
+
+        <h3>The verifier that found a missing model</h3>
+        <p><code>npm run db:verify</code> asserts models against the live schema. The version worth having checks <strong>both directions</strong> — models against tables <em>and</em> tables against models — and that second direction is how a real bug surfaced:</p>
+      </div>
+
+      <div class="note">
+        <div class="tag">A table with no model at all</div>
+        <p>There are two tables: <code>bonus_history</code> (awarded bonuses waiting to be claimed) and <code>bonushistory</code> (an <code>event</code>/<code>amount</code> audit log). The model generator PascalCases table names, so both wanted to be <code>BonusHistory</code> — and the second silently overwrote the first. The table the entire daily/weekly/monthly claim path reads and writes had <strong>no model</strong>, and the old one-directional verifier reported "every model matches". It is now hand-written as <code>BonusClaim</code>, so the collision cannot come back.</p>
+        <p class="ref">packages/db/src/models/extended/BonusClaim.js:11</p>
+      </div>
+
+      <div class="prose">
+        <h3>Naming trap worth memorising</h3>
+        <p>The registry is keyed by the Sequelize <em>model name</em>, derived from the table name. So the file is <code>BonusHistory.js</code> and the key is <code>models.Bonushistory</code> — lowercase h. Getting the capital wrong does not throw at boot; it throws <code>Cannot read properties of undefined</code> the first time somebody opens the screen.</p>
+
+        <h3>Migrations</h3>
+        <p>41 files, run inside a transaction, recorded in <code>sequelize_meta</code>. Destructive <code>down()</code> steps are gated behind <code>ALLOW_DESTRUCTIVE_MIGRATION=true</code>, and several deliberately have <strong>no <code>down()</code> at all</strong> — reversing them would restore a defect. Migration 013 added the unique index the spin wheel's redeem codes rely on; migration 020 gave <code>bonushistory</code> a primary key it had never had.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 06 -->
+    <section id="user">
+      <div class="part-head">
+        <div class="num">06</div>
+        <h2>user-service · 33 modules</h2>
+        <p class="dek">Identity and money. The only service on the intended path that writes a balance.</p>
+      </div>
+
+      <div class="tablewrap" style="margin: 0 0 1.6rem;">
+        <table>
+          <thead><tr><th>Cluster</th><th>Modules</th></tr></thead>
+          <tbody>
+            <tr><td>Identity</td><td class="mono">auth · twofa · profile · kyc · preferences · directory · email</td></tr>
+            <tr><td>Money</td><td class="mono">wallet · vault · swap · exchange-rate · transaction-history · wager</td></tr>
+            <tr><td>Money in</td><td class="mono">deposit-reports · fiat-deposit · crypto · psp · payment-orders · gift-cards</td></tr>
+            <tr><td>Money out</td><td class="mono">withdrawal · crypto-withdraw · fiat-withdraw · withdrawal-whitelist · bank-details</td></tr>
+            <tr><td>Rewards</td><td class="mono">bonus · vip · spin-wheel · rakeback · affiliate</td></tr>
+            <tr><td>Social</td><td class="mono">social · club · club-broadcasts · notifications · p2p</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <h3>Two token families, two secrets</h3>
+        <p>Player tokens are signed with <code>JWT_ACCESS_SECRET</code>, staff with <code>JWT_ADMIN_SECRET</code>, and the <code>TokenService</code> constructor <strong>refuses to boot if they are equal</strong>. A leaked player secret cannot mint a staff token. The <code>type</code> claim is checked on verify, so a refresh token cannot be presented as an access token.</p>
+        <p>Then two layers on top, and the split matters:</p>
+        <ul>
+          <li><code>authenticate()</code> — signature only.</li>
+          <li><code>requireActive()</code> — re-reads <code>status</code>, <code>is_locked</code>, <code>system_locked</code>, <code>bet_status</code> <strong>from the database on every request</strong>. A token stays valid for hours; a ban must take effect now.</li>
+        </ul>
+
+        <h3>The VIP ladder is a pure function</h3>
+        <p>Nothing stores a VIP level. It is computed from lifetime wager every time, by one shared function in <code>packages/common</code> — which is precisely what keeps the level shown on the VIP page and the level the bonus gate compares against from ever disagreeing.</p>
+        <p>41 levels across nine tiers (Wood, Bronze 1–5, Silver, Gold, Platinum, Jade, Sapphire, Ruby, Diamond), floors running 500 → 37,000,000. <code>level</code> is an <em>ordinal number</em>, not a name, because every consumer compares numerically; <code>name</code> carries the display string.</p>
+      </div>
+
+      <div class="rules" style="margin: 1.3rem 0;">
+        <div class="rule-row">
+          <span class="chip hold">Fixed</span>
+          <div>
+            <div class="claim">The top band is open-ended. Past the last threshold legacy returned an error object, and <code>parseInt(undefined) || 0</code> made the platform's biggest player <strong>VIP 0</strong> — silently losing every bonus they qualified for.</div>
+            <div class="where">packages/common/src/vipLevels.js — vipLevelFor()</div>
+          </div>
+        </div>
+        <div class="rule-row">
+          <span class="chip hold">Fixed</span>
+          <div>
+            <div class="claim">The field names were backwards. <code>getVipLevelDetails</code> returned <code>vipLevel: nextVip.level</code> — the field called <em>vipLevel</em> was the level the player had <em>not</em> reached.</div>
+            <div class="where">same file, header note 1</div>
+          </div>
+        </div>
+        <div class="rule-row">
+          <span class="chip except">Live trap</span>
+          <div>
+            <div class="claim"><code>userwager.wager</code> is <code>TEXT</code> and legacy wrote thousands separators into it — <code>"1,234,567.89"</code>. <code>Number("1,234")</code> is <code>NaN</code>, so a missed <code>.replace(/,/g,'')</code> silently makes <em>every</em> player VIP 0. Both readers strip and then validate with a regex.</div>
+            <div class="where">vip.service.js:53 · bonus.service.js #wagerAmount()</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <h3>Bonus: the gate moved to where the money is</h3>
+        <p>Daily and weekly require VIP 2 (Bronze 1); monthly requires VIP 7 (Silver 1). Legacy checked the level on the <em>read</em> endpoint only, so a player shown "not eligible" could claim anyway by calling the claim endpoint directly. The gate is now on the claim, and the thresholds are stated once in <code>bonus.constants.js</code> rather than as inline integers repeated in one place and absent from the other.</p>
+        <p>The claim itself is the platform's characteristic shape one level up from the wallet:</p>
+      </div>
+
+      <div class="versus" style="margin: 1.2rem 0;">
+        <div class="then">
+          <h5>Legacy — paid twice</h5>
+          <pre>SELECT … WHERE is_claimed = FALSE
+  ORDER BY created_at DESC LIMIT 1
+UPDATE bonus_history
+   SET is_claimed = TRUE
+ WHERE id = $1        ← unconditional
+UPDATE credits
+   SET bjb = bjb + $1 ← no ledger</pre>
+        </div>
+        <div class="now">
+          <h5>Now — the database picks a winner</h5>
+          <pre>UPDATE … SET is_claimed = true
+ WHERE id = ? AND is_claimed = false
+→ affected === 0 ? ALREADY_CLAIMED
+
+wallet.credit({ …,
+  idempotencyKey: `bonus:${award.id}`
+})  ← one award, one payment</pre>
+        </div>
+      </div>
+
+      <div class="prose">
+        <p>Inside a transaction in both cases — but legacy's had no lock and no condition on the update, so the transaction changed nothing.</p>
+
+        <h3>Spin wheel: the draw was predictable</h3>
+        <p>The winning slice was picked with <code>Math.random() * totalWeight</code>. V8's <code>Math.random</code> is xorshift128+ — fast, uniform, and <strong>completely recoverable from a handful of consecutive outputs</strong>, after which every future draw is known. The endpoint was unauthenticated and took <code>user_id</code> from the body, so an attacker could sample the generator freely on throwaway accounts and then spin for real when the state said the jackpot was next.</p>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <div class="block-label">spinWheel.service.js #draw() — three fixes in six lines</div>
+        <pre>let roll = crypto.randomInt(total);
+for (let i = 0; i &lt; weights.length; i += 1) {
+  if (roll &lt; weights[i]) return i;
+  roll -= weights[i];
+}</pre>
+      </div>
+
+      <div class="prose">
+        <ul>
+          <li><code>crypto.randomInt</code> is not predictable from its outputs.</li>
+          <li><code>roll &lt; weights[i]</code> replaces legacy's <code>rand -= w; if (rand &lt;= 0)</code>, which made <strong>slice 0 slightly more likely than its weight</strong> because a draw of exactly 0 also landed there.</li>
+          <li>A total weight of zero <strong>throws</strong> instead of returning slice 0 — legacy's version turned a misconfigured wheel into one that always landed on the same slice.</li>
+        </ul>
+        <p>The cooldown is enforced by taking <code>FOR UPDATE</code> on the player's latest claim inside the spin transaction: the second concurrent request blocks, then reads the first's committed row and fails. A player with no history locks nothing, which is correct — their first spin is free.</p>
+        <p>The wheel awards a <em>percentage</em> applied to a future deposit, not cash. It writes a <code>redeembonus</code> row with <code>bonus_pct</code> set and <code>amount: 0</code>, and the redeem endpoint explicitly refuses those — reading <code>amount</code> on a percentage code would pay zero.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 07 -->
+    <section id="admin">
+      <div class="part-head">
+        <div class="num">07</div>
+        <h2>admin-service · 16 modules</h2>
+        <p class="dek">Staff auth, RBAC, the agent hierarchy, and the audit trail every other service writes into.</p>
+      </div>
+
+      <div class="prose">
+        <p>Two independent ladders run the platform. <strong>Players</strong> have a flat <code>role</code> plus status flags. <strong>Staff</strong> have a numbered <code>level</code> from the <code>roles</code> table where <em>lower means more authority</em> — level 1 outranks level 5 — and level drives the agent hierarchy: a staff member can only ever act on someone strictly below them.</p>
+      </div>
+
+      <div class="tablewrap" style="margin: 1.3rem 0;">
+        <table>
+          <thead><tr><th class="num">Lvl</th><th>Role</th><th>Default grants</th></tr></thead>
+          <tbody>
+            <tr><td class="num mono">1</td><td>Super admin</td><td class="mono">*</td></tr>
+            <tr><td class="num mono">2</td><td>Admin</td><td>everything except <code>roles:manage</code></td></tr>
+            <tr><td class="num mono">3</td><td>Sub admin</td><td>users, wallet r/w, deposits + withdrawals approve, reports, config read</td></tr>
+            <tr><td class="num mono">4</td><td>Super master</td><td>users, wallet r/w, casino + sports read, reports, staff read</td></tr>
+            <tr><td class="num mono">5</td><td>Master</td><td>users r/w, wallet r/w, reports</td></tr>
+            <tr><td class="num mono">6</td><td>Agent</td><td>users read, wallet r/w, reports</td></tr>
+            <tr><td class="num mono">7</td><td>Executive</td><td>users read, wallet read, reports read</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <p>Permissions are strings shaped <code>resource:action</code> — 26 of them. <code>users:read</code> is a specific grant, <code>users:*</code> covers the resource, <code>*</code> is unrestricted; wildcard matching is what lets a role widen without touching route definitions. The <code>roles</code> row in the database is authoritative and overrides these defaults.</p>
+
+        <h3>Permissions are resolved live, not from the token</h3>
+        <p>Staff grants are read from the <em>current</em> database role on every request, so a demoted account loses access immediately rather than when its token expires. The socket transport asks the same question: a staff member disabled at 09:00 keeps a valid eight-hour token until 17:00, so <code>AUDIENCE.STAFF</code> checks the row, not just the signature.</p>
+
+        <h3>Hierarchy questions are asked, not asserted</h3>
+        <p>"Whose players may this operator see?" is answered by admin-service — which owns <code>staff</code> — even when the asker is user-service listing wallets. The staff id comes from a verified token, so a caller cannot widen its own scope:</p>
+      </div>
+
+      <div class="block" style="margin: 1.1rem 0;">
+        <pre>GET /internal/admin/staff-directory/staff/:id/descendants</pre>
+      </div>
+
+      <div class="prose">
+        <p>Every admin write is wrapped in <code>withActivity({ action, describe })</code>, which writes an audit row naming the actor, the target and the details. That is why granting bonus from the counter endpoint — an action that mints balance — requires <code>wallet:credit</code> rather than a configuration permission, and lands in the log with the staff id attached.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 08 -->
+    <section id="casino">
+      <div class="part-head">
+        <div class="num">08</div>
+        <h2>casino-service · 13 modules</h2>
+        <p class="dek">A game catalogue, four provider integrations, and twenty in-house games ported deliberately as-is.</p>
+      </div>
+
+      <div class="tablewrap" style="margin: 0 0 1.6rem;">
+        <table>
+          <thead><tr><th>Module</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">catalogue · games</td><td>The game list, providers, categories, hot/featured rotation</td></tr>
+            <tr><td class="mono">aggregators · seamless · gis · x-casino · x-gaming · js-games</td><td>Third-party provider integrations — launch, session, callback</td></tr>
+            <tr><td class="mono">in-house</td><td>20 games, socket-only, no HTTP surface</td></tr>
+            <tr><td class="mono">house · bet-history · wager-report · sportsbook</td><td>Bankroll, player history, reporting, sportsbook hand-off</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <h3>The in-house engine: gameplay ported, money path rebuilt</h3>
+        <p>This module states its own boundary in its header, and it is a clean one. The rules, payouts and result generation under <code>games/</code> are legacy's, <strong>carried over unchanged including the arithmetic that looks wrong</strong>, on instruction. Three things are not, because they are infrastructure rather than gameplay:</p>
+      </div>
+
+      <div class="rules" style="margin: 1.3rem 0;">
+        <div class="rule-row">
+          <span class="chip hold">Rebuilt</span>
+          <div>
+            <div class="claim"><strong>The stake.</strong> <code>Rule.preparePlay</code> inserted the bet row and debited in two unrelated statements. <code>reduceBalance</code> had <em>no floor</em>, and the affordability check was an unlocked read several callbacks earlier. Now: one transaction, one guarded <code>UPDATE … WHERE col &gt;= stake</code>.</div>
+            <div class="where">in-house/engine/gameEngine.js — placeBet()</div>
+          </div>
+        </div>
+        <div class="rule-row">
+          <span class="chip hold">Rebuilt</span>
+          <div>
+            <div class="claim"><strong>The settlement.</strong> Keyed on <code>gid</code> — a value built from a few digits of the clock plus <code>Math.floor(Math.random() * 100)</code>, which collides one time in a hundred for two bets in the same second <em>and settles the wrong one</em>.</div>
+            <div class="where">gameEngine.js — makeGameId() is kept for the column only; nothing keys on it</div>
+          </div>
+        </div>
+        <div class="rule-row">
+          <span class="chip hold">Removed</span>
+          <div>
+            <div class="claim"><strong>The queue.</strong> An in-process <code>Map</code> keyed on uid, with a <code>plinko</code> special case (<code>if (game === "plinko") exists = false;</code>) and an unbounded recursive 150ms retry. The bet row itself is the record of an in-flight bet.</div>
+            <div class="where">in-house/index.js header</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <h3>What "provably fair" actually is here</h3>
+        <p>This deserves stating plainly, because the naming invites a wrong assumption and the code says so itself.</p>
+      </div>
+
+      <div class="note">
+        <div class="tag">The mechanism is not a provably-fair one</div>
+        <p><code>engine/hash.js</code> ports legacy's generator byte for byte. <code>makeHash()</code> is SHA-256 <em>of a string built from <code>Math.random()</code></em> — and hashing does not add entropy, so the result carries exactly the randomness of xorshift128+. All twenty games draw from that one generator.</p>
+        <p>More decisively: <code>makeHash()</code> <strong>takes no player input, and the hash is generated at the same moment as the result</strong> rather than published beforehand. So the "hash" a player is shown is not something they can verify a result against — it is a value produced alongside it. There is no client seed and no commitment.</p>
+        <p class="ref">services/casino/src/modules/in-house/engine/hash.js — header notes 1 and 2</p>
+      </div>
+
+      <div class="prose">
+        <p>The port isolates both properties so changing them later is a small edit rather than an archaeology exercise: the RNG is the single <code>SEED_SOURCE</code> function, and the "discard a winning roll when the house is up" switch is <code>GameEngine.canProfit</code>. Migration <code>004-provably-fair-seeds</code> did add <code>fair_server_seed</code>, <code>fair_server_seed_hash</code>, <code>fair_client_seed</code> and <code>fair_nonce</code> columns — <code>preferences.service.js</code> deliberately excludes them from its response shape, since an unrevealed server seed is the one value that must stay secret — <strong>but no game reads them yet.</strong> The columns are laid in; the mechanism is not wired.</p>
+
+        <h3>Singleton game loops</h3>
+        <p>Crash and Keno are continuous rounds, not request/response. Legacy ran one loop per CPU worker, so <em>which round a player saw depended on which process their socket landed on</em>. Both loops are now singletons behind a Postgres advisory lock — chosen over a flag because it releases automatically when the connection dies, so a crashed process does not wedge the game.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 09 -->
+    <section id="sports">
+      <div class="part-head">
+        <div class="num">09</div>
+        <h2>sports-service · 7 modules</h2>
+        <p class="dek">The exposure vector, and a two-stage settlement that is the most faithfully-ported code in the repository.</p>
+      </div>
+
+      <div class="prose">
+        <p>A sports bet does not resolve immediately, which changes two things: the stake is debited at placement but the payout may be days later, and open bets create <strong>liability</strong>. A player with ₹10 holding ten open ₹10 bets at 10× could win ₹1,000 the house must cover.</p>
+
+        <h3>Exposure is a vector, not a number</h3>
+        <p>This is the piece most worth understanding, and it is genuinely well-built. A player's position on a match is <em>one signed number per possible outcome</em> — what their balance does if that outcome happens.</p>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <div class="block-label">A three-way cricket book</div>
+        <pre>{ "India": +150.00, "Australia": -80.00, "The Draw": -80.00 }
+
+read as: if India wins I gain 150; either other result loses me 80.</pre>
+      </div>
+
+      <div class="prose">
+        <p>The amount that must be blocked is the <strong>worst case</strong> — the largest negative across every outcome — because that is the most the player can lose. <code>modules/bets/exposure.js</code> is pure functions over exact decimal strings: no database, no wallet, no request. That is deliberate, so the arithmetic deciding how much money is blocked is readable and testable on its own.</p>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <pre>BACK at odds O for stake S:  selection +S(O−1), every other outcome −S
+LAY  at odds O for stake S:  selection −S(O−1), every other outcome +S
+
+worstCase(position)              → largest negative, or 0 if none
+additionalLiability(before,after) → worstCase(after) − worstCase(before)</pre>
+      </div>
+
+      <div class="prose">
+        <p><strong>A hedge can pay you back mid-match.</strong> Bet the other side and your worst case shrinks, so <code>additionalLiability</code> is negative and funds are released. A model that only ever blocks <code>stake × (odds−1)</code> per bet cannot do this — it over-blocks a hedged book, sometimes by a lot.</p>
+      </div>
+
+      <div class="block" style="margin: 1.2rem 0;">
+        <div class="block-label">Worked: two-way market, wallet ₹1,000</div>
+        <pre>Bet 1 — back India, 100 @ 2.50 → profit 150
+  book   { India: +150, Australia: −100 }
+  worst  100, first bet → block 100          wallet 1000 → 900
+
+Bet 2 — back Australia, 100 @ 3.00 → profit 200
+  book   { India: +50, Australia: +100 }
+  worst  0 — green either way
+  delta  0 − 100 = −100 → RELEASE 100        wallet  900 → 1000</pre>
+      </div>
+
+      <div class="prose">
+        <p>Three legacy defects are closed in this file, and each is worth knowing because each under-blocked real money:</p>
+        <ul>
+          <li><strong>The outcome list came from the request.</strong> <code>count</code> — the number of runners — arrived in the body, and the Draw leg was computed only <code>if (count == 3)</code>. A three-way bet posted with <code>count: 2</code> skipped the Draw entirely, so the outcome where the player loses was not in the set the worst case was taken over. Outcomes are now derived from the <em>market</em>.</li>
+          <li><strong>Fancy exposure was switched off mid-function</strong> — the real calculation commented out above a <code>console.log("[FANCY] Bet disabled for exposer")</code>. A NO bet's liability is <code>stake × (odds−1)</code>, which on a 3.0 line is twice the stake; legacy blocked the stake alone.</li>
+          <li><strong>Draw names did not match consistently.</strong> The feed writes "The Draw", "Draw" and "DRAW" depending on the endpoint; legacy compared one way in one branch and another way in the next, so a draw selection matched where it was checked for and fell through as "some other team" where it was not.</li>
+        </ul>
+
+        <h3>Settlement is two jobs, and only one pays</h3>
+      </div>
+
+      <div class="tablewrap" style="margin: 1.2rem 0;">
+        <table>
+          <thead><tr><th>Job</th><th class="num">Every</th><th>Does</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">settlement:results</td><td class="num">60s</td><td>Finds bets with a declared result, queues them</td></tr>
+            <tr><td class="mono">settlement:payout</td><td class="num">60s</td><td>Reads the queue. <strong>The only thing that pays anybody</strong> for a sports bet</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <p>MO/BM bets settle per user+match (because exposure is held per market, not per bet); FAN bets settle one at a time. A group that cannot resolve yet returns <code>requeue</code> and goes back to <code>queued</code> for the next tick — so a provider blip costs a minute, not a settlement.</p>
+        <p>The header is explicit that <strong>the maths did not change</strong>: <code>settlement.rules.js</code> holds it copied function for function, <code>settlement.markets.js</code> holds the market-name tables. What changed is only how rows are read and written — raw <code>pg.query</code> on a shared client became Sequelize models, and <code>pg.query('BEGIN')</code> became a real transaction.</p>
+      </div>
+
+      <div class="note">
+        <div class="tag">Why that second swap is not cosmetic</div>
+        <p>Legacy issued <code>BEGIN</code> and <code>COMMIT</code> as ordinary queries on <strong>one process-wide client</strong> — <code>legacy/General/Model/pool.js</code> warns about this in its own header. One request's <code>BEGIN</code> wrapped whatever else happened to be running, and its <code>COMMIT</code> committed that too. Every <code>FOR UPDATE</code> in the legacy exposure path gave less protection than it appeared to.</p>
+      </div>
+
+      <div class="prose">
+        <p>One thing was deliberately <em>not</em> changed: <code>processMobmGroup</code> had no transaction in legacy — every write autocommits as it goes — and it still has none. Wrapping it would be a behaviour change, since a mid-group failure would roll back earlier bets' payouts instead of leaving them settled. That is a defensible call for a port; it is also the reason the next section exists.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 10 -->
+    <section id="sockets">
+      <div class="part-head">
+        <div class="num">10</div>
+        <h2>Sockets</h2>
+        <p class="dek">78 events across four services, on a wire protocol that cannot be changed.</p>
+      </div>
+
+      <div class="prose">
+        <p>All four services attach a Socket.io server to the same HTTP server, so one port serves both and the gateway needs no second upstream. A service owns the sockets that touch the things it owns.</p>
+        <p>The wire names are <strong>opaque hashes lifted byte-for-byte</strong> from <code>legacy/General/Constant/index.js</code> — <code>C.SEND_TIP</code> is <code>"573a867973fa586555cab080e7d837ad"</code>. They are the client protocol and cannot be changed; a test pins the whole table against the legacy file, and registering an event whose name is not in the constant table <strong>throws at registration</strong>. That is the point: a typo would otherwise register a listener for a string no client sends, and the event would simply never fire with nothing to indicate why.</p>
+
+        <h3>Same guard pattern as HTTP</h3>
+        <p>A module declares an event with an audience and the transport attaches the guard, so a handler physically cannot forget its own auth check. <code>STAFF</code> is a separate audience rather than a flag on <code>USER</code>, because a player token and a staff token are different credentials issued to different tables.</p>
+        <p>Rate limits are per audience — 40 / 120 / 200 messages per 10s for public / user / staff. Legacy rate-limited <em>nothing</em> on this transport, including login, which made password guessing over the socket unmetered and invisible to every HTTP rate limiter in front of the service.</p>
+      </div>
+
+      <div class="note calm">
+        <div class="tag">Two representative fixes</div>
+        <p><strong>The one-second loop.</strong> Bonus countdowns ran <code>setInterval</code> at 1000ms iterating every connected socket, awaiting one database query each, sequentially. A thousand players online meant a thousand queries a second — and because each was awaited in turn, a slow one pushed the loop past its own interval and the loops piled up. All to render a countdown the client can compute from a <code>claim_deadline</code> it already has. Now request/response, capped at 60/min, still replying on the legacy event name so shipped clients need no change.</p>
+        <p><strong><code>luckeyUsers</code> was a module-scope array.</strong> The spin-wheel eligibility check pushed player ids into an in-process array that never shrank, was lost on restart, and existed once per forked CPU worker — so on an eight-core box the answer was eight spins. And it never spun anything: the reply was <code>{status: true|false}</code>, with the prize decided entirely on the client.</p>
+      </div>
+
+      <div class="prose">
+        <p>One more habit worth copying: <code>if (!id) return;</code> silently dropped the message, leaving the client on a spinner until it gave up. Every refusal now emits on the same event with <code>{ error: { code, message } }</code>, so a client can tell "you are signed out" from "the server is slow".</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 11 -->
+    <section id="worker">
+      <div class="part-head">
+        <div class="num">11</div>
+        <h2>The background worker</h2>
+        <p class="dek">Same container, same modules, different host process.</p>
+      </div>
+
+      <div class="prose">
+        <p><code>services/sports/src/worker.js</code> loads the <em>same</em> container and the <em>same</em> modules as the HTTP service, and runs the <code>jobs</code> a module declares in its manifest. That is why settlement logic lives in a service class and not a controller: automatic settlement and manual settlement run the same code, instead of the legacy arrangement where the cron carried its own copy of the payout maths.</p>
+      </div>
+
+      <div class="tablewrap" style="margin: 1.3rem 0;">
+        <table>
+          <thead><tr><th>Job</th><th class="num">Interval</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">feed:events</td><td class="num">60s</td><td><code>immediate</code> — <code>feed:odds</code> reads its output, so on a cold start odds would find nothing for a full minute</td></tr>
+            <tr><td class="mono">feed:odds</td><td class="num">2s</td><td>Live books into cache, 5s TTL</td></tr>
+            <tr><td class="mono">settlement:results</td><td class="num">60s</td><td>Not <code>immediate</code> — a settlement pass during boot is a poor trade for 60 seconds</td></tr>
+            <tr><td class="mono">settlement:payout</td><td class="num">60s</td><td>Closure built once and reused, because it owns the provider rate-limit clock</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <p>Three reasons it is a separate process, all real: the odds job runs every two seconds and would put every bet placement behind a feed poll; scaling is opposite (HTTP scales to N instances, crons must effectively run once); and a provider returning malformed JSON must not take down bet placement.</p>
+        <p>Each tick is protected by a <code>running</code> flag — "two settlement passes over the same market is exactly the double-payout scenario" — and a failing job logs and continues rather than killing the process. <code>REDIS_URL</code> is required beyond local development: without it the worker caches into its own heap while the HTTP service reads its own empty one, and it warns loudly on boot rather than looking fine.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 12 -->
+    <section id="invariants">
+      <div class="part-head">
+        <div class="num">12</div>
+        <h2>Invariants — and where they don't hold</h2>
+        <p class="dek">The platform states strong rules. Most are enforced mechanically. Four are not, and knowing which is which is the difference between reading this codebase correctly and trusting it wrongly.</p>
+      </div>
+
+      <div class="prose">
+        <p class="lead">Everything below is checkable from the source. The chips mean: <strong>enforced</strong> by code that fails loudly; <strong>documented exception</strong>, deliberate and explained at the site; <strong>docs drift</strong>, where the written documentation and the code disagree.</p>
+      </div>
+
+      <div class="rules" style="margin: 1.6rem 0;">
+
+        <div class="rule-row">
+          <span class="chip hold">Enforced</span>
+          <div>
+            <div class="claim">A module cannot serve an unauthenticated <code>user</code>/<code>admin</code>/<code>internal</code> route. The loader refuses to boot.</div>
+            <div class="where">moduleLoader.js:253</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip hold">Enforced</span>
+          <div>
+            <div class="claim">An admin route that mutates must carry a permission guard, or the service will not start.</div>
+            <div class="where">moduleLoader.js:171</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip hold">Enforced</span>
+          <div>
+            <div class="claim">A currency code never reaches SQL as text; only a value from a frozen allow-list does. Same pattern for the bonus counters.</div>
+            <div class="where">wallet.constants.js resolveColumn() · bonus.constants.js GAME_COUNTERS</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip hold">Enforced</span>
+          <div>
+            <div class="claim">Two error codes with the same name and different meanings throw at boot, not in production.</div>
+            <div class="where">defineErrors.js — global registry populated at require-time</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip hold">Enforced</span>
+          <div>
+            <div class="claim">A socket event name not in the constant table throws at registration.</div>
+            <div class="where">createSocketServer.js on()</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip except">Documented exception</span>
+          <div>
+            <div class="claim"><strong>"Only user-service writes a balance"</strong> — the casino in-house engine debits <code>credits</code> directly. It is a guarded <code>UPDATE … WHERE col &gt;= stake</code> inside a transaction, so the concurrency guarantee holds; but it does not go through <code>WalletService</code> and does not write a <code>credits_ledger</code> row.</div>
+            <div class="where">in-house/engine/gameEngine.js placeBet()</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip except">Documented exception</span>
+          <div>
+            <div class="claim"><strong>"Money is never a float"</strong> — the sports payout job computes credits with JS numbers (<code>num()</code>, <code>Math.abs</code>, <code>Math.max</code>) and credits with a read-modify-write: <code>Number(record.inr) + Number(amount)</code>, then <code>UPDATE</code>. Deliberate: the file says the maths is copied function for function and "this is a port, not a redesign."</div>
+            <div class="where">settlement.payout.job.js #creditWallet() — the lock is passed only where legacy said <code>FOR UPDATE</code>, so locking behaviour is unchanged per call site</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip drift">Docs drift</span>
+          <div>
+            <div class="claim"><code>docs/BETTING-LOGIC.md</code> §3 documents a provably-fair casino path at <code>casino/src/modules/bets/bets.service.js</code> — serverSeed, clientSeed, nonce, published commitment, dice and coinflip multipliers. <strong>That module does not exist.</strong> The in-house games use <code>engine/hash.js</code>, which has no client seed and no commitment.</div>
+            <div class="where">Read §3 as a design intent, not a description of the code</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip drift">Docs drift</span>
+          <div>
+            <div class="claim">The same doc's §6 gap table marks vector exposure, hedge-releases-funds and fancy liability as <em>not ported</em>. All three <strong>are</strong> implemented — <code>betDelta</code>, <code>worstCase</code>, <code>additionalLiability</code> and the fancy branch are all in the new service. The table predates that work.</div>
+            <div class="where">services/sports/src/modules/bets/exposure.js</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip drift">Docs drift</span>
+          <div>
+            <div class="claim">The README says jobs that write are <code>exclusive</code> and take a Postgres advisory lock. <strong>No sports job declares <code>exclusive</code>, and the worker has no advisory lock</strong> — overlap protection is an in-process <code>running</code> flag, which does not survive running two worker instances. Advisory locks <em>are</em> used, but in the casino crash and keno loops.</div>
+            <div class="where">worker.js tick() vs README §Background worker</div>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <span class="chip drift">Docs drift</span>
+          <div>
+            <div class="claim">Counts are stale: 69 modules (README says 66), 41 migrations (says 33). Model count is accurate at ~165. Regenerate with <code>npm run verify:modules</code> and <code>npm run db:status</code> rather than trusting the table.</div>
+            <div class="where">README.md §Current state</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="note">
+        <div class="tag">If you change one thing after reading this</div>
+        <p>The two documented exceptions are both defensible as port decisions, and both sit on the money path. The sports payout job is the one that would repay attention first: it is the only code that pays a sports bet, it uses float arithmetic and a read-modify-write against <code>credits.inr</code>, and it writes no <code>credits_ledger</code> row — which means the platform's headline invariant, <code>balance == SUM(ledger)</code>, cannot hold for any account that has ever won a sports bet.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ 13 -->
+    <section id="reading">
+      <div class="part-head">
+        <div class="num">13</div>
+        <h2>Reading it yourself</h2>
+        <p class="dek">The conventions that make this codebase navigable, and the commands that produce facts instead of claims.</p>
+      </div>
+
+      <div class="prose">
+        <h3>Four conventions worth internalising</h3>
+        <ul>
+          <li><strong><code>@legacy METHOD /path</code> tags are the map.</strong> Every ported handler carries one. The inventory tools read them, which is where coverage numbers come from — counted, not estimated. Grep a legacy path to find where it went.</li>
+          <li><strong>The banner comment is the design record.</strong> A boxed <code>═══</code> header on a file or method means "something here was wrong and this explains it." Read those before the code; they are the most information-dense thing in the repository.</li>
+          <li><strong>No raw SQL outside migrations and repositories.</strong> Every read and write goes through a Sequelize model.</li>
+          <li><strong>Constants files hold every literal that appeared twice.</strong> If you find a magic number inline, its twin is probably somewhere else and out of sync — that is exactly how the bonus VIP gate came to be enforced on the read and not the claim.</li>
+        </ul>
+
+        <h3>Verifiers</h3>
+        <p>Each of these produces a number rather than an assurance. Run them before believing any figure in a document — including this one.</p>
+      </div>
+
+      <div class="block" style="margin: 1.3rem 0;">
+        <pre>npm run verify:modules    # module map + gateway rewrites all resolve
+npm run verify:routes     # legacy HTTP coverage, from @legacy tags
+npm run verify:sockets    # legacy socket coverage
+npm run verify:models     # models vs live schema, BOTH directions
+npm run verify:authz      # permission coverage on admin writes
+npm run verify:internal-acl
+npm run verify:secrets    # no committed credential in ported code
+npm run db:status         # applied vs pending migrations
+npm test                  # 71 test files, against a real PostgreSQL</pre>
+      </div>
+
+      <div class="prose">
+        <p>Tests never mock the database away — they skip with a message if <code>ibitplay_test</code> is unreachable. That is why a model naming a column the database does not have is caught by <code>db:verify</code> in CI rather than at runtime.</p>
+      </div>
+
+      <div class="note calm">
+        <div class="tag">Before production</div>
+        <p><code>docs/ROTATION.md</code> lists sixteen credentials committed in <code>legacy/</code>, including the JWT secret that signs every player session — anyone with a copy of the repository can mint a token for any account. Nothing else on any list matters until those are rotated.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="colophon">
+    <p>Compiled by reading the source at <span class="mono">D:\CFZ\shuffle\backend</span> — boot chain, module loader, wallet, and one module per service in each of the four services — alongside <span class="mono">README.md</span>, <span class="mono">docs/BETTING-LOGIC.md</span> and the architecture notes. Counts in the masthead were taken from the filesystem, not from the documentation.</p>
+    <p>Where this document and <span class="mono">docs/</span> disagree, section 12 says which one the code supports.</p>
+  </footer>
+
+</div>

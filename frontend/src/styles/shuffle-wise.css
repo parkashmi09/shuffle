@@ -1,0 +1,480 @@
+/*
+ * Shuffle Wise — `/shuffle-wise/self-exclusion` and `/shuffle-wise/gambling-limits`.
+ *
+ * Read off the live stylesheets with the module hashes stripped, like every
+ * other file here. `Panel_*`, `ScrollableTab_*`, `Tab_*`, `SupportChatPrompt_*`,
+ * `Checkbox_*`, `ModalListContainer_*` and `Table_*` already exist elsewhere in
+ * these sheets and are not repeated.
+ *
+ * The four `magic-container` breakpoints are the site-wide rail-aware set:
+ * 992px with no rail, 1167px with the left rail, 1352px with the right panel
+ * and 1527px with both. Every rule below that changes at a width changes at all
+ * four, which is why each one appears four times.
+ */
+
+/* ── The page shell ──────────────────────────────────────────────────── */
+
+.ShuffleWise_container {
+  margin-bottom: 5rem;
+}
+
+.ShuffleWise_tabView {
+  margin-bottom: var(--spacing-lg1);
+  width: fit-content;
+}
+
+.ShuffleWise_tabsWrapper {
+  display: flex;
+  padding-bottom: var(--spacing-lg1);
+  gap: var(--spacing-sm4);
+}
+
+.ShuffleWise_tabsWrapper > div:first-child {
+  flex: 1 1 100%;
+}
+
+/*
+ * The panel and the Need Help card. Stacked on a narrow column, side by side
+ * once the column is wide enough — which is the only reason the support card
+ * has a width at all.
+ */
+.ShuffleWiseLayoutWithSupport_root {
+  display: flex;
+  gap: var(--spacing-lg1);
+  flex-direction: column;
+  align-items: center;
+}
+
+.ShuffleWiseLayoutWithSupport_root > :first-child {
+  overflow-y: hidden;
+}
+
+@media (min-width: 992px) {
+  .magic-container.no-side-opened .ShuffleWiseLayoutWithSupport_root {
+    flex-direction: row;
+    align-items: start;
+  }
+}
+
+@media (min-width: 1167px) {
+  .magic-container.left-side-opened-only .ShuffleWiseLayoutWithSupport_root {
+    flex-direction: row;
+    align-items: start;
+  }
+}
+
+@media (min-width: 1352px) {
+  .magic-container.right-side-opened-only .ShuffleWiseLayoutWithSupport_root {
+    flex-direction: row;
+    align-items: start;
+  }
+}
+
+@media (min-width: 1527px) {
+  .magic-container.both-side-opened .ShuffleWiseLayoutWithSupport_root {
+    flex-direction: row;
+    align-items: start;
+  }
+}
+
+/* ── Self-exclusion ──────────────────────────────────────────────────── */
+
+.ResponsibleGambling_selfExclusionWrapper {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-gray700);
+  gap: var(--spacing-lg1);
+  padding-top: var(--spacing-md2);
+}
+
+.ResponsibleGambling_descriptionWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: var(--spacing-lg1);
+  font-size: var(--text-lg);
+  line-height: 150%;
+}
+
+.ResponsibleGambling_button {
+  width: 100%;
+}
+
+@media (min-width: 992px) {
+  .magic-container.no-side-opened .ResponsibleGambling_button { width: 20%; }
+}
+
+@media (min-width: 1167px) {
+  .magic-container.left-side-opened-only .ResponsibleGambling_button { width: 20%; }
+}
+
+@media (min-width: 1352px) {
+  .magic-container.right-side-opened-only .ResponsibleGambling_button { width: 20%; }
+}
+
+@media (min-width: 1527px) {
+  .magic-container.both-side-opened .ResponsibleGambling_button { width: 20%; }
+}
+
+.ResponsibleGamblingInstructionCard_cardWrapper {
+  display: flex;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray700);
+}
+
+.ResponsibleGamblingInstructionCard_iconWrapper {
+  display: flex;
+  border-top-left-radius: var(--radius-md);
+  border-bottom-left-radius: var(--radius-md);
+  border-right: 1px solid var(--color-gray700);
+  padding: 2.1875rem 1.625rem;
+  background-color: var(--color-gray900);
+}
+
+.ResponsibleGamblingInstructionCard_iconWrapper > img {
+  width: var(--spacing-lg2);
+  height: var(--spacing-lg2);
+  margin: auto 0;
+}
+
+.ResponsibleGamblingInstructionCard_cardContentWrapper {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg) 1.75rem;
+  width: 100%;
+  font-size: var(--text-lg);
+  line-height: 150%;
+  font-weight: 700;
+}
+
+.ResponsibleGamblingInstructionCard_descriptionText {
+  color: var(--color-gray200);
+  font-weight: 400;
+}
+
+.ResponsibleGamblingInstructionCard_dimmed {
+  position: relative;
+  opacity: var(--disabled-opacity);
+  pointer-events: none;
+}
+
+/* The green (or red, when permanent) band above the cards while a break runs. */
+.SelfExclusionCountdown_timerContainer {
+  display: flex;
+  padding: var(--spacing-md1) var(--spacing-md2);
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-sm1);
+  border: 1px solid var(--color-success);
+}
+
+.SelfExclusionCountdown_timerCooldown {
+  color: var(--color-success);
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.SelfExclusionCountdown_timerPermanent {
+  border: 1px solid var(--color-error);
+}
+
+.SelfExclusionCountdown_timerCooldownPermanent {
+  color: var(--color-error);
+}
+
+/* ── The self-exclusion dialog ───────────────────────────────────────── */
+
+.SelfExclusionModal_modalBody {
+  display: flex;
+  flex-direction: column;
+  width: 33.75rem;
+}
+
+.SelfExclusionModal_form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+}
+
+.SelfExclusionModal_header {
+  font-size: var(--text-h2);
+  margin-bottom: 1.375rem;
+  font-weight: 700;
+  line-height: 130%;
+}
+
+.SelfExclusionModal_subheader {
+  font-weight: 400;
+}
+
+button.SelfExclusionModal_button {
+  margin-top: var(--spacing-sm4);
+}
+
+.SelfExclusionModal_cancelBtnWrapper {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  border: 0;
+  margin-top: var(--spacing-sm4);
+  width: 100%;
+}
+
+.SelfExclusionModal_cancelBtn {
+  text-decoration-line: underline;
+  text-underline-offset: 0.1875rem;
+  cursor: pointer;
+  background-color: var(--color-gray900);
+  color: #fff;
+  border: none;
+  font-weight: 500;
+  font-size: var(--text-lg);
+}
+
+.SelfExclusionModal_cancelBtn:active {
+  transform: var(--active-state);
+}
+
+.SelfExclusionModal_platformPermanentWrapper {
+  display: flex;
+  border-radius: var(--radius-sm1);
+  border: 1px solid var(--color-gray700);
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-md) var(--spacing-md2);
+  margin: var(--spacing-lg1) 0;
+  font-size: var(--text-lg);
+  color: var(--color-gray200);
+  line-height: 150%;
+}
+
+.SelfExclusionCheckbox_checkboxContainer {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-sm1);
+  padding: 1.5625rem;
+  font-size: var(--text-lg);
+  gap: var(--spacing-sm4);
+}
+
+label.SelfExclusionCheckbox_checkboxText {
+  align-items: self-start;
+}
+
+.SelfExclusionCheckbox_checkboxText {
+  font-weight: 400;
+  font-size: var(--text-lg);
+}
+
+.SelfExclusionCheckbox_checkboxText > span {
+  top: 0.125rem;
+}
+
+.SelfExclusionCheckbox_activeBetWrapper {
+  font-weight: 400;
+  font-size: var(--text-lg);
+  padding-left: var(--spacing-lg1);
+  margin-top: var(--spacing-sm3);
+}
+
+.SelfExclusionConfirmationContent_root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg1);
+}
+
+.SelfExclusionConfirmationContent_iconContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: var(--spacing-md2);
+}
+
+.SelfExclusionConfirmationContent_header {
+  font-size: var(--text-h2);
+  font-weight: 700;
+  line-height: 130%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.SelfExclusionConfirmationContent_confirmationWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm5);
+}
+
+/* ── Gambling limits ─────────────────────────────────────────────────── */
+
+.ResponsibleGamblingLimits_root {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-gray700);
+  font-size: var(--text-lg);
+  gap: var(--spacing-lg1);
+  padding-top: var(--spacing-md2);
+}
+
+.ResponsibleGamblingLimits_root a {
+  line-height: 1;
+}
+
+.ResponsibleGamblingLimits_button {
+  width: 100%;
+}
+
+@media (min-width: 992px) {
+  .magic-container.no-side-opened .ResponsibleGamblingLimits_button { width: fit-content; }
+}
+
+@media (min-width: 1167px) {
+  .magic-container.left-side-opened-only .ResponsibleGamblingLimits_button { width: fit-content; }
+}
+
+@media (min-width: 1352px) {
+  .magic-container.right-side-opened-only .ResponsibleGamblingLimits_button { width: fit-content; }
+}
+
+@media (min-width: 1527px) {
+  .magic-container.both-side-opened .ResponsibleGamblingLimits_button { width: fit-content; }
+}
+
+.ResponsibleGamblingLimits_removeBtn {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  width: fit-content;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #fff;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  text-decoration-line: underline;
+  cursor: pointer;
+  transition: var(--animation-duration);
+}
+
+.ResponsibleGamblingLimits_removeBtn:active {
+  transform: var(--active-state);
+}
+
+@media (hover: hover) {
+  .ResponsibleGamblingLimits_removeBtn:hover { text-decoration-line: unset; }
+}
+
+.ResponsibleGamblingLimits_tableRoot {
+  padding-bottom: var(--spacing-lg1);
+}
+
+.ResponsibleGamblingLimits_tableHeader {
+  border-top: 1px solid var(--color-gray700);
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.ResponsibleGamblingLimits_divider {
+  border: none;
+  margin: 0;
+  border-bottom: 1px solid var(--color-gray700);
+  width: 100%;
+}
+
+.ResponsibleGamblingLimits_resetPeriod {
+  display: flex;
+  flex-direction: row;
+  gap: var(--spacing-sm4);
+  align-items: center;
+}
+
+.ResponsibleGamblingLimits_img {
+  filter: var(--filter-gray400);
+}
+
+.ResponsibleGamblingLimits_flex {
+  position: relative;
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.ResponsibleGamblingLimits_expired {
+  color: var(--color-gray400);
+}
+
+.ResponsibleGamblingLimits_expired.ResponsibleGamblingLimits_expiredDate {
+  color: var(--color-warning);
+}
+
+/* The amount cell inside a limits row: coin icon, then a tabular figure. */
+
+/* ── The set-a-limit dialog ──────────────────────────────────────────── */
+
+.SetGamblingLimitContent_body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg1);
+  margin-bottom: var(--spacing-lg1);
+}
+
+.GamblingLimitConfirmationContent_tickIcon {
+  display: flex;
+  width: 100%;
+  margin-bottom: var(--spacing-md2);
+}
+
+.GamblingLimitConfirmationContent_body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg1);
+  align-items: center;
+  font-size: var(--text-lg);
+  text-align: center;
+}
+
+.GamblingLimitConfirmationContent_contentWrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-md);
+  background: var(--color-black);
+  width: 100%;
+}
+
+.GamblingLimitConfirmationContent_contentItem {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  height: var(--spacing-lg5);
+  padding: 0 var(--spacing-md2);
+  gap: var(--spacing-md2);
+}
+
+.GamblingLimitConfirmationContent_contentItem:not(:last-child) {
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.GamblingLimitConfirmationContent_label {
+  font-size: var(--text-lg);
+  color: var(--color-gray300);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-sm1);
+}
+
+.GamblingLimitConfirmationContent_item {
+  font-size: var(--text-lg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-sm4);
+}
+
+.GamblingLimitConfirmationContent_img {
+  filter: var(--filter-gray300);
+}

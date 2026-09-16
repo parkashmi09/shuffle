@@ -154,6 +154,47 @@ test('game catalogue', async (t) => {
     assert.deepEqual(result.rows.map((g) => g.uuid), [html5]);
   });
 
+  /**
+   * The game screen's read. It exists because nothing else could answer it:
+   * `browse` pages a filtered list and `search` matches a name, so a page
+   * opened from a link had no way to turn the uuid in its URL into a game.
+   */
+  await t.test('one game is readable by its uuid', async () => {
+    const uuid = await seedGame({ name: `${TAG} Reachable`, provider: `${TAG}-Spribe` });
+
+    const row = await service.byUuid(uuid);
+    assert.equal(row.uuid, uuid);
+    assert.equal(row.name, `${TAG} Reachable`);
+    // The screen renders artwork and a provider from this one read — a
+    // narrower projection would send it back for a second.
+    assert.ok('image' in row && 'provider' in row && 'type' in row, 'the full lobby projection');
+  });
+
+  /**
+   * The regression that made this route `/detail/:uuid`.
+   *
+   * A bare `/:uuid` matches any single segment, and the module mounts its
+   * public routes ahead of its player routes on the same base — so it also
+   * answered `/favourites` and `/recently-played`, both as "Game not found".
+   * This pins the shape of the route rather than the mounting, which is the
+   * part a future edit could quietly undo.
+   */
+  await t.test('the by-uuid route cannot shadow the player routes', async () => {
+    const routes = require('../routes/public.routes');
+    const router = routes({ models, db: connection, logger, config: { SERVICE_NAME: 'casino-service' }, clients: {} });
+    const paths = router.stack.filter((l) => l.route).map((l) => l.route.path);
+
+    assert.ok(paths.includes('/detail/:uuid'), 'by-uuid is namespaced');
+    assert.ok(!paths.includes('/:uuid'), 'a bare /:uuid would shadow /favourites and /recently-played');
+  });
+
+  await t.test('a uuid that names no game is a 404, not an empty object', async () => {
+    await assert.rejects(
+      () => service.byUuid(`${TAG}-no-such-game`),
+      (error) => error.status === 404 && error.code === 'GAMES_NOT_FOUND'
+    );
+  });
+
   await t.test('browsing by provider reports a real 404 rather than throwing', async () => {
     // `GET /gamesgis/provider/:provider` called a bare `getGamesgis(...)`, which
     // is a property of the exported object and not a binding in scope. Every

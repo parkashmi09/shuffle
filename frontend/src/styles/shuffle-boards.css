@@ -46,7 +46,6 @@
 .AirDropRaceTable_container > :first-child { border-bottom: 1px solid var(--color-gray700); }
 .AirDropRaceTable_loader { height: 1.6875rem !important; }
 
-.FormattedAmount_green { color: var(--color-green); }
 .FiatWithTooltip_root { display: inline-block; font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; font-size: var(--text-lg); line-height: var(--text-xl); white-space: nowrap; }
 .FiatWithTooltip_sm { font-size: var(--text-md); }
 

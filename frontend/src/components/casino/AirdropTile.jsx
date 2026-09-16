@@ -1,4 +1,5 @@
 import { PromoBanner, RankOrdinal, ShflAmount, UserCell } from "./PromoWidgets";
+import { navigate } from "../../lib/router";
 
 const leaderboard = [
   { rank: 1, user: null, prize: "50,000.00" },
@@ -15,12 +16,12 @@ export default function AirdropTile() {
     <section className="Flex_root Flex_column Flex_md">
       <div className="Flex_root Flex_spaced">
         <h3 className="Heading_root Heading_h3 CarouselHeader_heading">
-          <a className="TextLink_root" href="/airdrop" onClick={(e) => e.preventDefault()}>
+          <a className="TextLink_root" href="/airdrop" onClick={(e) => { e.preventDefault(); navigate("/airdrop"); }}>
             <img alt="shuffle logo" className="ShuffleAirDropTile_icon" height="24" src="/icons/token-white.svg" width="24" />
             SHFL Airdrop 3
           </a>
         </h3>
-        <a className="TextLink_root CarouselHeader_viewAllButton CarouselHeader_viewAllButtonAlwaysVisible" href="/airdrop" onClick={(e) => e.preventDefault()}>
+        <a className="TextLink_root CarouselHeader_viewAllButton CarouselHeader_viewAllButtonAlwaysVisible" href="/airdrop" onClick={(e) => { e.preventDefault(); navigate("/airdrop"); }}>
           View more
         </a>
       </div>

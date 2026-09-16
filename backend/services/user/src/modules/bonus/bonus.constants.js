@@ -7,11 +7,33 @@
  * (`vipLevelNum >= 20`, `>= 25`, `>= 30`), repeated in the eligibility read and
  * absent from the claim path — so the API reported a player as ineligible while
  * the claim endpoint would happily pay them. Stated once, used by both.
+ *
+ * ── THESE MOVED WHEN THE LADDER MOVED, AND THEY LOOSENED ─────────────────
+ *
+ * They are LEVEL NUMBERS, and `packages/common/src/vipLevels.js` was replaced:
+ * 75 legacy bands became the reference platform's 41. The old numbers meant
+ * something entirely different on the old ladder —
+ *
+ *      was  20 / 25 / 30   =  29,000 / 45,000 / 69,000 lifetime wager
+ *      now   2 /  2 /  7   =   1,000 /  1,000 / 10,000 lifetime wager
+ *
+ * — so the daily and weekly bonuses are now reachable **29× and 45× sooner**,
+ * and the monthly nearly 7× sooner. That is not a side effect of renumbering:
+ * these are the gates the reference publishes on its own VIP page, where the
+ * locked cards read "Bronze 1", "Bronze 1" and "Silver 1", and adopting its
+ * ladder without its gates would have left the page describing thresholds this
+ * platform does not use.
+ *
+ * **If the ladder is ever reverted, revert these in the same commit.** Left at
+ * 2/2/7 on the legacy ladder they would pay the daily bonus from 100 XP.
  */
 const BONUS_TYPES = Object.freeze({
-  daily: { minVipLevel: 20, amountColumn: 'dailybonus', paidColumn: 'actualdailybonus' },
-  weekly: { minVipLevel: 25, amountColumn: 'weeklybonus', paidColumn: 'actualweeklybonus' },
-  monthly: { minVipLevel: 30, amountColumn: 'monthlybonus', paidColumn: 'actualmonthlybonus' },
+  /** Bronze 1 — 1,000 lifetime wager. */
+  daily: { minVipLevel: 2, amountColumn: 'dailybonus', paidColumn: 'actualdailybonus' },
+  /** Bronze 1 — 1,000. The reference gates daily and weekly at the same rank. */
+  weekly: { minVipLevel: 2, amountColumn: 'weeklybonus', paidColumn: 'actualweeklybonus' },
+  /** Silver 1 — 10,000. */
+  monthly: { minVipLevel: 7, amountColumn: 'monthlybonus', paidColumn: 'actualmonthlybonus' },
 });
 
 const BONUS_TYPE_NAMES = Object.freeze(Object.keys(BONUS_TYPES));

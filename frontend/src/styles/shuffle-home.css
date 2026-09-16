@@ -68,7 +68,12 @@
 
 }
 
-.HomeBannerSection_newHomeBannerCarousel {
+/* Qualified with LayoutContainer_root so the zeroed right edge beats that
+   class's own 16px — the section is declared ahead of it in this file, and
+   without the extra class the carousel loses the mobile bleed (and with it the
+   width the 16:9 cards take their height from). The magic-container variants
+   below already carry three classes, so they still win at their breakpoints. */
+.LayoutContainer_root.HomeBannerSection_newHomeBannerCarousel {
   overflow-x: hidden;
   padding-right: 0;
 }
@@ -2374,7 +2379,18 @@
   flex-direction: row;
 }
 
-.TextInput_hasRightLabel {
+/*
+ * Specificity raised from the reference's bare `.TextInput_hasRightLabel`.
+ *
+ * `.LabelBlock_root { width: 100% }` lives in `shuffle-auth.css`, which
+ * `index.css` imports AFTER this file, so at equal specificity the 100% won
+ * and the label block ate the row — the fiat value beside "You're Staking" on
+ * the token lottery form clipped to "0.00 U…". The reference ships one bundle
+ * where this rule simply comes later. `.LabelBlock_root.TextInput_hasRightLabel`
+ * restores the reference's computed result without reordering the imports,
+ * which would move a great deal more than this.
+ */
+.LabelBlock_root.TextInput_hasRightLabel {
   width: auto;
 }
 
@@ -5282,6 +5298,44 @@ a.RichText_link {
   text-align: center;
 }
 
+/* The lobby's SEO copy is desktop-only — the reference drops it below the
+   layout's tablet breakpoints, same widths the rest of the shell switches on. */
+.SEOArticle_section {
+  display: none;
+}
+
+@media(min-width:1128px) {
+
+  .magic-container.right-side-opened-only .SEOArticle_section {
+    display: flex;
+  }
+
+}
+
+@media(min-width:943px) {
+
+  .magic-container.left-side-opened-only .SEOArticle_section {
+    display: flex;
+  }
+
+}
+
+@media(min-width:1303px) {
+
+  .magic-container.both-side-opened .SEOArticle_section {
+    display: flex;
+  }
+
+}
+
+@media(min-width:768px) {
+
+  .magic-container.no-side-opened .SEOArticle_section {
+    display: flex;
+  }
+
+}
+
 .SEOArticle_articleContent {
   display: flex;
   flex-direction: column;
@@ -5753,6 +5807,18 @@ button.ShowMoreOverlayButton_btnNoOverlay {
   gap: var(--spacing-lg1);
   max-width: 12.875rem;
   margin-top: 1.75rem;
+}
+
+/* The footer's pickers sit at the very bottom of the page, so their list opens
+   upwards instead of down. Doubled up with the popup's own class so it wins
+   over `ActivityBoard_selectPopup` whichever order the sheets load in. */
+.Footer_selectPopup.ActivityBoard_selectPopup {
+  top: auto;
+  bottom: calc(100% + var(--spacing-sm1));
+  left: 0;
+  right: auto;
+  max-height: 16rem;
+  overflow-y: auto;
 }
 
 @media(min-width:1352px) {
@@ -7760,7 +7826,11 @@ span.PayoutCell_lose {
 
 /* Page content enters after the loader (the reference animates this inline) */
 .PageLoader_enter { opacity: 0; transform: translateY(10px); }
-.PageLoader_enter.PageLoader_entered { opacity: 1; transform: translateY(0); transition: opacity var(--animation-slow-duration) ease, transform var(--animation-slow-duration) ease; }
+/* `transform: none` at rest, not `translateY(0)` — a settled transform makes
+   this element the containing block for every `position: fixed` descendant, and
+   the page's fixed bars (the lottery confirm strip, for one) then anchor to the
+   page instead of the viewport. The entrance still interpolates from the 10px. */
+.PageLoader_enter.PageLoader_entered { opacity: 1; transform: none; transition: opacity var(--animation-slow-duration) ease, transform var(--animation-slow-duration) ease; }
 .PageLoader_loader.PageLoader_leaving { animation: PageLoader_fadeOut var(--animation-slow-duration) forwards; }
 
 /* Card entrance: hidden until scrolled into view, then staggered rise (reference adds TallGameCard_show) */

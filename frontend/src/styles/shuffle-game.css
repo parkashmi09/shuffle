@@ -1,0 +1,609 @@
+/**
+ * The game screen — `/casino/games/:uuid`.
+ *
+ * Pulled verbatim from the reference's own stylesheet
+ * (`_next/static/css/f9554f2e2c4fffec.css`) for the components its game page is
+ * built from, with the CSS-module hash suffixes stripped the way every other
+ * file in `src/styles/` has them stripped:
+ *
+ *   GameWrapperComponent   the page column the game sits in
+ *   ProviderGame           the frame, its aspect ratio and its loading states
+ *   ProviderGameContainer  the iframe host
+ *   GameOverlayShell       the blurred backdrop over an unstarted game
+ *   ProviderGameOverlay    the card on top of it — currency, then the buttons
+ *   SoftswissLoader        the iframe itself, and the 16/9 box it fills
+ *   GameDetailsSection     the section below the game
+ *
+ * The `magic-container` breakpoint variants are part of the capture and are
+ * kept: they are how the reference reflows the frame as the two side rails open
+ * and close, and dropping them is what makes a clone's game frame the wrong
+ * size at every width but the one it was checked at.
+ *
+ * Nothing here is authored. Anything this clone adds of its own goes at the
+ * bottom, under its own heading.
+ */
+
+.GameOverlayShell_shell {width:100%;height:100%;z-index:var(--z-above);display:grid;place-items:center}
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .GameOverlayShell_shell {position:absolute;inset:0}
+}
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .GameOverlayShell_shell {position:absolute;inset:0}
+}
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .GameOverlayShell_shell {position:absolute;inset:0}
+}
+@media(min-width:768px) {
+  .magic-container.no-side-opened .GameOverlayShell_shell {position:absolute;inset:0}
+}
+.SoftswissLoader_root {width:100%;height:100%;aspect-ratio:16/9}
+.SoftswissLoader_iframe {width:100%;height:100%}
+.GameWrapperComponent_root {position:relative;display:flex;flex-direction:column;align-items:center;max-width:100%;padding:0;margin-top:var(--spacing-md2);width:var(--max-width)}
+@media(min-width:1352px) {
+  .magic-container.right-side-opened-only .GameWrapperComponent_root {border-radius:var(--radius-md);padding:0 var(--spacing-lg4);margin-top:var(--spacing-lg2)}
+}
+@media(min-width:1167px) {
+  .magic-container.left-side-opened-only .GameWrapperComponent_root {border-radius:var(--radius-md);padding:0 var(--spacing-lg4);margin-top:var(--spacing-lg2)}
+}
+@media(min-width:1527px) {
+  .magic-container.both-side-opened .GameWrapperComponent_root {border-radius:var(--radius-md);padding:0 var(--spacing-lg4);margin-top:var(--spacing-lg2)}
+}
+@media(min-width:992px) {
+  .magic-container.no-side-opened .GameWrapperComponent_root {border-radius:var(--radius-md);padding:0 var(--spacing-lg4);margin-top:var(--spacing-lg2)}
+}
+@media(min-width:1860px) {
+  .magic-container.right-side-opened-only .GameWrapperComponent_root {padding-left:0;padding-right:0}
+}
+@media(min-width:1675px) {
+  .magic-container.left-side-opened-only .GameWrapperComponent_root {padding-left:0;padding-right:0}
+}
+@media(min-width:2035px) {
+  .magic-container.both-side-opened .GameWrapperComponent_root {padding-left:0;padding-right:0}
+}
+@media(min-width:1500px) {
+  .magic-container.no-side-opened .GameWrapperComponent_root {padding-left:0;padding-right:0}
+}
+@media(min-height:770px)and (min-width:1352px) {
+  .magic-container.right-side-opened-only .GameWrapperComponent_root.GameWrapperComponent_isTheatreMode {margin-top:0;padding:0;height:calc(100vh - 76px);aspect-ratio:16/9;width:100%}
+}
+@media(min-height:770px)and (min-width:1167px) {
+  .magic-container.left-side-opened-only .GameWrapperComponent_root.GameWrapperComponent_isTheatreMode {margin-top:0;padding:0;height:calc(100vh - 76px);aspect-ratio:16/9;width:100%}
+}
+@media(min-height:770px)and (min-width:1527px) {
+  .magic-container.both-side-opened .GameWrapperComponent_root.GameWrapperComponent_isTheatreMode {margin-top:0;padding:0;height:calc(100vh - 76px);aspect-ratio:16/9;width:100%}
+}
+@media(min-height:770px)and (min-width:992px) {
+  .magic-container.no-side-opened .GameWrapperComponent_root.GameWrapperComponent_isTheatreMode {margin-top:0;padding:0;height:calc(100vh - 76px);aspect-ratio:16/9;width:100%}
+}
+@media(min-height:770px)and (min-width:1860px) {
+  .magic-container.right-side-opened-only .GameWrapperComponent_root.GameWrapperComponent_isTheatreMode {padding-left:0;padding-right:0}
+}
+@media(min-height:770px)and (min-width:1675px) {
+  .magic-container.left-side-opened-only .GameWrapperComponent_root.GameWrapperComponent_isTheatreMode {padding-left:0;padding-right:0}
+}
+@media(min-height:770px)and (min-width:2035px) {
+  .magic-container.both-side-opened .GameWrapperComponent_root.GameWrapperComponent_isTheatreMode {padding-left:0;padding-right:0}
+}
+@media(min-height:770px)and (min-width:1500px) {
+  .magic-container.no-side-opened .GameWrapperComponent_root.GameWrapperComponent_isTheatreMode {padding-left:0;padding-right:0}
+}
+.ProviderGame_providerGame {padding:0 var(--spacing-md2)}
+.ProviderGame_popupMode {padding:0;margin-top:0;aspect-ratio:16/9;display:flex;justify-content:center;align-items:center;height:100%}
+.ProviderGame_popupMode .ProviderGame_root {border-radius:0}
+.ProviderGame_root {border-radius:var(--spacing-md);overflow:hidden;width:100%}
+.ProviderGame_gameContainer {display:grid;position:relative;height:100%;width:100%}
+.ProviderGame_gameContainer .ProviderGame_game,.ProviderGame_gameContainer .ProviderGame_loadingContainer {grid-area:1/1;position:absolute;inset:0}
+.ProviderGame_popupMode .ProviderGame_gameContainer {height:auto}
+.ProviderGame_popupMode .ProviderGame_game,.ProviderGame_popupMode .ProviderGame_loadingContainer {position:relative}
+.ProviderGame_loadGame {aspect-ratio:16/9}
+.ProviderGame_theatreMode {border-radius:0;height:100%}
+.ProviderGame_loadingContainer {height:100%;width:100%;background-color:var(--color-gray900);pointer-events:none;display:flex;align-items:center;justify-content:center}
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .ProviderGame_loadingContainer {z-index:unset}
+}
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .ProviderGame_loadingContainer {z-index:unset}
+}
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .ProviderGame_loadingContainer {z-index:unset}
+}
+@media(min-width:768px) {
+  .magic-container.no-side-opened .ProviderGame_loadingContainer {z-index:unset}
+}
+.ProviderGame_loadingContainerNoRadius {border-radius:0}
+.ProviderGame_error {margin:var(--spacing-lg3)}
+@media(min-width:768px) {
+  .ProviderGame_error {position:absolute;top:0;left:0}
+}
+.ProviderGame_banner {width:100%;text-align:center;margin:5rem auto auto;padding-left:5%;padding-right:5%}
+.ProviderGame_banner>p {font-size:var(--text-lg)}
+@media(min-width:768px) {
+  .ProviderGame_banner {margin:0}
+}
+.ProviderGameContainer_popout {margin:auto;font-size:var(--text-h2);width:100%;height:100%;display:flex;justify-content:center;align-items:center}
+.ProviderGameContainer_gameRoot {position:relative;overflow:hidden;width:100%;height:100%;display:block;background:var(--color-gray900);min-height:15rem}
+.ProviderGameContainer_gameRoot iframe {height:100%;width:100%;border:0}
+.ProviderGameContainer_gameRoot.ProviderGameContainer_removeOverlay {max-height:50rem}
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .ProviderGameContainer_gameRoot {aspect-ratio:16/9}
+  .magic-container.right-side-opened-only .ProviderGameContainer_gameRoot.ProviderGameContainer_removeOverlay {height:100%}
+}
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .ProviderGameContainer_gameRoot {aspect-ratio:16/9}
+  .magic-container.left-side-opened-only .ProviderGameContainer_gameRoot.ProviderGameContainer_removeOverlay {height:100%}
+}
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .ProviderGameContainer_gameRoot {aspect-ratio:16/9}
+  .magic-container.both-side-opened .ProviderGameContainer_gameRoot.ProviderGameContainer_removeOverlay {height:100%}
+}
+@media(min-width:768px) {
+  .magic-container.no-side-opened .ProviderGameContainer_gameRoot {aspect-ratio:16/9}
+  .magic-container.no-side-opened .ProviderGameContainer_gameRoot.ProviderGameContainer_removeOverlay {height:100%}
+}
+.ProviderGameContainer_loading iframe {display:none}
+div.ProviderGameContainer_radiusNone {border-radius:0;padding:0}
+div.ProviderGameContainer_radiusNone iframe {border-radius:0}
+@media(min-height:770px)and (min-width:1352px) {
+  .magic-container.right-side-opened-only .ProviderGameContainer_theatreMode {border-radius:0;height:100%!important;width:100%;position:relative;overflow:hidden;aspect-ratio:16/9;display:flex}
+  .magic-container.right-side-opened-only .ProviderGameContainer_theatreMode>div {height:100%;width:100%}
+  .magic-container.right-side-opened-only .ProviderGameContainer_theatreMode.ProviderGameContainer_removeOverlay {max-height:100%}
+}
+@media(min-height:770px)and (min-width:1167px) {
+  .magic-container.left-side-opened-only .ProviderGameContainer_theatreMode {border-radius:0;height:100%!important;width:100%;position:relative;overflow:hidden;aspect-ratio:16/9;display:flex}
+  .magic-container.left-side-opened-only .ProviderGameContainer_theatreMode>div {height:100%;width:100%}
+  .magic-container.left-side-opened-only .ProviderGameContainer_theatreMode.ProviderGameContainer_removeOverlay {max-height:100%}
+}
+@media(min-height:770px)and (min-width:1527px) {
+  .magic-container.both-side-opened .ProviderGameContainer_theatreMode {border-radius:0;height:100%!important;width:100%;position:relative;overflow:hidden;aspect-ratio:16/9;display:flex}
+  .magic-container.both-side-opened .ProviderGameContainer_theatreMode>div {height:100%;width:100%}
+  .magic-container.both-side-opened .ProviderGameContainer_theatreMode.ProviderGameContainer_removeOverlay {max-height:100%}
+}
+@media(min-height:770px)and (min-width:992px) {
+  .magic-container.no-side-opened .ProviderGameContainer_theatreMode {border-radius:0;height:100%!important;width:100%;position:relative;overflow:hidden;aspect-ratio:16/9;display:flex}
+  .magic-container.no-side-opened .ProviderGameContainer_theatreMode>div {height:100%;width:100%}
+  .magic-container.no-side-opened .ProviderGameContainer_theatreMode.ProviderGameContainer_removeOverlay {max-height:100%}
+}
+.ProviderGameOverlay_shell {-webkit-backdrop-filter:blur(var(--blur-lg));backdrop-filter:blur(var(--blur-lg))}
+div.ProviderGameOverlay_popupMode {border-radius:0;padding:0;position:absolute}
+div.ProviderGameOverlay_popupMode iframe {border-radius:0}
+div.ProviderGameOverlay_popupMode .ProviderGameOverlay_gameOverlayCard {width:auto;height:auto;border-radius:var(--radius-md)}
+div.ProviderGameOverlay_popupMode .ProviderGameOverlay_buttonGroup,div.ProviderGameOverlay_popupMode .ProviderGameOverlay_gameDetail {width:auto}
+.ProviderGameOverlay_gameOverlayCard {z-index:var(--z-overlay);background:var(--color-gray900);width:100%;height:100%;justify-content:center;align-items:center;padding:var(--spacing-lg1)}
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .ProviderGameOverlay_gameOverlayCard {width:auto;height:auto;border-radius:var(--spacing-sm4)}
+}
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .ProviderGameOverlay_gameOverlayCard {width:auto;height:auto;border-radius:var(--spacing-sm4)}
+}
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .ProviderGameOverlay_gameOverlayCard {width:auto;height:auto;border-radius:var(--spacing-sm4)}
+}
+@media(min-width:768px) {
+  .magic-container.no-side-opened .ProviderGameOverlay_gameOverlayCard {width:auto;height:auto;border-radius:var(--spacing-sm4)}
+}
+.ProviderGameOverlay_gameDetail {width:100%}
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .ProviderGameOverlay_gameDetail {width:100%}
+}
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .ProviderGameOverlay_gameDetail {width:100%}
+}
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .ProviderGameOverlay_gameDetail {width:100%}
+}
+@media(min-width:768px) {
+  .magic-container.no-side-opened .ProviderGameOverlay_gameDetail {width:100%}
+}
+.ProviderGameOverlay_buttonGroup {width:100%}
+.ProviderGameOverlay_playOptionButton {min-width:8rem}
+.ProviderGameOverlay_playOptionButton>button {white-space:nowrap}
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .ProviderGameOverlay_playOptionButton {min-width:10rem}
+}
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .ProviderGameOverlay_playOptionButton {min-width:10rem}
+}
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .ProviderGameOverlay_playOptionButton {min-width:10rem}
+}
+@media(min-width:768px) {
+  .magic-container.no-side-opened .ProviderGameOverlay_playOptionButton {min-width:10rem}
+}
+.ProviderGameOverlay_fullWidthButton {width:100%}
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .ProviderGameOverlay_fullWidthButton {min-width:15rem}
+}
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .ProviderGameOverlay_fullWidthButton {min-width:15rem}
+}
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .ProviderGameOverlay_fullWidthButton {min-width:15rem}
+}
+@media(min-width:768px) {
+  .magic-container.no-side-opened .ProviderGameOverlay_fullWidthButton {min-width:15rem}
+}
+.ProviderGameOverlay_gameDetailImage {width:6.25rem;min-width:6.25rem}
+.ProviderGameOverlay_heading {font-size:var(--text-xl);font-weight:700}
+.ProviderGameOverlay_paragraph {font-size:var(--text-lg);color:var(--color-gray200);text-align:left;width:100%}
+.ProviderGameOverlaySelector_gameOverlayCardHeader {display:flex;justify-content:center;align-items:center;column-gap:var(--spacing-md2);color:var(--color-gray200);font-size:var(--text-lg);font-style:normal;font-weight:400}
+.ProviderGameOverlaySelector_gameOverlayCardHeader>div {width:auto}
+.ProviderGameOverlaySelector_selector {font-weight:500}
+.ProviderGameOverlaySelector_mobileTitle {font-size:var(--text-lg)}
+.ProviderGameOverlaySelector_title {font-size:var(--text-xl)}
+/**
+ * The control bar under the frame — reference `ProviderGamesFooter`, plus the
+ * mobile full-screen shell and the access-error overlay that ship with it.
+ *
+ * Verbatim, same source and same hash-stripping as the block above. Note
+ * `_theatreModeButton` and `_popupButton` are `display:none` until their own
+ * breakpoints — that is the reference's behaviour, not a mistake: neither
+ * control makes sense on a narrow screen.
+ */
+.GameAccessErrorOverlay_shell {padding:var(--spacing-md2)}
+.GameAccessErrorOverlay_card {background:var(--color-gray800);max-width:22rem;min-width:20rem}
+.GameAccessErrorOverlay_text {font-size:var(--text-lg)}
+.GameAccessErrorOverlay_buttons {width:100%;display:flex;flex-direction:row;gap:var(--spacing-md2)}
+.GameAccessErrorOverlay_button {flex:1 1}
+.GameAccessErrorOverlay_linkButton {flex:1 1;display:block}
+.GameAccessErrorOverlay_linkButton>* {width:100%}
+.ProviderGameMobileFullScreenMode_fullScreen {left:0;top:0;position:fixed;display:flex;justify-content:center;align-items:center;height:100vh;background-color:var(--color-gray900);width:100%;z-index:var(--z-provider-game-full-screen)}
+.ProviderGameMobileFullScreenMode_fullScreen .ProviderGameMobileFullScreenMode_loader {position:fixed;margin-top:-3.5rem;pointer-events:none}
+.ProviderGameMobileFullScreenMode_fullScreen iframe {position:fixed;top:2rem;left:0;width:100%;height:calc(100% - 2rem);border:none;z-index:var(--z-provider-game-full-screen)}
+@media(display-mode:standalone) {
+  .ProviderGameMobileFullScreenMode_fullScreen iframe {height:calc(100vh - 2rem)}
+}
+.ProviderGameMobileFullScreenMode_header {width:100%;height:var(--spacing-lg2);background:var(--color-gray900);top:0;position:fixed;padding-left:var(--spacing-sm4);padding-right:var(--spacing-sm4);display:flex;align-items:center;justify-content:space-between}
+.ProviderGameMobileFullScreenMode_homeLink {margin:auto}
+.ProviderGameMobileFullScreenMode_homeLink>img {margin:auto 0;display:block}
+.ProviderGameMobileFullScreenMode_backButton,.ProviderGameMobileFullScreenMode_walletButton {width:var(--spacing-lg1);height:var(--spacing-lg1);padding:0}
+.ProviderGameMobileFullScreenMode_backButton .ProviderGameMobileFullScreenMode_backButtonBg,.ProviderGameMobileFullScreenMode_walletButton .ProviderGameMobileFullScreenMode_walletButtonBg {width:var(--spacing-lg1);height:var(--spacing-lg1);padding:0;min-height:auto}
+.ProviderGameMobileFullScreenMode_backButton:before,.ProviderGameMobileFullScreenMode_walletButton:before {content:"";position:absolute;top:var(--spacing-sm4-neg);bottom:var(--spacing-sm1-neg);left:var(--spacing-sm4-neg);right:var(--spacing-sm4-neg)}
+.ProviderGameMobileFullScreenMode_hide {visibility:hidden}
+.ProviderGamesFooter_selectContainer {display:flex;column-gap:var(--spacing-sm4);align-items:center}
+.ProviderGamesFooter_gameSelect {border-radius:var(--radius-sm1);background:var(--color-gray800);height:var(--spacing-lg3);padding:var(--spacing-sm1);display:none;gap:var(--spacing-sm1)}
+@media(min-width:1128px) {
+  .magic-container.right-side-opened-only .ProviderGamesFooter_gameSelect {display:flex}
+}
+@media(min-width:943px) {
+  .magic-container.left-side-opened-only .ProviderGamesFooter_gameSelect {display:flex}
+}
+@media(min-width:1303px) {
+  .magic-container.both-side-opened .ProviderGamesFooter_gameSelect {display:flex}
+}
+@media(min-width:768px) {
+  .magic-container.no-side-opened .ProviderGamesFooter_gameSelect {display:flex}
+}
+.ProviderGamesFooter_gameSelectBg {line-height:1}
+.ProviderGamesFooter_button .ProviderGamesFooter_gameSelectBg,.ProviderGamesFooter_button:disabled .ProviderGamesFooter_gameSelectBg {background:none}
+.ProviderGamesFooter_button .ProviderGamesFooter_gameSelectBg img,.ProviderGamesFooter_button:disabled .ProviderGamesFooter_gameSelectBg img {filter:none}
+.ProviderGamesFooter_button {color:#fff}
+.ProviderGamesFooter_button .ProviderGamesFooter_gameSelectBg {color:var(--color-gray200)}
+.ProviderGamesFooter_button .ProviderGamesFooter_gameSelectBg img {filter:var(--filter-gray200)}
+.ProviderGamesFooter_popupButton {display:none}
+@media(min-width:1140px) {
+  .ProviderGamesFooter_popupButton {display:block}
+}
+.ProviderGamesFooter_select {font-weight:500}
+span.ProviderGamesFooter_icon {height:var(--spacing-lg3)}
+.ProviderGamesFooter_theatreModeButton {display:none}
+@media(min-height:770px)and (min-width:1352px) {
+  .magic-container.right-side-opened-only .ProviderGamesFooter_theatreModeButton {display:block}
+}
+@media(min-height:770px)and (min-width:1167px) {
+  .magic-container.left-side-opened-only .ProviderGamesFooter_theatreModeButton {display:block}
+}
+@media(min-height:770px)and (min-width:1527px) {
+  .magic-container.both-side-opened .ProviderGamesFooter_theatreModeButton {display:block}
+}
+@media(min-height:770px)and (min-width:992px) {
+  .magic-container.no-side-opened .ProviderGamesFooter_theatreModeButton {display:block}
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   This clone's own — everything above this line is the reference's.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * The artwork behind an unstarted game.
+ *
+ * `.ProviderGameOverlay_shell` above is a `backdrop-filter: blur(...)` and
+ * nothing else — it blurs what is BEHIND it and paints nothing of its own. So
+ * with an empty frame there is nothing to blur and the effect is invisible,
+ * which is why this looked like a flat dark box rather than the reference's
+ * soft-focus game art.
+ *
+ * The reference has the provider's own client loaded underneath by this point.
+ * There is no client to load until the player presses Play, so the game's
+ * catalogue artwork stands in: same effect, and it is the same image the tile
+ * the player arrived from was showing.
+ *
+ * No captured rule to copy — the reference never needed one.
+ */
+.GamePage_artwork {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Behind the overlay shell, which carries `z-index: var(--z-above)`. */
+  z-index: 0;
+}
+
+/**
+ * The control bar under the frame — reference `FooterContainer`, verbatim.
+ *
+ * Everything else the bar is built from already ships in this clone:
+ * `ToolbarGroup_*` and `ToolbarButton_*` in `shuffle-sports.css`, `ButtonIcon_root`
+ * and `Tooltip_trigger` in `shuffle-home.css`, and every `ButtonVariants_*`
+ * modifier the reference markup uses. Only the container itself was missing.
+ *
+ * ── THE WORDMARK IS A BACKGROUND, NOT AN ELEMENT ─────────────────────────
+ *
+ * The centred grey SHUFFLE mark is `background: url(...) no-repeat center` on
+ * this container, applied only at the `magic-container` breakpoints — there is
+ * no <img> for it in the reference's DOM. Drawing one as a third flex child is
+ * what pushed this clone's two button groups off the ends of the bar.
+ */
+.FooterContainer_root {display:flex;justify-content:space-between;width:100%;padding:var(--spacing-sm5) var(--spacing-lg1);height:var(--spacing-xl);min-height:var(--spacing-xl);align-items:center;overflow:hidden;overflow-x:auto;border-top:1px solid var(--color-gray700);background:var(--color-gray900);border-radius:0 0 var(--radius-md) var(--radius-md);gap:var(--spacing-md2)}
+.FooterContainer_root.FooterContainer_popup {overflow:visible}
+@media (min-width: 1128px) {
+  .magic-container.right-side-opened-only .FooterContainer_root.FooterContainer_isTheatreMode {border-radius:0}
+  .magic-container.right-side-opened-only .FooterContainer_root {background:url(/images/shuffle-logo-grey.svg) var(--color-gray900) no-repeat center}
+}
+@media (min-width: 943px) {
+  .magic-container.left-side-opened-only .FooterContainer_root.FooterContainer_isTheatreMode {border-radius:0}
+  .magic-container.left-side-opened-only .FooterContainer_root {background:url(/images/shuffle-logo-grey.svg) var(--color-gray900) no-repeat center}
+}
+@media (min-width: 1303px) {
+  .magic-container.both-side-opened .FooterContainer_root.FooterContainer_isTheatreMode {border-radius:0}
+  .magic-container.both-side-opened .FooterContainer_root {background:url(/images/shuffle-logo-grey.svg) var(--color-gray900) no-repeat center}
+}
+@media (min-width: 768px) {
+  .magic-container.no-side-opened .FooterContainer_root.FooterContainer_isTheatreMode {border-radius:0}
+  .magic-container.no-side-opened .FooterContainer_root {background:url(/images/shuffle-logo-grey.svg) var(--color-gray900) no-repeat center}
+}
+
+/**
+ * A refused launch.
+ *
+ * `ProviderGameOverlay_paragraph` is the reference's body text and is
+ * `--color-gray200`, which reads as a caption rather than a failure — a player
+ * whose game did not open scanned straight past it. Same type, stated colour.
+ */
+.GamePage_error {
+  color: var(--color-error);
+  text-align: center;
+}
+
+/**
+ * Live Stats — reference `LiveGameStats`.
+ *
+ * ── THESE RULES ARE OURS; THE MARKUP IS NOT ──────────────────────────────
+ *
+ * The panel's DOM is the reference's, class for class. Its `Collapse_*`,
+ * `IconValue_*`, `FormattedAmount_*` and `Select_*` rules already ship in this
+ * clone and style most of it for free. The `LiveGameStats*` rules below do not
+ * exist in the captured stylesheet at all — the reference code-splits this
+ * panel and only fetches its chunk when a signed-in player opens it, so a
+ * capture taken from a page load never contained them. They are written here
+ * to the reference's shape and are the one part of this panel to swap out when
+ * that chunk can be captured.
+ *
+ * The panel is docked over the frame rather than centred: the game stays
+ * visible and playable behind it, which is the point of a *live* readout.
+ */
+.LiveGameStats_root {
+  position: absolute;
+  top: var(--spacing-md2);
+  left: var(--spacing-md2);
+  z-index: var(--z-overlay);
+  width: 19rem;
+  max-width: calc(100% - var(--spacing-lg2));
+  max-height: calc(100% - var(--spacing-lg2));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+}
+
+/* `Collapse_collapseRoot` already paints the card; this only spaces them. */
+.LiveGameStats_collapse {
+  flex: 0 0 auto;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.45);
+}
+
+.LiveGameStats_collapseHeader {
+  cursor: pointer;
+}
+
+.LiveGameStats_collapseBody {
+  padding: var(--spacing-md1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+}
+
+.LiveGameStats_liveGameSelect {
+  width: 100%;
+  justify-content: space-between;
+  background: var(--color-gray800);
+  border-radius: var(--radius-sm1);
+  padding: var(--spacing-sm3) var(--spacing-md2);
+}
+
+.LiveGameStats_liveGameStatsBody {
+  background: var(--color-gray800);
+  border-radius: var(--radius-sm1);
+  padding: var(--spacing-md2);
+}
+
+.LiveGameStats_liveGameStatsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* The horizontal rule between the two rows of the 2×2 grid. */
+.LiveGameStats_liveGameStatsRowHasBorder {
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.LiveGameStats_liveGameStatsCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm1);
+  min-width: 0;
+}
+
+/* The vertical rule between the two columns — carried by the LEFT cell. */
+.LiveGameStats_liveGameStatsCellHasBorder {
+  border-right: 1px solid var(--color-gray700);
+  padding-right: var(--spacing-md2);
+}
+
+.LiveGameStats_liveGameStatsCellNoBorder {
+  padding-left: var(--spacing-md2);
+}
+
+.LiveGameStats_liveGameStatsCellBottomPadding {
+  padding-bottom: var(--spacing-md2);
+}
+
+.LiveGameStats_liveGameStatsCellTopPadding {
+  padding-top: var(--spacing-md2);
+}
+
+.LiveGameStats_liveGameStatsCellHeader {
+  color: var(--color-gray200);
+  font-size: var(--text-md);
+}
+
+.LiveGameStats_liveGameStatsCellHeaderHasBorder,
+.LiveGameStats_liveGameStatsCellHeaderNoBorder {
+  /* Both modifiers exist in the reference's markup and neither changes the
+     header's own box — the rules above draw every border in this grid. They
+     are kept so the DOM matches class for class. */
+  border: 0;
+}
+
+/**
+ * A figure. Neutral by default; the win and loss modifiers are what colour it,
+ * and the reference applies them to the count cells as well as the amounts.
+ */
+.LiveGameStatsCellValue_liveGameStatsCellValue {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm2);
+  min-width: 0;
+}
+
+.LiveGameStatsCellValue_liveGameStatsCellValueWin {
+  color: var(--color-success);
+}
+
+.LiveGameStatsCellValue_liveGameStatsCellValueLoss {
+  color: var(--color-error);
+}
+
+.LiveGameStatsCellValue_liveGameStatsCellValueMarginLeft {
+  margin-left: var(--spacing-md2);
+}
+
+.LiveGameStatsChart_liveGameStatsChartContainer {
+  background: var(--color-gray800);
+  border-radius: var(--radius-sm1);
+  padding: var(--spacing-md2) 0;
+}
+
+.LiveGameStatsChart_liveGameStatsChartWrapper {
+  width: 100%;
+  height: 125px;
+}
+
+.LiveGameStats_note {
+  color: var(--color-gray200);
+  font-size: var(--text-md);
+}
+
+/**
+ * The expanded mini-player's own frame.
+ *
+ * OURS. The minimised strip above it (`popupMinimiseItems_*`,
+ * `PopupMinimiseItem_*`) is the reference's, verbatim — those rules are in the
+ * captured stylesheet. The expanded player's frame is not: the reference
+ * code-splits it and only fetches its chunk once a game is actually popped, so
+ * a capture taken from a page load never held it. What sits INSIDE the frame is
+ * still the reference's: `ProviderGame_popupMode` is what drops the radius and
+ * lets the game size itself to a dock instead of a page column.
+ */
+.PoppedGame_root {
+  position: fixed;
+  right: var(--spacing-md2);
+  bottom: var(--spacing-md2);
+  z-index: var(--z-overlay);
+  width: 28rem;
+  max-width: calc(100vw - var(--spacing-lg2));
+  background: var(--color-gray900);
+  border: 1px solid var(--color-gray500);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.45);
+}
+
+/* Below the tablet breakpoint the dock would cover the page it is meant to let
+   you browse, so it takes the full width and sits flush to the bottom. */
+@media (max-width: 767px) {
+  .PoppedGame_root {
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+  }
+}
+
+.PoppedGame_bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md2);
+  padding: var(--spacing-sm2) var(--spacing-md2);
+  background: var(--color-gray900);
+}
+
+.PoppedGame_title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm2);
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+}
+
+.PoppedGame_actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm2);
+  flex: 0 0 auto;
+}
+
+.PoppedGame_iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  padding: var(--spacing-sm1);
+  cursor: pointer;
+  color: var(--color-gray200);
+}
+
+.PoppedGame_iconButton img {
+  filter: var(--filter-gray200);
+}

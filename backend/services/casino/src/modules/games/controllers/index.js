@@ -36,6 +36,9 @@ function createControllers({ service }) {
       });
     }),
 
+    /** The game screen's read — one catalogue row by uuid. */
+    byUuid: asyncHandler(async (req, res) => response.ok(res, await service.byUuid(req.params.uuid))),
+
     /** @legacy GET /api/gis/gamesgis/stats */
     stats: asyncHandler(async (_req, res) => response.ok(res, await service.stats())),
 

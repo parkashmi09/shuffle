@@ -1,0 +1,730 @@
+/* ==========================================================================
+   The wallet modal.
+
+   The capture holds none of this: the modal is a lazily-loaded chunk that a
+   signed-out visitor never fetches, so neither its SCSS modules nor its markup
+   reached `assets/`. Every rule below was read off the live signed-in modal's
+   stylesheet (`document.styleSheets`, module hashes stripped) and every element
+   off its DOM.
+
+   The form primitives it builds on — `Select_*`, `Input_*`, `TextInput_*`,
+   `LabelBlock_*`, `InputWrapper_*`, `TabViewOutline_*`, `ModalContent_*` — are
+   already in the captured stylesheets, because the auth modal uses the same
+   ones. Only the wallet-specific classes are here.
+
+   Reference measurements: the modal body is 540px wide on `--color-gray900`
+   with an 8px radius and no padding of its own; `ModalContent_modalContent`
+   supplies the 40px inset.
+   ========================================================================== */
+
+/* ── The shell ──────────────────────────────────────────────────────────── */
+
+.GlobalModal_walletModalBody {
+  width: 540px;
+  max-width: 540px;
+  padding: 0;
+  background-color: var(--color-gray900);
+  border-radius: var(--radius-md);
+}
+
+.WalletModal_tabsGap {
+  margin-bottom: var(--spacing-lg1);
+}
+
+.WalletModal_walletRestrictedBannerWrapper {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--spacing-lg2);
+}
+
+/* ── Currency + network selects, side by side ───────────────────────────── */
+
+.CurrencyNetworkSelectOptionsWrapper_root {
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-content: space-between;
+  gap: var(--spacing-md2);
+}
+
+.CurrencySelect_wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.CurrencySelect_currencySelectBalance {
+  margin-left: auto;
+}
+
+/*
+ * The reference's two `> div > span` descendant rules paint the balance
+ * `--color-gray400`, but the live modal computes `rgb(255,255,255)` — its
+ * balance is not nested that deeply, so neither rule ever matches and the text
+ * inherits white. Reproduced by matching the DOM (see `CurrencySelect.jsx`)
+ * rather than by overriding the colour: the rules stay as the reference wrote
+ * them, for the shape that does trigger them.
+ */
+.CurrencySelect_currencySelectBalance > div > span {
+  margin-left: auto;
+  font-size: var(--text-lg);
+  color: var(--color-gray400);
+  display: inline-block;
+  max-width: 6.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.CurrencySelect_currencySelectBalance > div > div > span {
+  color: var(--color-gray400);
+}
+
+/* ── Deposit ────────────────────────────────────────────────────────────── */
+
+.Deposit_form {
+  gap: var(--spacing-md2);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.Deposit_inputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm4);
+}
+
+.Deposit_link {
+  display: inline-flex;
+  vertical-align: initial;
+}
+
+/*
+ * The blur the reference lays over the address and QR before a deposit address
+ * exists — a geo block, or a provider that has not answered.
+ */
+.Deposit_contentBlur {
+  position: relative;
+}
+
+.Deposit_contentBlur::before {
+  content: "";
+  position: absolute;
+  backdrop-filter: blur(0.4rem);
+  z-index: var(--z-overlay-above);
+  inset: var(--spacing-md2-neg);
+}
+
+.Deposit_walletGeoRestrictionBlock {
+  background-color: var(--color-gray700);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md2);
+  font-size: var(--text-md);
+  color: var(--color-gray400);
+  line-height: var(--text-lg);
+  font-weight: 500;
+  width: 100%;
+  margin-bottom: var(--spacing-lg2);
+}
+
+.QrCodeSection_QRCodeWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-sm4) var(--spacing-lg2) 0;
+}
+
+.QrCodeSection_blurQrCode {
+  filter: blur(var(--spacing-sm4));
+}
+
+/* ── Withdraw ───────────────────────────────────────────────────────────── */
+
+.Withdraw_form {
+  gap: var(--spacing-md2);
+  display: flex;
+  flex-direction: column;
+}
+
+.Withdraw_inputWrapper {
+  display: flex;
+  gap: var(--spacing-sm3);
+  flex-direction: column;
+}
+
+.Withdraw_percentageButtons {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-sm4);
+}
+
+.Withdraw_percentageButtons button {
+  font-size: var(--text-md);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.Withdraw_withdrawableRow {
+  padding: 0 var(--spacing-md2);
+}
+
+.Withdraw_tooltipNoticeTrigger {
+  display: flex;
+  align-items: center;
+}
+
+.Withdraw_withdrawFeeTooltip {
+  width: 250px;
+  text-align: left;
+}
+
+.Withdraw_delayedKycBlockerWrapper {
+  margin-top: var(--spacing-sm4);
+  margin-bottom: var(--spacing-sm4);
+}
+
+.Withdraw_disabledInput {
+  pointer-events: none;
+}
+
+/* ── The amount field ───────────────────────────────────────────────────── */
+
+.CurrencyInput_formControlWrapper {
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  text-align: left;
+  width: 100%;
+  transition: opacity 0.2s;
+  gap: var(--spacing-sm1);
+}
+
+.CurrencyInput_currencyInput {
+  width: 100%;
+}
+
+.CurrencyInput_currencyInputIcon {
+  position: absolute;
+  z-index: var(--z-above);
+  top: 50%;
+  left: 1.0625rem;
+  transform: translateY(-50%);
+  display: flex;
+}
+
+.CurrencyInputRawLabel_labelBlock {
+  flex-direction: row;
+}
+
+.CurrencyInputRawLabel_labelLeft {
+  gap: var(--spacing-sm3);
+  display: inline-flex;
+  font-size: var(--text-md);
+  font-weight: 500;
+  position: relative;
+}
+
+.CurrencyInputRawLabel_labelRight {
+  gap: var(--spacing-sm3);
+  font-size: var(--text-md);
+  color: var(--color-gray300);
+  justify-content: flex-end;
+  font-weight: 500;
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 10rem;
+}
+
+/* ── Messages ───────────────────────────────────────────────────────────── */
+
+.WarningMessage_container {
+  display: flex;
+  align-items: flex-start;
+}
+
+.WarningMessage_icon {
+  margin-right: var(--spacing-sm3);
+}
+
+.WarningMessage_content {
+  font-size: var(--text-md);
+  color: var(--color-warning);
+  line-height: var(--spacing-md2);
+}
+
+.NoticeMessage_root {
+  gap: var(--spacing-sm4);
+  font-size: var(--text-md);
+  color: #fff;
+  line-height: var(--spacing-lg);
+  width: 100%;
+  align-items: center;
+  display: inline-flex;
+}
+
+.NoticeMessage_root > img {
+  margin-top: 0;
+}
+
+.NoticeMessage_text {
+  font-size: var(--text-md);
+  color: var(--color-gray200);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+.Footer_root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+}
+
+.Footer_root > button {
+  height: var(--spacing-lg6);
+}
+
+.ModalBottomLink_root {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  cursor: pointer;
+  margin: 0 auto auto;
+  width: max-content;
+  display: block;
+  color: #fff;
+  background: none;
+  border-width: 0 0 1px;
+  border-style: none none solid;
+  border-color: currentcolor currentcolor #fff;
+  border-image: none;
+}
+
+/* ── Dimming, for a form waiting on a request ───────────────────────────── */
+
+.DimOverlay_dimRoot {
+  gap: var(--spacing-lg1);
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  pointer-events: unset;
+  transition: var(--animation-duration);
+}
+
+.DimOverlay_dimmed {
+  opacity: var(--disabled-opacity);
+  pointer-events: none;
+}
+
+.DimOverlay_dimmed input:disabled {
+  opacity: 1;
+}
+
+.DimOverlay_dimOverlay {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--color-gray900-overlay);
+  z-index: var(--z-modal);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.RedoButton_button {
+  height: 100%;
+  background-color: var(--color-gray800);
+  border-radius: var(--radius-sm1);
+}
+
+/*
+ * The rows inside the currency popup.
+ *
+ * That list is this clone's `ActivityBoard_selectPopup` — the reference's own
+ * popup markup was never captured — so the reference's `CurrencySelect_wrapper`
+ * has to be told to fill it before `space-between` has anything to spread.
+ * Scoped to the option so it cannot reach the closed-state button, which takes
+ * its width from `Select_item`.
+ */
+.ActivityBoard_selectOption .CurrencySelect_wrapper {
+  width: 100%;
+}
+
+/*
+ * The QR frame's waiting state.
+ *
+ * The reference always has an address to encode, so it has no empty state and
+ * no rule for one. This is ours: the same footprint the QR occupies, so the
+ * modal does not change height once an encoder and an address are in place.
+ */
+.QrCodeSection_placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  padding: var(--spacing-md2);
+  text-align: center;
+  border-radius: var(--radius-sm1);
+  background: var(--color-gray800);
+  border: 1px dashed var(--color-gray600);
+  color: var(--color-gray400);
+  font-size: var(--text-md);
+  overflow: hidden;
+  /* Only an address needs breaking mid-token; the caption is ordinary prose and
+     `break-all` was splitting it as "ad dress". */
+  overflow-wrap: anywhere;
+}
+
+/* ── Buy Crypto ─────────────────────────────────────────────────────────── */
+
+.BuyCrypto_form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+}
+
+.BuyCrypto_fieldRow {
+  display: flex;
+  gap: var(--spacing-sm5);
+  align-items: flex-start;
+}
+
+.BuyCrypto_fieldColumn {
+  display: flex;
+  gap: var(--spacing-sm1);
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.BuyCrypto_options {
+  min-width: 7.5rem;
+  max-width: 7.5rem;
+  padding-top: 1.375rem;
+}
+
+.BuyCrypto_amountFieldWrapper {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+
+.BuyCrypto_amountFieldWrapper span {
+  left: var(--spacing-md2);
+  z-index: var(--z-overlay);
+}
+
+.BuyCrypto_amountFieldWrapper input {
+  position: relative;
+  padding-left: var(--spacing-lg3);
+}
+
+.BuyCrypto_providerOption {
+  display: flex;
+  width: 100%;
+  gap: var(--spacing-sm4);
+  margin-right: var(--spacing-sm1);
+  font-size: var(--text-lg);
+}
+
+.BuyCrypto_providerOption img {
+  margin: auto 0;
+}
+
+.BuyCrypto_providerName {
+  margin-right: auto;
+}
+
+.BuyCrypto_submitButton {
+  margin-top: var(--spacing-sm4);
+}
+
+.BuyCryptoLogos_root {
+  display: flex;
+  height: var(--spacing-lg3);
+  padding: 0 var(--spacing-md);
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  border-radius: var(--radius-sm1);
+  border: 1px solid var(--color-gray700);
+}
+
+.BuyCryptoLogos_root > img {
+  height: var(--spacing-md2);
+}
+
+.BuyCryptoLogos_root.BuyCryptoLogos_dark {
+  background-color: var(--color-black900);
+}
+
+.BuyCryptoLogos_root.BuyCryptoLogos_transparent {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.BuyCryptoDisclaimer_disclaimer {
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: var(--text-md);
+  font-style: normal;
+  font-weight: 400;
+  border: 1px solid var(--color-gray700);
+  padding: var(--spacing-md2);
+  color: var(--color-gray200);
+}
+
+/* ── Tip ────────────────────────────────────────────────────────────────── */
+
+.Tip_form {
+  gap: var(--spacing-md2);
+  display: flex;
+  flex-direction: column;
+}
+
+.Tip_amount {
+  display: flex;
+  gap: var(--spacing-sm4);
+  flex-direction: column;
+}
+
+.Tip_switch {
+  display: block;
+}
+
+.Tip_switch .Tip_switchButton {
+  padding: 0;
+}
+
+/*
+ * The submit sits 8px below the switch, the same way Withdraw's and Buy
+ * Crypto's do. Measured y510 against a form ending at 486 with a 16px gap.
+ */
+.Tip_button {
+  margin-top: var(--spacing-sm4);
+}
+
+/* ── Switch ─────────────────────────────────────────────────────────────────
+ *
+ * Compiled from the reference's own `src/components/Switch.module.scss`, which
+ * the capture does carry — so this is its rules, not a reconstruction.
+ *
+ * `Public Tip` was built here as a `Checkbox`, which is a different component:
+ * a 16px square that fills solid `--color-lightBlue` when ticked. The live
+ * modal uses this instead — a 42x24 track with a 14px knob that slides 18px —
+ * and the wrapper is explicitly `background: none; border: none`, because it is
+ * a `<label>` the reference also uses as a button elsewhere.
+ */
+.Switch_switchWrapper {
+  display: flex;
+  background: none;
+  border: none;
+  align-items: center;
+  gap: var(--spacing-sm5);
+  flex-direction: row;
+  justify-content: flex-start;
+  color: inherit;
+  cursor: pointer;
+}
+
+.Switch_switchWrapper:has(.Switch_hiddenCheckbox:disabled):not(.Switch_keepEnabledStyle) .Switch_darkSwitchElement,
+.Switch_switchWrapper:has(.Switch_hiddenCheckbox:disabled):not(.Switch_keepEnabledStyle) .Switch_switchElement {
+  cursor: default;
+  background: var(--color-gray300);
+}
+
+.Switch_switchWrapper.Switch_keepEnabledStyle:has(.Switch_hiddenCheckbox:disabled) .Switch_darkSwitchElement,
+.Switch_switchWrapper.Switch_keepEnabledStyle:has(.Switch_hiddenCheckbox:disabled) .Switch_switchElement {
+  cursor: default;
+}
+
+.Switch_switchWrapper:active:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_darkSwitchElement,
+.Switch_switchWrapper:active:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_switchElement {
+  background: var(--color-primaryViolet);
+}
+
+@media (hover: hover) {
+  .Switch_switchWrapper:hover:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_darkSwitchElement,
+  .Switch_switchWrapper:hover:not(:has(.Switch_hiddenCheckbox:disabled)) .Switch_switchElement {
+    box-shadow: 0 0 0 1px white;
+  }
+}
+
+.Switch_labelFloat {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.Switch_spacedLayout {
+  justify-content: space-between;
+}
+
+.Switch_spacedLayout .Switch_label {
+  color: white;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: 150%;
+}
+
+.Switch_label {
+  font-size: var(--text-md);
+}
+
+/* Not `display: none` — the input still has to take focus and fire change. */
+.Switch_hiddenCheckbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.Switch_switchElement {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--spacing-lg1);
+  width: 2.625rem;
+  transition: var(--animation-duration);
+  background: var(--color-gray700);
+  border-radius: var(--radius-rounded);
+  cursor: pointer;
+}
+
+.Switch_darkSwitchElement {
+  background: var(--color-black900);
+}
+
+.Switch_checked {
+  background: var(--color-primaryNeonPurple);
+}
+
+.Switch_checked .Switch_knob {
+  transform: translateX(1.125rem);
+}
+
+.Switch_knob {
+  position: absolute;
+  left: var(--spacing-sm2);
+  transition: transform var(--animation-duration);
+  transform: translateX(0);
+  width: var(--spacing-md1);
+  height: var(--spacing-md1);
+  border-radius: var(--radius-full);
+  background: white;
+}
+
+/*
+ * `Select_text` holds the whole name/balance row in the wallet's selects, so it
+ * has to fill the button for `space-between` to reach the right edge. The
+ * reference's `Select_text` is sized by the popup it was written for; this is
+ * scoped to the wallet's own wrapper so nothing else moves.
+ */
+.CurrencyNetworkSelectOptionsWrapper_root .Select_text,
+.Tip_form .Select_text,
+.BuyCrypto_form .Select_text {
+  width: 100%;
+}
+
+.CurrencySelect_wrapper > span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * The notice icons.
+ *
+ * The withdraw notices use the site's own white `exclamation.svg` and
+ * `shield.svg`; only the deposit warning is orange. They must not shrink when
+ * the sentence beside them wraps.
+ */
+.NoticeMessage_root > img {
+  flex-shrink: 0;
+}
+
+/*
+ * The address field's reset affordance sits inside the input, like the deposit
+ * row's copy button.
+ */
+.InputWrapper_root .RedoButton_button {
+  position: absolute;
+  right: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+/*
+ * The amount field's coin mark sits inside the input, so the text has to start
+ * clear of it. The live modal computes `padding-left: 40px` — `--spacing-lg3`,
+ * the same inset `BuyCrypto_amountFieldWrapper` uses. Without it the placeholder
+ * runs under the icon.
+ */
+.CurrencyInput_currencyInput > input {
+  padding-left: var(--spacing-lg3);
+}
+
+/*
+ * The submit sits 24px below the last notice on the live modal: the form's own
+ * 16px gap plus this. `BuyCrypto_submitButton` carries the identical rule, so
+ * the reference clearly treats the extra breath before a money button as a
+ * property of the button rather than of the gap above it.
+ */
+.Withdraw_submitButton {
+  margin-top: var(--spacing-sm4);
+}
+
+/*
+ * The portalled select panel.
+ *
+ * It leaves the modal's DOM to avoid growing its scroll area, so it also leaves
+ * the modal's stacking context — `--z-overlay-above` puts it over the body,
+ * where it now lives.
+ */
+/*
+ * The portalled listbox.
+ *
+ * `ul.` rather than `.`, because this has to beat `.ActivityBoard_selectPopup`
+ * — same specificity, so whichever sheet loaded last was winning — and three of
+ * its declarations are actively wrong once the list is portalled.
+ *
+ * That rule was written for a popup positioned `absolute` inside
+ * `.Select_formWrapper`, where `min-width: 100%` means "at least as wide as the
+ * field" and `right: 0` pins it to the field's right edge. Portalled to
+ * `document.body` the position becomes `fixed`, so its containing block is the
+ * viewport: `min-width: 100%` resolved to the full 1536px window and stretched
+ * the list clear across the page, which is what read as the dropdown escaping
+ * the modal. The width comes from the trigger's own rect inline instead, so
+ * both of these have to get out of the way.
+ *
+ * `--z-above` is 1, which sits far below `--z-modal`; a list rendered outside
+ * the modal has to clear the modal, not the page.
+ */
+ul.WalletSelect_portal {
+  min-width: 0;
+  right: auto;
+  z-index: calc(var(--z-modal) + var(--z-above));
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+/*
+ * The disclaimer's own leading.
+ *
+ * The reference computes `normal` here — 14.4px for its 12px text. This clone
+ * inherits a taller line-height from the base sheet, which opened the gap
+ * between its two lines and made the block 5px tall. Reset rather than pinned
+ * to a number, so it tracks the font the way the reference's does.
+ */
+.BuyCryptoDisclaimer_disclaimer {
+  line-height: normal;
+}

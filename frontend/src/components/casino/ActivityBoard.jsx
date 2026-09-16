@@ -1,11 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { UserCell } from "./PromoWidgets";
 import { AirdropHeader, RaceHeader } from "./BoardHeaders";
 import { sections } from "../../data/catalog";
+import { betHistory } from "../../lib/endpoints";
+import { toBoardRows, toStandingRows } from "../../lib/adapters";
+import { useSession } from "../../lib/sessionContext";
 
-const tabs = [
-  { id: "my-bets", label: "My Bets", disabled: true },
+/**
+ * "My Bets" is the one tab that needs a session. The reference disables it
+ * while signed out, which is exactly what `GET /casino/bet-history` requires,
+ * so the flag follows the session rather than being hardcoded off.
+ */
+const tabsFor = (signedIn) => [
+  { id: "my-bets", label: "My Bets", disabled: !signedIn },
   { id: "latest-bets", label: "Latest Bets" },
   { id: "high-roller-bets", label: "High Rollers" },
   { id: "race", label: "Weekly Race" },
@@ -14,6 +22,9 @@ const tabs = [
 
 const columns = ["User", "Game", "Bet Amount", "Multiplier", "Payout"];
 const LIMITS = ["0", "10", "20", "30", "40"];
+
+/** How often the live tabs re-read. The reference pushes over a socket; this polls. */
+const POLL_MS = 5000;
 
 const game = (sectionId, name) => {
   const s = sections.find((x) => x.id === sectionId);
@@ -85,7 +96,10 @@ function StandingRow({ r, index, kind }) {
         )}
       </td>
       <td>
-        {kind === "race" ? (
+        {/* A live leaderboard row has no prize: the platform has no prize-table
+            module, so the column is left empty rather than given a made-up
+            figure. The captured rows still carry theirs. */}
+        {r.prize == null ? null : kind === "race" ? (
           <span className="IconValue_root FormattedAmount_root Race_racePrizeText">
             <img alt="BTC" className="CryptoIcon_root CryptoIcon_image" height="16" src="/icons/crypto/btc.svg" width="16" />
             {r.prize}
@@ -146,33 +160,90 @@ function Row({ r, index }) {
  * once the live feed connects; `visible={false}` reproduces the pre-connect state.
  */
 export default function ActivityBoard({ visible = true, initialTab = "latest-bets", hideTabs = [] }) {
-  const [active, setActive] = useState(initialTab);
+  const { signedIn } = useSession();
+  const [selected, setSelected] = useState(initialTab);
   const [limit, setLimit] = useState("10");
   const [limitOpen, setLimitOpen] = useState(false);
+  const tabs = tabsFor(signedIn);
 
-  const isFeed = active === "latest-bets" || active === "high-roller-bets";
-  const feedKey = active === "high-roller-bets" ? "high" : "latest";
+  // Signing out while "My Bets" is open leaves a tab the session no longer
+  // allows. Derived from the session rather than corrected by an effect, so
+  // there is no render showing a signed-out player somebody's bet history.
+  const active = !signedIn && selected === "my-bets" ? "latest-bets" : selected;
+  const setActive = setSelected;
 
-  // Simulated live feed: a new bet lands at the top every few seconds, like the reference's socket feed.
-  const [feeds, setFeeds] = useState(() => ({
-    latest: latest.map((r, i) => ({ ...r, key: i })),
-    high: highRollers.map((r, i) => ({ ...r, key: i })),
-  }));
+  const isFeed = active === "latest-bets" || active === "high-roller-bets" || active === "my-bets";
+  const feedKey = active === "high-roller-bets" ? "high" : active === "my-bets" ? "mine" : "latest";
+
+  /**
+   * Artwork for the in-house game codes the bet rows carry. Flattened once
+   * rather than per row — the board re-renders on every poll.
+   */
+  const knownGames = useMemo(() => sections.flatMap((s) => s.games || []), []);
+
+  /**
+   * The live rows.
+   *
+   * The reference pushes these down a socket. There is no socket client here
+   * yet, so the three live tabs poll their route and the two that have no
+   * backend at all (the SHFL airdrop board) keep their capture.
+   *
+   * Every tab falls back to the captured rows when its read is empty or fails,
+   * for the reason in `lib/useResource.js`: a fresh database has four bets in
+   * it and an empty board would read as a broken page rather than a quiet one.
+   */
+  const [live, setLive] = useState({ latest: null, high: null, mine: null, race: null });
+
   useEffect(() => {
-    let next = 0;
-    const t = setInterval(() => {
-      next += 1;
-      setFeeds((f) => {
-        const source = feedKey === "high" ? highRollers : latest;
-        const r = source[next % source.length];
-        return { ...f, [feedKey]: [{ ...r, key: `n${next}` }, ...f[feedKey]].slice(0, 40) };
-      });
-    }, 3500);
-    return () => clearInterval(t);
-  }, [feedKey]);
+    if (!visible) return undefined;
+    let cancelled = false;
+
+    const read = async () => {
+      try {
+        const size = Math.max(Number(limit) || 10, 10);
+        if (active === "latest-bets") {
+          const rows = await betHistory.live(size);
+          if (!cancelled) setLive((s) => ({ ...s, latest: toBoardRows(rows, knownGames) }));
+        } else if (active === "high-roller-bets") {
+          const rows = await betHistory.topWins(size);
+          if (!cancelled) setLive((s) => ({ ...s, high: toBoardRows(rows, knownGames) }));
+        } else if (active === "my-bets" && signedIn) {
+          const { data } = await betHistory.mine({ limit: size });
+          if (!cancelled) setLive((s) => ({ ...s, mine: toBoardRows(data, knownGames) }));
+        } else if (active === "race") {
+          const board = await betHistory.leaderboard({ limit: size });
+          if (!cancelled) setLive((s) => ({ ...s, race: toStandingRows(board?.rows) }));
+        }
+      } catch {
+        // Leave whatever is on screen. The fallback below covers a null.
+      }
+    };
+
+    read();
+    // The leaderboard is an aggregate over a week and does not move between
+    // paints; only the two tickers are worth re-reading.
+    const poll = active === "latest-bets" || active === "high-roller-bets";
+    const t = poll ? setInterval(read, POLL_MS) : null;
+    return () => {
+      cancelled = true;
+      if (t) clearInterval(t);
+    };
+  }, [active, limit, visible, signedIn, knownGames]);
+
+  /** Live rows if the read found any, the capture otherwise. An empty array is not "some". */
+  const pick = (fetched, captured) => (fetched && fetched.length ? fetched : captured);
+
+  const feeds = {
+    latest: pick(live.latest, latest.map((r, i) => ({ ...r, key: `s${i}` }))),
+    high: pick(live.high, highRollers.map((r, i) => ({ ...r, key: `s${i}` }))),
+    // A signed-in player with no bets yet has an empty history, and that is the
+    // honest answer for their own tab — no capture stands in for it.
+    mine: live.mine || [],
+  };
 
   const feed = feeds[feedKey];
-  const board = boards[active];
+  const staticBoard = boards[active];
+  const board = staticBoard && active === "race" ? { ...staticBoard, rows: pick(live.race, staticBoard.rows) } : staticBoard;
   const cols = board ? board.columns : columns;
 
   const rows = feed.slice(0, Number(limit) || 10);

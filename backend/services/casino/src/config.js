@@ -136,11 +136,29 @@ const config = loadEnv(
     /** Where a player lands when they close a jsGames title. */
     JSGAMES_HOME_URL: coercers.optionalStr(),
 
-    // ── jsGames v2 (games.ibitplay.com) ───────────────────────────────
+    // ── jsGames v2 (gamesv2.ibitplay.com) ─────────────────────────────
     // From `legacy/jsgamesv2/config.js`, committed in plain text.
-    JSGAMES_V2_BASE_URL: coercers.str('https://games.ibitplay.com/api/game'),
+    /**
+     * The GAME api: launch, game lists, search.
+     *
+     * `games.ibitplay.com` was wrong — that host serves the USER api below.
+     * Launch lives on `gamesv2`, and pointing the two at one base is what made
+     * every history read resolve to a path that does not exist.
+     */
+    JSGAMES_V2_BASE_URL: coercers.str('https://gamesv2.ibitplay.com/api/game'),
+    /** The USER api: a player's bet history, and the admin history feed. */
+    JSGAMES_V2_USER_BASE_URL: coercers.str('https://games.ibitplay.com/api/user'),
     JSGAMES_V2_API_KEY: coercers.optionalStr(),
     JSGAMES_V2_API_SECRET: coercers.optionalStr(),
+
+    /**
+     * Must a `win` callback name a round that was already staked?
+     *
+     * Yes, unless a provider is confirmed IN WRITING to settle bonus rounds
+     * under a fresh round id. With it off, a signed callback carrying
+     * `bet_amount: 0` and any `win_amount` mints credit from nothing.
+     */
+    JSGAMES_REQUIRE_BET_FOR_WIN: coercers.bool(true),
 
     /**
      * How stale a jsGames callback timestamp may be, in seconds.

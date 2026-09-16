@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
+import Modal from "../ui/Modal";
 
 /**
  * "$100,000 Weekly Race" dialog — reference `RaceInfoModal`, opened from the
@@ -41,69 +42,43 @@ function Field({ label, icon, value, placeholder }) {
 }
 
 export default function WeeklyRaceModal({ onClose }) {
-  const [entered, setEntered] = useState(false);
   const parts = useCountdown(ENDS_AT);
-  useEffect(() => {
-    // A timer rather than an animation frame: background tabs throttle rAF and the
-    // dialog would stay in its pre-enter (scaled down) state.
-    const id = setTimeout(() => setEntered(true), 16);
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(id);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
   return (
-    <div className={cx("ModalContent_root defaultTheme", entered ? "ModalContent_show" : "ModalContent_hide")} role="dialog" aria-modal="true" aria-label="$100,000 Weekly Race">
-      <div className={cx("ModalContent_overlay", entered && "ModalContent_overlayShow ModalContent_showBgCover")} onClick={onClose} />
-      <div>
-        <div className={cx("ModalContent_modalBody ModalContent_hideModalBody", entered && "ModalContent_showModalBody ModalContent_animationCompleted")}>
-          <div className="ModalClose_modalHeader">
-            <button aria-label="Close modal" className="ModalClose_closeButton" id="close-modal" type="button" onClick={onClose}>
-              <img alt="times" src="/icons/times.svg" />
-            </button>
-          </div>
-          <div className="ModalContent_modalContent">
-            <div className="RaceInfoModal_root">
-              <div className="RaceInfoModal_headerWrapper">
-                <img alt="" height="80" src="/icons/race.svg" width="80" />
-                <h2 className="RaceInfoModal_header">$100,000 Weekly Race</h2>
-                <div className="RaceInfoModal_countDown">
-                  <div className="TournamentCounter_countDown">
-                    {parts.map(([value, label]) => (
-                      <div key={label} className="TournamentCounter_countDownItem">
-                        <span>{value}</span>
-                        <span>{label}</span>
-                      </div>
-                    ))}
-                  </div>
+    <Modal onClose={onClose} label="$100,000 Weekly Race">
+      <div className="RaceInfoModal_root">
+        <div className="RaceInfoModal_headerWrapper">
+          <img alt="" height="80" src="/icons/race.svg" width="80" />
+          <h2 className="RaceInfoModal_header">$100,000 Weekly Race</h2>
+          <div className="RaceInfoModal_countDown">
+            <div className="TournamentCounter_countDown">
+              {parts.map(([value, label]) => (
+                <div key={label} className="TournamentCounter_countDownItem">
+                  <span>{value}</span>
+                  <span>{label}</span>
                 </div>
-              </div>
-              <p className="RaceInfoModal_text">
-                Place bets to climb the ranks and make your way into the top 1000 positions to win your share of the prize pool! When the race ends,
-                prizes will be instantly added to your VIP rewards in the equivalent BTC value!
-              </p>
-              <div className="RaceInfoModal_raceForm">
-                <Field label="Your position" placeholder value="Wager to join the race!" />
-                <div className="RaceInfoModal_inputWrapper">
-                  <Field icon="/icons/fiat/USD.svg" label="Total wagered" value="$0.00" />
-                  <Field icon="/icons/crypto/btc.svg" label="Current prize" value="$0.00" />
-                </div>
-                <button
-                  className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary RaceInfoModal_cta"
-                  type="button"
-                  onClick={() => { onClose(); navigate(PRIZE_ROUTE); }}
-                >
-                  <span className="ButtonVariants_buttonContent">Learn More</span>
-                </button>
-              </div>
+              ))}
             </div>
           </div>
         </div>
+        <p className="RaceInfoModal_text">
+          Place bets to climb the ranks and make your way into the top 1000 positions to win your share of the prize pool! When the race ends,
+          prizes will be instantly added to your VIP rewards in the equivalent BTC value!
+        </p>
+        <div className="RaceInfoModal_raceForm">
+          <Field label="Your position" placeholder value="Wager to join the race!" />
+          <div className="RaceInfoModal_inputWrapper">
+            <Field icon="/icons/fiat/USD.svg" label="Total wagered" value="$0.00" />
+            <Field icon="/icons/crypto/btc.svg" label="Current prize" value="$0.00" />
+          </div>
+          <button
+            className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary RaceInfoModal_cta"
+            type="button"
+            onClick={() => { onClose(); navigate(PRIZE_ROUTE); }}
+          >
+            <span className="ButtonVariants_buttonContent">Learn More</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

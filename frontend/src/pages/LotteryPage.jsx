@@ -206,7 +206,22 @@ function PlayPanel() {
         </section>
       </TicketWrapper>
 
+      {/* The running total sits beside Buy Now — on mobile this whole strip is
+          pinned above the nav bar, which is where the reference keeps it. */}
       <section className="LotteryPlaySectionConfirmButton_confirmButton">
+        <div className="LotteryPlaySectionConfirmButton_leftPanel">
+          <div className="LotteryPlaySectionConfirmButton_textGroup">
+            <p className="LotteryPlaySectionConfirmButton_title">Total cost</p>
+            <span className="IconValue_root LotteryPlaySectionConfirmButton_value">
+              <img alt="ETH" className="CryptoIcon_root CryptoIcon_image" height="16" src="/icons/crypto/eth.svg" width="16" />
+              <span className="FormattedAmount_root formatted-amount-value">{(count * price * 0.00023).toFixed(8)}</span>
+            </span>
+          </div>
+          <div className="LotteryPlaySectionConfirmButton_textGroup">
+            <p className="LotteryPlaySectionConfirmButton_title">Tickets</p>
+            <p className="LotteryPlaySectionConfirmButton_value">{count}</p>
+          </div>
+        </div>
         <button type="submit" disabled={!stepThreeOn} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary LotteryPlaySectionConfirmButton_button">
           <span className="ButtonVariants_buttonContent">Buy Now</span>
         </button>

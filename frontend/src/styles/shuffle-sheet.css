@@ -1,0 +1,186 @@
+/* ==========================================================================
+   Mobile bottom sheet — reference `MobileSheet`.
+
+   Below 768px every dialog on the site is a sheet that slides up from the
+   bottom edge instead of a centred modal: same content, different chrome. The
+   reference builds it on Vaul, so the animation lives on `[data-vaul-*]`
+   attribute selectors rather than on the module classes; `components/ui/Modal`
+   renders the same attributes so these rules drive it unchanged.
+
+   The 768px switch is the reference's own — measured on the live site, which
+   opens a sheet at 767px and a centred modal at 768px.
+   ========================================================================== */
+
+.MobileSheet_overlay {
+  position: fixed;
+  background-color: var(--color-overlay);
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  z-index: calc(var(--z-mobile-modal) - 1);
+}
+
+.MobileSheet_darkOverlayBackground {
+  background: var(--color-overlay-darker);
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  backdrop-filter: blur(var(--blur-md));
+}
+
+.MobileSheet_content {
+  outline: none;
+  position: fixed;
+  background: var(--color-gray900);
+  bottom: 0;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  z-index: var(--z-mobile-modal);
+  /* The header stays uncovered — 4.6875rem is its 75px. */
+  max-height: calc(100% - 4.6875rem) !important;
+}
+
+.MobileSheet_content [data-vaul-handle] {
+  background: var(--color-gray500);
+}
+
+.MobileSheet_handler {
+  display: block;
+  position: relative;
+  touch-action: pan-y;
+  cursor: grab;
+  margin: var(--spacing-md2) auto;
+  flex-shrink: 0;
+}
+
+.MobileSheet_hideDismiss [data-vaul-handle] {
+  opacity: 0;
+  margin: var(--spacing-sm4);
+}
+
+.MobileSheet_container {
+  padding: var(--spacing-md) var(--spacing-lg2) var(--spacing-lg3) var(--spacing-lg2);
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+  /*
+   * `[data-vaul-drawer]` below sets `touch-action: none`, which would stop this
+   * scroller panning too — Vaul re-implements that scrolling in JS, and this
+   * clone does not. Handing the axis back to the browser is what makes the two
+   * gestures divide cleanly: a scrolled list pans natively and the browser
+   * cancels the pointer `Modal` was tracking, while a list already at the top
+   * has nothing to pan, so the drag falls through to dismissing the sheet.
+   */
+  touch-action: pan-y;
+}
+
+.MobileSheet_keyboardOpen {
+  padding-bottom: max(0px, var(--data-keyboard-height) - 10rem);
+}
+
+.MobileSheet_keyboardOpen .MobileSheet_container {
+  padding-bottom: 10rem;
+}
+
+.MobileSheet_hidden {
+  display: none;
+}
+
+body.mobile-sheet-open[data-scroll-locked] {
+  overflow: visible !important;
+}
+
+/* ── Vaul's own rules ─────────────────────────────────────────────────────
+   Kept under the attribute selectors the reference uses, so the markup in
+   `Modal` is the markup Vaul would have produced.
+   ------------------------------------------------------------------------ */
+
+[data-vaul-drawer] {
+  touch-action: none;
+  will-change: transform;
+  transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[data-vaul-drawer][data-vaul-snap-points="false"][data-vaul-drawer-direction="bottom"][data-state="open"] {
+  animation-name: slideFromBottom;
+}
+
+[data-vaul-drawer][data-vaul-snap-points="false"][data-vaul-drawer-direction="bottom"][data-state="closed"] {
+  animation-name: slideToBottom;
+}
+
+[data-vaul-overlay][data-vaul-snap-points="false"] {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="open"] {
+  animation-name: fadeIn;
+}
+
+[data-vaul-overlay][data-state="closed"] {
+  animation-name: fadeOut;
+}
+
+[data-vaul-handle] {
+  display: block;
+  position: relative;
+  opacity: 0.7;
+  background: #e2e2e4;
+  margin-left: auto;
+  margin-right: auto;
+  height: 5px;
+  width: 32px;
+  border-radius: 1rem;
+  touch-action: pan-y;
+}
+
+[data-vaul-handle]:active,
+[data-vaul-handle]:hover {
+  opacity: 1;
+}
+
+/* The grab target is bigger than the 5px bar it sits behind. */
+[data-vaul-handle-hitarea] {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100%, 2.75rem);
+  height: max(100%, 2.75rem);
+  touch-action: inherit;
+}
+
+@keyframes slideFromBottom {
+  from {
+    transform: translate3d(0, var(--initial-transform, 100%), 0);
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideToBottom {
+  to {
+    transform: translate3d(0, var(--initial-transform, 100%), 0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}

@@ -177,4 +177,13 @@
   --z-mobile-modal: calc(var(--z-modal) + var(--z-above));
   --z-splash: calc(var(--z-modal) + var(--z-above));
   --z-alert: calc(var(--z-mobile-modal) + var(--z-above));
+
+  /* Backdrop blurs. `--blur-lg` is what `.ProviderGameOverlay_shell` uses to
+     soften the artwork behind an unstarted game; without these the rule is
+     `blur(var(--blur-lg))` over an undefined variable, which computes to no
+     filter at all and the overlay sits on a flat box. Verbatim values. */
+  --blur-xs: 0.1875rem;
+  --blur-sm: 0.375rem;
+  --blur-md: 0.4rem;
+  --blur-lg: 0.625rem;
 }

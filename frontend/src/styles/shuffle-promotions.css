@@ -1821,16 +1821,6 @@ span.MatchEventTileGroupSkeleton_header {
 .TournamentInfoLeaderboard_tablePrize {
   color: var(--color-success);
 }
-.FormattedUsdAmountWithTooltip_flex {
-  position: relative;
-  display: flex;
-  gap: var(--spacing-sm4);
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  align-items: center;
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
-}
 
 /* --- Promotion countdown panel --- */
 .TournamentCounter_root {
