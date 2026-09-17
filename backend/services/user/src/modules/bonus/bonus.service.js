@@ -10,8 +10,9 @@ const {
   CODE_STATUS,
   GAME_COUNTERS,
   BLANK_GAME_COUNTERS,
+  minVipLevelFor,
 } = require('./bonus.constants');
-const { vipLevelFor } = require('@ibitplay/common');
+const { resolveVipLadder } = require('@ibitplay/common');
 const { WalletService } = require('../wallet/wallet.service');
 const { REASON } = require('../wallet/wallet.constants');
 
@@ -100,18 +101,20 @@ class BonusService {
       }),
     ]);
 
-    const vip = vipLevelFor(this.#wagerAmount(wager));
+    const ladder = await resolveVipLadder(this.models, { logger: this.logger });
+    const vip = ladder.levelFor(this.#wagerAmount(wager));
     const byType = new Map(claimable.map((c) => [c.bonus_type, c]));
 
     const types = {};
     for (const [type, spec] of Object.entries(BONUS_TYPES)) {
       const pending = byType.get(type);
-      const eligible = vip.level >= spec.minVipLevel;
+      const minVipLevel = minVipLevelFor(type, ladder);
+      const eligible = vip.level >= minVipLevel;
 
       types[type] = {
         amount: money.toDecimalString(money.toMinor(bonuses?.[spec.amountColumn] ?? '0')),
         totalPaid: money.toDecimalString(money.toMinor(bonuses?.[spec.paidColumn] ?? '0')),
-        minVipLevel: spec.minVipLevel,
+        minVipLevel,
         eligible,
         // Claimable means BOTH: there is an award waiting AND the player
         // qualifies. Legacy reported these separately and enforced neither.
@@ -165,10 +168,14 @@ class BonusService {
     if (!spec) throw errors.INVALID_TYPE({ type });
 
     // The VIP gate, on the CLAIM. Legacy checked it only on the read.
-    const wager = await this.models.Userwager.findOne({ where: { uid: userId }, raw: true });
-    const vip = vipLevelFor(this.#wagerAmount(wager));
-    if (vip.level < spec.minVipLevel) {
-      throw errors.VIP_LEVEL_TOO_LOW({ required: spec.minVipLevel, current: vip.level, type });
+    const [wager, ladder] = await Promise.all([
+      this.models.Userwager.findOne({ where: { uid: userId }, raw: true }),
+      resolveVipLadder(this.models, { logger: this.logger }),
+    ]);
+    const vip = ladder.levelFor(this.#wagerAmount(wager));
+    const minVipLevel = minVipLevelFor(type, ladder);
+    if (vip.level < minVipLevel) {
+      throw errors.VIP_LEVEL_TOO_LOW({ required: minVipLevel, current: vip.level, type });
     }
 
     const award = await this.models.BonusClaim.findOne({
@@ -731,8 +738,9 @@ class BonusService {
       }),
     ]);
 
+    const ladder = await resolveVipLadder(this.models, { logger: this.logger });
     const wagerByUser = new Map(wagers.map((w) => [String(w.uid), this.#wagerAmount(w)]));
-    const vipOf = (userId) => vipLevelFor(wagerByUser.get(String(userId)) ?? '0');
+    const vipOf = (userId) => ladder.levelFor(wagerByUser.get(String(userId)) ?? '0');
 
     return {
       total: awards.count,

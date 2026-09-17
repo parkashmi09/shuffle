@@ -27,14 +27,30 @@
  * **If the ladder is ever reverted, revert these in the same commit.** Left at
  * 2/2/7 on the legacy ladder they would pay the daily bonus from 100 XP.
  */
+const { PLATFORM_LADDER } = require('@ibitplay/common');
+
+/**
+ * ── THE GATE IS A PROPERTY OF THE LADDER NOW ─────────────────────────────
+ *
+ * Since a site can run a different ladder through its `vip` feature variant
+ * (`packages/common/src/vipLadders.js`), the numbers above are no longer the
+ * only ones: each ladder carries its own `bonusGates`, and the Addaplay
+ * ladder keeps the legacy 20 / 25 / 30 that its 75 bands were built around.
+ * `minVipLevel` here is the PLATFORM ladder's gate, kept so a caller without
+ * a site in hand still has an answer; `minVipLevelFor(type, ladder)` is what
+ * the service uses once it has resolved the site's ladder.
+ */
 const BONUS_TYPES = Object.freeze({
-  /** Bronze 1 — 1,000 lifetime wager. */
-  daily: { minVipLevel: 2, amountColumn: 'dailybonus', paidColumn: 'actualdailybonus' },
-  /** Bronze 1 — 1,000. The reference gates daily and weekly at the same rank. */
-  weekly: { minVipLevel: 2, amountColumn: 'weeklybonus', paidColumn: 'actualweeklybonus' },
-  /** Silver 1 — 10,000. */
-  monthly: { minVipLevel: 7, amountColumn: 'monthlybonus', paidColumn: 'actualmonthlybonus' },
+  /** Platform: Bronze 1 — 1,000 lifetime wager. Addaplay: VIP 20 — 29,000. */
+  daily: { minVipLevel: PLATFORM_LADDER.bonusGates.daily, amountColumn: 'dailybonus', paidColumn: 'actualdailybonus' },
+  /** Platform: Bronze 1 — 1,000; the reference gates daily and weekly at the same rank. Addaplay: VIP 25 — 45,000. */
+  weekly: { minVipLevel: PLATFORM_LADDER.bonusGates.weekly, amountColumn: 'weeklybonus', paidColumn: 'actualweeklybonus' },
+  /** Platform: Silver 1 — 10,000. Addaplay: VIP 30 — 69,000. */
+  monthly: { minVipLevel: PLATFORM_LADDER.bonusGates.monthly, amountColumn: 'monthlybonus', paidColumn: 'actualmonthlybonus' },
 });
+
+/** The level a bonus type requires on the given ladder. */
+const minVipLevelFor = (type, ladder) => ladder?.bonusGates?.[type] ?? BONUS_TYPES[type].minVipLevel;
 
 const BONUS_TYPE_NAMES = Object.freeze(Object.keys(BONUS_TYPES));
 
@@ -112,4 +128,5 @@ module.exports = {
   CODE_STATUS,
   GAME_COUNTERS,
   BLANK_GAME_COUNTERS,
+  minVipLevelFor,
 };

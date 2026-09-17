@@ -3,7 +3,7 @@
 const { Op, fn, col, where } = require('@ibitplay/db');
 
 const errors = require('./profile.errors');
-const { vipLevelFor } = require('@ibitplay/common');
+const { resolveVipLadder } = require('@ibitplay/common');
 
 /**
  * A player's own profile.
@@ -66,10 +66,13 @@ class ProfileService {
     // not exist are the same answer.
     if (!user) throw errors.USER_NOT_FOUND({ userId });
 
-    const wagerRow = await this.models.Userwager.findOne({ where: { uid: userId }, raw: true });
+    const [wagerRow, ladder] = await Promise.all([
+      this.models.Userwager.findOne({ where: { uid: userId }, raw: true }),
+      resolveVipLadder(this.models, { logger: this.logger }),
+    ]);
     const cleaned = String(wagerRow?.wager ?? '0').replace(/,/g, '').trim();
     const wager = /^-?\d+(\.\d+)?$/.test(cleaned) ? cleaned : '0';
-    const vip = vipLevelFor(wager);
+    const vip = ladder.levelFor(wager);
 
     /**
      * The counts come from casino-service, which owns `bets`. A failure there

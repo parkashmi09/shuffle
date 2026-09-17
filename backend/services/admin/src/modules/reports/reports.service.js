@@ -1,7 +1,7 @@
 'use strict';
 
 const { Op, fn, col, literal } = require('sequelize');
-const { money, vipLevelFor } = require('@ibitplay/common');
+const { money, resolveVipLadder } = require('@ibitplay/common');
 
 const errors = require('./reports.errors');
 const csv = require('./csv');
@@ -90,10 +90,11 @@ class ReportsService {
     });
 
     const ids = rows.map((r) => r.id);
-    const [credits, wagers, totals] = await Promise.all([
+    const [credits, wagers, totals, ladder] = await Promise.all([
       this.#creditsFor(ids),
       this.#wagersFor(ids),
       this.#lifetimeTotalsFor(ids),
+      resolveVipLadder(this.models, { logger: this.logger }),
     ]);
 
     return {
@@ -103,7 +104,7 @@ class ReportsService {
           user,
           credits.get(String(user.id)),
           wagers.get(String(user.id)),
-          { totals: totals.get(String(user.id)) }
+          { totals: totals.get(String(user.id)), ladder }
         )
       ),
     };
@@ -120,15 +121,17 @@ class ReportsService {
   async playerReport({ staff, userId }) {
     const user = await this.#assertVisible(staff, userId);
 
-    const [credits, wagers, totals] = await Promise.all([
+    const [credits, wagers, totals, ladder] = await Promise.all([
       this.#creditsFor([user.id]),
       this.#wagersFor([user.id]),
       this.#lifetimeTotalsFor([user.id]),
+      resolveVipLadder(this.models, { logger: this.logger }),
     ]);
 
     return this.#describePlayer(user, credits.get(String(user.id)), wagers.get(String(user.id)), {
       verbose: true,
       totals: totals.get(String(user.id)),
+      ladder,
     });
   }
 
@@ -1154,12 +1157,14 @@ class ReportsService {
     );
   }
 
-  #describePlayer(user, credits, wager, { verbose = false, totals } = {}) {
+  #describePlayer(user, credits, wager, { verbose = false, totals, ladder } = {}) {
     // `fromStored`, not `toMinor`: `credits` is bare `numeric`, and real rows
     // carry more than eight decimal places. `toMinor` refuses those, which
     // turned one over-precise balance into a 400 for the whole listing.
     const amount = (value) => money.fromStored(value ?? '0');
-    const vip = vipLevelFor(wager ?? '0');
+    // The site's ladder, resolved once by the caller — the same one the player
+    // is shown on `GET /user/vip`, so support and player never disagree.
+    const vip = ladder.levelFor(wager ?? '0');
 
     return {
       id: String(user.id),

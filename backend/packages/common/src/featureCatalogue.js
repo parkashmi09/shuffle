@@ -61,6 +61,11 @@ const GENERATED = [
         "description": "/vip-club page with banner, ranking slider, progress bar, benefits and FAQ; tier names from stake's own card map (api/vip.js)."
       },
       {
+        "key": "addaplay",
+        "label": "Addaplay VIP",
+        "description": "/vip-club page with the level ring, bonus table and per-tier levels accordion, over Addaplay's own 75-level ladder (VIP 01–VIP 75, brownz→diamond). Selecting it switches the BACKEND ladder: GET /user/vip, /user/vip/levels, USER_INFO, the bonus gates (VIP 20/25/30) and the player reports all rank on it (packages/common/src/vipLadders.js)."
+      },
+      {
         "key": "none",
         "label": "Off",
         "description": "No VIP surface."
@@ -641,6 +646,31 @@ const TEMPLATES = Object.freeze({
       "vault": "stake",
       "swap": "stake",
       "chat": "stake",
+      "notifications": "stake",
+      "banners": "stake",
+      "blog": "stake",
+      "casino_lobby": "stake",
+      "club_membership": "none",
+      "kyc": "stake",
+      "push_notifications": "none"
+    }
+  },
+  "addaplay": {
+    "label": "Addaplay (the platform's own front end)",
+    "description": "The reference front end over this platform's own routes: Addaplay's 75-level VIP ladder, spin wheel, gift cards, bonus centre, affiliate, swap and blog; no races, chat or club.",
+    "variants": {
+      "vip": "addaplay",
+      "promotions": "stake",
+      "spin_wheel": "stake",
+      "gift_cards": "stake",
+      "bonus": "stake",
+      "affiliate": "stake",
+      "races": "none",
+      "challenges": "none",
+      "raffles": "none",
+      "vault": "none",
+      "swap": "stake",
+      "chat": "none",
       "notifications": "stake",
       "banners": "stake",
       "blog": "stake",

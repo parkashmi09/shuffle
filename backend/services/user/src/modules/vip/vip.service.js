@@ -1,14 +1,16 @@
 'use strict';
 
-const { VIP_LEVELS, vipLevelFor } = require('@ibitplay/common');
+const { resolveVipLadder } = require('@ibitplay/common');
 
 /**
- * Where a player stands on the ladder.
+ * Where a player stands on the ladder — THIS site's ladder.
  *
- * Both reads are thin on purpose — the arithmetic lives in
- * `packages/common/src/vipLevels.js` and is shared with `bonus.service.js`,
- * which is what keeps the level shown on the VIP page and the level the bonus
- * eligibility checks compare against from ever disagreeing.
+ * Both reads are thin on purpose: the arithmetic lives in
+ * `packages/common/src/vipLadder.js` and the choice of ladder in
+ * `vipLadders.js`, both shared with `bonus.service.js`, the profile socket
+ * and the operator's reports. That is what keeps the level shown on the VIP
+ * page, the level the bonus gates compare against and the level a support
+ * agent reads from ever disagreeing.
  */
 class VipService {
   constructor({ models, logger }) {
@@ -16,26 +18,27 @@ class VipService {
     this.logger = logger;
   }
 
+  #ladder() {
+    return resolveVipLadder(this.models, { logger: this.logger });
+  }
+
   /**
-   * The ladder. Same for everyone, no login.
+   * The ladder. Same for everyone on this site, no login.
    *
-   * `maxXp` on the top band is returned as `null` rather than its stored
-   * number: `vipLevelFor` treats the last band as OPEN-ENDED — that is the
-   * fix for legacy's biggest-player-becomes-VIP-0 bug — so publishing a
-   * ceiling there would describe behaviour the platform does not have.
+   * `maxXp` on the top band is `null` rather than its stored number:
+   * `levelFor` treats the last band as OPEN-ENDED — that is the fix for
+   * legacy's biggest-player-becomes-VIP-0 bug — so publishing a ceiling there
+   * would describe behaviour the platform does not have.
    */
-  levels() {
-    const top = VIP_LEVELS[VIP_LEVELS.length - 1];
-    return VIP_LEVELS.map((band) => ({
-      level: band.level,
-      // The display form — "Bronze 1", "Wood". The VIP page prints it verbatim
-      // rather than rebuilding it from the card and an offset, which would go
-      // wrong on Wood: one level in its tier, and no number after the name.
-      name: band.name,
-      minXp: String(band.minXp),
-      maxXp: band.level === top.level ? null : String(band.maxXp),
-      card: band.card,
-    }));
+  async levels() {
+    const ladder = await this.#ladder();
+    return {
+      ladder: ladder.key,
+      label: ladder.label,
+      unranked: ladder.unranked,
+      bonusGates: ladder.bonusGates,
+      levels: ladder.publish(),
+    };
   }
 
   /**
@@ -50,13 +53,16 @@ class VipService {
    * treated as no wager, which is the honest reading of an unparseable counter.
    */
   async standing(userId) {
-    const row = await this.models.Userwager.findOne({ where: { uid: userId }, raw: true });
+    const [ladder, row] = await Promise.all([
+      this.#ladder(),
+      this.models.Userwager.findOne({ where: { uid: userId }, raw: true }),
+    ]);
 
     const raw = row?.wager;
     const cleaned = raw == null ? '0' : String(raw).replace(/,/g, '').trim();
     const wager = /^-?\d+(\.\d+)?$/.test(cleaned) ? cleaned : '0';
 
-    return { ...vipLevelFor(wager), totalLevels: VIP_LEVELS.length };
+    return { ...ladder.levelFor(wager), ladder: ladder.key, totalLevels: ladder.levels.length };
   }
 }
 

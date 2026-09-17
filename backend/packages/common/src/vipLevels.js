@@ -115,80 +115,40 @@ const VIP_LEVELS = Object.freeze([
   { level: 41, name: 'Diamond 5',   card: 'diamond',  minXp: 37000000, maxXp: 99999999999 },
 ]);
 
-const TOP = VIP_LEVELS[VIP_LEVELS.length - 1];
-
-/** Level 0 — signed up, has not wagered enough to reach the first band. */
-const UNRANKED = Object.freeze({ level: 0, name: 'Unranked', card: 'unranked' });
-
-/** `2` → `Bronze 1`. `0` and anything off the ladder → `Unranked`. */
-function vipLevelName(level) {
-  return VIP_LEVELS.find((band) => band.level === level)?.name ?? UNRANKED.name;
-}
+const { makeLadder } = require('./vipLadder');
 
 /**
- * Which VIP level a lifetime wager buys.
+ * The platform ladder as a value. The arithmetic — open-ended top, string
+ * comparison, distance to the first band — lives in `vipLadder.js`, shared
+ * with every other ladder a site may choose (see `vipLadders.js`), so two
+ * ladders can never disagree about HOW a wager becomes a level, only about
+ * WHERE the bands sit.
  *
- * Takes a decimal STRING, not a number. Wagers carry eight decimal places and
- * the top bands run to eight digits, which together exceed what a double
- * represents exactly — comparing them as numbers puts players on the wrong side
- * of a boundary. `Number` is used only after the band is chosen, for the
- * progress percentage, where a rounding error is cosmetic.
- *
- * Below the first band is VIP 0: a player who has not wagered 500 yet.
- *
- * Above the last band stays at the top level rather than falling off the end.
+ * `bonusGates` are the reference platform's own: daily and weekly from
+ * Bronze 1 (1,000 lifetime wager), monthly from Silver 1 (10,000). See the
+ * note in `services/user/src/modules/bonus/bonus.constants.js`.
  */
-function vipLevelFor(wager) {
-  const amount = Number.parseFloat(String(wager ?? '0').replace(/,/g, '')) || 0;
+const PLATFORM_LADDER = makeLadder({
+  key: 'platform',
+  label: 'Platform ladder — 41 levels, Wood to Diamond',
+  bands: VIP_LEVELS,
+  unranked: { level: 0, name: 'Unranked', card: 'unranked' },
+  bonusGates: { daily: 2, weekly: 2, monthly: 7 },
+});
 
-  if (amount < Number(VIP_LEVELS[0].minXp)) {
-    return {
-      level: UNRANKED.level,
-      name: UNRANKED.name,
-      card: UNRANKED.card,
-      wager: String(wager ?? '0'),
-      nextLevel: VIP_LEVELS[0].level,
-      nextName: VIP_LEVELS[0].name,
-      // Distance to the first band, not the band's floor. The old version
-      // returned the floor flat, which disagreed with the branch below —
-      // a player 300 into a 500 threshold was told they needed 500 more.
-      wagerToNextLevel: String(Number(VIP_LEVELS[0].minXp) - amount),
-      progressPct: '0.00',
-    };
-  }
+/** Level 0 — signed up, has not wagered enough to reach the first band. */
+const UNRANKED = PLATFORM_LADDER.unranked;
 
-  // Open-ended at the top. Legacy returned an error object here, and its
-  // callers turned that into VIP 0.
-  if (amount >= Number(TOP.minXp)) {
-    return {
-      level: TOP.level,
-      name: TOP.name,
-      card: TOP.card,
-      wager: String(wager ?? '0'),
-      nextLevel: null,
-      nextName: null,
-      wagerToNextLevel: null,
-      progressPct: '100.00',
-    };
-  }
+/** `2` → `Bronze 1`. `0` and anything off the ladder → `Unranked`. */
+const vipLevelName = PLATFORM_LADDER.levelName;
 
-  const index = VIP_LEVELS.findIndex((v) => amount >= Number(v.minXp) && amount <= Number(v.maxXp));
-  const band = VIP_LEVELS[index];
-  const next = VIP_LEVELS[index + 1] ?? null;
+/**
+ * Which VIP level a lifetime wager buys, on the PLATFORM ladder.
+ *
+ * Callers that serve a site should prefer `resolveVipLadder(models)` from
+ * `vipLadders.js`, which honours the site's `vip` variant; this stays the
+ * default for anything that has no site context.
+ */
+const vipLevelFor = PLATFORM_LADDER.levelFor;
 
-  const span = Number(band.maxXp) - Number(band.minXp) + 1;
-  const into = amount - Number(band.minXp);
-
-  return {
-    level: band.level,
-    name: band.name,
-    card: band.card,
-    wager: String(wager ?? '0'),
-    nextLevel: next ? next.level : null,
-    nextName: next ? next.name : null,
-    wagerToNextLevel: next ? String(Number(band.maxXp) - amount + 1) : null,
-    progressPct: ((into / span) * 100).toFixed(2),
-  };
-}
-
-module.exports = { VIP_LEVELS, UNRANKED, vipLevelName, vipLevelFor };
+module.exports = { VIP_LEVELS, UNRANKED, vipLevelName, vipLevelFor, PLATFORM_LADDER };

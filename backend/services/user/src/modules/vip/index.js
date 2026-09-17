@@ -26,16 +26,23 @@
  * not reachable from here. `GET /user/vip/levels` is the same resource under
  * the prefix the service actually owns.
  *
- * The ladder is on the PUBLIC router: it is identical for everyone and a
- * signed-out visitor looking at the VIP page needs it. A player's own standing
- * is on the user router.
+ * The ladder is on the PUBLIC router: it is identical for everyone ON THIS
+ * SITE and a signed-out visitor looking at the VIP page needs it. A player's
+ * own standing is on the user router.
+ *
+ * ── WHICH LADDER ─────────────────────────────────────────────────────────
+ *
+ * The site's `vip` feature variant names it — `addaplay` runs the 75-band
+ * ladder, everything else the platform's 41 — and `resolveVipLadder` reads
+ * that choice on every request. Both routes publish `ladder` so a front end
+ * can tell which one it was sent.
  */
 module.exports = {
   name: 'vip',
   service: 'user',
   basePath: '/vip',
-  /* `core` for `Userwager`, which is the only table read. */
-  models: ['core'],
+  /* `core` for `Userwager`; `extended` for `SiteFeature`, which names the ladder this site runs. */
+  models: ['core', 'extended'],
   routers: {
     public: require('./routes/public.routes'),
     user: require('./routes/user.routes'),

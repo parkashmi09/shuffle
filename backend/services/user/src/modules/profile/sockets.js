@@ -1,7 +1,7 @@
 'use strict';
 
 const { EVENTS, AUDIENCE } = require('@ibitplay/socket');
-const { money, vipLevelFor } = require('@ibitplay/common');
+const { money, resolveVipLadder } = require('@ibitplay/common');
 const errors = require('./profile.errors');
 const { ProfileService } = require('./profile.service');
 const { IN_HOUSE_GAMES } = require('./profile.constants');
@@ -153,9 +153,10 @@ function register({ on, deps }) {
           'referalcode', 'created', 'last_login_at',
         ]);
 
-        const [credits, wager] = await Promise.all([
+        const [credits, wager, ladder] = await Promise.all([
           models.Credits.findOne({ where: { uid: user.id }, raw: true }),
           models.Userwager.findOne({ where: { uid: user.id }, raw: true }),
+          resolveVipLadder(models, { logger }),
         ]);
 
         const lifetimeWager = String(wager?.wager ?? '0').replace(/,/g, '');
@@ -173,10 +174,11 @@ function register({ on, deps }) {
           lastLogin: user.last_login_at ?? null,
           wager: lifetimeWager,
           /**
-           * The shared ladder — the same one the operator's reports use, so a
-           * player and a support agent never see different levels.
+           * The site's ladder — the same one `GET /user/vip` and the operator's
+           * reports resolve, so a player and a support agent never see
+           * different levels.
            */
-          vip: vipLevelFor(lifetimeWager),
+          vip: { ...ladder.levelFor(lifetimeWager), ladder: ladder.key },
           credit: describeBalances(credits),
         });
       } catch (error) {
