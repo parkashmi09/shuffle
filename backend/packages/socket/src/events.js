@@ -311,6 +311,19 @@ const PLATFORM_EVENTS = Object.freeze({
    * there and needs the Redis adapter before it works behind more than one.
    */
   BET_SETTLED: 'betSettled',
+  /**
+   * The site's public feature list changed — pushed to every client on the
+   * USER socket, alongside `siteConfigUpdated` for the flags.
+   *
+   * The flags and the features are written by admin-service, and the player
+   * sockets live on user-service, so the write does not emit directly: it
+   * calls `POST /internal/user/preferences/site-config` and user-service
+   * emits from there. That is the same reason the operator's moderation
+   * events sit on the player transport (see services/user/src/sockets.js).
+   * The payload is exactly what `GET /admin/features/public` returns, so a
+   * client replaces its list rather than re-reading it.
+   */
+  FEATURES_UPDATED: 'featuresUpdated',
 });
 
 /**

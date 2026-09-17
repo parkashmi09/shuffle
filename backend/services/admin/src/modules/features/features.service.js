@@ -26,12 +26,12 @@ const TEMPLATE_ROW = '_template';
  * ═════════════════════════════════════════════════════════════════════════
  */
 class FeaturesService {
-  constructor({ models, logger, config, fetchImpl }) {
+  constructor({ models, logger, config, fetchImpl, clients = null }) {
     this.models = models;
     this.logger = logger;
     this.config = config;
     this.fetchImpl = fetchImpl;
-    this.siteConfig = new SiteConfigService({ models, logger, config });
+    this.siteConfig = new SiteConfigService({ models, logger, config, clients });
     this.box = null;
   }
 
@@ -214,6 +214,9 @@ class FeaturesService {
       'Site feature changed'
     );
 
+    // The flag mirror already pushed the flags; now the variants themselves.
+    await this.siteConfig.pushPublic({ features: await this.publicList() });
+
     return (await this.list()).features.find((x) => x.feature === feature);
   }
 
@@ -267,6 +270,8 @@ class FeaturesService {
       secrets: {},
       updated_by: staff ? `staff:${staff.id}` : null,
     });
+
+    await this.siteConfig.pushPublic({ features: await this.publicList() });
 
     this.logger?.warn({ staffId: staff?.id, template, features: applied.length }, 'Site template applied');
     return { template, applied };

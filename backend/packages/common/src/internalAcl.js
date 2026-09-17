@@ -47,7 +47,7 @@
  * not exist is worse than no entry, because it reads as coverage.
  */
 const INTERNAL_SURFACE = Object.freeze({
-  'user-service': ['/internal/user/wallet', '/internal/user/exchange-rate', '/internal/user/rakeback'],
+  'user-service': ['/internal/user/wallet', '/internal/user/exchange-rate', '/internal/user/rakeback', '/internal/user/preferences'],
   'admin-service': [
     '/internal/admin/audit',
     '/internal/admin/auth',
@@ -123,6 +123,12 @@ const INTERNAL_ACL = Object.freeze({
     '/internal/sports/settlement',
     '/internal/sports/wager',
     '/internal/user/exchange-rate',
+    /**
+     * Site flags and features are written here and heard on the player
+     * sockets, which are user-service's. This is the push, nothing else:
+     * the route takes the public view admin-service computed and emits it.
+     */
+    '/internal/user/preferences',
   ],
 
   /** Pays out casino bets, so it holds the wallet. Not sports settlement. */

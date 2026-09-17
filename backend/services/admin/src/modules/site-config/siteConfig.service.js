@@ -123,7 +123,9 @@ const DEFAULT_USER_PREFS = Object.freeze({
  * holding more than one row — which nothing prevented.
  */
 class SiteConfigService {
-  constructor({ models, db, logger, config }) {
+  constructor({ models, db, logger, config, clients = null }) {
+    /** Service clients, when the caller has them — `pushPublic` needs `clients.user`. */
+    this.clients = clients;
     this.models = models;
     this.db = db;
     this.logger = logger;
@@ -258,6 +260,37 @@ class SiteConfigService {
     return { ...flags, ...amounts, configured: Boolean(row) };
   }
 
+  /**
+   * Push the public view down every player socket.
+   *
+   * ── WHY A CALL TO USER-SERVICE, NOT AN EMIT ──────────────────────────
+   *
+   * The player sockets are on user-service and there is no cross-process
+   * Socket.IO adapter, so an emit from here reaches nobody. user-service's
+   * `POST /internal/user/preferences/site-config` emits what it is given —
+   * and what it is given is `publicSettings()`, the same allow-list the HTTP
+   * route serves, so the socket can never carry more than the GET does.
+   *
+   * Best effort: the write has already happened and is the truth; a push that
+   * fails is logged, and the next page load reads the row. It must never turn
+   * a successful save into a 500.
+   *
+   * @param {{ features?: Array }} [extra] the public feature list, when the
+   *   caller changed it (the features service passes `publicList()`).
+   */
+  async pushPublic({ features } = {}) {
+    const client = this.clients?.user;
+    if (!client) return { pushed: false, reason: 'no user-service client' };
+    try {
+      const flags = await this.publicSettings();
+      const result = await client.post('/internal/user/preferences/site-config', { flags, ...(features ? { features } : {}) });
+      return { pushed: true, ...(result?.data ?? {}) };
+    } catch (error) {
+      this.logger?.warn({ err: error.message }, 'Could not push site config to the player sockets');
+      return { pushed: false, reason: error.message };
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════════════
   //  Feature flags, for the operator
   // ══════════════════════════════════════════════════════════════════════
@@ -297,6 +330,9 @@ class SiteConfigService {
       { ...patch, updatedat: new Date() },
       { where: { id: row.id } }
     );
+
+    // Every connected player hears the new flags — see `pushPublic`.
+    await this.pushPublic();
 
     this.logger?.warn({ staffId, flags: Object.keys(patch) }, 'Site feature flags changed');
     return this.globalSettings();
