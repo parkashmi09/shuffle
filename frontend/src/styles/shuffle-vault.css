@@ -30,6 +30,88 @@
   color: var(--color-white);
 }
 
+.VaultModal_note {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--color-gray400);
+}
+
+.VaultModal_labelWithInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm2);
+}
+
+.VaultModal_labelWithInfo .LabelBlock_root {
+  margin: 0;
+}
+
+.CurrencyInputRawLabel_labelLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm2);
+}
+
+.VaultModal_infoWrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.VaultModal_infoBtn {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: help;
+  line-height: 0;
+}
+
+.VaultModal_infoBtn img {
+  filter: var(--filter-gray400);
+}
+
+.VaultModal_infoTooltip {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + var(--spacing-sm2));
+  right: 0;
+  left: auto;
+  width: 16.5rem;
+  max-width: min(16.5rem, calc(100vw - 2.5rem));
+  padding: var(--spacing-sm3) var(--spacing-md);
+  border: 1px solid var(--color-gray600);
+  border-radius: var(--radius-sm1);
+  background: var(--color-black);
+  color: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transform: none;
+  transition: opacity var(--animation-slow-duration) ease-in-out;
+}
+
+/* The info control sits on the right; let the tooltip extend left inside the modal. */
+.VaultModal_labelWithInfo .VaultModal_infoWrap {
+  position: relative;
+}
+
+.ModalContent_modalBody.GlobalModal_vaultModalBody,
+.ModalContent_modalBody.GlobalModal_vaultModalBody .ModalContent_modalContent {
+  overflow: visible;
+}
+
+.VaultModal_infoWrap:hover .VaultModal_infoTooltip,
+.VaultModal_infoWrap:focus-within .VaultModal_infoTooltip {
+  opacity: 1;
+}
+
 /*
  * The submit sits 24px below the amount field: the form's own 16px gap plus
  * this. `Withdraw_submitButton` carries the identical rule for the identical

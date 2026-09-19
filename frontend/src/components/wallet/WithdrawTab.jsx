@@ -6,6 +6,7 @@ import { useSession } from "../../lib/sessionContext";
 import { displayBalance, isFiat } from "../../lib/adapters";
 import { currencyName } from "../../lib/currencies";
 import { networkLabel, networksFor } from "../../lib/networks";
+import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import WalletSelect, { CoinIcon } from "./CurrencySelect";
 import { currencyOptions } from "../../lib/walletOptions";
 
@@ -44,7 +45,7 @@ const PERCENTAGES = [25, 50, 75];
  * against the wallet, so wiring this is one `funding.createCryptoWithdrawal`
  * away once the route exists.
  */
-function CryptoWithdraw({ coin, available, form, set, setPercent }) {
+function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = false }) {
   const options = networksFor(coin);
   const [network, setNetwork] = useState("");
   const active = network || options[0]?.value || "";
@@ -92,7 +93,7 @@ function CryptoWithdraw({ coin, available, form, set, setPercent }) {
           <div className="LabelBlock_root CurrencyInputRawLabel_labelBlock">
             <p className="CurrencyInputRawLabel_labelLeft"><span>Amount*</span></p>
             <p className="CurrencyInputRawLabel_labelRight">
-              {displayBalance(available, coin)} {coin}
+              {hideBalance ? MASKED_AMOUNT : `${displayBalance(available, coin)} ${coin}`}
             </p>
           </div>
           <div className="InputWrapper_root CurrencyInput_currencyInput">
@@ -160,11 +161,29 @@ function CryptoWithdraw({ coin, available, form, set, setPercent }) {
   );
 }
 
-export default function WithdrawTab({ coin, onCoinChange, balances, displayCurrency, rates }) {
+export default function WithdrawTab({
+  coin,
+  onCoinChange,
+  balances,
+  displayCurrency,
+  rates,
+  fiatView = true,
+  hideZeroBalances = false,
+  hideBalance = false,
+  onWithdrawalHistory,
+}) {
   const { refreshBalances } = useSession();
   const options = useMemo(
-    () => currencyOptions(balances, { displayCurrency, rates }),
-    [balances, displayCurrency, rates]
+    () =>
+      currencyOptions(balances, {
+        displayCurrency,
+        rates,
+        fiatEquivalent: fiatView,
+        hideZeroBalances,
+        hideBalance,
+        keep: coin,
+      }),
+    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin]
   );
 
   const available = balances?.[coin] ?? "0";
@@ -251,7 +270,14 @@ export default function WithdrawTab({ coin, onCoinChange, balances, displayCurre
         )}
 
         {!isFiat(coin) ? (
-          <CryptoWithdraw coin={coin} available={available} form={{ ...form, currencySelect }} set={set} setPercent={setPercent} />
+          <CryptoWithdraw
+            coin={coin}
+            available={available}
+            form={{ ...form, currencySelect }}
+            set={set}
+            setPercent={setPercent}
+            hideBalance={hideBalance}
+          />
         ) : (
           <>
             <div className="Withdraw_inputWrapper">
@@ -277,7 +303,7 @@ export default function WithdrawTab({ coin, onCoinChange, balances, displayCurre
                 <div className="LabelBlock_root CurrencyInputRawLabel_labelBlock">
                   <span className="CurrencyInputRawLabel_labelLeft">Amount*</span>
                   <span className="CurrencyInputRawLabel_labelRight">
-                    {displayBalance(available, coin)} {coin}
+                    {hideBalance ? MASKED_AMOUNT : `${displayBalance(available, coin)} ${coin}`}
                   </span>
                 </div>
                 <div className="InputWrapper_root CurrencyInput_currencyInput">
@@ -339,6 +365,12 @@ export default function WithdrawTab({ coin, onCoinChange, balances, displayCurre
             </button>
           </>
       )}
+
+      <div className="Footer_root">
+        <button type="button" className="ModalBottomLink_root" onClick={() => onWithdrawalHistory?.()}>
+          Withdrawal history
+        </button>
+      </div>
     </form>
   );
 }

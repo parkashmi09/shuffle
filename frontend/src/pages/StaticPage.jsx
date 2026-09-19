@@ -1,6 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { injectAffiliateCommission } from "../lib/affiliateMarketingHtml";
 import { navigate } from "../lib/router";
 import { useSession } from "../lib/sessionContext";
+import { usePublicSiteConfig } from "../lib/usePublicSiteConfig";
 import affiliateHtml from "../data/affiliate.html?raw";
 
 /**
@@ -62,10 +64,24 @@ export function HtmlPage({ html, cta = "register", onCta }) {
 /** Reference `/affiliate`. */
 export function AffiliatePage() {
   const { signedIn } = useSession();
+  const { commissionPercent, affiliateEnabled } = usePublicSiteConfig();
+  const html = useMemo(
+    () => injectAffiliateCommission(affiliateHtml, commissionPercent),
+    [commissionPercent]
+  );
+
+  if (!affiliateEnabled) {
+    return (
+      <section className="LayoutContainer_root LayoutContainer_column">
+        <p className="AffiliateHero_description">The affiliate program is not available right now.</p>
+      </section>
+    );
+  }
+
   return (
     <div>
       <HtmlPage
-        html={affiliateHtml}
+        html={html}
         cta="register"
         onCta={signedIn ? () => navigate("/affiliate/overview") : undefined}
       />

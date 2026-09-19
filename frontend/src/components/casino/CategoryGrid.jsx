@@ -4,11 +4,17 @@ import { navigate } from "../../lib/router";
 
 const PAGE = 28;
 
-/** Category tab view — reference `CardGrid`: heading, responsive grid, "Show More" footer. */
-export default function CategoryGrid({ title, icon, href, games, total }) {
+/**
+ * Category tab view — reference `CardGrid`: heading, responsive grid, "Show More" footer.
+ *
+ * When `onShowMore` is set (live catalogue), the parent owns paging and `games`
+ * is already the page to render. Otherwise we slice the captured list locally.
+ */
+export default function CategoryGrid({ title, icon, href, games, total, onShowMore }) {
   const [count, setCount] = useState(PAGE);
-  const visible = games.slice(0, count);
   const all = total ?? games.length;
+  const visible = onShowMore ? games : games.slice(0, count);
+  const hasMore = onShowMore ? games.length < all : count < games.length;
 
   return (
     <div>
@@ -32,8 +38,12 @@ export default function CategoryGrid({ title, icon, href, games, total }) {
           Displaying {visible.length} of {all} games
         </p>
 
-        {count < games.length && (
-          <button className="ShowMoreBackground_root CardGrid_background" type="button" onClick={() => setCount((c) => c + PAGE)}>
+        {hasMore && (
+          <button
+            className="ShowMoreBackground_root CardGrid_background"
+            type="button"
+            onClick={() => (onShowMore ? onShowMore() : setCount((c) => c + PAGE))}
+          >
             <div className="ShowMore_button">
               <div className="CircularLoadingIndicator_rotatingAnimationWrapper">
                 <svg width="16" height="16" version="1.1" viewBox="0 0 200 200">

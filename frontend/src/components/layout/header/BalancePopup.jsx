@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { cx } from "../../../lib/carousel";
 import { displayBalance } from "../../../lib/adapters";
+import { MASKED_AMOUNT } from "../../../lib/playerPreferences";
 import { CoinIcon } from "../../ui/CoinIcon";
 
 /**
@@ -16,14 +17,7 @@ import { CoinIcon } from "../../ui/CoinIcon";
  * two different places.
  */
 
-/**
- * Re-exported so the header keeps importing `CoinIcon` from here.
- *
- * This file used to define its own, hardcoding `/icons/crypto/<code>.svg` for
- * every currency — so the header pill and the mobile strip asked for a crypto
- * path for each FIAT balance, got a 404, and drew the generic star instead of
- * the player's currency mark. See `components/ui/CoinIcon.jsx`.
- */
+/** Re-exported so the header keeps importing `CoinIcon` from here. */
 export { CoinIcon };
 
 /**
@@ -31,14 +25,18 @@ export { CoinIcon };
  *
  * `/user/wallet/balances` answers ~30 codes and almost all are zero. A player
  * with two funded coins should not scroll past `ADA 0.00000000` to reach their
- * money. Within each group the order is stable, so the list does not reshuffle
- * as balances move.
+ * money. `hideZeroBalances` drops the zeros (the active wallet always stays).
  */
-function useSortedBalances(balances, query = "") {
+function useSortedBalances(balances, query = "", { hideZeroBalances = false, keep } = {}) {
   return useMemo(() => {
     const needle = query.trim().toUpperCase();
     return Object.entries(balances || {})
-      .filter(([code]) => !needle || code.includes(needle))
+      .filter(([code, amount]) => {
+        if (needle && !code.includes(needle)) return false;
+        if (!hideZeroBalances) return true;
+        if (keep && code === keep) return true;
+        return Number(amount) > 0;
+      })
       .sort(([aCode, aVal], [bCode, bVal]) => {
         const aHeld = Number(aVal) > 0;
         const bHeld = Number(bVal) > 0;
@@ -46,11 +44,11 @@ function useSortedBalances(balances, query = "") {
         if (aHeld && bHeld) return Number(bVal) - Number(aVal);
         return aCode.localeCompare(bCode);
       });
-  }, [balances, query]);
+  }, [balances, query, hideZeroBalances, keep]);
 }
 
 /** One currency row. */
-function BalanceItem({ code, amount, active, onSelect }) {
+function BalanceItem({ code, amount, active, onSelect, hideBalance = false }) {
   return (
     <button
       type="button"
@@ -61,7 +59,7 @@ function BalanceItem({ code, amount, active, onSelect }) {
         <CoinIcon code={code} />
         <p className="BalanceItem_currencyText">{code}</p>
       </div>
-      <p className="BalanceItem_amount">{displayBalance(amount, code)}</p>
+      <p className="BalanceItem_amount">{hideBalance ? MASKED_AMOUNT : displayBalance(amount, code)}</p>
     </button>
   );
 }
@@ -71,8 +69,6 @@ function BalanceTypeSearch({ value, onChange }) {
   return (
     <div className="BalanceTypeSearch_root">
       <div className="BalanceTypeSearch_wrapper">
-        {/* The input carries `padding-left: var(--spacing-lg2)` in the
-            reference's stylesheet — that gap is cut for this mark. */}
         <img alt="" className="BalanceTypeSearch_searchIcon" src="/icons/search.svg" />
         <input
           className="Input_root"
@@ -98,16 +94,27 @@ function BalanceTypeSearch({ value, onChange }) {
  * @param {object}   balances
  * @param {string}   currency   The active code, shown selected.
  * @param {Function} onSelect
- * @param {boolean}  [search]   Show the filter box (the header pill does; the
- *                              mobile strip has no room for it).
- * @param {string}   [className] Extra class — the mobile strip narrows the panel.
+ * @param {boolean}  [search]
+ * @param {boolean}  [hideZeroBalances]
+ * @param {boolean}  [hideBalance] Streamer Mode.
+ * @param {string}   [className]
  */
-export default function BalancePopup({ balances, currency, onSelect, search = false, className }) {
+export default function BalancePopup({
+  balances,
+  currency,
+  onSelect,
+  search = false,
+  hideZeroBalances = false,
+  hideBalance = false,
+  className,
+}) {
   const [entered, setEntered] = useState(false);
   const [query, setQuery] = useState("");
-  const rows = useSortedBalances(balances, search ? query : "");
+  const rows = useSortedBalances(balances, search ? query : "", {
+    hideZeroBalances,
+    keep: currency,
+  });
 
-  // One frame after mount, so the transition has two states to move between.
   useEffect(() => {
     const t = setTimeout(() => setEntered(true), 20);
     return () => clearTimeout(t);
@@ -124,6 +131,7 @@ export default function BalancePopup({ balances, currency, onSelect, search = fa
             amount={value}
             active={code === currency}
             onSelect={onSelect}
+            hideBalance={hideBalance}
           />
         ))}
         {!rows.length && (

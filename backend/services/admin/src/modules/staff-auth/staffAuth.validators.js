@@ -5,6 +5,18 @@ const { z } = require('@ibitplay/common');
 const email = z.string().trim().toLowerCase().email().max(255);
 const username = z.string().trim().toLowerCase().min(3).max(100);
 
+/** Staff sign-in: email, or the account display name (e.g. bootstrap `superadmin`). */
+const staffLoginId = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3)
+  .max(255)
+  .refine(
+    (value) => email.safeParse(value).success || /^[a-z0-9][a-z0-9._-]*$/.test(value),
+    { message: 'must be a valid email or staff login name' }
+  );
+
 /**
  * A submitted password.
  *
@@ -38,7 +50,7 @@ const twoFactorCode = z
   .regex(/^\d{6}$/, 'must be the 6-digit code from your authenticator app');
 
 const login = {
-  body: z.object({ email, password: submitted, twoFactorCode: twoFactorCode.optional() }).strict(),
+  body: z.object({ email: staffLoginId, password: submitted, twoFactorCode: twoFactorCode.optional() }).strict(),
 };
 
 const executiveLogin = {
@@ -70,7 +82,7 @@ const disableTwoFactor = {
  */
 const firstLoginPassword = {
   body: z
-    .object({ email, currentPassword: submitted, newPassword: chosen })
+    .object({ email: staffLoginId, currentPassword: submitted, newPassword: chosen })
     .strict()
     .refine((v) => v.currentPassword !== v.newPassword, {
       message: 'the new password must be different',

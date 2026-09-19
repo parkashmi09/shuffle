@@ -1,19 +1,28 @@
 import { useEffect, useState } from "react";
 import { cx } from "../../../lib/carousel";
-import { displayFiat } from "../../../lib/adapters";
+import { displayBalance, displayFiat } from "../../../lib/adapters";
+import { MASKED_AMOUNT } from "../../../lib/playerPreferences";
 import BalancePopup, { CoinIcon } from "./BalancePopup";
 
 /**
  * The balance strip under the header on phones — reference
  * `HeaderBalanceSelector.module.scss`.
  *
- * It exists because the pill on the bar has nowhere to go once the logo and the
- * account button have taken the width, so below `sm` the balance moves to its
- * own sticky row. The stylesheet hides this at `sm-and-up`, which is why there
- * is no breakpoint logic here: the markup is always rendered and CSS decides.
- * It sticks to `--height-header`, directly beneath the bar.
+ * Currently unused in the site header (the pill stays on the bar to 320px);
+ * kept for the in-game header where the reference does mount it. Honours the
+ * same Preferences as BalanceSelect: Fiat View, Hide zero balances, Streamer Mode.
  */
-export default function MobileBalanceBar({ balances, currency, onCurrencyChange, displayCurrency, rates, loading = false }) {
+export default function MobileBalanceBar({
+  balances,
+  currency,
+  onCurrencyChange,
+  displayCurrency,
+  rates,
+  fiatView = true,
+  hideZeroBalances = false,
+  hideBalance = false,
+  loading = false,
+}) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -24,6 +33,11 @@ export default function MobileBalanceBar({ balances, currency, onCurrencyChange,
   }, [open]);
 
   const amount = balances?.[currency] ?? "0";
+  const figure = hideBalance
+    ? MASKED_AMOUNT
+    : fiatView
+      ? displayFiat(amount, currency, displayCurrency, rates)
+      : displayBalance(amount, currency);
 
   return (
     <div className={cx("HeaderBalanceSelector_root", open && "HeaderBalanceSelector_open")}>
@@ -39,7 +53,7 @@ export default function MobileBalanceBar({ balances, currency, onCurrencyChange,
         {loading ? (
           <span className="SkeletonPlaceholder_root HeaderBalanceSelector_skeleton" />
         ) : (
-          <p className="HeaderBalanceSelector_content">&nbsp;{displayFiat(amount, currency, displayCurrency, rates)}</p>
+          <p className="HeaderBalanceSelector_content">&nbsp;{figure}</p>
         )}
         <img
           alt=""
@@ -48,13 +62,13 @@ export default function MobileBalanceBar({ balances, currency, onCurrencyChange,
         />
       </button>
 
-      {/* No filter box: the strip is the full width of a phone and the list is
-          already the whole wallet. The header pill is where searching belongs. */}
       {open && (
         <BalancePopup
           className="HeaderBalanceSelector_popup"
           balances={balances}
           currency={currency}
+          hideZeroBalances={hideZeroBalances}
+          hideBalance={hideBalance}
           onSelect={(next) => {
             onCurrencyChange(next);
             setOpen(false);

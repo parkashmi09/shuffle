@@ -9,14 +9,31 @@ const paging = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-/** Referral codes are short, printable, and appear in URLs. */
-const referralCode = z.string().trim().min(3).max(40).regex(/^[A-Za-z0-9_-]+$/);
+/** Referral input may be the alphanumeric code or the referrer's username. */
+const referralCode = z.string().trim().min(1).max(120);
 const playerName = z.string().trim().min(1).max(120);
 
 /** No `uid` or `userId` — legacy took it from the body on every claim route. */
 const myPaging = { query: paging };
 
-const joinTeam = { body: z.object({ referralCode }).strict() };
+const campaignSlug = z.preprocess(
+  (v) => (typeof v === 'string' && !v.trim() ? undefined : v),
+  z
+    .string()
+    .trim()
+    .max(80)
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9 _-]*$/, 'use letters, numbers, spaces, hyphens')
+    .optional()
+);
+
+const joinTeam = {
+  body: z
+    .object({
+      referralCode,
+      campaign: campaignSlug,
+    })
+    .strict(),
+};
 
 const claimReward = {
   body: z.object({ rewardId: z.coerce.number().int().positive() }).strict(),

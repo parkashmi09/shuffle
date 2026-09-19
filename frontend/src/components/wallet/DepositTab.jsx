@@ -279,10 +279,28 @@ function FiatDeposit({ coin }) {
   );
 }
 
-export default function DepositTab({ coin, onCoinChange, balances, displayCurrency, rates }) {
+export default function DepositTab({
+  coin,
+  onCoinChange,
+  balances,
+  displayCurrency,
+  rates,
+  fiatView = true,
+  hideZeroBalances = false,
+  hideBalance = false,
+  onDepositHistory,
+}) {
   const options = useMemo(
-    () => currencyOptions(balances, { displayCurrency, rates }),
-    [balances, displayCurrency, rates]
+    () =>
+      currencyOptions(balances, {
+        displayCurrency,
+        rates,
+        fiatEquivalent: fiatView,
+        hideZeroBalances,
+        hideBalance,
+        keep: coin,
+      }),
+    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin]
   );
 
   // Built once and handed to whichever branch renders, so both share the single
@@ -303,10 +321,9 @@ export default function DepositTab({ coin, onCoinChange, balances, displayCurren
       )}
 
       <div className="Footer_root">
-        <a href="/user/history/deposits" onClick={(e) => e.preventDefault()}>
-          {/* The history screen is not built yet — §4.3. */}
-          <button type="button" className="ModalBottomLink_root">Deposit history</button>
-        </a>
+        <button type="button" className="ModalBottomLink_root" onClick={() => onDepositHistory?.()}>
+          Deposit history
+        </button>
       </div>
     </form>
   );

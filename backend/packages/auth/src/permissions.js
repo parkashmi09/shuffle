@@ -70,6 +70,8 @@ const PERMISSIONS = {
   ROLES_MANAGE: 'roles:manage',
   CONFIG_READ: 'config:read',
   CONFIG_WRITE: 'config:write',
+  /** Issue fixed-amount redeem codes from the admin panel. */
+  REDEEM_CODES_WRITE: 'redeem:write',
   REPORTS_READ: 'reports:read',
   AUDIT_READ: 'audit:read',
 };
@@ -96,6 +98,7 @@ const LEVEL_PERMISSIONS = {
     PERMISSIONS.REPORTS_READ,
     PERMISSIONS.STAFF_READ,
     PERMISSIONS.CONFIG_READ,
+    PERMISSIONS.REDEEM_CODES_WRITE,
   ],
   [STAFF_LEVELS.SUPER_MASTER]: [
     PERMISSIONS.USERS_READ,

@@ -6,6 +6,7 @@ import { useFavourites } from "../lib/favouritesContext";
 import { usePoppedGame } from "../lib/poppedGameContext";
 import { currencyIcon } from "../lib/currencies";
 import { displayBalance } from "../lib/adapters";
+import { MASKED_AMOUNT } from "../lib/playerPreferences";
 import { cx } from "../lib/carousel";
 import { navigate } from "../lib/router";
 import GameCarousel from "../components/casino/GameCarousel";
@@ -100,7 +101,7 @@ function FunPlayButton({ className }) {
 }
 
 /** The overlay card: pick a currency, then open the game. */
-function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error, options, balances }) {
+function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error, options, balances, hideBalance = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -183,7 +184,9 @@ function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error,
                       {/* The control says "Balance In", so each option shows
                           the balance it would play against. */}
                       {balances?.[c] != null && (
-                        <span className="SelectMenu_optionCount">{displayBalance(balances[c], c)}</span>
+                        <span className="SelectMenu_optionCount">
+                          {hideBalance ? MASKED_AMOUNT : displayBalance(balances[c], c)}
+                        </span>
                       )}
                     </button>
                   </li>
@@ -453,7 +456,7 @@ function GameNotFound() {
 
 export default function GamePage({ uuid }) {
   const { game, loading, error: readError } = useGame(uuid);
-  const { signedIn, restoring, refreshBalances, balances, currency: walletCurrency } = useSession();
+  const { signedIn, restoring, refreshBalances, balances, currency: walletCurrency, hideBalance } = useSession();
   const { providers } = useProviders();
   /**
    * The star in the control bar.
@@ -578,6 +581,7 @@ export default function GamePage({ uuid }) {
                 error={launchError}
                 options={options}
                 balances={balances}
+                hideBalance={hideBalance}
               />
             )}
 

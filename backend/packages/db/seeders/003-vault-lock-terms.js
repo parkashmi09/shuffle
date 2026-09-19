@@ -64,6 +64,18 @@ async function up({ sequelize, transaction, logger }) {
 
     logger?.info(`Configured vault term "${term.lock_period}" at ${term.rate}% (id ${inserted.id})`);
   }
+
+  // Sample principal deductions for dev (early exit is always available).
+  await sequelize.query(
+    `UPDATE vault_lock_rates
+        SET early_penalty_rate = CASE lock_period
+              WHEN '30d' THEN 5
+              WHEN '90d' THEN 8
+              ELSE COALESCE(early_penalty_rate, 0)
+            END
+      WHERE lock_period IN ('30d', '90d')`,
+    { transaction }
+  );
 }
 
 async function down({ sequelize, transaction }) {

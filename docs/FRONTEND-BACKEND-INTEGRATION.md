@@ -7,14 +7,48 @@ Written against `backend/docs/api-surface.json` (613 routes) and the live
 platform on `http://127.0.0.1:4000`, probed endpoint by endpoint rather than
 read off the docs.
 
+Companion: [MISSING-AND-UNWIRED.md](MISSING-AND-UNWIRED.md) lists what still
+cannot be answered or is not yet asked.
+
+---
+
+## 0. Current status (snapshot)
+
+The client is no longer capture-only. Auth, wallet (fiat), VIP/rewards, vault,
+settings, transactions, affiliate dashboard, favourites / recently-played, the
+activity board, game detail + launch, and the casino catalogue (with capture
+fallback) all call the API.
+
+**Casino catalogue — how screens ask:**
+
+| UI | Hook | Route when live |
+| --- | --- | --- |
+| Lobby carousels with a collection map (`slots`, `live-casino`, `game-shows`) | `useLobbySection` | `GET /casino/games/collections/{popular-slots\|live-casino\|hot}` |
+| Lobby carousels without a map (`shuffle-games`, `shuffle-picks`, `latest-releases`) | `useLobbySection` | none — capture by design |
+| Home tabs Slots / Live Casino / Table Games | `useCategory` + `categoryQuery` | `GET /casino/games?category=slots\|live\|table` |
+| Home tab Originals | `useCategory` | none — capture by design |
+| `/casino/categories/:slug` browse | same `useCategory` path | same queries as above (plus search for blackjack/roulette/baccarat) |
+| Provider rail / providers page | `useProviders` | `GET /casino/games/providers` |
+| Provider page | `useProviderGames` | `GET /casino/games/provider/:name` |
+| Game screen | `useGame` + `jsGames.launch` | `GET /casino/games/detail/:uuid`, `POST /casino/js-games/v2/launch` |
+
+Empty catalogue tables still fall back to `src/data/catalog.js` /
+`categories.js` via `useResource` — seed with `npm run db:seed:demo` (seeder
+`004-provider-game-catalogue.js` fills **`gisgamesnew`**, providers, and the
+five collection tables). Naming `gis_games` alone is wrong for what the lobby
+reads.
+
+Sports-service still does not boot (§2.2). Run
+`node scripts/dev.js user admin casino gateway`.
+
 ---
 
 ## 1. Where the two halves stood
 
-**`frontend/` had no backend integration of any kind.** Not a stub, not a
-disabled call — zero. `grep -rn "fetch(\|axios\|import.meta.env" frontend/src`
+**At the start of integration, `frontend/` had no backend calls of any kind.**
+Not a stub, not a disabled call — zero. `grep -rn "fetch(\|axios\|import.meta.env" frontend/src`
 returned nothing. There was no `.env`, no proxy in `vite.config.js`, no API
-module. Every page renders from a file:
+module. Every page rendered from a file:
 
 | Source | Feeds |
 | --- | --- |
@@ -100,13 +134,15 @@ partly seeded.
 | `GET /admin/blogs` | ✅ | 3 posts |
 | `GET /user/spin-wheel/slices` | ✅ | 8 slices |
 | `GET /user/exchange-rate/rates` | ✅ | ~25 currencies |
-| `GET /casino/games` | ⚠️ `200` **empty** | `gis_games` = 0 |
-| `GET /casino/games/providers` | ⚠️ `200` **empty** | `gis_providers` = 0 |
+| `GET /casino/games` | ⚠️ `200` **empty** until seeded | serving table is **`gisgamesnew`** |
+| `GET /casino/games/collections/:name` | ⚠️ empty until seeded | `hot`, `live-casino`, `popular-slots`, `crash`, `indian` |
+| `GET /casino/games/providers` | ⚠️ empty until seeded | `gis_providers` / `gis_providers_new` |
 | `GET /admin/banners/:type` | ⚠️ `404 BANNERS_NOT_FOUND` | `banners` = 0 |
 | everything under `/sports/*` | ❌ service down | — |
 
-The catalogue endpoints **work**; they have nothing to serve. That distinction
-drove the fallback design in §5.
+The catalogue endpoints **work**; they have nothing to serve until
+`004-provider-game-catalogue.js` (or a live aggregator sync) fills them. That
+distinction drove the fallback design in §5.
 
 ---
 
@@ -134,43 +170,85 @@ drove the fallback design in §5.
 | `VipPage` → Your Rewards — claim one | `POST /api/v1/user/bonus/claim/:type` |
 | `VipPage` → Your Rewards — rakeback balance | `GET /api/v1/user/rakeback` |
 | `VipPage` → Your Rewards — claim it | `POST /api/v1/user/rakeback/claim` |
+| `UserMenu` → Redeem Code modal | `POST /api/v1/user/bonus/redeem` |
+| Admin → Redeem Codes (create / list) | `POST` / `GET /api/v1/admin/user/bonus/codes` |
+| Admin redeem — player search | `GET /api/v1/admin/staff/players?search=` |
+| Game screen — detail | `GET /api/v1/casino/games/detail/:uuid` |
+| Game screen — launch | `POST /api/v1/casino/js-games/v2/launch` |
+| Favourites (star + `/favourites`) | `GET/PUT/DELETE /api/v1/casino/games/favourites…` |
+| Recently played (`/casino/recently-played`) | `GET /api/v1/casino/games/recently-played` |
+| Vault modal | `GET /api/v1/user/vault/*` (+ lock / unlock POSTs) |
+| Transactions tabs | `GET /api/v1/user/history/*` (and related deposit/withdraw lists) |
+| Settings — account / KYC / 2FA / preferences / sessions | profile, kyc, `/user/2fa/*`, preferences, `/user/auth/sessions` |
+| Affiliate dashboard (signed in) | `GET /api/v1/user/affiliate/*` (+ reward claims) |
+| Wallet — fiat deposit | `GET /user/bank-details/:coin`, `POST /user/deposits/fiat` |
+| Wallet — fiat withdraw | `POST /user/withdrawals/fiat` |
 
-> All of these have been run against a live backend. The two claim POSTs were
-> exercised on their **refusal** path only — `RAKEBACK_NOTHING_TO_CLAIM` (409)
-> and `BONUS_VIP_LEVEL_TOO_LOW` (403) — because the test player has no wager
-> and so qualifies for neither. **Neither claim has ever been observed paying
-> out.** They move money; that is the next thing to check against an account
-> that actually qualifies.
+> Auth, VIP claims, and wallet fiat paths have been run against a live backend.
+> The two VIP claim POSTs were exercised on their **refusal** path only —
+> `RAKEBACK_NOTHING_TO_CLAIM` (409) and `BONUS_VIP_LEVEL_TOO_LOW` (403) — because
+> the test player has no wager and so qualifies for neither. **Neither claim has
+> ever been observed paying out.** They move money; that is the next thing to
+> check against an account that actually qualifies.
+>
+> Game launch needs a working js-games / operator upstream account; Fun Play is
+> disabled on purpose (it would invent a session).
 
-### 4.2 Wired behind a fallback — route works, table is empty
+### 4.2 Wired behind a fallback — route works, table may be empty
 
 Rendering an empty lobby against an empty table would wreck a pixel-accurate
 clone, so these read the API and **fall back to the static file when the answer
 is empty**. Seed the tables and the same code shows live data with no edit.
+Policy lives in `frontend/src/lib/useResource.js` (`isLive` when adopted).
 
-| Frontend | Route | Fallback |
-| --- | --- | --- |
-| Lobby rows, category grids | `GET /api/v1/casino/games` | `data/catalog.js` |
-| `ProvidersPage`, provider rail | `GET /api/v1/casino/games/providers` | `data/catalog.js` |
-| `HeroBanners` | `GET /api/v1/admin/banners/home` | `data/catalog.js` |
+| Frontend | Hook / entry | Route | Fallback |
+| --- | --- | --- | --- |
+| Lobby carousels `slots`, `live-casino`, `game-shows` | `useLobbySection` → `ROW_COLLECTION` | `GET /api/v1/casino/games/collections/{popular-slots\|live-casino\|hot}` | `data/catalog.js` section games |
+| Lobby carousels `shuffle-games`, `shuffle-picks`, `latest-releases` | `useLobbySection` (no collection) | — | capture only (by design — see below) |
+| Home tabs **Slots / Live Casino / Table Games** | `HomeCategoryTab` → `useCategory` + `categoryQuery` | `GET /api/v1/casino/games?category=slots\|live\|table` | pooled capture from lobby rows |
+| Home tab **Originals** | `useCategory` with empty query | — | capture only |
+| `/casino/categories/:slug` | `CategoryPage` → same `useCategory` | `category` or `search` per `lib/categories.js` | `data/categories.js` |
+| Provider rail, `ProvidersPage` | `useProviders` | `GET /api/v1/casino/games/providers` | brand roster + capture art |
+| Provider page | `useProviderGames` | `GET /api/v1/casino/games/provider/:name` | `lib/providerGames.js` |
+| `HeroBanners` | `useBanners("home")` | `GET /api/v1/admin/banners/home` | `data/catalog.js` banners |
 
-### 4.3 Reachable, not yet wired — needs UI that does not exist
+**Why some lobby / category surfaces stay on capture even when the API is up:**
 
-The routes are live and the client can call them today; there is no screen.
+- **Shuffle Games / Originals** — in-house titles live outside the aggregator
+  catalogue (`gisgamesnew`); there is nothing honest to ask for.
+- **Shuffle Picks** — editorial curation; inventing a filter would invent the
+  list, not read it.
+- **Latest Releases** — wants newest-first; browse has no sort key.
+- **Game Shows** (as a category slug) — a studio format, not a normalised
+  `tags` value. The home *lobby row* named game-shows maps to the `hot`
+  collection; the category browse slug does not.
 
-Deposit / withdraw (`/user/deposits/*`, `/user/withdrawals/*`, `/user/payments/*`),
-transaction history (`/user/history/*`), profile & preferences, 2FA
-(`/user/2fa/*`), KYC, vault, swap, P2P, gift cards, affiliate dashboard,
-club/team, notifications inbox, withdrawal whitelist.
+`categoryQuery` live map: `slots` → `slots`, `live-casino` → `live`,
+`table-games` → `table`, `crash` → `crash`, plus
+`blackjack` / `roulette` / `baccarat` via `search`.
 
-Bonus and rakeback claims came off this list with the VIP page — §4.1. Game
-favourites and recently-played came off it with the two signed-in casino lists:
-`/casino/favourites` reads and writes `/casino/games/favourites` through the
-star on every game tile, and `/casino/recently-played` reads
-`/casino/games/recently-played`, which stays empty until a tile can launch a
-game and the backend records the play.
+### 4.3 Reachable API, screen still missing or inert
 
-### 4.4 Not wireable — no backend for it
+Routes exist; the UI either has no page yet or the control does not call them.
+
+| Surface | Routes idle / unused by FE |
+| --- | --- |
+| Global Search button | `GET /casino/games/search` — declared in `endpoints.js`, never imported |
+| Notifications panel | `GET /user/notifications` (+ unread / mark-read) — panel always shows empty state |
+| Swap, P2P, gift cards, spin wheel | modules on user-service; no screens |
+| Club / team | player routes exist; no screens |
+| Withdrawal whitelist, bank-details admin UX beyond deposit | partial |
+| Payment orders / on-ramp | provider-gated; Buy Crypto tab disabled |
+| Site blogs for BlogPage | `GET /admin/blogs` — FE still renders 28 captured HTML articles |
+| Casino game stats endpoint | `GET /casino/games/stats` — unused (tile stats use bet-history) |
+| Legacy GIS / catalogue launch | FE launches via js-games v2 instead (§4.1 / GamePage) |
+
+**Came off this list (now wired):** wallet fiat deposit/withdraw, vault modal,
+transactions page, settings (account / verify / security / preferences /
+sessions), affiliate dashboard (`/affiliate/{overview,referred-users,campaigns,earnings}`),
+VIP bonus + rakeback claims, favourites + recently-played, game launch.
+
+### 4.4 Not wireable — no backend for it (or wrong product shape)
 
 | Frontend | Why |
 | --- | --- |
@@ -181,14 +259,15 @@ game and the backend records the play.
 | `PromotionsPage`, `PromotionArticlePage`, `TournamentsCarousel`, `WeeklyRaceModal` | No promotions/tournaments module; content is captured HTML |
 | `BlogPage` | `/admin/blogs` exists and has 3 rows, but they are plain-text posts; the frontend renders 28 captured Shuffle HTML articles. Different content model. |
 | Google / Line / Telegram buttons | No OAuth on the backend |
-| Opening a game | `/casino/catalogue/launch`, `/casino/gis/launch` need live aggregator credentials |
-| `SeoArticle`, the affiliate page, and the **signed-out** half of `/vip-program` | Static marketing copy by design. The signed-in half is not static any more — it is in §4.1. |
+| Opening a game **via Slotegrator GIS** | `/casino/catalogue/launch`, `/casino/gis/launch` still need aggregator credentials — but the **player path in use** is `POST /casino/js-games/v2/launch` (GamePage). Launch still needs operator upstream credentials for that provider account. |
+| `SeoArticle`, the **marketing** `/affiliate` page, and the **signed-out** half of `/vip-program` | Static marketing copy by design. Signed-in VIP and signed-in affiliate dashboard are live. |
+| Wallet → Tip, crypto withdraw create, Buy Crypto | See [MISSING-AND-UNWIRED.md](MISSING-AND-UNWIRED.md) — Tip has no P2P transfer route; crypto withdraw has history GET only; Buy Crypto needs an on-ramp. |
 
 ---
 
 ## 5. How the client is built
 
-New files, all under `frontend/src/lib/`:
+Under `frontend/src/lib/`:
 
 **`api.js`** — one `fetch` wrapper. Unwraps `{success, data, meta}`, throws
 `ApiError` carrying the backend's stable `error.code` (never the message —
@@ -197,16 +276,29 @@ reworded), returns `null` on `204` without parsing it, attaches the bearer
 token, and on a `401` refreshes once and replays the request — with a single
 shared in-flight refresh so ten parallel 401s cause one refresh, not ten.
 
+**`endpoints.js`** — named clients (`auth`, `casino`, `jsGames`, `betHistory`,
+`funding`, `vault`, `affiliate`, …) over that wrapper.
+
 **`session.jsx`** — `SessionProvider` / `useSession`. Holds user, balances and
 tokens; persists to `localStorage`; restores by calling `/auth/me` on mount.
 
-**`useResource.js`** — `useResource(fetcher, fallback)`. Returns the fallback
-immediately, swaps in the API answer when it arrives and is non-empty, and
-keeps the fallback on error or empty. This is what makes §4.2 work.
+**`useResource.js`** — `useResource(key, fetcher, fallback)` returns the
+fallback immediately, swaps in the API answer when it arrives and is
+non-empty, and keeps the fallback on error or empty (`isLive`). `useApi` is
+the no-fallback twin for auth-scoped or single-entity reads.
+
+**`catalogue.js`** — casino hooks: `useLobbySection`, `useCategory`,
+`useProviders`, `useProviderGames`, `useBanners`, `useGame`, `useRecentlyPlayed`.
+Collection map and “ask nothing → stay on capture” rules live here and in
+`categories.js` (`categoryQuery`).
 
 **`adapters.js`** — backend shape → the shape the components already render, so
-no component's JSX or class names changed. `gis_games` rows become lobby cards;
-bet rows become board rows.
+no component's JSX or class names changed. `gisgamesnew` rows become lobby
+cards via `toGameCard` (`href: /casino/games/:uuid`); bet rows become board
+rows.
+
+**`favourites.jsx`** — signed-in favourite set; tile star writes through
+`casino.addFavourite` / `removeFavourite`.
 
 Config: `vite.config.js` proxies `/api` → `127.0.0.1:4000`, so the browser is
 same-origin in dev. `VITE_API_BASE` overrides for other setups, and
@@ -375,13 +467,17 @@ more class to win.
 | VIP card — tier badge and progress bar | `GET /user/vip`, live |
 | Logout | `POST /user/auth/logout`, live |
 | VIP and Affiliate Program menu rows | anchors to `/vip-program` and `/affiliate`, routed client-side |
-| Wallet button, 3 icon buttons, 7 of 11 menu rows | rendered, inert — §4.3 |
+| Wallet / Vault | open live modals (`shuffle:wallet` / vault) |
+| Transactions / Settings | routed to live pages |
+| Notifications row | opens the panel (empty until wired — §4.3) |
+| Bet slip, chat icon buttons | rendered, inert — no sportsbook / chat module |
 
 The inert controls use `ButtonVariants_keepEnabledStyle`, the reference's own
 variant for keeping an enabled appearance on a `:disabled` button, so they look
-right rather than greyed. Menu items get `cursor: not-allowed` on hover — the
-one rule in that stylesheet that is ours rather than the reference's, and it is
-marked as such. Delete it as the screens get built.
+right rather than greyed. Menu items that truly have nowhere to go get
+`cursor: not-allowed` on hover — the one rule in that stylesheet that is ours
+rather than the reference's, and it is marked as such. Delete it as the screens
+get built.
 
 **Icons.** The capture holds only signed-out icons, so `wallet`, `receipt`,
 `crown`, `user`, `settings`, `logout`, `transactions` and `vault` were drawn to
@@ -704,7 +800,16 @@ cd frontend && npm run dev
 `curl localhost:4000/health` — expect user/admin/casino `ok`, sports `down`.
 
 To see §4.2 switch from fallback to live data, seed the catalogue:
-`cd backend && npm run db:seed:demo`.
+
+```
+cd backend && npm run db:seed:demo
+```
+
+That runs (among other demo data) `004-provider-game-catalogue.js`, which fills
+**`gisgamesnew`**, `js_games`, provider tables, and the five collection lists
+(`hot_games`, `live_casino`, `popular_slots`, `crash_games`, `indian_games`).
+Lobby collections and `?category=` browse then go live; banners still need
+rows in `banners` (or admin) separately.
 
 ### Verified end to end
 
@@ -727,13 +832,19 @@ In Chrome against the running platform:
 
 1. **Restore `services/sports/src/modules/bets/legacy/`** from wherever the port
    was done. Nothing in the sportsbook moves until sports-service boots.
-2. **Seed `gis_games`, `gis_providers`, `banners`.** The code in §4.2 is already
-   waiting; this is data, not code.
-3. **Decide the sportsbook's data model.** The captured Shuffle shape and the
-   cricket-exchange feed are not the same product. This is the largest
-   outstanding decision in the repo.
-4. **Move the refresh token to an httpOnly cookie** (backend change).
-5. Build the account screens for §4.3 — those routes are live and idle.
+2. **Seed catalogue + banners** if not already — `npm run db:seed:demo` for
+   `gisgamesnew` / collections / providers; seed or admin-set `banners` for the
+   hero. Code in §4.2 is waiting on data.
+3. **Wire global Search** to `GET /casino/games/search` (endpoint already in
+   `endpoints.js`; `SearchButton` is inert).
+4. **Wire the notifications panel** to `GET /user/notifications` (player routes
+   exist; panel is still hard-empty).
+5. **Decide the sportsbook's data model.** The captured Shuffle shape and the
+   cricket-exchange feed are not the same product. Largest outstanding product
+   decision.
+6. **Move the refresh token to an httpOnly cookie** (backend change).
+7. **Crypto withdraw POST**, Tip / P2P, on-ramp — see
+   [MISSING-AND-UNWIRED.md](MISSING-AND-UNWIRED.md).
 
 ### The lottery staking block, measured rather than inferred
 

@@ -4,6 +4,8 @@ import { useSession } from "../../lib/sessionContext";
 import { ApiError, NetworkError } from "../../lib/api";
 import { auth as authApi } from "../../lib/endpoints";
 import Modal from "../ui/Modal";
+import { clearStoredReferral, normalizeReferralInput, readStoredReferral } from "../../lib/referralCapture";
+import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
 
 /**
  * Login / Register modal — a 1:1 port of the reference AuthModal
@@ -15,6 +17,7 @@ const oauth = [
   { id: "Line", icon: "/icons/brands/line.svg" },
   { id: "Telegram", icon: "/icons/brands/telegram.svg" },
 ];
+
 
 /** Inline validation message — reference `ErrorMessage` (rendered under the field). */
 function ErrorMessage({ children }) {
@@ -304,9 +307,11 @@ function LoginForm({ onDone }) {
 
 function RegisterForm({ onDone }) {
   const { register } = useSession();
-  const [referralOpen, setReferralOpen] = useState(false);
+  const { registerBonus, registerBonusCurrency } = usePublicSiteConfig();
+  const initialReferrer = readStoredReferral();
+  const [referralOpen, setReferralOpen] = useState(() => Boolean(initialReferrer));
   const form = useForm(
-    { username: "", email: "", password: "", referrerCode: "", terms: false },
+    { username: "", email: "", password: "", referrerCode: initialReferrer, terms: false },
     { username: rules.username, email: rules.email, password: rules.password, terms: rules.terms }
   );
   const [status, setStatus] = useState(null);
@@ -326,13 +331,15 @@ function RegisterForm({ onDone }) {
        * value, and `terms` — a client-side gate with no column behind it —
        * is not sent at all.
        */
+      const referredBy = normalizeReferralInput(form.values.referrerCode.trim() || readStoredReferral());
       await register({
         username: form.values.username,
         email: form.values.email,
         password: form.values.password,
-        ...(form.values.referrerCode.trim() ? { referredBy: form.values.referrerCode.trim() } : {}),
+        ...(referredBy ? { referredBy } : {}),
       });
       // `register` signs in as its second step, so this closes onto a session.
+      clearStoredReferral();
       onDone();
     } catch (error) {
       if (error instanceof ApiError && error.code === "VALIDATION_ERROR") form.setFieldErrors(error.fieldErrors());
@@ -356,15 +363,20 @@ function RegisterForm({ onDone }) {
           <PasswordField value={form.values.password} onChange={form.set("password")} error={form.errors.password} autoComplete="new-password" />
         </div>
         <input type="hidden" name="cxd" value="" />
+        {Number.parseFloat(registerBonus) > 0 && (
+          <p className="TermAndPolicyRegister_root" style={{ marginBottom: "0.5rem" }}>
+            New accounts receive a {registerBonus} {registerBonusCurrency} welcome bonus when registration completes.
+          </p>
+        )}
         <div className="Flex_root Flex_column Flex_sm4 Register_collapse">
           <button type="button" className="Register_collapseTitle" aria-expanded={referralOpen} onClick={() => setReferralOpen((o) => !o)}>
-            <span>Referral Code (Optional)</span>
+            <span>Referral code or username (optional)</span>
             <img alt="chevron" className={cx(referralOpen && "Register_up")} src="/icons/chevron.svg" />
           </button>
           <div className={cx("Register_collapseBody", referralOpen && "Register_isCollapseExpanded")}>
             <div className="TextInput_formControlWrapper">
               <div className="InputWrapper_root">
-                <input className="Input_root" placeholder="Enter referral code" name="referrerCode" aria-label="Referral code" value={form.values.referrerCode} onChange={(e) => form.set("referrerCode")(e.target.value)} />
+                <input className="Input_root" placeholder="Referral code or referrer username" name="referrerCode" aria-label="Referral code or username" value={form.values.referrerCode} onChange={(e) => form.set("referrerCode")(e.target.value)} />
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { cx } from "../../lib/carousel";
+import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
 import DepositTab from "./DepositTab";
 import WithdrawTab from "./WithdrawTab";
@@ -42,7 +43,15 @@ function tabFromUrl() {
 }
 
 export default function WalletModal({ onClose }) {
-  const { balances, currency: headerCurrency, displayCurrency, rates } = useSession();
+  const {
+    balances,
+    currency: headerCurrency,
+    displayCurrency,
+    rates,
+    fiatView,
+    hideZeroBalances,
+    hideBalance,
+  } = useSession();
   const [tab, setTab] = useState(tabFromUrl);
   /**
    * The wallet the modal is working on.
@@ -74,7 +83,23 @@ export default function WalletModal({ onClose }) {
     window.history.replaceState(null, "", url);
   }, [tab]);
 
-  const shared = { coin, onCoinChange: setCoin, balances, displayCurrency, rates };
+  const openHistory = (path) => {
+    onClose();
+    navigate(path);
+  };
+
+  const shared = {
+    coin,
+    onCoinChange: setCoin,
+    balances,
+    displayCurrency,
+    rates,
+    fiatView,
+    hideZeroBalances,
+    hideBalance,
+    onDepositHistory: () => openHistory("/transactions"),
+    onWithdrawalHistory: () => openHistory("/transactions/withdrawals"),
+  };
 
   return (
     <Modal onClose={onClose} label="Wallet" bodyClass="GlobalModal_walletModalBody">

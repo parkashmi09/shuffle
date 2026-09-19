@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { displayBalance } from "../../lib/adapters";
+import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import { currencyOptions } from "../../lib/walletOptions";
 import WalletSelect, { CoinIcon } from "./CurrencySelect";
 
@@ -129,15 +130,32 @@ export function BuyCryptoTab() {
  * "Public Tip" switch, and Send Tip. Shorter than the other tabs on the live
  * modal too (489px against Deposit's 634).
  */
-export function TipTab({ coin, onCoinChange, balances, displayCurrency, rates }) {
+export function TipTab({
+  coin,
+  onCoinChange,
+  balances,
+  displayCurrency,
+  rates,
+  fiatView = true,
+  hideZeroBalances = false,
+  hideBalance = false,
+}) {
   const [username, setUsername] = useState("");
   const [amount, setAmount] = useState("");
   /* The live modal opens with the switch off. */
   const [isPublic, setIsPublic] = useState(false);
 
   const options = useMemo(
-    () => currencyOptions(balances, { displayCurrency, rates }),
-    [balances, displayCurrency, rates]
+    () =>
+      currencyOptions(balances, {
+        displayCurrency,
+        rates,
+        fiatEquivalent: fiatView,
+        hideZeroBalances,
+        hideBalance,
+        keep: coin,
+      }),
+    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin]
   );
   const available = balances?.[coin] ?? "0";
 
@@ -172,7 +190,7 @@ export function TipTab({ coin, onCoinChange, balances, displayCurrency, rates })
           <div className="LabelBlock_root CurrencyInputRawLabel_labelBlock">
             <p className="CurrencyInputRawLabel_labelLeft"><span>Amount*</span></p>
             <p className="CurrencyInputRawLabel_labelRight">
-              {displayBalance(available, coin)} {coin}
+              {hideBalance ? MASKED_AMOUNT : `${displayBalance(available, coin)} ${coin}`}
             </p>
           </div>
           {/* The icon is a sibling of the input's wrapper, not of the input:

@@ -27,6 +27,10 @@ module.exports = function adminRoutes(deps) {
   const router = Router();
   const canRead = auth.requirePermission(PERMISSIONS.REPORTS_READ);
   const canWrite = auth.requirePermission(PERMISSIONS.CONFIG_WRITE);
+  const canIssueRedeemCode = auth.requireAnyPermission(
+    PERMISSIONS.CONFIG_WRITE,
+    PERMISSIONS.REDEEM_CODES_WRITE
+  );
   const audit = (action, describe) => withActivity({ action, describe });
 
   router.get('/records', canRead, validate(v.listRecords), ctrl.listRecords);
@@ -148,7 +152,7 @@ module.exports = function adminRoutes(deps) {
 
   router.post(
     '/codes',
-    canWrite,
+    canIssueRedeemCode,
     validate(v.createCode),
     audit('bonus.code.create', (req) => ({
       targetType: 'REDEEM_CODE', targetId: req.body.code,

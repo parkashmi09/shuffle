@@ -144,6 +144,8 @@
 .DepositTransactions_header,
 .WithdrawalTransactions_data,
 .WithdrawalTransactions_header,
+.BetTransactions_data,
+.BetTransactions_header,
 .OtherTransactions_data,
 .OtherTransactions_header,
 .TipRainTransactions_data,
@@ -179,7 +181,34 @@
 }
 
 .BetTransactions_currency { padding-left: var(--spacing-sm1); }
-.BetTransactions_betIdLink { text-decoration: underline; }
+
+.BetTransactions_gameTitle {
+  cursor: default;
+  pointer-events: none;
+}
+
+.BetTransactions_betIdLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.BetTransactions_betIdLink:hover {
+  color: var(--color-primaryViolet);
+}
+
+.BetTransactions_betIdLink img {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
 .BetTransactions_dateTooltipTrigger,
 .DepositTransactions_tooltipContent,
 .WithdrawalTransactions_tooltipTrigger,

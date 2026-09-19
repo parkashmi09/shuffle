@@ -127,10 +127,10 @@ test('jsGames', async (t) => {
   /**
    * user-service, stubbed.
    *
-   * Only the rakeback accrual and the USD rate behind it cross that boundary.
-   * `posted` is what the assertions read: the accrual must be a consequence of
+   * VIP on-wager sync and rakeback accrual cross that boundary. `posted` is
+   * what the assertions read: loyalty side-effects must be a consequence of
    * a settlement, not a precondition for one, so every test that does not care
-   * about it simply ignores the list.
+   * about them simply ignores the list.
    */
   const makeClients = () => {
     const posted = [];
@@ -139,7 +139,15 @@ test('jsGames', async (t) => {
       user: {
         async post(path, body) {
           posted.push({ path, body });
-          return { accrued: body.amount, amount: body.amount, duplicate: false };
+          if (path === '/internal/user/rakeback/accrue') {
+            const { vipRewards, money: m } = require('@ibitplay/common');
+            const rate = vipRewards.DEFAULT_RAKEBACK_RATE;
+            const amount = body.amount
+              ? body.amount
+              : m.toDecimalString(m.multiply(body.stakeUsd, rate));
+            return { accrued: amount, amount, duplicate: false };
+          }
+          return { ok: true };
         },
         async get(_path, { query } = {}) {
           // One INR = 0.012 USD, which is the only conversion these tests need.
@@ -488,11 +496,11 @@ test('jsGames', async (t) => {
 
     await service.betCallbackV2(v2Callback(stake(uid, round, '50')));
 
-    assert.equal(clients.posted.length, 1);
-    assert.equal(clients.posted[0].path, '/internal/user/rakeback/accrue');
-    // 0.2% of 50 USDT.
-    assert.equal(clients.posted[0].body.amount, '0.10000000');
-    assert.equal(clients.posted[0].body.ref, round, 'keyed on the round, so a retry accrues nothing');
+    const accrue = clients.posted.find((p) => p.path === '/internal/user/rakeback/accrue');
+    assert.ok(accrue, 'rakeback accrual posted');
+    // Stake in USD terms — user-service applies the VIP rate.
+    assert.equal(accrue.body.stakeUsd, '50.00000000');
+    assert.equal(accrue.body.ref, round, 'keyed on the round, so a retry accrues nothing');
   });
 
   await t.test('v2 converts a non-USD stake before applying the rate', async () => {
@@ -508,8 +516,26 @@ test('jsGames', async (t) => {
 
     await service.betCallbackV2(v2Callback(stake(uid, newRound(), '1000', 'INR')));
 
-    // 1000 INR -> 12 USD -> 0.2% of that.
-    assert.equal(clients.posted[0].body.amount, '0.02400000');
+    const accrue = clients.posted.find((p) => p.path === '/internal/user/rakeback/accrue');
+    assert.ok(accrue);
+    // 1000 INR × 0.012 = 12 USD.
+    assert.equal(accrue.body.stakeUsd, '12.00000000');
+  });
+
+  await t.test('v2 records VIP XP as a decimal, not minor units', async () => {
+    const uid = await seedPlayer(newUid());
+    const balances = new Map([[String(uid), '100']]);
+    const { service, clients } = build(balances);
+    const round = newRound();
+
+    await service.betCallbackV2(v2Callback(stake(uid, round, '10')));
+
+    const sync = clients.posted.find((p) => p.path === '/internal/user/vip/on-wager');
+    assert.ok(sync, 'VIP on-wager sync posted');
+    // 10.00 face units — never the BigInt minor form "1000000000".
+    assert.equal(sync.body.newWager, '10.00000000');
+    assert.match(sync.body.newWager, /^\d+(\.\d+)?$/);
+    assert.ok(Number(sync.body.newWager) < 1_000_000);
   });
 
   await t.test('v2 does not accrue rakeback on a payout, or on a replay', async () => {
@@ -519,13 +545,14 @@ test('jsGames', async (t) => {
     const round = newRound();
 
     await service.betCallbackV2(v2Callback(stake(uid, round, '10')));
-    assert.equal(clients.posted.length, 1);
+    const accruals = () => clients.posted.filter((p) => p.path === '/internal/user/rakeback/accrue');
+    assert.equal(accruals().length, 1);
 
     // The replay of the stake, then the payout for the round.
     await service.betCallbackV2(v2Callback(stake(uid, round, '10')));
     await service.betCallbackV2(v2Callback(payout(uid, round, '30')));
 
-    assert.equal(clients.posted.length, 1, 'one stake, one accrual');
+    assert.equal(accruals().length, 1, 'one stake, one accrual');
   });
 
   await t.test('v2 settles even when the rakeback accrual fails', async () => {

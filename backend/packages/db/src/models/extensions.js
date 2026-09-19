@@ -78,6 +78,7 @@ const EXTENSIONS = {
     startTime: { type: DataTypes.DATE, allowNull: true, field: 'startTime' },
     endTime: { type: DataTypes.DATE, allowNull: true, field: 'endTime' },
     status: { type: DataTypes.STRING(20), allowNull: true, defaultValue: 'active', field: 'status' },
+    principal: { type: DataTypes.DECIMAL(30, 8), allowNull: true, field: 'principal' },
   },
 
   // ── migration 013-spin-wheel-integrity ───────────────────────────────
@@ -278,6 +279,31 @@ const EXTENSIONS = {
     // Found by `node tools/verify-models.js`, which is what this file's header
     // says to use and which reported it as the only column missing platform-wide.
     eur: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'eur' },
+    // ── migration 043-siteconfig-reward-currencies ─────────────────────
+    //
+    // Wallet codes VIP bonuses and Instant Rakeback credit into. Written from
+    // the Site Config admin screen; read by user-service over the internal
+    // site-config/rewards route. Defaults match the former compile-time
+    // constants so an unmigrated deploy and a migrated one with no operator
+    // change behave the same.
+    bonus_currency: {
+      type: DataTypes.TEXT, allowNull: false, defaultValue: 'BJB', field: 'bonus_currency',
+    },
+    rakeback_currency: {
+      type: DataTypes.TEXT, allowNull: false, defaultValue: 'USDT', field: 'rakeback_currency',
+    },
+    // ── migration 044-siteconfig-affiliate-bonus-currencies ────────────
+    register_bonus_currency: {
+      type: DataTypes.TEXT, allowNull: false, defaultValue: 'BJB', field: 'register_bonus_currency',
+    },
+    affiliate_bonus_currency: {
+      type: DataTypes.TEXT, allowNull: false, defaultValue: 'BJB', field: 'affiliate_bonus_currency',
+    },
+  },
+
+  // ── migration 045-team-campaign ──────────────────────────────────────
+  Team: {
+    campaign: { type: DataTypes.TEXT, allowNull: false, defaultValue: '', field: 'campaign' },
   },
 
   // ── migration 036-2fa-hardening ──────────────────────────────────────
@@ -355,6 +381,11 @@ const OVERRIDES = {
      */
     price: { type: DataTypes.DECIMAL(30, 8), allowNull: true, field: 'price' },
     amount: { type: DataTypes.DECIMAL(30, 8), allowNull: true, field: 'amount' },
+  },
+
+  // ── migration 010-vault-schema ───────────────────────────────────────
+  VaultPro: {
+    vaultBalance: { type: DataTypes.DECIMAL(30, 8), allowNull: false, field: 'vaultBalance' },
   },
 
   // ── migration 020-bonus-counter-integrity ────────────────────────────

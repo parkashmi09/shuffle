@@ -20,4 +20,12 @@ module.exports = defineErrors('VAULT', {
     // maturity would no longer resolve to anything.
     message: 'This lock period has open deposits and cannot be removed',
   },
+  EARLY_WITHDRAWAL_NOT_ALLOWED: {
+    status: 409,
+    message: 'Early withdrawal is not available for this deposit',
+  },
+  EARLY_WITHDRAWAL_FORBIDDEN: {
+    status: 409,
+    message: 'This deposit is already matured — withdraw without the early-exit penalty',
+  },
 });

@@ -29,14 +29,30 @@ const accrue = {
   body: z
     .object({
       userId: z.coerce.number().int().positive(),
-      /** Positive decimal, at most 8 places — the scale the wallet stores. */
-      amount: z.string().trim().regex(/^\d+(\.\d{1,8})?$/, 'amount must be a positive decimal'),
+      /**
+       * Pre-computed accrual (legacy/compat). Prefer `stakeUsd` so this
+       * service can apply the player's VIP rakeback rate.
+       */
+      amount: z
+        .string()
+        .trim()
+        .regex(/^\d+(\.\d{1,8})?$/, 'amount must be a positive decimal')
+        .optional(),
+      /** USD face value of the stake — rate is applied here from `users.rakeback`. */
+      stakeUsd: z
+        .string()
+        .trim()
+        .regex(/^\d+(\.\d{1,8})?$/, 'stakeUsd must be a positive decimal')
+        .optional(),
       /** The integration accruing it. Bounded because it is written to a column. */
       source: z.string().trim().min(1).max(40),
       /** That integration's idempotency key — a round id, a bet id. */
       ref: z.string().trim().min(1).max(190),
     })
-    .strict(),
+    .strict()
+    .refine((body) => Boolean(body.amount || body.stakeUsd), {
+      message: 'amount or stakeUsd is required',
+    }),
 };
 
 module.exports = function internalRoutes(deps) {

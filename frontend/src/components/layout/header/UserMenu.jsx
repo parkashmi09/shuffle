@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cx } from "../../../lib/carousel";
 import { navigate } from "../../../lib/router";
+import { usePublicSiteConfig } from "../../../lib/usePublicSiteConfig";
 import { useApi } from "../../../lib/useResource";
 import { vip as vipApi } from "../../../lib/endpoints";
 import VipBadge from "../../vip/VipBadge";
@@ -211,6 +212,8 @@ function MenuRow({ item, onClose }) {
  * a handler, so the shell can put its confirmation in front of the sign-out.
  */
 export default function UserMenu({ user }) {
+  const { affiliateEnabled } = usePublicSiteConfig();
+  const menuItems = affiliateEnabled ? items : items.filter((i) => i.id !== "affiliate");
   const [open, setOpen] = useState(false);
   const root = useRef(null);
 
@@ -259,7 +262,7 @@ export default function UserMenu({ user }) {
       <div className="ExpandMenuElement_menuWrapper">
         <div className="ExpandMenuElement_expandMenu">
           <VipCard name={user.name} vip={vip} />
-          {items.map((item) => (
+          {menuItems.map((item) => (
             <MenuRow key={item.id} item={item} onClose={() => setOpen(false)} />
           ))}
           <button

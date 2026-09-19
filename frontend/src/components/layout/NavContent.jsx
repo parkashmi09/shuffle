@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 /**
  * Navigation list shared by the desktop rail and the mobile menu panel —
@@ -7,7 +7,9 @@ import { useState } from "react";
 
 import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
+import { site } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
+import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
 
 const casinoLinks = [
   { id: "originals", label: "Originals", icon: "original", href: "/casino/categories/originals" },
@@ -21,8 +23,7 @@ const casinoLinks = [
   { id: "providers", label: "Providers", icon: "providers", href: "/casino/providers" },
 ];
 
-// Pinned promotions with their Contentful icons and time-left counters, as on the reference rail.
-const promoLinks = [
+const FALLBACK_PROMO_LINKS = [
   { id: "promo-race", label: "$100K Weekly Race", href: "/promotions/100000-weekly-race", icon: "trophy", counter: "16h" },
   { id: "promo-freak", label: "$20K Freak Show!", href: "/promotions/freak-show", icon: "promos/multi", counter: "5d" },
   { id: "promo-level", label: "Level Up Rewards!", href: "/promotions/level-up", icon: "promos/diamond", counter: "10d" },
@@ -57,8 +58,6 @@ const footerLinks = [
   // The reference's rail switches this href with the session — read off the
   // live sidebar, which serves `/affiliate` to a visitor and
   // `/affiliate/overview` once signed in, exactly as the account menu does.
-  // The footer's "Affiliate Program" keeps pointing at the marketing page in
-  // both states, so it is deliberately not part of this.
   { id: "affiliate", label: "Affiliate", icon: "affiliate", href: "/affiliate", signedInHref: "/affiliate/overview" },
 ];
 
@@ -81,7 +80,7 @@ const profileLinks = [
   { id: "profile-wallet", label: "Wallet", icon: "wallet", action: "wallet" },
   { id: "profile-vault", label: "Vault", icon: "vault", action: "vault" },
   { id: "profile-transactions", label: "Transactions", icon: "transactions", href: "/transactions" },
-  { id: "profile-settings", label: "Settings", icon: "setting" },
+  { id: "profile-settings", label: "Settings", icon: "setting", href: "/settings/account" },
 ].map((l) => ({ ...l, as: l.href ? "a" : "button" }));
 
 /** Wraps collapsed items in the reference's tooltip trigger span. */
@@ -238,25 +237,64 @@ function ExpandableGroup({ expanded, icon, label, links, active, onSelect, open,
 export default function NavContent({ expanded, active, onSelect, mobile = false, variant = "casino" }) {
   const casino = variant === "casino";
   const sportsbook = variant === "sports";
+  const minimal = !casino && !sportsbook;
   const [promosOpen, setPromosOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   // The account group only exists for a signed-in visitor, so the rail reads
   // the session directly rather than having it threaded through two shells.
   const { signedIn } = useSession();
+  const { affiliateEnabled } = usePublicSiteConfig();
+  /** `null` until the sidebar API responds; then use API list (may be empty). Fallback only on error. */
+  const [sidebarPromos, setSidebarPromos] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await site.promotionSidebar();
+        const links = Array.isArray(data) ? data : [];
+        if (!cancelled) setSidebarPromos(links);
+      } catch {
+        if (!cancelled) setSidebarPromos(FALLBACK_PROMO_LINKS);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const promoLinks = sidebarPromos ?? FALLBACK_PROMO_LINKS;
+  const siteFooterLinks = affiliateEnabled ? footerLinks : footerLinks.filter((l) => l.id !== "affiliate");
   // The two sport directories behave as one accordion: opening either closes the
   // other, so only one long list is ever pushed into the rail at a time.
   const [openDirectory, setOpenDirectory] = useState(null);
   const toggleDirectory = (id) => setOpenDirectory((cur) => (cur === id ? null : id));
 
-  const handleSelect = (id, action) => {
+  const handleSelect = (id, action, href) => {
     if (action === "wallet") {
       window.dispatchEvent(new CustomEvent("shuffle:wallet"));
     } else if (action === "vault") {
       window.dispatchEvent(new CustomEvent("shuffle:vault"));
     } else {
-      onSelect?.(id);
+      onSelect?.(id, action, href);
     }
   };
+
+  // On account-wide routes the reference keeps Profile inside the same
+  // `NavigationLineBreakWrapper` as Promotions; a second wrapper stacked
+  // right below it draws two hairlines where the live rail draws one.
+  const profileGroup = signedIn ? (
+    <ExpandableGroup
+      expanded={expanded}
+      icon="profile"
+      label="Profile"
+      links={profileLinks}
+      active={active}
+      onSelect={handleSelect}
+      open={profileOpen}
+      onToggle={() => setProfileOpen((o) => !o)}
+    />
+  ) : null;
 
   return (
     // The reference applies `isExpanded` here only while the rail is collapsed
@@ -327,6 +365,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
               open={promosOpen}
               onToggle={() => setPromosOpen((o) => !o)}
             />
+            {minimal && profileGroup}
           </div>
 
           {sportsbook && sportsFeatured.map((l) => <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={handleSelect} />)}
@@ -344,18 +383,9 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
           {/* Between Providers and VIP, exactly where the live rail puts it —
               and inside a `NavigationLineBreakWrapper`, which is what draws the
               hairline above the group. Same wrapper the sport directories use. */}
-          {signedIn && (
+          {signedIn && !minimal && (
             <div className={cx("NavigationLineBreakWrapper_root", expanded && "NavigationLineBreakWrapper_expanded")}>
-              <ExpandableGroup
-                expanded={expanded}
-                icon="profile"
-                label="Profile"
-                links={profileLinks}
-                active={active}
-                onSelect={handleSelect}
-                open={profileOpen}
-                onToggle={() => setProfileOpen((o) => !o)}
-              />
+              {profileGroup}
             </div>
           )}
 
@@ -371,7 +401,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
           */}
           {casino && !signedIn && <hr className={cx("NavDivider_root", expanded && "NavDivider_isExpanded")} />}
 
-          {footerLinks.map(({ signedInHref, ...l }) => (
+          {siteFooterLinks.map(({ signedInHref, ...l }) => (
             <NavLink
               key={l.id}
               {...l}

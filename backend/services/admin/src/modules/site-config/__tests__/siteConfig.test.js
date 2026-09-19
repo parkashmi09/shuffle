@@ -58,6 +58,21 @@ test('site-config', async (t) => {
     assert.equal(parse({ affiliateBonus: '5', kycRequired: 'false' }).success, false);
   });
 
+  await t.test('affiliate currency fields accept wallet codes only', async () => {
+    assert.equal(parse({ registerBonusCurrency: 'USDT' }).success, true);
+    assert.equal(parse({ affiliateBonusCurrency: 'bjb' }).success, true);
+    assert.equal(parse({ registerBonusCurrency: 'FAKE' }).success, false);
+  });
+
+  await t.test('reward currency updates accept wallet codes only', async () => {
+    const rewards = (body) => v.updateRewardCurrencies.body.safeParse(body);
+    assert.equal(rewards({ bonusCurrency: 'BJB' }).success, true);
+    assert.equal(rewards({ rakebackCurrency: 'usdt' }).success, true);
+    assert.equal(rewards({ bonusCurrency: 'FAKE' }).success, false);
+    assert.equal(rewards({}).success, false);
+    assert.equal(rewards({ bonusCurrency: 'BJB', extra: 'x' }).success, false);
+  });
+
   // ── The feature-flag screen ─────────────────────────────────────────
 
   await t.test('a flag is a boolean, never a truthy string', async () => {
@@ -190,6 +205,23 @@ test('site-config', async (t) => {
     assert.equal(after.registerBonus, '10.00000000');
   });
 
+  await t.test('affiliate bonus currencies round-trip through siteconfig', async () => {
+    await seedConfig({
+      register_bonus_currency: 'USDT',
+      affiliate_bonus_currency: 'BJB',
+    });
+    const read = await service.affiliateSettings();
+    assert.equal(read.registerBonusCurrency, 'USDT');
+    assert.equal(read.affiliateBonusCurrency, 'BJB');
+
+    const after = await service.updateAffiliateSettings({
+      registerBonusCurrency: 'INR',
+      affiliateBonusCurrency: 'USDT',
+    });
+    assert.equal(after.registerBonusCurrency, 'INR');
+    assert.equal(after.affiliateBonusCurrency, 'USDT');
+  });
+
   await t.test('an update does not touch a second config row', async () => {
     /**
      * Legacy's statement was `UPDATE siteconfig SET ... RETURNING ...` with NO
@@ -236,6 +268,17 @@ test('site-config', async (t) => {
     const a = await service.affiliateSettings();
     const b = await service.affiliateSettings();
     assert.deepEqual(a, b);
+  });
+
+  await t.test('reward currencies round-trip through siteconfig', async () => {
+    await seedConfig({ bonus_currency: 'BJB', rakeback_currency: 'USDT' });
+    const read = await service.rewardCurrencies();
+    assert.equal(read.bonusCurrency, 'BJB');
+    assert.equal(read.rakebackCurrency, 'USDT');
+
+    const after = await service.updateRewardCurrencies({ bonusCurrency: 'USDT', rakebackCurrency: 'BJB' });
+    assert.equal(after.bonusCurrency, 'USDT');
+    assert.equal(after.rakebackCurrency, 'BJB');
   });
 
   await t.test('updating with no config row is a 409, not a silent success', async () => {

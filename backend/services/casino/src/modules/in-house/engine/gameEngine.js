@@ -67,7 +67,7 @@ function makeGameId(add = 0) {
 }
 
 class GameEngine {
-  constructor({ models, db, logger, config }) {
+  constructor({ models, db, logger, config, clients }) {
     this.models = models;
     this.db = db;
     this.logger = logger;
@@ -75,8 +75,9 @@ class GameEngine {
     /**
      * `recordPlay` and the wager counters live with the catalogue they are
      * about. Same service, same models — a plain collaborator, not an HTTP hop.
+     * `clients` reaches user-service for the VIP on-wager sync.
      */
-    this.games = new GamesService({ models, db, config, logger });
+    this.games = new GamesService({ models, db, config, logger, clients });
   }
 
   /**

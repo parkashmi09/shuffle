@@ -5,45 +5,82 @@ import WalletSelect, { CoinIcon } from "./CurrencySelect";
 import { useApi } from "../../lib/useResource";
 import { currencyOptions } from "../../lib/walletOptions";
 import { displayBalance } from "../../lib/adapters";
+import { MASKED_AMOUNT } from "../../lib/playerPreferences";
+import { ApiError } from "../../lib/api";
 import { vault as vaultApi } from "../../lib/endpoints";
 import Modal from "../ui/Modal";
-
-/**
- * The vault modal — reference `VaultModal`, opened from the account menu.
- *
- * Read off the live signed-in modal, which is three fields and a button and
- * nothing else: a direction select, a currency select, an amount with a Max
- * suffix, and the submit. There is no lock-period picker, no deposit list and
- * no history tab — an earlier pass invented all three and they are gone.
- *
- * The shell is the wallet modal's: `GlobalModal_walletModalBody` (540px on
- * `--color-gray900`), `ModalContent_modalContent` supplying the 40px inset.
- *
- * ── THE BACKEND VAULT IS NOT THIS VAULT ──────────────────────────────────
- *
- * The reference vault is a flat balance. This backend's is the older
- * fixed-term product: `transfer-in` opens a deposit against a lock period, and
- * `transfer-out` closes one whole deposit by id. Neither maps onto a single
- * amount field, so the bridge is made explicit here rather than hidden:
- *
- * - In  — the shortest active lock term is used. It is the closest thing the
- *   backend has to "no term", and the reference gives the player no way to
- *   choose one.
- * - Out — matured deposits are closed oldest first until the requested amount
- *   is covered. A deposit closes whole (the route takes an id, not an amount),
- *   so the last one may return more than was asked for; anything still locked
- *   is left alone, and the request is refused up front if the matured total is
- *   short.
- */
 
 const DIRECTIONS = [
   { value: "transfer-in", label: "Transfer In", iconSrc: "/icons/transfer-in.svg" },
   { value: "transfer-out", label: "Transfer Out", iconSrc: "/icons/transfer-out.svg" },
 ];
 
+const WITHDRAW_MODES = [
+  { value: "standard", label: "After lock period (full balance + interest)" },
+  { value: "early", label: "Early exit (penalty applies, no interest)" },
+];
+
+const coinsMatch = (a, b) => String(a ?? "").toUpperCase() === String(b ?? "").toUpperCase();
+
+function depositBalance(deposit) {
+  const raw = deposit.balance ?? deposit.principal ?? deposit.vaultBalance ?? 0;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Spendable amount for a locked deposit on early exit (API value or local estimate). */
+function earlyPayoutAmount(deposit, lockOptions) {
+  if (deposit.earlyPayout != null && deposit.earlyPayout !== "") {
+    const fromApi = Number(deposit.earlyPayout);
+    if (fromApi > 0) return fromApi;
+  }
+  const principal = depositBalance(deposit);
+  if (!principal) return 0;
+  let rate = Number(deposit.earlyPenaltyRate ?? 0);
+  if (!rate && deposit.lockPeriod && lockOptions?.length) {
+    const term = lockOptions.find((t) => t.value === deposit.lockPeriod);
+    rate = Number(term?.earlyPenaltyRate ?? 0);
+  }
+  const penalty = principal * (Math.min(100, Math.max(0, rate)) / 100);
+  return Math.max(0, principal - penalty);
+}
+
+function isLocked(deposit) {
+  if (deposit?.locked === true || deposit?.locked === "true") return true;
+  if (deposit?.locked === false || deposit?.locked === "false") return false;
+  if (!deposit?.endTime) return false;
+  return new Date(deposit.endTime).getTime() > Date.now();
+}
+
+function vaultTotalForCoin(totals, coinCode) {
+  if (!totals || typeof totals !== "object") return 0;
+  const key = Object.keys(totals).find((k) => coinsMatch(k, coinCode));
+  if (!key) return 0;
+  const n = Number(totals[key]);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function VaultHoverInfo({ text }) {
+  if (!text) return null;
+
+  return (
+    <span className="VaultModal_infoWrap">
+      <button type="button" className="VaultModal_infoBtn" aria-label="Withdrawal information">
+        <img alt="" width="16" height="16" src="/icons/info.svg" />
+      </button>
+      <span role="tooltip" className="VaultModal_infoTooltip">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 export default function VaultModal({ onClose }) {
-  const { balances, currency: headerCurrency, displayCurrency, rates, refreshBalances } = useSession();
+  const { balances, currency: headerCurrency, displayCurrency, rates, refreshBalances, fiatView, hideZeroBalances, hideBalance } =
+    useSession();
   const [direction, setDirection] = useState("transfer-in");
+  const [withdrawMode, setWithdrawMode] = useState("standard");
+  const [lockPeriod, setLockPeriod] = useState("");
   const [coin, setCoin] = useState(headerCurrency);
   const [amount, setAmount] = useState("");
   const [pending, setPending] = useState(false);
@@ -51,25 +88,152 @@ export default function VaultModal({ onClose }) {
   const [nonce, setNonce] = useState(0);
 
   const options = useMemo(
-    () => currencyOptions(balances, { displayCurrency, rates }),
-    [balances, displayCurrency, rates]
+    () =>
+      currencyOptions(balances, {
+        displayCurrency,
+        rates,
+        fiatEquivalent: fiatView,
+        hideZeroBalances,
+        hideBalance,
+        keep: coin,
+      }),
+    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin]
   );
 
   const { data: lockOptions } = useApi("vault:lock-options", () => vaultApi.lockOptions());
-  const { data: vaultData } = useApi(`vault:data:${coin}:${nonce}`, () => vaultApi.data(coin));
+  const { data: vaultData } = useApi(`vault:data:${nonce}`, () => vaultApi.data());
+
+  const lockPeriodOptions = useMemo(
+    () =>
+      (lockOptions ?? []).map((term) => ({
+        value: term.value,
+        label: term.label,
+        right: term.rate ? `${term.rate}% / yr` : undefined,
+      })),
+    [lockOptions]
+  );
+
+  useEffect(() => {
+    if (!lockPeriod && lockOptions?.length) {
+      setLockPeriod(lockOptions[0].value);
+    }
+  }, [lockOptions, lockPeriod]);
 
   const walletBalance = balances?.[coin] ?? "0";
-  const vaultBalance = vaultData?.totals?.[coin] ?? "0";
-  const available = direction === "transfer-in" ? walletBalance : vaultBalance;
 
-  /** Matured deposits for this coin, oldest first — what a transfer out can draw on. */
-  const matured = useMemo(
-    () =>
-      (vaultData?.deposits ?? [])
-        .filter((d) => d.coin === coin && !d.locked && Number(d.balance) > 0)
-        .sort((a, b) => a.depositId - b.depositId),
+  const depositsForCoin = useMemo(
+    () => (vaultData?.deposits ?? []).filter((d) => coinsMatch(d.coin, coin)),
     [vaultData, coin]
   );
+
+  const matured = useMemo(
+    () =>
+      depositsForCoin
+        .filter((d) => !isLocked(d) && depositBalance(d) > 0)
+        .sort((a, b) => (a.depositId ?? a.id) - (b.depositId ?? b.id)),
+    [depositsForCoin]
+  );
+
+  const lockedEarly = useMemo(
+    () =>
+      depositsForCoin
+        .filter((d) => isLocked(d) && earlyPayoutAmount(d, lockOptions) > 0)
+        .sort((a, b) => (a.depositId ?? a.id) - (b.depositId ?? b.id)),
+    [depositsForCoin, lockOptions]
+  );
+
+  const withdrawPool = useMemo(() => {
+    if (direction !== "transfer-out") return [];
+
+    if (withdrawMode === "standard") {
+      return matured.map((deposit) => ({
+        deposit,
+        early: false,
+        payout: depositBalance(deposit),
+      }));
+    }
+
+    const standard = matured.map((deposit) => ({
+      deposit,
+      early: false,
+      payout: depositBalance(deposit),
+    }));
+    const early = lockedEarly.map((deposit) => ({
+      deposit,
+      early: true,
+      payout: earlyPayoutAmount(deposit, lockOptions),
+    }));
+
+    return [...standard, ...early].sort(
+      (a, b) => (a.deposit.depositId ?? a.deposit.id) - (b.deposit.depositId ?? b.deposit.id)
+    );
+  }, [direction, withdrawMode, matured, lockedEarly, lockOptions]);
+
+  const withdrawableTotal = useMemo(() => {
+    if (direction !== "transfer-out") return 0;
+
+    if (withdrawMode === "standard") {
+      const fromDeposits = matured.reduce((sum, d) => sum + depositBalance(d), 0);
+      return fromDeposits > 0 ? fromDeposits : vaultTotalForCoin(vaultData?.totals, coin);
+    }
+
+    let sum = 0;
+    for (const d of depositsForCoin) {
+      sum += isLocked(d) ? earlyPayoutAmount(d, lockOptions) : depositBalance(d);
+    }
+    if (sum > 0) return sum;
+    return vaultTotalForCoin(vaultData?.totals, coin);
+  }, [direction, withdrawMode, matured, depositsForCoin, vaultData?.totals, coin, lockOptions]);
+
+  const availableTotal = useMemo(
+    () => withdrawPool.reduce((sum, row) => sum + row.payout, 0) || withdrawableTotal,
+    [withdrawPool, withdrawableTotal]
+  );
+
+  const available =
+    direction === "transfer-in"
+      ? walletBalance
+      : availableTotal > 0
+        ? String(availableTotal)
+        : "0";
+
+  const selectedTerm = lockOptions?.find((t) => t.value === lockPeriod);
+
+  const withdrawInfoText = useMemo(() => {
+    if (direction !== "transfer-out") return "";
+
+    if (withdrawMode === "standard") {
+      return "Only deposits that have finished their lock period can be withdrawn this way. You receive the full vault balance, including interest earned while locked.";
+    }
+
+    const operatorTerms =
+      lockOptions
+        ?.map(
+          (t) =>
+            `${t.label}: ${t.earlyPenaltyRate ?? "0"}% of your original deposit is deducted by the operator`
+        )
+        .join(". ") ?? "";
+
+    const yourLocked =
+      lockedEarly.length > 0
+        ? lockedEarly
+            .map((d) => {
+              const label =
+                lockOptions?.find((t) => t.value === d.lockPeriod)?.label ?? d.lockPeriod;
+              return `${label}: you would receive up to ${displayBalance(earlyPayoutAmount(d, lockOptions), coin)} ${coin} (${d.earlyPenaltyRate}% principal deduction, interest forfeited)`;
+            })
+            .join(". ")
+        : "";
+
+    return [
+      "Early exit withdraws locked funds before maturity. Accrued interest is not paid.",
+      "The operator sets how much of your original deposit is deducted (principal penalty) for each lock period.",
+      operatorTerms,
+      yourLocked,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }, [direction, withdrawMode, lockOptions, lockedEarly, coin]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -78,22 +242,35 @@ export default function VaultModal({ onClose }) {
 
     try {
       if (direction === "transfer-in") {
-        const term = lockOptions?.[0];
-        if (!term) throw new Error("The vault is not accepting transfers right now.");
-        await vaultApi.transferIn({ coin, amount, lockPeriod: term.value });
+        if (!lockPeriod) throw new Error("Choose a lock period.");
+        await vaultApi.transferIn({
+          coin: String(coin).trim().toUpperCase(),
+          amount,
+          lockPeriod,
+        });
       } else {
         const wanted = Number(amount);
-        const total = matured.reduce((sum, d) => sum + Number(d.balance), 0);
+        const total = withdrawPool.reduce((sum, row) => sum + row.payout, 0);
         if (!(total >= wanted)) {
+          if (withdrawMode === "early") {
+            throw new Error(
+              "Not enough vault balance for an early withdrawal. Enable early exit on lock terms in admin or lower the amount."
+            );
+          }
           throw new Error("Not enough matured vault balance. Locked deposits cannot be withdrawn yet.");
         }
+
         let covered = 0;
-        for (const deposit of matured) {
+        for (const row of withdrawPool) {
           if (covered >= wanted) break;
-          // Sequential on purpose: each close credits the wallet, and the next
-          // one must see that — they cannot overlap.
-          await vaultApi.transferOut({ depositId: deposit.depositId, coin });
-          covered += Number(deposit.balance);
+          const depositId = row.deposit.depositId ?? row.deposit.id;
+          if (!depositId) throw new Error("Could not identify the vault deposit. Refresh and try again.");
+          await vaultApi.transferOut({
+            depositId,
+            coin: String(coin).trim().toUpperCase(),
+            early: Boolean(row.early),
+          });
+          covered += row.payout;
         }
       }
 
@@ -101,7 +278,9 @@ export default function VaultModal({ onClose }) {
       setNonce((n) => n + 1);
       await refreshBalances?.();
     } catch (err) {
-      setError(err?.message || "That did not go through.");
+      const message =
+        err instanceof ApiError ? err.message : err?.message || "That did not go through.";
+      setError(message);
     } finally {
       setPending(false);
     }
@@ -122,7 +301,11 @@ export default function VaultModal({ onClose }) {
   }, []);
 
   return (
-    <Modal onClose={onClose} label="Vault" bodyClass="GlobalModal_walletModalBody">
+    <Modal
+      onClose={onClose}
+      label="Vault"
+      bodyClass="GlobalModal_walletModalBody GlobalModal_vaultModalBody"
+    >
       <form className="VaultModal_form" onSubmit={submit}>
         <h1 className="VaultModal_header">Vault</h1>
 
@@ -136,6 +319,7 @@ export default function VaultModal({ onClose }) {
             setDirection(next);
             setAmount("");
             setError(null);
+            if (next === "transfer-in") setWithdrawMode("standard");
           }}
         />
 
@@ -151,17 +335,57 @@ export default function VaultModal({ onClose }) {
           }}
         />
 
+        {direction === "transfer-in" && lockPeriodOptions.length > 0 && (
+          <WalletSelect
+            label="Lock period*"
+            options={lockPeriodOptions}
+            value={lockPeriod}
+            disabled={pending}
+            onChange={(next) => {
+              setLockPeriod(next);
+              setError(null);
+            }}
+          />
+        )}
+
+        {direction === "transfer-in" && selectedTerm && (
+          <p className="VaultModal_note">
+            Funds stay locked for {selectedTerm.days} day{selectedTerm.days === 1 ? "" : "s"} at{" "}
+            {selectedTerm.rate}% annual interest. Early exit may be available with a penalty set by
+            the operator.
+          </p>
+        )}
+
+        {direction === "transfer-out" && (
+          <>
+            <div className="VaultModal_labelWithInfo">
+              <div className="LabelBlock_root">
+                <span className="Label_root">Withdrawal type*</span>
+              </div>
+              <VaultHoverInfo text={withdrawInfoText} />
+            </div>
+            <WalletSelect
+              variant="plain"
+              options={WITHDRAW_MODES}
+              value={withdrawMode}
+              disabled={pending}
+              onChange={(next) => {
+                setWithdrawMode(next);
+                setAmount("");
+                setError(null);
+              }}
+            />
+          </>
+        )}
+
         <div className="CurrencyInput_formControlWrapper">
           <div className="LabelBlock_root CurrencyInputRawLabel_labelBlock">
             <p className="CurrencyInputRawLabel_labelLeft"><span>Amount*</span></p>
             <p className="CurrencyInputRawLabel_labelRight">
-              {displayBalance(available, coin)} {coin}
+              {hideBalance ? MASKED_AMOUNT : `${displayBalance(available, coin)} ${coin}`}
             </p>
           </div>
           <div className="InputWrapper_root">
-            {/* The live modal marks this field with the *display*
-                currency, not the selected coin — the amount beside it is
-                already the coin's own balance. */}
             <div className="CurrencyInput_currencyInputIcon">
               <CoinIcon code={displayCurrency || coin} />
             </div>
@@ -199,7 +423,7 @@ export default function VaultModal({ onClose }) {
           <button
             type="submit"
             className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary"
-            disabled={pending || !Number(amount)}
+            disabled={pending || !Number(amount) || (direction === "transfer-in" && !lockPeriod)}
           >
             <span className="ButtonVariants_buttonContent">
               {direction === "transfer-in" ? "Transfer to Vault" : "Withdraw from Vault"}

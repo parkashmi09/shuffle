@@ -194,7 +194,7 @@ export const toBanners = (rows) => (Array.isArray(rows) ? rows.map(toBanner) : [
  * code is normalised (`classic_dice` → `dice`) and matched against them; a game
  * with no match keeps its code, title-cased, beside the generic mark.
  */
-function resolveGame(code, known = []) {
+export function resolveGame(code, known = []) {
   const raw = String(code || "");
   const key = raw.toLowerCase().replace(/^classic_/, "").replace(/[_-]/g, "");
   const hit = known.find((g) => g.name.toLowerCase().replace(/[^a-z0-9]/g, "") === key);

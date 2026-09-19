@@ -26,6 +26,7 @@
     "db:seed:data": "node scripts/seed-data.js",
     "db:seed:demo": "node scripts/seed-data.js --demo",
     "db:seed:list": "node scripts/seed-data.js --list",
+    "staff:2fa:bootstrap": "node scripts/bootstrap-staff-2fa.js",
     "db:verify": "node packages/db/src/cli.js verify",
     "db:generate-models": "node packages/db/tools/generate-models.js",
     "test": "node --test --test-concurrency=1 \"packages/*/__tests__/*.test.js\" \"services/*/src/modules/**/__tests__/*.test.js\" \"gateway/src/__tests__/*.test.js\"",

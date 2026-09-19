@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { cx } from "../../lib/carousel";
+import { navigate } from "../../lib/router";
+import { useSession } from "../../lib/sessionContext";
+import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
 
 const columns = [
   {
@@ -16,7 +19,7 @@ const columns = [
     title: "Platform",
     links: [
       { label: "Provably Fair", href: "/provably-fair/overview" },
-      { label: "Affiliate Program", href: "/affiliate" },
+      { label: "Affiliate Program", href: "/affiliate", signedInHref: "/affiliate/overview" },
       { label: "Redeem Code", button: true },
       { label: "VIP Program", href: "/vip-program" },
     ],
@@ -149,6 +152,12 @@ function LanguageAndOddSelectors({ className, language, setLanguage, odd, setOdd
 
 /** Site footer — reference `Footer` module. */
 export default function Footer() {
+  const { signedIn } = useSession();
+  const { affiliateEnabled } = usePublicSiteConfig();
+  const linkColumns = columns.map((col) => ({
+    ...col,
+    links: col.links.filter((l) => affiliateEnabled || l.label !== "Affiliate Program"),
+  }));
   const [language, setLanguage] = useState("English");
   const [odd, setOdd] = useState("Decimal");
 
@@ -166,21 +175,36 @@ export default function Footer() {
             </div>
           </div>
 
-          {columns.map((col) => (
+          {linkColumns.map((col) => (
             <div key={col.title} className={`Footer_column Footer_columnOrder${col.order}`}>
               <div className="Footer_menuHeading">{col.title}</div>
               <ul className="Footer_menuList">
-                {col.links.map((l) => (
-                  <li key={l.label} className="Footer_menuItem">
-                    {l.button ? (
-                      <button type="button">{l.label}</button>
-                    ) : (
-                      <a href={l.href} rel={l.external ? "noopener noreferrer" : undefined} target={l.external ? "_blank" : undefined} onClick={l.external ? undefined : (e) => e.preventDefault()}>
-                        {l.label}
-                      </a>
-                    )}
-                  </li>
-                ))}
+                {col.links.map((l) => {
+                  const href = (signedIn && l.signedInHref) || l.href;
+                  return (
+                    <li key={l.label} className="Footer_menuItem">
+                      {l.button ? (
+                        <button type="button">{l.label}</button>
+                      ) : (
+                        <a
+                          href={href}
+                          rel={l.external ? "noopener noreferrer" : undefined}
+                          target={l.external ? "_blank" : undefined}
+                          onClick={
+                            l.external
+                              ? undefined
+                              : (e) => {
+                                  e.preventDefault();
+                                  navigate(href);
+                                }
+                          }
+                        >
+                          {l.label}
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

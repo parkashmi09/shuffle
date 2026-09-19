@@ -85,6 +85,34 @@ module.exports = function adminRoutes(deps) {
     )
   );
 
+  // ── Reward payout currencies ────────────────────────────────────────
+
+  router.get(
+    '/rewards',
+    auth.requirePermission(PERMISSIONS.CONFIG_READ),
+    asyncHandler(async (_req, res) => response.ok(res, await service.rewardCurrencies()))
+  );
+
+  router.put(
+    '/rewards',
+    auth.requirePermission(PERMISSIONS.CONFIG_WRITE),
+    validate(v.updateRewardCurrencies),
+    withActivity({
+      action: 'site-config.rewards.update',
+      describe: (req) => ({
+        targetType: 'SITE_CONFIG',
+        targetId: 'rewards',
+        details: req.body,
+      }),
+    }),
+    asyncHandler(async (req, res) =>
+      response.ok(
+        res,
+        await service.updateRewardCurrencies({ ...req.body, staffId: req.staff?.id ?? null })
+      )
+    )
+  );
+
   // ── Feature flags ───────────────────────────────────────────────────
 
   /** @legacy GET /api/admin/config/global */

@@ -791,6 +791,9 @@ class GamesService {
       return;
     }
 
+    let previous = '0';
+    let next = amount;
+
     try {
       const [row, created] = await this.models.Userwager.findOrCreate({
         where: { uid: userId },
@@ -807,8 +810,8 @@ class GamesService {
        * Best-effort like everything else in this method: an audit row must
        * never be the reason a settled bet errors.
        */
-      const previous = created ? '0' : String(row?.wager ?? '0');
-      const next = created
+      previous = created ? '0' : String(row?.wager ?? '0');
+      next = created
         ? amount
         : String(Number(String(previous).replace(/,/g, '')) + Number(amount));
 
@@ -850,12 +853,41 @@ class GamesService {
       }
     } catch (error) {
       this.logger?.warn({ err: error, userId: String(userId) }, 'userwager update failed');
+      return;
     }
 
     try {
       await this.models.Users.increment({ games_played: 1 }, { where: { id: userId } });
     } catch (error) {
       this.logger?.warn({ err: error, userId: String(userId) }, 'games_played update failed');
+    }
+
+    /**
+     * VIP rate sync + level/rank-up credits live on user-service. Best-effort:
+     * a loyalty side-effect must never fail a settled bet.
+     */
+    try {
+      if (this.clients?.user) {
+        await this.clients.user.post('/internal/user/vip/on-wager', {
+          userId,
+          previousWager: String(previous).replace(/,/g, ''),
+          newWager: String(next).replace(/,/g, ''),
+        });
+      }
+    } catch (error) {
+      this.logger?.warn({ err: error, userId: String(userId) }, 'VIP on-wager sync failed');
+    }
+
+    try {
+      if (this.clients?.user) {
+        await this.clients.user.post('/internal/user/affiliate/on-wager', {
+          userId,
+          previousWager: String(previous).replace(/,/g, ''),
+          newWager: String(next).replace(/,/g, ''),
+        });
+      }
+    } catch (error) {
+      this.logger?.warn({ err: error, userId: String(userId) }, 'Affiliate on-wager sync failed');
     }
   }
 

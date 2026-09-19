@@ -21,7 +21,9 @@ const { loadModules, mountModules } = require('@ibitplay/common');
 const { markAuthorization } = require('@ibitplay/auth');
 
 const ROOT = path.resolve(__dirname, '..');
-const SERVICES = ['user', 'admin', 'casino', 'sports'];
+const SERVICES = process.env.VERIFY_SERVICES
+  ? process.env.VERIFY_SERVICES.split(',').map((s) => s.trim()).filter(Boolean)
+  : ['user', 'admin', 'casino', 'sports'];
 
 const passthrough = () => function guard(_req, _res, next) { next(); };
 
@@ -296,7 +298,11 @@ function checkProxyRouting() {
 console.log(`\n${'─'.repeat(70)}`);
 console.log(`${totalModules} modules, ${totalRoutes} routes`);
 
-if (!failed) {
+// Partial service lists (e.g. sports not mountable locally) skip gateway checks —
+// rewrites for the omitted service would false-fail.
+const partialVerify = Boolean(process.env.VERIFY_SERVICES);
+
+if (!failed && !partialVerify) {
   console.log('\nGateway legacy rewrites:');
   const broken = checkGatewayTargets();
   if (broken) {

@@ -5,7 +5,10 @@ const { money } = require('@ibitplay/common');
 
 const { WalletService } = require('../wallet/wallet.service');
 const errors = require('./rakeback.errors');
-const { ACCRUED_COLUMN, RAKEBACK_CURRENCY, MIN_CLAIM, REASON } = require('./rakeback.constants');
+const { ACCRUED_COLUMN, MIN_CLAIM, REASON } = require('./rakeback.constants');
+const { vipRewards } = require('@ibitplay/common');
+const { DEFAULT_RAKEBACK_RATE } = vipRewards;
+const { createRewardCurrencyResolver } = require('../bonus/rewardCurrencies');
 
 /**
  * Rakeback — a share of the house edge, accrued from wagering and claimed.
@@ -60,12 +63,19 @@ const { ACCRUED_COLUMN, RAKEBACK_CURRENCY, MIN_CLAIM, REASON } = require('./rake
  */
 class RakebackService {
   constructor(deps) {
-    const { models, db, logger, config } = deps;
+    const { models, db, logger, config, clients } = deps;
     this.models = models;
     this.db = db;
     this.logger = logger;
     this.config = config;
+    this.clients = clients;
     this.wallet = deps.wallet ?? new WalletService(deps);
+    this.rewardCurrencies = createRewardCurrencyResolver(deps);
+  }
+
+  /** Live payout currency from siteconfig (falls back to RAKEBACK_CURRENCY). */
+  async #rakebackCurrency() {
+    return this.rewardCurrencies.rakebackCurrency();
   }
 
   /**
@@ -86,10 +96,11 @@ class RakebackService {
     if (!user) throw errors.USER_NOT_FOUND({ userId: String(userId) });
 
     const accrued = money.toDecimalString(money.toMinor(user[ACCRUED_COLUMN] ?? '0'));
+    const currency = await this.#rakebackCurrency();
 
     return {
       amount: accrued,
-      currency: RAKEBACK_CURRENCY,
+      currency,
       claimable: money.gte(accrued, MIN_CLAIM),
       minimum: MIN_CLAIM,
       /** The player's rate. A different column, and read-only here. */
@@ -121,12 +132,36 @@ class RakebackService {
    * `ServiceClient` will make on any 5xx or timeout, adds nothing the second
    * time.
    */
-  async accrue({ userId, amount, source, ref }) {
-    const value = money.toDecimalString(money.toMinor(amount));
+  /**
+   * Accrue rakeback earned on a stake.
+   *
+   * Accepts either a pre-computed `amount` (compat) or a `stakeUsd` whose
+   * VIP rate is read from `users.rakeback` (preferred — casino converts the
+   * stake to USD, this service owns the loyalty rate).
+   */
+  async accrue({ userId, amount, stakeUsd, source, ref }) {
+    let value;
+
+    if (amount != null) {
+      value = money.toDecimalString(money.toMinor(amount));
+    } else {
+      const user = await this.models.Users.findByPk(userId, {
+        attributes: ['id', 'rakeback'],
+        raw: true,
+      });
+      if (!user) throw errors.USER_NOT_FOUND({ userId: String(userId) });
+
+      const rawRate = user.rakeback == null || user.rakeback === '' ? null : String(user.rakeback);
+      const rate =
+        rawRate && money.gt(rawRate, '0') ? money.toDecimalString(money.toMinor(rawRate)) : DEFAULT_RAKEBACK_RATE;
+      value = money.toDecimalString(money.multiply(stakeUsd, rate));
+    }
 
     // A zero or negative accrual is not a thing to record. Rakeback is a share
     // of a stake; there is no such thing as a negative share of one.
-    if (!money.gt(value, '0')) throw errors.ACCRUAL_NOT_POSITIVE({ amount: String(amount) });
+    if (!money.gt(value, '0')) throw errors.ACCRUAL_NOT_POSITIVE({ amount: String(amount ?? value) });
+
+    const currency = await this.#rakebackCurrency();
 
     try {
       return await this.db.transaction(async (transaction) => {
@@ -138,7 +173,7 @@ class RakebackService {
         if (!user) throw errors.USER_NOT_FOUND({ userId: String(userId) });
 
         await this.models.RakebackAccrual.create(
-          { user_id: userId, amount: value, currency: RAKEBACK_CURRENCY, source, ref: String(ref) },
+          { user_id: userId, amount: value, currency, source, ref: String(ref) },
           { transaction }
         );
 
@@ -160,7 +195,7 @@ class RakebackService {
         );
 
         this.logger?.info({ userId, source, ref, amount: value }, 'Rakeback accrued');
-        return { accrued, amount: value, currency: RAKEBACK_CURRENCY, duplicate: false };
+        return { accrued, amount: value, currency, duplicate: false };
       });
     } catch (error) {
       if (error?.name !== 'SequelizeUniqueConstraintError') throw error;
@@ -172,7 +207,7 @@ class RakebackService {
        */
       this.logger?.info({ userId, source, ref }, 'Duplicate rakeback accrual ignored');
       const current = await this.amount({ userId });
-      return { accrued: current.amount, amount: '0.00000000', currency: RAKEBACK_CURRENCY, duplicate: true };
+      return { accrued: current.amount, amount: '0.00000000', currency, duplicate: true };
     }
   }
 
@@ -182,6 +217,8 @@ class RakebackService {
    * @legacy SOCKET k2089ht7ae660578ed9gffgh8hkk7vxj (C.ADD_RAKEBACK)
    */
   async claim({ userId }) {
+    const currency = await this.#rakebackCurrency();
+
     return this.db.transaction(async (transaction) => {
       /**
        * THE LOCK.
@@ -240,7 +277,7 @@ class RakebackService {
       const movement = await this.wallet.credit(
         {
           userId,
-          currency: RAKEBACK_CURRENCY,
+          currency,
           amount: accrued,
           reason: REASON.CLAIM,
           /**
@@ -306,7 +343,7 @@ class RakebackService {
 
       return {
         claimed: accrued,
-        currency: RAKEBACK_CURRENCY,
+        currency,
         newBalance: movement.newBalance,
         /**
          * Zero by construction — the row was locked, so nothing accrued

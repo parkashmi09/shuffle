@@ -39,10 +39,11 @@ export const profile = {
 /**
  * Settings → Preferences.
  *
- * `GET/PATCH /user/preferences` is the `userconfig` module — the only three
- * switches on that tab with a column behind them are `emailNotifications`,
- * `pushNotifications` and `hideBalance`. `theme` and `language` are the other
- * two fields; neither has a control on this page yet.
+ * `GET/PATCH /user/preferences` is the `userconfig` module. Columns used by
+ * the tab: `emailNotifications`, `pushNotifications`, `hideBalance` (Streamer
+ * Mode). `theme` and `language` are the other two fields; neither has a
+ * control on this page. Fiat View and Hide zero balances are client-only and
+ * live on the session (see `lib/playerPreferences.js`).
  */
 export const preferences = {
   get: () => get("/user/preferences"),
@@ -207,12 +208,16 @@ export const site = {
   config: () => get("/admin/site-config/public", { auth: false }),
   /** Placement is the path segment: `home`, `sports`, … 404s when none is set. */
   banners: (type) => get(`/admin/banners/${type}`, { auth: false }),
-  blogs: (query) => get("/admin/blogs", { query, auth: false }),
+  blogs: (query) => get("/admin/blogs", { query, auth: false, withMeta: true }),
   blogBySlug: (slug) => get(`/admin/blogs/slug/${slug}`, { auth: false }),
+  promotions: (query) => get("/admin/promotions", { query, auth: false, withMeta: true }),
+  promotionSidebar: () => get("/admin/promotions/sidebar", { auth: false }),
+  promotionBySlug: (segment, slug) => get(`/admin/promotions/slug/${segment}/${slug}`, { auth: false }),
 };
 
 export const notifications = {
-  list: (query) => get("/user/notifications", { query }),
+  /** Resolves `{ data: rows[], meta: { total, limit, offset, page } }`. */
+  list: (query) => get("/user/notifications", { query, withMeta: true }),
   unreadCount: () => get("/user/notifications/unread-count"),
   markRead: (id) => post(`/user/notifications/${id}/read`),
   markAllRead: () => post("/user/notifications/read-all"),
@@ -229,7 +234,10 @@ export const notifications = {
  */
 export const vault = {
   /** `{ totals, deposits }` for the caller. `coin` narrows it. */
-  data: (coin) => get("/user/vault", { query: coin ? { coin } : undefined }),
+  data: (coin) =>
+    get("/user/vault", {
+      query: coin ? { coin: String(coin).trim().toUpperCase() } : undefined,
+    }),
   /** Active lock terms, shortest first. */
   lockOptions: () => get("/user/vault/lock-options"),
   transferIn: (body) => post("/user/vault/transfer-in", body),
@@ -247,13 +255,22 @@ export const vault = {
 export const affiliate = {
   /** `{ referralCode, referralLink }`. */
   referralInfo: () => get("/user/affiliate"),
+  /** Attach the signed-in player to a referrer (code or username). */
+  joinTeam: (referralCode, campaign) =>
+    post("/user/affiliate/team/join", {
+      body: {
+        referralCode,
+        ...(campaign ? { campaign: String(campaign).trim().slice(0, 80) } : {}),
+      },
+    }),
   /** `{ referralCode, total, members }` — who signed up under the code. */
   team: (query) => get("/user/affiliate/team", { query }),
   /** `{ total, totalAmount, rows }` — commission already credited. */
   rewards: (query) => get("/user/affiliate/rewards", { query }),
-  /** `{ total, currency, rows }` — commission unlocked and waiting. */
+  /** `{ total, claimedTotal, currency, rows }` — unlocked rewards summary. */
   unclaimed: () => get("/user/affiliate/rewards/unclaimed"),
   claimAll: () => post("/user/affiliate/rewards/claim-all"),
+  claimOne: (rewardId) => post("/user/affiliate/rewards/claim", { body: { rewardId } }),
 };
 
 export const rates = {

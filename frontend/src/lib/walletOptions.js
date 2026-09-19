@@ -1,5 +1,6 @@
 import { displayBalance, displayFiat } from "./adapters";
 import { currencyLabel } from "./currencies";
+import { MASKED_AMOUNT } from "./playerPreferences";
 
 /**
  * Currency options built from the player's own wallet.
@@ -11,9 +12,27 @@ import { currencyLabel } from "./currencies";
  *
  * @param {boolean} [fiatEquivalent] Show each balance converted to the display
  *   currency (what the live modal does) rather than the coin's own amount.
+ * @param {boolean} [hideZeroBalances] Drop unfunded rows (active `keep` stays).
+ * @param {boolean} [hideBalance] Streamer Mode — mask the right-hand figure.
+ * @param {string}  [keep] Always include this code even when its balance is 0.
  */
-export function currencyOptions(balances, { displayCurrency, rates, fiatEquivalent = true } = {}) {
+export function currencyOptions(
+  balances,
+  {
+    displayCurrency,
+    rates,
+    fiatEquivalent = true,
+    hideZeroBalances = false,
+    hideBalance = false,
+    keep,
+  } = {}
+) {
   return Object.entries(balances || {})
+    .filter(([code, amount]) => {
+      if (!hideZeroBalances) return true;
+      if (keep && code === keep) return true;
+      return Number(amount) > 0;
+    })
     .sort(([aCode, aVal], [bCode, bVal]) => {
       const aHeld = Number(aVal) > 0;
       const bHeld = Number(bVal) > 0;
@@ -26,8 +45,10 @@ export function currencyOptions(balances, { displayCurrency, rates, fiatEquivale
       // `Ethereum (ETH)`, as the reference writes it — not the bare ticker.
       label: currencyLabel(code),
       icon: code,
-      right: fiatEquivalent && rates
-        ? displayFiat(amount, code, displayCurrency, rates)
-        : displayBalance(amount, code),
+      right: hideBalance
+        ? MASKED_AMOUNT
+        : fiatEquivalent && rates
+          ? displayFiat(amount, code, displayCurrency, rates)
+          : displayBalance(amount, code),
     }));
 }

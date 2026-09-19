@@ -1,266 +1,92 @@
-import { useEffect, useRef, useState } from "react";
-import { CarouselHeader, SwipeTrack } from "../components/ui/Carousel";
-import { GameCard } from "../components/casino/GameCarousel";
-import { UserCell } from "../components/casino/PromoWidgets";
+import { useEffect, useMemo, useState } from "react";
 import { PromotionTile } from "./PromotionsPage";
-import { cx, useCarousel } from "../lib/carousel";
+import { cx } from "../lib/carousel";
 import { navigate } from "../lib/router";
 import ActivityBoard from "../components/casino/ActivityBoard";
-import promoData from "../data/promotions.json";
-import blogData from "../data/blog.json";
+import ArticleBody, { QualifyingGames } from "../components/content/ArticleBody";
+import PromotionSportEvents from "../components/content/PromotionSportEvents";
+import PromotionTermsAccordion from "../components/content/PromotionTermsAccordion";
+import { site } from "../lib/endpoints";
+import { normalizeBlogHtml } from "../lib/blogContent";
+import {
+  fetchLivePromotionBoard,
+  parsePromotionPath,
+  promotionImageUrl,
+  promotionToTile,
+} from "../lib/promotions";
 
-/**
- * Promotion detail — reference `/promotions/<slug>`: breadcrumb bar with a
- * back button, the hero image, the article (heading, optional qualifying
- * games carousel, rich text, terms accordion) and the tag chips.
- */
+export default function PromotionArticlePage({ path }) {
+  const parsed = useMemo(() => parsePromotionPath(path), [path]);
+  const [post, setPost] = useState(null);
+  const [board, setBoard] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-const promoBodies = import.meta.glob("../data/promotions/*.html", { query: "?raw", import: "default", eager: true });
-const blogBodies = import.meta.glob("../data/blog/*.html", { query: "?raw", import: "default", eager: true });
-const sources = {
-  promotions: { data: promoData, bodies: promoBodies, dir: "promotions", root: "/promotions", label: "Promotions" },
-  blog: { data: blogData, bodies: blogBodies, dir: "blog", root: "/blog", label: "Blog" },
-};
-const bodyFor = (src, href) => src.bodies[`../data/${src.dir}/${href.replace(/^\//, "").replace(/\//g, "__")}.html`] || "";
+  const root = parsed?.segment === "sports" ? "/sports/promotions" : "/promotions";
 
-const ordinal = (n) => `${n}${["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) || n % 10 > 3 ? 0 : n % 10]}`;
-
-/** Tournament standings — reference `TournamentInfoLeaderboard`: table plus pager, client-rendered on the original. */
-function Leaderboard({ board }) {
-  const [page, setPage] = useState(1);
-  const total = board.pages || 1;
-  const lo = Math.max(1, page - 2);
-  const hi = Math.min(total, page + 2);
-  const items = [];
-  if (lo > 1) {
-    items.push(1);
-    if (lo > 2) items.push("…");
-  }
-  for (let i = lo; i <= hi; i++) items.push(i);
-  if (hi < total) {
-    if (hi < total - 1) items.push("…");
-    items.push(total);
-  }
-  const ranked = board.columns[0] === "Rank";
-  return (
-    <div className="Flex_root Flex_column Flex_md2">
-      <div className="Table_root">
-        <table className="Table_table">
-          <thead>
-            <tr>
-              {board.columns.map((c, i) => (
-                <td key={c} width={board.widths[i]}>
-                  {c}
-                </td>
-              ))}
-            </tr>
-          </thead>
-          <tbody className={cx("TableBody_tbody TableBody_even", ranked && "TableBody_withClick")} data-testid="table-body">
-            {board.rows.map((row, i) => (
-              <tr key={i} {...(ranked ? { role: "button", "aria-label": "View detail", tabIndex: 0 } : {})}>
-                {ranked && (
-                  <td>
-                    <p>{ordinal(row.rank)}</p>
-                  </td>
-                )}
-                <td>
-                  <UserCell user={row.user} />
-                </td>
-                <td>
-                  <span className="TournamentInfoLeaderboard_tableCell">
-                    {board.kind === "multiplier" ? (
-                      <span className="MultiplierCell_root">
-                        <img alt="increase" height="16" src="/icons/multi-increase.svg" width="16" />
-                        <span>{row.score}</span>
-                      </span>
-                    ) : board.kind === "payout" ? (
-                      <div className="FormattedUsdAmountWithTooltip_flex">
-                        <img alt="USD" height="16" src="/icons/fiat/USD.svg" width="16" />
-                        <span className="Tooltip_trigger">{row.score}</span>
-                      </div>
-                    ) : (
-                      <span className="Tooltip_trigger">
-                        <p className="FormattedTournamentScores_tableDate">{row.score}</p>
-                      </span>
-                    )}
-                  </span>
-                </td>
-                <td>
-                  <span className="TournamentInfoLeaderboard_tableCell TournamentInfoLeaderboard_tablePrize">
-                    <span className="IconValue_root FormattedAmount_root">
-                      <img alt="USD" height="16" src="/icons/fiat/USD.svg" width="16" />
-                      {row.prize}
-                    </span>
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <ul className="Pagination_root">
-        {page > 1 && (
-          <li className="Pagination_item">
-            <button type="button" aria-label="previous page" onClick={() => setPage(page - 1)}>
-              <img alt="arrow right" className="Pagination_left" src="/icons/chevron.svg" />
-            </button>
-          </li>
-        )}
-        {items.map((it, i) =>
-          it === "…" ? (
-            <li key={`e${i}`} className="Pagination_item">
-              ...
-            </li>
-          ) : (
-            <li key={it} className="Pagination_item">
-              <button className={it === page ? "Pagination_active" : ""} type="button" onClick={() => setPage(it)}>
-                {it}
-              </button>
-            </li>
-          )
-        )}
-        {page < total && (
-          <li className="Pagination_item">
-            <button type="button" aria-label="next page" onClick={() => setPage(page + 1)}>
-              <img alt="arrow right" className="Pagination_right" src="/icons/chevron.svg" />
-            </button>
-          </li>
-        )}
-      </ul>
-    </div>
-  );
-}
-
-function QualifyingGames({ href, viewAll }) {
-  const { trackRef, carousel } = useCarousel();
-  // Qualifying games captured from the reference tournament pages.
-  const games = promoData.games[href] || [];
-  return (
-    <section className="CasinoTournamentContent_carousel">
-      <CarouselHeader className="CasinoTournamentContent_carouselHeader" href={viewAll} carousel={carousel}>
-        <a className="TextLink_root" href={viewAll} onClick={(e) => e.preventDefault()}>
-          Qualifying Games
-        </a>
-      </CarouselHeader>
-      <SwipeTrack trackRef={trackRef} carousel={carousel} className="CasinoTournamentContent_carouselContent">
-        {games.map((g, i) => (
-          <GameCard key={g.href + i} game={g} index={i} indicator={g.indicator} />
-        ))}
-      </SwipeTrack>
-    </section>
-  );
-}
-
-/** Countdown + prize details that the reference renders above the standings. */
-function TournamentPanel({ panel }) {
-  const target = panel.endsAt ? Date.parse(panel.endsAt) : NaN;
-  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (Number.isNaN(target)) return undefined;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [target]);
-  const left = Math.max(0, Math.floor((target - now) / 1000));
-  const parts = Number.isNaN(target)
-    ? []
-    : [
-        [Math.floor(left / 86400), "Days"],
-        [Math.floor((left % 86400) / 3600), "Hours"],
-        [Math.floor((left % 3600) / 60), "Minutes"],
-        [left % 60, "Seconds"],
-      ];
-  const rows = [
-    ["Ends", panel.ends],
-    ["Prize Pool", panel.prizePool],
-    ["Prize Split", panel.prizeSplit],
-  ].filter((r) => r[1]);
-  return (
-    <>
-      {parts.length > 0 && (
-        <div className="TournamentCounter_root">
-          <div className="TournamentCounter_countDown">
-            {parts.map(([value, label]) => (
-              <div key={label} className="TournamentCounter_countDownItem">
-                <span>{value}</span>
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {rows.length > 0 && (
-        <div className="ModalListContainer_root">
-          {rows.map(([label, value]) => (
-            <div key={label} className="ModalListContainer_item">
-              <span className="ModalListContainer_label">{label}</span>
-              <span className="ModalListContainer_value">{value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-/** Reference rich text rendered as-is; accordions and internal links are wired up after mount. */
-function ArticleBody({ html, board, panel }) {
-  const ref = useRef(null);
-  const slotRef = useRef(null);
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const onClick = (e) => {
-      const btn = e.target.closest(".Accordion_accordionHeader");
-      if (btn && root.contains(btn)) {
-        const acc = btn.closest(".Accordion_root");
-        const open = btn.getAttribute("aria-expanded") === "true";
-        btn.setAttribute("aria-expanded", String(!open));
-        btn.querySelector(".Accordion_accordionHeaderLeft")?.classList.toggle("Accordion_headingOpen", !open);
-        btn.querySelector(".Accordion_chevronWrapper")?.classList.toggle("Accordion_open", !open);
-        acc.querySelectorAll(".Accordion_contentHeight .Accordion_content").forEach((c) => c.classList.toggle("Accordion_openContent", !open));
-        return;
+    if (!parsed) {
+      setLoading(false);
+      setError("Promotion not found.");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await site.promotionBySlug(parsed.segment, parsed.slug);
+        if (cancelled) return;
+        setPost(data);
+        const resolved = data.leaderboard ? await fetchLivePromotionBoard(data.leaderboard) : null;
+        if (!cancelled) setBoard(resolved);
+      } catch (e) {
+        if (!cancelled) {
+          setPost(null);
+          setBoard(null);
+          setError(e?.message || "Could not load this promotion.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      const a = e.target.closest("a[href]");
-      if (!a || !root.contains(a)) return;
-      const href = a.getAttribute("href");
-      if (href.startsWith("/")) {
-        e.preventDefault();
-        if (/^\/(sports\/)?promotions\/|^\/blog\//.test(href)) navigate(href);
-      } else if (href.startsWith("https://shuffle.com/")) {
-        e.preventDefault();
-      }
+    })();
+    return () => {
+      cancelled = true;
     };
-    root.addEventListener("click", onClick);
-    return () => root.removeEventListener("click", onClick);
-  }, [html]);
-  // The reference keeps an empty flex column after the rules that the leaderboard renders into.
-  const [head, tail] = html.split('<div class="Flex_root Flex_column Flex_md2"></div>');
-  return (
-    <>
-      <div ref={ref} style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: head }} />
-      {tail !== undefined && panel && <TournamentPanel panel={panel} />}
-      {board && tail !== undefined && <Leaderboard board={board} />}
-      {tail !== undefined && <div ref={slotRef} style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: tail }} />}
-    </>
-  );
-}
+  }, [parsed?.segment, parsed?.slug]);
 
-export default function PromotionArticlePage({ path, kind = "promotions" }) {
-  const src = sources[kind];
-  const data = src.data;
-  const info = data.details[path];
-  const html = bodyFor(src, path);
-  const tile = data.tiles.find((t) => t.href === path);
-  const title = info?.title || tile?.title || "Promotion";
-  const img = info?.img || tile?.img;
-  // Blog posts end with three related articles — other posts sharing a tag, newest first.
-  const tags = info?.tags || [];
-  const related =
-    kind === "blog"
-      ? [...data.tiles.filter((t) => t.href !== path && data.details[t.href]?.tags?.some((tg) => tags.includes(tg))), ...data.tiles.filter((t) => t.href !== path)]
-          .filter((t, i, arr) => arr.indexOf(t) === i)
-          .slice(0, 3)
-      : [];
+  const tile = useMemo(() => (post ? promotionToTile(post) : null), [post]);
+  const bodyHtml = useMemo(() => {
+    if (!post?.description) return "";
+    return normalizeBlogHtml(post.description, { subheading: post.summary });
+  }, [post]);
+
+  const tags = post?.tags || [];
+  const hasTournament = Boolean(post?.tournamentPanel || board);
+
+  if (loading) {
+    return (
+      <section className="LayoutContainer_root LayoutContainer_column">
+        <p className="RichText_paragraph">Loading…</p>
+      </section>
+    );
+  }
+
+  if (error || !post || !tile) {
+    return (
+      <section className="LayoutContainer_root LayoutContainer_column">
+        <p className="RichText_paragraph">{error || "Promotion not found."}</p>
+        <button type="button" className="ButtonVariants_root ButtonVariants_primary" onClick={() => navigate(root)}>
+          Back to promotions
+        </button>
+      </section>
+    );
+  }
+
+  const img = promotionImageUrl(post.imageUrl);
+  const title = post.title;
+  const events = post.sportEvents || [];
+  const games = post.qualifyingGames || [];
 
   return (
     <div>
@@ -268,15 +94,15 @@ export default function PromotionArticlePage({ path, kind = "promotions" }) {
         <nav className="BlogAndPromotionArticle_nav">
           <section className="LayoutContainer_root LayoutContainer_mobile-top-lg LayoutContainer_mobile-bottom-lg LayoutContainer_tablet-top-lg1 LayoutContainer_tablet-bottom-lg1 LayoutContainer_column LayoutContainer_singleColumn">
             <div className="SportsBreadcrumbLayout_breadcrumbRoot">
-              <button aria-label="back" className="SportsBreadcrumbLayout_backBtn" type="button" onClick={() => (window.history.length > 1 ? window.history.back() : navigate(src.root))}>
+              <button aria-label="back" className="SportsBreadcrumbLayout_backBtn" type="button" onClick={() => (window.history.length > 1 ? window.history.back() : navigate(root))}>
                 <img alt="arrow left" src="/icons/arrow-left.svg" />
               </button>
               <ul className="BreadcrumbList_list">
                 <li className="BreadcrumbItem_root BlogAndPromotionArticle_hiddenOnMobile">
                   <div className="BreadcrumbItem_name">
                     <span className="BreadcrumbItem_text">
-                      <a className="BreadcrumbLink_root" href={src.root} onClick={(e) => { e.preventDefault(); navigate(src.root); }}>
-                        <span>{src.label}</span>
+                      <a className="BreadcrumbLink_root" href={root} onClick={(e) => { e.preventDefault(); navigate(root); }}>
+                        <span>Promotions</span>
                       </a>
                     </span>
                   </div>
@@ -291,46 +117,53 @@ export default function PromotionArticlePage({ path, kind = "promotions" }) {
             </div>
           </section>
         </nav>
-        <section className={cx("LayoutContainer_root BlogAndPromotionArticle_container", related.length > 0 && "BlogAndPromotionArticle_hasRelated", "LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-lg1 LayoutContainer_column LayoutContainer_singleColumn")}>
+        <section
+          className={cx(
+            "LayoutContainer_root BlogAndPromotionArticle_container",
+            hasTournament && "BlogAndPromotionArticle_hasTournament",
+            "LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-lg1 LayoutContainer_column LayoutContainer_singleColumn"
+          )}
+        >
           {img && (
             <div className="BlogAndPromotionArticle_imageContainer">
-              <img alt={info?.alt || title} className="BlogAndPromotionArticle_image" height={info?.h || tile?.h} src={img} width={info?.w || tile?.w} />
+              <img alt={post.imageAlt || title} className="BlogAndPromotionArticle_image" height={400} src={img} width={640} />
             </div>
           )}
           <article className="BlogAndPromotionArticle_body">
             <div className="BlogAndPromotionArticle_headingGroup">
               <h1 className="Heading_root Heading_h1 BlogAndPromotionArticle_heading">{title}</h1>
-              {tile?.date && <p className="PromotionsInfoDate_root">{tile.date}</p>}
-              {tile?.ends && (
+              {tile.ends && (
                 <div className="PromotionsInfoDate_root">
                   <span className={cx("Tag_tagBlock Tag_md", tile.status === "ended" ? "Tag_ended" : "Tag_live")}>{tile.status === "ended" ? "Ended" : "LIVE"}</span>
                   {tile.status === "ended" ? "Ended" : "Ends"} {tile.ends}
                 </div>
               )}
             </div>
-            {info?.games && <QualifyingGames href={path} viewAll={info.viewAll} />}
-            {html ? (
-              <ArticleBody key={path} board={data.boards?.[path]} html={html} panel={data.panels?.[path]} />
+            {games.length > 0 && <QualifyingGames games={games} viewAll={post.viewAllHref} />}
+            {events.length > 0 && <PromotionSportEvents events={events} />}
+            {bodyHtml ? (
+              <>
+                <ArticleBody html={bodyHtml} board={board} panel={post.tournamentPanel} />
+                <PromotionTermsAccordion html={post.termsHtml} />
+              </>
             ) : (
               <div className="RichText_richTextBlock">
                 <p className="RichText_paragraph">This promotion is no longer available.</p>
               </div>
             )}
+            {tags.length > 0 && (
+              <div className="BlogAndPromotionArticle_tags">
+                {tags.map((tag) => (
+                  <a key={tag} href={`/blog?tag=${encodeURIComponent(tag)}`} onClick={(e) => { e.preventDefault(); navigate(`/blog?tag=${encodeURIComponent(tag)}`); }}>
+                    <div className="BlogAndPromotionArticle_tag">{tag}</div>
+                  </a>
+                ))}
+              </div>
+            )}
           </article>
         </section>
-        {related.length > 0 && (
-          <section className="LayoutContainer_root LayoutContainer_column">
-            <hr className="BlogAndPromotionArticle_lineBreakRelated" />
-            <h2 className="Heading_root Heading_h2 BlogAndPromotionArticle_relatedBlogsHeading">Related articles</h2>
-            <div className="BlogLists_root">
-              {related.map((t) => (
-                <PromotionTile key={t.href} tile={t} meta={<p className="BlogAndPromotionTile_date">{t.date}</p>} />
-              ))}
-            </div>
-          </section>
-        )}
       </main>
-      {kind === "promotions" && <ActivityBoard hideTabs={["my-bets", "high-roller-bets", "race", "airDropRace"]} />}
+      <ActivityBoard hideTabs={["my-bets", "high-roller-bets", "race", "airDropRace"]} />
     </div>
   );
 }

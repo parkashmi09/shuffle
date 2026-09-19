@@ -212,8 +212,8 @@ class NotificationsService {
       throw errors.BROADCAST_TOO_LARGE({ devices: tokens.length, max: MAX_BROADCAST_DEVICES });
     }
 
-    const recipients = [...new Set(tokens.map((t) => String(t.user_id)))];
-    const record = await this.#record(recipients, { title, body, type, data });
+    // Inbox rows for every player in scope — not only those with push tokens.
+    const record = await this.#record(visible, { title, body, type, data });
 
     const outcome = tokens.length
       ? await this.#deliver(tokens, { title, body, type, data })
@@ -222,12 +222,12 @@ class NotificationsService {
     await this.#markDelivered(record, outcome);
 
     this.logger?.warn(
-      { staffId: staff?.id, players: recipients.length, devices: tokens.length, delivered: outcome.delivered },
+      { staffId: staff?.id, players: visible.length, devices: tokens.length, delivered: outcome.delivered },
       'BROADCAST sent'
     );
 
     return {
-      players: recipients.length,
+      players: visible.length,
       devices: tokens.length,
       recorded: record.length,
       delivered: outcome.delivered,

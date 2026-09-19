@@ -3,6 +3,26 @@
 const { z } = require('@ibitplay/common');
 
 /**
+ * Wallet currency codes an operator may pick for reward payouts.
+ *
+ * Mirrors `wallet.constants.js` `SUPPORTED_CURRENCIES` in user-service. Kept
+ * here rather than importing across services: admin-service does not load the
+ * wallet module, and a currency that is not a `credits` column must never be
+ * written into siteconfig or claims will fail at credit time.
+ */
+const WALLET_CURRENCIES = Object.freeze([
+  'BTC', 'ETH', 'LTC', 'BCH', 'USDT', 'TRX', 'DOGE', 'ADA', 'XRP', 'BNB',
+  'USDP', 'NEXO', 'MKR', 'TUSD', 'USDC', 'BUSD', 'NC', 'INR', 'SHIB', 'MATIC',
+  'SC', 'MVR', 'BJB', 'AED', 'NPR', 'PKR', 'EUR', 'BDT',
+]);
+
+const walletCurrency = z
+  .string({ invalid_type_error: 'send the currency as a string' })
+  .trim()
+  .transform((v) => v.toUpperCase())
+  .pipe(z.enum(WALLET_CURRENCIES, { errorMap: () => ({ message: 'unsupported wallet currency' }) }));
+
+/**
  * A decimal that may be zero, carried as a string.
  *
  * Zero is not a valid PAYMENT, but it is a valid SETTING — it is how the
@@ -25,6 +45,8 @@ const updateAffiliateSettings = {
         .refine((v) => Number.parseFloat(v) <= 100, 'commissionPercent cannot exceed 100')
         .optional(),
       registerBonus: rate.optional(),
+      registerBonusCurrency: walletCurrency.optional(),
+      affiliateBonusCurrency: walletCurrency.optional(),
     })
     .strict()
     // An update naming nothing would answer "updated successfully" having
@@ -34,7 +56,9 @@ const updateAffiliateSettings = {
       (v) =>
         v.affiliateBonus !== undefined ||
         v.commissionPercent !== undefined ||
-        v.registerBonus !== undefined,
+        v.registerBonus !== undefined ||
+        v.registerBonusCurrency !== undefined ||
+        v.affiliateBonusCurrency !== undefined,
       { message: 'give at least one setting to change' }
     ),
 };
@@ -47,6 +71,26 @@ const updateAffiliateSettings = {
  */
 const setSportsEnabled = {
   body: z.object({ enabled: z.boolean() }).strict(),
+};
+
+/**
+ * VIP bonus + Instant Rakeback payout currencies.
+ *
+ * Separate from the boolean currency flags on `/global` — those decide whether
+ * a currency appears in the wallet UI; these decide which column a reward
+ * credits. At least one field required so an empty PUT is not a silent no-op.
+ */
+const updateRewardCurrencies = {
+  body: z
+    .object({
+      bonusCurrency: walletCurrency.optional(),
+      rakebackCurrency: walletCurrency.optional(),
+    })
+    .strict()
+    .refine(
+      (v) => v.bonusCurrency !== undefined || v.rakebackCurrency !== undefined,
+      { message: 'give at least one currency to change' }
+    ),
 };
 
 /**
@@ -109,8 +153,10 @@ const updateUserSettings = {
 };
 
 module.exports = {
+  WALLET_CURRENCIES,
   updateAffiliateSettings,
   setSportsEnabled,
+  updateRewardCurrencies,
   updateEmailSettings,
   updateGlobalSettings,
   userParam,

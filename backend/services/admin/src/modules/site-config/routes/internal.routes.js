@@ -37,5 +37,16 @@ module.exports = function internalRoutes(deps) {
     asyncHandler(async (_req, res) => response.ok(res, await service.sportsEnabled()))
   );
 
+  /**
+   * Bonus + rakeback payout currencies, for user-service.
+   *
+   * Claim and overview paths resolve these on every credit so an operator
+   * change on the Site Config screen takes effect without a deploy.
+   */
+  router.get(
+    '/rewards',
+    asyncHandler(async (_req, res) => response.ok(res, await service.rewardCurrencies()))
+  );
+
   return router;
 };

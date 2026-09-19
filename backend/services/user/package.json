@@ -6,6 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "start:worker": "node src/worker.js",
     "test": "node --test --test-concurrency=1 src/modules/*/__tests__/*.test.js"
   },
   "dependencies": {

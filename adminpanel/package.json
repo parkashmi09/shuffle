@@ -1,0 +1,87 @@
+{
+  "name": "adminpanel",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fortawesome/fontawesome-svg-core": "^6.5.1",
+    "@fortawesome/free-solid-svg-icons": "^6.5.1",
+    "@fortawesome/react-fontawesome": "^0.2.0",
+    "@headlessui/react": "^2.2.4",
+    "@heroicons/react": "^2.2.0",
+    "@mui/icons-material": "^6.4.5",
+    "@mui/lab": "^6.0.0-beta.28",
+    "@mui/material": "^6.4.5",
+    "@mui/styled-engine-sc": "^6.0.0-alpha.17",
+    "@mui/x-date-pickers": "^7.23.3",
+    "@shadcn/ui": "^0.0.4",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/axios": "^0.14.0",
+    "@types/country-list": "^2.1.4",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.18.71",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/recharts": "^2.0.1",
+    "assert": "^2.1.0",
+    "axios": "^1.19.0",
+    "buffer": "^6.0.3",
+    "chart.js": "^4.4.3",
+    "country-list": "^2.3.0",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.427.0",
+    "mui": "^0.0.1",
+    "react": "^18.3.1",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.3.1",
+    "react-dropzone": "^14.2.3",
+    "react-phone-number-input": "^3.3.9",
+    "react-router-dom": "^7.18.2",
+    "react-scripts": "^5.0.1",
+    "recharts": "^2.15.3",
+    "socket.io-client": "^4.8.3",
+    "sonner": "^1.7.1",
+    "styled-components": "^6.1.8",
+    "typescript": "3.9.10",
+    "url": "^0.11.4",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "GENERATE_SOURCEMAP=false INLINE_RUNTIME_CHUNK=false react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.4",
+    "@types/react-dom": "^18.3.0",
+    "browserify-zlib": "^0.2.0",
+    "html-webpack-plugin": "^5.6.0",
+    "https-browserify": "^1.0.0",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "tailwindcss": "^3.4.1",
+    "util": "^0.12.5",
+    "webpack-dev-server": "^4.15.1"
+  }
+}

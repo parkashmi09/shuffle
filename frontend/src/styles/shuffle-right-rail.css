@@ -119,6 +119,100 @@
   filter: var(--filter-primaryViolet);
 }
 
+/* Filter list — wider than the icon trigger; right-aligned to the filters button. */
+ul.WalletSelect_portal.NotificationsSidebar_filterPopup {
+  white-space: nowrap;
+}
+
+ul.WalletSelect_portal.NotificationsSidebar_filterPopup .ActivityBoard_selectOption {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+/* ── Notification list ──────────────────────────────────────────────────── */
+
+.NotificationsSidebar_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.NotificationsSidebar_message {
+  margin: 0;
+  padding: var(--spacing-md2);
+  color: var(--color-gray300);
+  text-align: center;
+}
+
+.NotificationsSidebar_messageError {
+  color: var(--color-red400, #f87171);
+}
+
+.NotificationsSidebar_item {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm3);
+  padding: var(--spacing-md2);
+  border: none;
+  border-bottom: 1px solid var(--color-gray700);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.NotificationsSidebar_item:hover {
+  background-color: var(--color-gray800);
+}
+
+.NotificationsSidebar_itemUnread {
+  background-color: rgb(160 143 255 / 6%);
+}
+
+.NotificationsSidebar_itemMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  flex: 1;
+}
+
+.NotificationsSidebar_title {
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.NotificationsSidebar_body {
+  font-size: var(--text-caption, 0.8125rem);
+  color: var(--color-gray300);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.NotificationsSidebar_meta {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.NotificationsSidebar_time {
+  font-size: var(--text-caption, 0.75rem);
+  color: var(--color-gray400);
+  white-space: nowrap;
+}
+
+.NotificationsSidebar_dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-primaryViolet);
+}
+
 /*
  * Below the tablet breakpoint the rail is a full-screen sheet rather than a
  * docked column, so its inner container is fixed and the mobile nav keeps its

@@ -72,10 +72,7 @@ class StaffAuthService {
     const { ip, userAgent } = context;
     this.#assertNotThrottled(email, ip);
 
-    const staff = await this.models.Staff.findOne({
-      where: { email: String(email).toLowerCase() },
-      raw: true,
-    });
+    const staff = await this.#findStaffByLoginId(email);
 
     /**
      * The comparison runs even when there is no account.
@@ -375,10 +372,7 @@ class StaffAuthService {
     const { ip } = context;
     this.#assertNotThrottled(email, ip);
 
-    const staff = await this.models.Staff.findOne({
-      where: { email: String(email).toLowerCase() },
-      raw: true,
-    });
+    const staff = await this.#findStaffByLoginId(email);
 
     const ok = await verifyPassword(currentPassword, staff?.password ?? DUMMY_HASH);
     if (!staff || !ok) {
@@ -523,6 +517,23 @@ class StaffAuthService {
     if (lockedAncestor) {
       throw errors.ACCOUNT_UNAVAILABLE({ reason: 'locked by an upline account' });
     }
+  }
+
+  async #findStaffByLoginId(identifier) {
+    const id = String(identifier).toLowerCase();
+    if (id.includes('@')) {
+      return this.models.Staff.findOne({ where: { email: id }, raw: true });
+    }
+    const { sequelize } = this.models.Staff;
+    return this.models.Staff.findOne({
+      where: {
+        [Op.or]: [
+          { email: id },
+          sequelize.where(sequelize.fn('lower', sequelize.col('name')), id),
+        ],
+      },
+      raw: true,
+    });
   }
 
   #key(identifier, ip) {

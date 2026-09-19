@@ -212,6 +212,30 @@ test('affiliate', async (t) => {
     );
   });
 
+  await t.test('claiming pays the wallet column stored on the reward row', async () => {
+    const owner = await seed(newUid());
+    const member = await seed(newUid());
+    await connection.models.Credits.update({ usdt: '0' }, { where: { uid: owner.uid } });
+
+    const reward = await connection.models.UnlockedRewards.create({
+      uid: owner.uid,
+      ownername: owner.name,
+      membername: member.name,
+      amount: '3.00',
+      cointype: 'USDT',
+      wager_amount: '1000',
+      claimed: false,
+      referalCode: owner.code,
+    });
+
+    const result = await service.claimReward({ userId: owner.uid, rewardId: reward.id });
+
+    assert.equal(result.currency, 'USDT');
+    const row = await connection.models.Credits.findOne({ where: { uid: owner.uid }, raw: true });
+    assert.equal(money.toDecimalString(money.toMinor(row?.usdt ?? '0')), '3.00000000');
+    assert.equal(money.toDecimalString(money.toMinor(row?.bjb ?? '0')), '0.00000000');
+  });
+
   await t.test('claim-all pays every outstanding reward exactly once', async () => {
     const owner = await seed(newUid());
     const member = await seed(newUid());
@@ -265,6 +289,90 @@ test('affiliate', async (t) => {
     );
   });
 
+  await t.test('join accepts the referrer username when players paste a display name', async () => {
+    const owner = await seed(newUid());
+    const member = await seed(newUid());
+    await service.joinTeam({ userId: member.uid, referralCode: owner.name });
+    const team = await connection.models.Team.findOne({ where: { membername: member.name }, raw: true });
+    assert.equal(team.ownername, owner.name);
+    assert.equal(team.referalCode, owner.code);
+  });
+
+  await t.test('myTeam backfills members who registered with refree but have no team row', async () => {
+    const owner = await seed(newUid());
+    const memberUid = newUid();
+    const memberName = `aff-${memberUid}`;
+    await connection.models.Users.create({
+      id: memberUid,
+      name: memberName,
+      password: 'x',
+      status: 'active',
+      referalcode: `REF${memberUid}`,
+      refree: owner.name,
+    });
+    await connection.models.Credits.create({ uid: memberUid, bjb: '0' });
+
+    const team = await service.myTeam({ userId: owner.uid });
+    assert.equal(team.total, 1);
+    assert.equal(team.members[0].name, memberName);
+
+    await connection.models.Team.destroy({ where: { membername: memberName } });
+    await connection.models.Credits.destroy({ where: { uid: memberUid } });
+    await connection.models.Users.destroy({ where: { id: memberUid } });
+  });
+
+  await t.test('on-wager unlocks tiers for players on a team', async () => {
+    const owner = await seed(newUid());
+    const member = await seed(newUid(), { wager: '1500' });
+    await service.joinTeam({ userId: member.uid, referralCode: owner.code });
+
+    const result = await service.onWager({
+      userId: member.uid,
+      previousWager: '0',
+      newWager: '1500',
+    });
+
+    assert.equal(result.onTeam, true);
+    assert.equal(result.unlock.unlocked, true);
+  });
+
+  await t.test('on-wager records commission from site-config percent', async () => {
+    const owner = await seed(newUid());
+    const member = await seed(newUid());
+    await service.joinTeam({ userId: member.uid, referralCode: owner.code });
+
+    const rated = new AffiliateService({
+      models: connection.models,
+      db: connection,
+      logger,
+      config: { SERVICE_NAME: 'user-service', PUBLIC_SITE_URL: 'https://play.example.test' },
+      clients: {
+        admin: {
+          get: async (path) => {
+            assert.match(path, /site-config\/affiliate/);
+            return { commissionPercent: '10.00000000', affiliateBonus: '0', registerBonus: '0' };
+          },
+        },
+      },
+    });
+
+    const result = await rated.onWager({
+      userId: member.uid,
+      previousWager: '100',
+      newWager: '200',
+    });
+
+    assert.equal(result.commissionRecorded, true);
+    assert.equal(result.commission, '10.00000000');
+
+    const rows = await connection.models.Rewards.findAll({
+      where: { ownername: owner.name, membername: member.name },
+      raw: true,
+    });
+    assert.equal(rows.length, 1);
+    assert.equal(String(rows[0].referalmount), '100.00000000');
+  });
+
   await t.test('a team listing does not include member email addresses', async () => {
     // `GET /affiliate/team/:referralCode` was unauthenticated and selected
     // `u.email`. A referral code is meant to be shared publicly.
@@ -308,6 +416,35 @@ test('affiliate', async (t) => {
 
     const unclaimed = await service.unclaimedRewards({ userId: owner.uid });
     assert.equal(unclaimed.total, '17.00000000');
+    assert.equal(unclaimed.claimedTotal, '0.00000000');
+  });
+
+  await t.test('unclaimed rewards reports claimed and outstanding totals separately', async () => {
+    const owner = await seed(newUid());
+    await connection.models.UnlockedRewards.create({
+      uid: owner.uid,
+      ownername: owner.name,
+      membername: 'member',
+      amount: '3.00',
+      cointype: 'BJB',
+      wager_amount: '1000',
+      claimed: true,
+      referalCode: owner.code,
+    });
+    await connection.models.UnlockedRewards.create({
+      uid: owner.uid,
+      ownername: owner.name,
+      membername: 'member',
+      amount: '4.00',
+      cointype: 'BJB',
+      wager_amount: '5000',
+      claimed: false,
+      referalCode: owner.code,
+    });
+
+    const summary = await service.unclaimedRewards({ userId: owner.uid });
+    assert.equal(summary.claimedTotal, '3.00000000');
+    assert.equal(summary.total, '4.00000000');
   });
 
   await t.test('the dashboard reports what is still owed', async () => {

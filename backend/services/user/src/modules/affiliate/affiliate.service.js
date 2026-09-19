@@ -5,6 +5,7 @@ const { money } = require('@ibitplay/common');
 
 const errors = require('./affiliate.errors');
 const { UNLOCK_TIERS, REWARD_CURRENCY } = require('./affiliate.constants');
+const { affiliateSettings } = require('./affiliateSettings');
 const { WalletService } = require('../wallet/wallet.service');
 const { REASON } = require('../wallet/wallet.constants');
 
@@ -50,6 +51,138 @@ class AffiliateService {
     this.logger = logger;
     this.config = config;
     this.wallet = new WalletService(deps);
+    this.settings = affiliateSettings(deps);
+  }
+
+  /** Wallet code for referrer rewards (joining bonus, tier unlocks, claims). */
+  async #affiliateRewardCurrency() {
+    const { affiliateBonusCurrency } = await this.settings.read();
+    const code = String(affiliateBonusCurrency || '').trim().toUpperCase();
+    return code || REWARD_CURRENCY;
+  }
+
+  /**
+   * casino-service calls this after every stake that moves `userwager`.
+   *
+   * Unlocks the next affiliate tier for referred players and accrues commission
+   * into `rewards` using `commissionPercent` from site config.
+   */
+  async onWager({ userId, previousWager, newWager }) {
+    const member = await this.#user(userId);
+    const team = await this.models.Team.findOne({ where: { membername: member.name }, raw: true });
+    if (!team) return { onTeam: false };
+
+    let unlock = { unlocked: false };
+    try {
+      unlock = await this.unlockFor({ memberName: member.name });
+    } catch (error) {
+      this.logger?.warn(
+        { err: error, userId, member: member.name },
+        'Affiliate tier unlock on wager failed'
+      );
+    }
+
+    const prev = this.#wagerAmount({ wager: previousWager });
+    const next = this.#wagerAmount({ wager: newWager });
+    const delta = money.subtract(next, prev);
+    if (!money.gt(delta, '0')) {
+      return { onTeam: true, unlock, commissionRecorded: false };
+    }
+
+    const { commissionPercent } = await this.settings.read();
+    if (!money.gt(commissionPercent, '0')) {
+      return { onTeam: true, unlock, commissionRecorded: false };
+    }
+
+    const commission = money.percentOf(delta, commissionPercent);
+    if (!money.gt(commission, '0')) {
+      return { onTeam: true, unlock, commissionRecorded: false };
+    }
+
+    const amount = money.toDecimalString(money.toMinor(commission));
+    const referredAmount = money.toDecimalString(money.toMinor(delta));
+    const rewardCoin = await this.#affiliateRewardCurrency();
+
+    await this.models.Rewards.create({
+      ownername: team.ownername,
+      membername: member.name,
+      referalCode: team.referalCode ?? null,
+      amount,
+      referalmount: referredAmount,
+      coin: rewardCoin,
+      type: 'commission',
+      locked: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    this.logger?.info(
+      { owner: team.ownername, member: member.name, delta: referredAmount, commission: amount },
+      'Affiliate commission recorded'
+    );
+
+    return { onTeam: true, unlock, commissionRecorded: true, commission: amount, wagerDelta: referredAmount };
+  }
+
+  /**
+   * One-time signup bonuses from site config — register bonus to the member,
+   * joining bonus to the referrer once the team row exists.
+   */
+  async applyRegistrationBonuses({ userId, referredBy, joined = false }) {
+    const settings = await this.settings.read();
+    const member = await this.#user(userId);
+    const results = { registerBonus: false, affiliateBonus: false };
+
+    const registerCurrency = settings.registerBonusCurrency || REWARD_CURRENCY;
+    const affiliateCurrency = settings.affiliateBonusCurrency || REWARD_CURRENCY;
+
+    if (money.gt(settings.registerBonus, "0")) {
+      const amount = money.toDecimalString(money.toMinor(settings.registerBonus));
+      await this.wallet.credit(
+        {
+          userId,
+          currency: registerCurrency,
+          amount,
+          reason: REASON.BONUS,
+          idempotencyKey: `affiliate:register-bonus:${userId}`,
+          refType: "AFFILIATE_REGISTER_BONUS",
+          refId: String(userId),
+          description: "Registration bonus",
+        },
+        { sourceService: "user-service" }
+      );
+      results.registerBonus = true;
+    }
+
+    if (!joined || !referredBy?.trim() || !money.gt(settings.affiliateBonus, "0")) {
+      return results;
+    }
+
+    const owner = await this.#resolveReferrerOwner(referredBy);
+    if (!owner) return results;
+
+    const team = await this.models.Team.findOne({ where: { membername: member.name }, raw: true });
+    if (!team || team.ownername !== owner.name) return results;
+
+    const existing = await this.models.UnlockedRewards.findOne({
+      where: { uid: owner.id, membername: member.name, wager_amount: "0" },
+      raw: true,
+    });
+    if (existing) return results;
+
+    const bonus = money.toDecimalString(money.toMinor(settings.affiliateBonus));
+    await this.models.UnlockedRewards.create({
+      uid: owner.id,
+      ownername: owner.name,
+      membername: member.name,
+      amount: bonus,
+      cointype: affiliateCurrency,
+      referalCode: team.referalCode ?? owner.referalcode,
+      wager_amount: "0",
+      claimed: false,
+    });
+    results.affiliateBonus = true;
+    return results;
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -86,6 +219,11 @@ class AffiliateService {
     const user = await this.#user(userId);
     if (!user.referalcode) return { referralCode: null, total: 0, members: [] };
 
+    // Players often type a referrer's username at signup, not the alphanumeric
+    // `referalcode`. That value lands in `users.refree`; backfill team rows
+    // when the referrer opens their dashboard so earlier signups still appear.
+    await this.#syncOrphanReferralsForOwner(user);
+
     const { rows, count } = await this.models.Team.findAndCountAll({
       where: { referalCode: user.referalcode },
       order: [['createdAt', 'DESC']],
@@ -94,23 +232,39 @@ class AffiliateService {
       raw: true,
     });
 
-    const members = await this.#usersByName(rows.map((r) => r.membername));
+    const memberUsers = await this.#usersByName(rows.map((r) => r.membername));
+    const memberIds = [...memberUsers.values()].map((u) => u.id).filter(Boolean);
+    const wagerByUid = new Map();
+    if (memberIds.length) {
+      const wagers = await this.models.Userwager.findAll({
+        where: { uid: { [Op.in]: memberIds } },
+        attributes: ['uid', 'wager'],
+        raw: true,
+      });
+      for (const w of wagers) wagerByUid.set(Number(w.uid), this.#wagerAmount(w));
+    }
+
+    let totalWager = '0';
+    const members = rows.map((r) => {
+      const member = memberUsers.get(r.membername);
+      const wager = member ? wagerByUid.get(Number(member.id)) ?? '0' : '0';
+      totalWager = money.toDecimalString(money.add(totalWager, wager));
+      const campaignLabel = String(r.campaign ?? '').trim();
+      return {
+        name: r.membername,
+        joinedAt: r.createdAt,
+        campaign: campaignLabel || user.referalcode || 'Default',
+        wager: money.toDecimalString(money.toMinor(wager)),
+        level: member?.level ?? null,
+        avatar: member?.avatar ?? null,
+      };
+    });
 
     return {
       referralCode: user.referalcode,
       total: count,
-      members: rows.map((r) => {
-        const member = members.get(r.membername);
-        return {
-          name: r.membername,
-          joinedAt: r.createdAt,
-          // Deliberately NOT the email address. Legacy's team query selected
-          // `u.email` and returned it to whoever asked — a referral code is a
-          // public thing, so that published the email of everyone who used it.
-          level: member?.level ?? null,
-          avatar: member?.avatar ?? null,
-        };
-      }),
+      totalWager,
+      members,
     };
   }
 
@@ -191,18 +345,30 @@ class AffiliateService {
 
   /** @legacy GET /affiliate/unclaimed-rewards/:uid */
   async unclaimedRewards({ userId }) {
-    const rows = await this.models.UnlockedRewards.findAll({
-      where: { uid: userId, claimed: false },
-      order: [['id', 'DESC']],
-      raw: true,
-    });
+    const [rows, [claimedTotals]] = await Promise.all([
+      this.models.UnlockedRewards.findAll({
+        where: { uid: userId, claimed: false },
+        order: [['id', 'DESC']],
+        raw: true,
+      }),
+      this.models.UnlockedRewards.findAll({
+        attributes: [[fn('COALESCE', fn('SUM', col('amount')), 0), 'total']],
+        where: { uid: userId, claimed: true },
+        raw: true,
+      }),
+    ]);
 
     const total = rows.reduce((sum, r) => money.toDecimalString(money.add(sum, r.amount ?? '0')), '0');
+    const claimedTotal = money.toDecimalString(money.toMinor(claimedTotals?.total ?? '0'));
+    const configuredCurrency = await this.#affiliateRewardCurrency();
+    const displayCurrency =
+      rows.find((r) => r.cointype)?.cointype?.toUpperCase() || configuredCurrency;
 
     return {
       total,
-      currency: REWARD_CURRENCY,
-      rows: rows.map((r) => this.#shapeUnlocked(r)),
+      claimedTotal,
+      currency: displayCurrency,
+      rows: rows.map((r) => this.#shapeUnlocked(r, configuredCurrency)),
     };
   }
 
@@ -223,13 +389,15 @@ class AffiliateService {
     if (reward.claimed) throw errors.ALREADY_CLAIMED({ rewardId });
 
     const amount = money.toDecimalString(money.toMinor(reward.amount ?? '0'));
+    const payoutCurrency =
+      String(reward.cointype || '').trim().toUpperCase() || (await this.#affiliateRewardCurrency());
 
     return this.db.transaction(async (transaction) => {
       const paid = await this.#payReward({ userId, reward, amount, transaction });
       if (!paid) throw errors.ALREADY_CLAIMED({ rewardId });
 
-      this.logger?.info({ userId, rewardId, amount }, 'Affiliate reward claimed');
-      return { rewardId, amount, currency: REWARD_CURRENCY, newBalance: paid.newBalance };
+      this.logger?.info({ userId, rewardId, amount, currency: payoutCurrency }, 'Affiliate reward claimed');
+      return { rewardId, amount, currency: payoutCurrency, newBalance: paid.newBalance };
     });
   }
 
@@ -250,6 +418,8 @@ class AffiliateService {
 
     if (!rewards.length) throw errors.NOTHING_TO_CLAIM({ userId });
 
+    const configuredCurrency = await this.#affiliateRewardCurrency();
+
     return this.db.transaction(async (transaction) => {
       const claimed = [];
       let total = '0';
@@ -263,14 +433,16 @@ class AffiliateService {
         // legitimately owed.
         if (!paid) continue;
 
-        claimed.push({ ...this.#shapeUnlocked(reward), amount });
+        claimed.push({ ...this.#shapeUnlocked(reward, configuredCurrency), amount });
         total = money.toDecimalString(money.add(total, amount));
       }
 
       if (!claimed.length) throw errors.NOTHING_TO_CLAIM({ userId });
 
-      this.logger?.info({ userId, count: claimed.length, total }, 'All affiliate rewards claimed');
-      return { total, currency: REWARD_CURRENCY, count: claimed.length, rewards: claimed };
+      const payoutCurrency = claimed[0]?.currency || configuredCurrency;
+
+      this.logger?.info({ userId, count: claimed.length, total, currency: payoutCurrency }, 'All affiliate rewards claimed');
+      return { total, currency: payoutCurrency, count: claimed.length, rewards: claimed };
     });
   }
 
@@ -288,16 +460,14 @@ class AffiliateService {
    * code belonged to the owner, or that the member was not already on a team.
    * A team row could name anyone, including people who had never signed up.
    */
-  async joinTeam({ userId, referralCode }) {
+  async joinTeam({ userId, referralCode, campaign = '' }) {
     const member = await this.#user(userId);
 
-    const owner = await this.models.Users.findOne({
-      where: { referalcode: referralCode },
-      attributes: ['id', 'name', 'referalcode'],
-      raw: true,
-    });
+    const owner = await this.#resolveReferrerOwner(referralCode);
     if (!owner) throw errors.INVALID_REFERRAL_CODE({ referralCode });
     if (Number(owner.id) === Number(userId)) throw errors.CANNOT_REFER_SELF();
+
+    const campaignLabel = String(campaign ?? '').trim().slice(0, 80);
 
     const [row, created] = await this.models.Team.findOrCreate({
       where: { membername: member.name },
@@ -305,6 +475,7 @@ class AffiliateService {
         ownername: owner.name,
         membername: member.name,
         referalCode: owner.referalcode,
+        campaign: campaignLabel,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -379,13 +550,15 @@ class AffiliateService {
         return { unlocked: false, reason: 'This tier has already been unlocked', tier: tier.wager, wager };
       }
 
+      const rewardCoin = await this.#affiliateRewardCurrency();
+
       const created = await this.models.UnlockedRewards.create(
         {
           uid: owner.id,
           ownername: owner.name,
           membername: memberName,
           amount: tier.reward,
-          cointype: REWARD_CURRENCY,
+          cointype: rewardCoin,
           // NOT NULL on this table. Taken from the TEAM row, not the owner's
           // current code: a referrer who regenerates their code must not
           // orphan the rewards already earned under the old one.
@@ -484,6 +657,7 @@ class AffiliateService {
 
     const unlockedTotal = money.toDecimalString(money.toMinor(unlocked[0]?.total ?? '0'));
     const claimedTotal = money.toDecimalString(money.toMinor(claimed[0]?.total ?? '0'));
+    const rewardCoin = await this.#affiliateRewardCurrency();
 
     return {
       teams,
@@ -496,7 +670,7 @@ class AffiliateService {
       // claimed separately and never the difference, which is the number that
       // matters on a balance sheet.
       outstanding: money.toDecimalString(money.subtract(unlockedTotal, claimedTotal)),
-      currency: REWARD_CURRENCY,
+      currency: rewardCoin,
     };
   }
 
@@ -529,22 +703,25 @@ class AffiliateService {
       raw: true,
     });
 
+    const rewardCoin = await this.#affiliateRewardCurrency();
+
     return rows.map((r) => ({
       owner: r.ownername,
       rewards: Number(r.rewards),
       total: money.toDecimalString(money.toMinor(r.total ?? '0')),
-      currency: REWARD_CURRENCY,
+      currency: rewardCoin,
     }));
   }
 
   /** @legacy POST /affiliate/rewards/record — staff only; this creates a payable. */
   async recordReward({ ownerName, memberName, referralCode, amount, coin }) {
+    const defaultCoin = await this.#affiliateRewardCurrency();
     const row = await this.models.Rewards.create({
       ownername: ownerName,
       membername: memberName,
       referalCode: referralCode,
       amount,
-      coin: coin ?? null,
+      coin: coin ?? defaultCoin,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -567,10 +744,13 @@ class AffiliateService {
     );
     if (affected === 0) return null;
 
-    return this.wallet.credit(
+    const payoutCurrency =
+      String(reward.cointype || '').trim().toUpperCase() || (await this.#affiliateRewardCurrency());
+
+    const credited = await this.wallet.credit(
       {
         userId,
-        currency: REWARD_CURRENCY,
+        currency: payoutCurrency,
         amount,
         reason: REASON.BONUS,
         idempotencyKey: `affiliate:${reward.id}`,
@@ -580,6 +760,8 @@ class AffiliateService {
       },
       { sourceService: 'user-service', transaction }
     );
+
+    return { ...credited, payoutCurrency };
   }
 
   /** The highest tier this wager has reached, or null. */
@@ -625,6 +807,82 @@ class AffiliateService {
     return user;
   }
 
+  /**
+   * Match a signup field that may be either `users.referalcode` or `users.name`.
+   * Legacy stored free text in `refree` and operators often share usernames.
+   */
+  async #resolveReferrerOwner(rawInput) {
+    const key = String(rawInput ?? '').trim();
+    if (!key) return null;
+
+    const attrs = ['id', 'name', 'referalcode'];
+
+    const byExactCode = await this.models.Users.findOne({
+      where: { referalcode: key },
+      attributes: attrs,
+      raw: true,
+    });
+    if (byExactCode?.referalcode) return byExactCode;
+
+    const folded = key.toLowerCase();
+    const byFoldedCode = await this.models.Users.findOne({
+      where: where(fn('lower', col('referalcode')), folded),
+      attributes: attrs,
+      raw: true,
+    });
+    if (byFoldedCode?.referalcode) return byFoldedCode;
+
+    const byName = await this.models.Users.findOne({
+      where: where(fn('lower', col('name')), folded),
+      attributes: attrs,
+      raw: true,
+    });
+    if (byName?.referalcode) return byName;
+
+    return null;
+  }
+
+  /** Create missing `team` rows for accounts that named this owner in `refree`. */
+  async #syncOrphanReferralsForOwner(owner) {
+    const code = String(owner.referalcode ?? '').trim();
+    const name = String(owner.name ?? '').trim();
+    if (!code) return;
+
+    const referred = await this.models.Users.findAll({
+      where: {
+        id: { [Op.ne]: owner.id },
+        [Op.or]: [
+          ...(code ? [{ refree: { [Op.iLike]: code } }] : []),
+          ...(name ? [{ refree: { [Op.iLike]: name } }] : []),
+        ],
+      },
+      attributes: ['id', 'name'],
+      raw: true,
+    });
+
+    for (const member of referred) {
+      const existing = await this.models.Team.findOne({
+        where: { membername: member.name },
+        raw: true,
+      });
+      if (existing) continue;
+
+      await this.models.Team.create({
+        ownername: owner.name,
+        membername: member.name,
+        referalCode: code,
+        campaign: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      this.logger?.info(
+        { owner: owner.name, member: member.name, referralCode: code },
+        'Affiliate team row backfilled from refree'
+      );
+    }
+  }
+
   async #usersByName(names) {
     if (!names.length) return new Map();
     const rows = await this.models.Users.findAll({
@@ -635,13 +893,14 @@ class AffiliateService {
     return new Map(rows.map((r) => [r.name, r]));
   }
 
-  #shapeUnlocked(row) {
+  #shapeUnlocked(row, fallbackCurrency = REWARD_CURRENCY) {
+    const code = String(row.cointype || fallbackCurrency || REWARD_CURRENCY).trim().toUpperCase();
     return {
       id: row.id,
       owner: row.ownername,
       member: row.membername,
       amount: money.toDecimalString(money.toMinor(row.amount ?? '0')),
-      currency: row.cointype ?? REWARD_CURRENCY,
+      currency: code || REWARD_CURRENCY,
       tier: row.wager_amount != null ? String(row.wager_amount) : null,
       claimed: Boolean(row.claimed),
     };

@@ -21,7 +21,9 @@ too. **The screens carry no notice about this deployment's configuration** — a
 player should not be reading about `CCPAYMENT_*` in a wallet. That belongs here.
 
 Companion to [FRONTEND-BACKEND-INTEGRATION.md](FRONTEND-BACKEND-INTEGRATION.md),
-which is the map of what *is* wired.
+which is the map of what *is* wired. Re-read §0 / §4 there for the catalogue
+hooks (`useLobbySection`, `useCategory`, home tabs) before treating a casino
+surface as “still dummy”.
 
 ---
 
@@ -42,14 +44,16 @@ Everything else on this page is built.
 
 ## 2. Blocked on configuration
 
-These have code on both sides. They need environment variables, not development.
+These have code on both sides. They need environment variables or seed data, not
+a redesign.
 
 | What | Symptom | Fix |
 | --- | --- | --- |
 | Crypto deposits — networks, addresses | `GET /user/crypto/chains` → `CRYPTO_PROVIDER_DISABLED` | `CCPAYMENT_*` in `backend/.env` |
 | Card / on-ramp purchases | `GET /user/payments/methods/:provider` → `PAYORDER_PROVIDER_DISABLED` | a PSP in `backend/.env` |
-| The casino lobby's live catalogue | `GET /casino/games` → `200 []` | seed `gis_games`, `gis_providers` |
+| Casino lobby / browse live catalogue | `GET /casino/games` → `200 []`; collections empty | `npm run db:seed:demo` — seeder `004-provider-game-catalogue.js` fills **`gisgamesnew`**, `js_games`, providers, and collection tables (`hot_games`, `live_casino`, `popular_slots`, …). Naming only `gis_games` is wrong for what the lobby reads. |
 | Home hero banners | `GET /admin/banners/home` → `404 BANNERS_NOT_FOUND` | seed `banners`, or set them in admin |
+| Game launch | `POST /casino/js-games/v2/launch` needs operator upstream creds | js-games / provider account config (Fun Play stays disabled on purpose) |
 | Sports — everything | service will not boot: `Cannot find module './legacy/oddsGuard'` | restore `services/sports/src/modules/bets/legacy/` (see §2.2 of the integration doc) |
 
 The dev runner stops every service when one child dies, so until that folder is
@@ -57,18 +61,24 @@ restored the platform starts as `node scripts/dev.js user admin casino gateway`
 rather than `npm run dev`. `/health` then reports `degraded` with sports `down`
 and the other three `ok`, which is the honest state.
 
-Until then the wallet's network picker falls back to `src/lib/networks.js` —
-public facts about which chains an asset moves on, which is safe to list because
-it invents no account data. It is **not** a claim about what this operator
-accepts; that is provider configuration.
+Until crypto is configured the wallet's network picker falls back to
+`src/lib/networks.js` — public facts about which chains an asset moves on, which
+is safe to list because it invents no account data. It is **not** a claim about
+what this operator accepts; that is provider configuration.
+
+**After catalogue seed**, home lobby rows mapped in `ROW_COLLECTION`, home tabs
+Slots / Live Casino / Table Games, category browse, and provider pages switch to
+live data automatically (`useResource` + `isLive`). Originals / Shuffle Games /
+Shuffle Picks / Latest Releases stay on capture by design — see integration
+doc §4.2.
 
 ---
 
 ## 3. Missing backend routes
 
-Screens are built. There is nothing to call.
+Screens are built. There is nothing to call (or the only call is history-only).
 
-All four tabs are now the live modal's own layouts, read off
+All four wallet tabs are the live modal's own layouts, read off
 `?modal=wallet&md-tab=…` element by element:
 
 | Tab | Reference layout, reproduced |
@@ -91,32 +101,43 @@ provider notices inside the forms; a player should not be reading about
 | **Header → Chat** | any chat module | none in user, admin, casino or sports |
 | **Header → bet slip panel** | the sportsbook | `services/sports` will not boot |
 
+Fiat deposit, fiat withdraw, and vault **are wired** — they are not on this
+list. See integration doc §4.1 / wallet section.
+
 ---
 
-## 4. Live routes with no screen
+## 4. Live routes with no screen (or no FE call)
 
-The opposite problem: these answer today and nothing in the app asks. Each is
-one page away from being useful.
+The opposite problem: these answer today and nothing in the app asks — or the
+UI is present but still hard-wired to empty / inert.
 
-**Money** — transaction history (`/user/history/*`, nine routes), fiat deposit
-and withdrawal lists, payment orders, vault (`/user/vault/*`, six routes), swap
-(`/user/swap/*`), withdrawal whitelist, bank details management.
+**Still unused by the frontend**
 
-**Account** — profile, preferences, 2FA setup and verification (`/user/2fa/*`),
-KYC submission and status, sessions list and revocation, change email, change
-password.
+| Area | Routes | Notes |
+| --- | --- | --- |
+| **Global game search** | `GET /casino/games/search` | Declared in `endpoints.js`; `SearchButton` has no handler. Category-page search *does* pass `search` into `casino.games` when live. |
+| **Notifications inbox** | `GET /user/notifications`, unread-count, mark-read | Player routes exist on user-service. `NotificationPanel` always renders the empty state and does not call them (comment in the panel is stale). |
+| **Swap** | `/user/swap/*` | No screen |
+| **P2P** | P2P module | No screen (Tip tab needs this shape of transfer) |
+| **Gift cards / spin wheel** | `/user/gift-cards/*`, `/user/spin-wheel/*` | No screens |
+| **Clubs / club broadcasts** | `/user/club-broadcasts/*` | No screens |
+| **Withdrawal whitelist** | whitelist routes | No dedicated UI |
+| **Site blogs → BlogPage** | `GET /admin/blogs` | Three plain-text posts; FE still uses 28 captured HTML articles |
+| **Casino catalogue stats** | `GET /casino/games/stats` | Unused; GameStatsPanel reads bet-history instead |
+| **Legacy GIS / catalogue launch** | `/casino/gis/launch`, `/casino/catalogue/launch` | Player path is `POST /casino/js-games/v2/launch` |
 
-**Rewards** — gift cards, spin wheel, affiliate dashboard and reward claims,
-clubs and club broadcasts. Bonuses, rakeback and VIP progress came off this
-list with `/vip-program`'s signed-in page.
+**Came off this list (now have screens that call the API)**
 
-**Casino** — the caller's own bet history beyond the board's My Bets tab,
-per-game stats. Game favourites and recently-played came off this list with
-`/casino/favourites` and `/casino/recently-played`; the star on every game tile
-writes the first, and the second fills once a tile has a game screen to launch.
+- Wallet fiat deposit / withdraw, vault
+- Transactions (`/transactions/…`)
+- Settings (account, verify/KYC, security/2FA, preferences, sessions)
+- Affiliate dashboard (`/affiliate/overview` etc.) — marketing `/affiliate` stays capture
+- VIP bonus + rakeback claims
+- Favourites + recently-played (tile star + `/favourites`, `/casino/recently-played`)
+- Game detail + launch
 
-The two `Deposit history` / `Withdrawal history` links at the foot of the wallet
-point at the first of these and are inert for exactly that reason.
+The `Deposit history` / `Withdrawal history` links in the wallet still need a
+clear landing on the transactions tabs if they are not already routed there.
 
 ---
 
@@ -127,6 +148,7 @@ has not built.
 
 | Area | State |
 | --- | --- |
+| **Casino home / browse (partial)** | **Hybrid.** Slots, Live, Table (home tabs + category pages), mapped lobby collections, providers, banners: API with capture fallback. **Capture-only by design:** Originals / Shuffle Games, Shuffle Picks, Latest Releases category, Game Shows as a browse slug. See integration §0 / §4.2. |
 | **Coin marks for 15 assets** | The wallet's currency list is this platform's 28 balances; the reference ships a 16px mark for only 13 of them. `ADA BCH MKR NEXO SHIB TUSD USDP` and the fiat `AED BDT MVR NPR PKR` all 404 on shuffle.com — it does not list those assets — and `BJB NC SC` are this platform's own tokens, which have no mark anywhere. They render the star fallback, which is what the reference does with an asset it has no icon for. Drop a file into `public/icons/crypto/` or `public/icons/fiat/` and it is picked up with no code change. |
 | ~~Token-page assets~~ | **Done.** Every asset the token page asks for is in and byte-exact. `/icons/token/shflLottery.svg` (22,867 bytes) came through `WebFetch` in one call — SVG is text, so the fetch tool returns it whole, which is worth trying before the console channel for anything textual. `/images/shfl-staking-background.png` (259,049 bytes, 1713x1038) came from the user by hand: a PNG does not compress, so the gzip-then-hex console channel would have needed roughly 576 round trips. **Binaries have no route in from here** — the shell has no outbound network and the extension refuses downloads — so ask rather than grind. Note the browser caches the 404 for a background image for the life of the document: after dropping one in, reload the page or it stays blank while `getComputedStyle` cheerfully reports the URL. |
 | **The token page's chart series** | `recharts` is installed and the four cards draw real charts, but there is no price history to draw: `TokenGraphs.jsx` generates a deterministic walk that ENDS on the published figure. It is the one place on the site where invented data is plotted as though measured, so every card labels its support text "sample series". Delete `series()` when a feed exists. |
@@ -134,9 +156,13 @@ has not built.
 | **Lottery, Airdrop, Challenges, Promotions, Tournaments, Weekly Race** | Captured HTML and JSON. No module in any service. |
 | **Blog** | `/admin/blogs` has three plain-text posts; the frontend renders 28 captured HTML articles. Different content model. |
 | **OAuth (Google, Line, Telegram)** | Buttons render; no OAuth on the backend. |
-| **Opening a game** | `/casino/catalogue/launch` and `/casino/gis/launch` need aggregator credentials. |
+| **Opening a game** | Player path is `POST /casino/js-games/v2/launch` (wired in GamePage). Still needs operator upstream credentials. Legacy GIS/catalogue launch routes are unused by the FE. |
+| **Global Search** | Button renders; does not call `casino.search`. |
+| **Notifications panel** | Layout complete; does not call `GET /user/notifications`. |
 | **Live support** | Button renders; no support integration. |
 | **Sportsbook** | Nine captured JSON files. Even with sports-service booting, the upstream feed is a cricket-exchange shape unrelated to the captured Shuffle sportsbook — a rewrite, not a wiring job. |
+| **Shuffle Wise** | Client-local / capture; not a backend product module. |
+| **Settings → Ignored users** | Tab exists; no live ignore-list API wired. |
 
 ---
 
@@ -151,8 +177,12 @@ has not built.
 - **No withdrawal fee is shown for fiat.** The reference quotes one; this
   platform has no fee configuration for fiat payouts, so the notice states the
   terms it can stand behind instead of a number it cannot.
-- **Notifications are read once per mount, not pushed.** The reference uses a
-  socket. `packages/socket` exists and the services declare handlers, but no
-  socket client is wired on this side yet.
+- **Notifications are not pushed.** The reference uses a socket.
+  `packages/socket` exists and the services declare handlers, but no socket
+  client is wired on this side yet — and the panel does not even poll the
+  player list route yet (§4).
 - **The activity board polls.** Same reason — the reference pushes over a
   socket; this reads `/casino/bet-history/live` every 5s.
+- **Nav Profile comment is stale.** `NavContent.jsx` still says the four profile
+  links have “no screen yet”; Wallet, Vault, Transactions, and Settings are
+  live. Update the comment when touching that file.

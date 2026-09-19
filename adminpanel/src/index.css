@@ -1,0 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+:root {
+  --color-primary: #886CFF;
+  --color-primary-hover: #9B82FF;
+  --color-primary-light: rgba(136, 108, 255, 0.2);
+
+  --color-bg: #0C0D1D;
+  --color-bg-surface: #0C0D1D;
+  --color-bg-card: #0E1831;
+  --color-bg-card-light: #121E38;
+  --color-bg-card-hover: #162140;
+  --color-bg-contrast: #172244;
+  --color-bg-input: #10182E;
+
+  --color-text: #F9F9F9;
+  --color-text-primary: #F9F9F9;
+  --color-text-secondary: #8384A5;
+  --color-text-muted: #878AA2;
+
+  --color-border: #1E2D55;
+  --color-border-active: #886CFF;
+
+  --color-success: #0ECC68;
+  --color-error: #E01B4F;
+  --color-warning: #FFC23F;
+  --color-info: #A08FFF;
+
+  --color-button-primary: #886CFF;
+  --color-button-secondary: #1A2550;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* Autofill background removal */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-input) inset !important;
+  -webkit-text-fill-color: var(--color-text) !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: var(--color-text);
+}
+
+/* Selection styling */
+::selection {
+  background-color: var(--color-primary-light);
+  color: var(--color-text);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

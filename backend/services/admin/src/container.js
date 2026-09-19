@@ -33,6 +33,16 @@ async function createContainer({ logger: injectedLogger } = {}) {
   const ourInternalKey = resolveInternalKey(config, config.SERVICE_NAME);
 
   const clients = {
+    // Self-client for `withActivity` audit posts (`/internal/admin/audit/activity`).
+    admin: new ServiceClient({
+      name: 'admin-service',
+      baseUrl: config.ADMIN_SERVICE_URL,
+      internalKey: ourInternalKey,
+      callerName: config.SERVICE_NAME,
+      timeoutMs: config.SERVICE_TIMEOUT_MS,
+      retries: config.SERVICE_RETRIES,
+      logger,
+    }),
     user: new ServiceClient({
       name: 'user-service',
       baseUrl: config.USER_SERVICE_URL,

@@ -10,8 +10,22 @@ const transferIn = {
   body: z.object({ coin: currency, amount: moneyAmount, lockPeriod }).strict(),
 };
 
+const rateString = z.string().trim().regex(/^\d+(\.\d{1,4})?$/, 'rate must be a positive decimal');
+
+const earlyFlag = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .optional()
+  .transform((v) => v === true || v === 'true')
+  .default(false);
+
 const transferOut = {
-  body: z.object({ depositId: z.coerce.number().int().positive(), coin: currency }).strict(),
+  body: z
+    .object({
+      depositId: z.coerce.number().int().positive(),
+      coin: currency,
+      early: earlyFlag,
+    })
+    .strict(),
 };
 
 const listing = {
@@ -29,7 +43,8 @@ const upsertRate = {
       label: z.string().trim().min(1).max(100),
       days: z.coerce.number().int().min(1).max(3650),
       // Annual percentage: 7.5 means 7.5%. A string, because it multiplies money.
-      rate: z.string().trim().regex(/^\d+(\.\d{1,4})?$/, 'rate must be a positive decimal'),
+      rate: rateString,
+      earlyPenaltyRate: rateString.optional(),
     })
     .strict(),
 };
@@ -38,9 +53,14 @@ const updateRate = {
   body: z
     .object({
       lockPeriod,
-      rate: z.string().trim().regex(/^\d+(\.\d{1,4})?$/, 'rate must be a positive decimal'),
+      rate: rateString.optional(),
+      earlyPenaltyRate: rateString.optional(),
     })
-    .strict(),
+    .strict()
+    .refine(
+      (body) => body.rate !== undefined || body.earlyPenaltyRate !== undefined,
+      { message: 'Provide rate or earlyPenaltyRate' }
+    ),
 };
 
 const deleteRate = { body: z.object({ lockPeriod }).strict() };

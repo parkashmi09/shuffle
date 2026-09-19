@@ -69,7 +69,18 @@ function WalletButton({ onClick }) {
  * whole lot slides right, which is not what the live header does.
  */
 function SignedInActions() {
-  const { user, balances, currency, setCurrency, displayCurrency, rates, loadingBalances } = useSession();
+  const {
+    user,
+    balances,
+    currency,
+    setCurrency,
+    displayCurrency,
+    rates,
+    loadingBalances,
+    fiatView,
+    hideZeroBalances,
+    hideBalance,
+  } = useSession();
 
   return (
     <>
@@ -78,13 +89,16 @@ function SignedInActions() {
           {/* The Wallet button is a *child* of BalanceSelect, not a sibling —
               the live DOM keeps it inside `BalanceSelect_root`, which is what
               sets the 8px gap and what the popup centres against. See the note
-              in BalanceSelect.jsx. No deposit flow exists yet (§4.3). */}
+              in BalanceSelect.jsx. */}
           <BalanceSelect
             balances={balances}
             currency={currency}
             onCurrencyChange={setCurrency}
             displayCurrency={displayCurrency}
             rates={rates}
+            fiatView={fiatView}
+            hideZeroBalances={hideZeroBalances}
+            hideBalance={hideBalance}
             loading={loadingBalances}
           >
             <WalletButton onClick={() => window.dispatchEvent(new CustomEvent("shuffle:wallet"))} />

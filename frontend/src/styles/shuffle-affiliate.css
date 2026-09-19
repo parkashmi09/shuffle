@@ -168,6 +168,21 @@ section.AffiliateProgram_root {
   width: 50%;
 }
 
+.ReferredUsers_table tbody td,
+.Earnings_table tbody td {
+  padding: var(--spacing-sm5) var(--spacing-md2);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.ReferredUsers_amount .FormattedAmount_root,
+.Earnings_amount .FormattedAmount_root {
+  display: inline-block;
+  padding: var(--spacing-sm2) 0;
+}
+
 @media (min-width: 992px) {
   .ReferredUsers_row {
     display: table-cell;
@@ -342,4 +357,38 @@ section.AffiliateProgram_root {
 
 @media (min-width: 768px) {
   .magic-container.no-side-opened .Earnings_earningsCardContainer { flex-direction: row; }
+}
+
+/* ── Create Campaign modal ─────────────────────────────────────────────── */
+
+div.GlobalModal_createCampaignBody {
+  max-width: 28rem;
+}
+
+.CreateCampaignModal_content {
+  padding-top: var(--spacing-lg2) !important;
+}
+
+.CreateCampaignModal_title {
+  margin: 0 0 var(--spacing-lg3);
+  color: var(--color-white);
+  font-size: var(--text-h2);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.CreateCampaignModal_form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+}
+
+.CreateCampaignModal_readOnlyInput {
+  color: var(--color-gray300);
+  cursor: default;
+}
+
+.CreateCampaignModal_submit {
+  width: 100%;
+  margin-top: var(--spacing-lg2);
 }

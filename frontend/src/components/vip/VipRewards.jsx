@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { bonus as bonusApi, rakeback as rakebackApi } from "../../lib/endpoints";
 import { useApi } from "../../lib/useResource";
@@ -13,7 +13,7 @@ import { levelName } from "./vipTiers";
  *   `GET /user/rakeback`  → `{ amount, currency, claimable, minimum, rate }`
  *   `GET /user/bonus`     → `{ currency, types: { daily, weekly, monthly } }`
  *
- * ── THE REFERENCE HAS SEVEN CARD STATES; THIS PLATFORM CAN TELL THREE ────
+ * ── THE REFERENCE HAS SEVEN CARD STATES; THIS PLATFORM CAN TELL FOUR ─────
  *
  * `claimed / locked / cooldown / expired / claimable / view-only /
  * wager-to-unlock` is what the reference's reward block renders. Here:
@@ -25,10 +25,11 @@ import { levelName } from "./vipTiers";
  *                  computes `claimable` as *both*, which is the fix for a
  *                  legacy bug where the API reported ineligible and the claim
  *                  route paid out anyway; this side does not re-derive it.
- *   WAGER_TO_UNLOCK  eligible, nothing waiting. The reference would show a
- *                  countdown to the next claim — there is no next-claim
- *                  timestamp anywhere in `bonus.service.js`, so the card says
- *                  what it can stand behind rather than a time it cannot.
+ *   COOLDOWN       eligible, nothing waiting, but `nextClaimAt` is in the
+ *                  future — the period award has not rolled yet.
+ *   WAGER_TO_UNLOCK  eligible, nothing waiting, and no future timestamp (or
+ *                  the next award is due now). Falls back when the worker has
+ *                  not yet written an award row.
  *
  * `CLAIMED` is not a resting state here: a claimed award is deleted from the
  * pending set rather than flagged, so the card returns to waiting. It is used
@@ -44,6 +45,7 @@ const STATUS = {
   CLAIMABLE: "claimable",
   CLAIMED: "claimed",
   LOCKED: "locked",
+  COOLDOWN: "cooldown",
   WAGER: "wager",
 };
 
@@ -66,24 +68,34 @@ const BONUS_CARDS = [
 ];
 
 /**
- * `2026-09-30T…` → `Expires in 22 days`. Null once the deadline has passed.
+ * `2026-09-30T…` → `Expires in 22 days` / `Available in 5h`. Null once the
+ * deadline has passed (or the stamp is missing).
  *
  * Rounded, not truncated, in the two coarse buckets: a deadline 4 days and 23
  * hours out is "5 days" to a reader and "4 days" to `Math.floor`, and the
  * floor is the one that reads as wrong. Minutes are floored, because rounding
  * a minute *up* would promise time that has already gone.
  */
-function expiresIn(deadline) {
-  if (!deadline) return null;
-  const ms = new Date(deadline).getTime() - Date.now();
+function timeUntil(iso, { available } = {}) {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - Date.now();
   if (!Number.isFinite(ms) || ms <= 0) return null;
 
+  const prefix = available ? "Available in" : "Expires in";
   const minutes = ms / 60000;
-  if (minutes < 60) return `Expires in ${Math.max(1, Math.floor(minutes))}m`;
+  if (minutes < 60) return `${prefix} ${Math.max(1, Math.floor(minutes))}m`;
   const hours = minutes / 60;
-  if (hours < 24) return `Expires in ${Math.round(hours)}h`;
+  if (hours < 24) return `${prefix} ${Math.round(hours)}h`;
   const days = Math.round(hours / 24);
-  return `Expires in ${days} ${days === 1 ? "day" : "days"}`;
+  return `${prefix} ${days} ${days === 1 ? "day" : "days"}`;
+}
+
+function expiresIn(deadline) {
+  return timeUntil(deadline, { available: false });
+}
+
+function availableIn(nextClaimAt) {
+  return timeUntil(nextClaimAt, { available: true });
 }
 
 /*
@@ -102,6 +114,8 @@ function statusText(status, { expiry, error }) {
     case STATUS.LOCKED:
     case STATUS.WAGER:
       return "Wager to Unlock";
+    case STATUS.COOLDOWN:
+      return expiry ?? "Coming soon";
     default:
       return expiry ?? "Claim now";
   }
@@ -201,6 +215,29 @@ export default function VipRewards({ levels }) {
     }
   }, []);
 
+  /*
+   * `claimed` is only a flash for the click. Once the re-fetch says that
+   * award is gone, drop the local flag so the card returns to cooldown /
+   * wager from live data — otherwise the badge and button stay stuck on
+   * the post-click state until a full page reload.
+   */
+  useEffect(() => {
+    setClaims((c) => {
+      let changed = false;
+      const next = { ...c };
+      for (const [id, state] of Object.entries(next)) {
+        if (state !== "claimed") continue;
+        const stillClaimable =
+          id === "rakeback" ? Boolean(rake?.claimable) : Boolean(bonuses?.types?.[id]?.claimable);
+        if (!stillClaimable) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : c;
+    });
+  }, [rake, bonuses]);
+
   const cards = useMemo(() => {
     const list = [];
 
@@ -218,6 +255,7 @@ export default function VipRewards({ levels }) {
       const entry = bonuses?.types?.[card.type];
       if (!entry) continue;
       const claimed = claims[card.type] === "claimed";
+      const cooldown = availableIn(entry.nextClaimAt);
       list.push({
         id: card.type,
         heading: card.heading,
@@ -227,30 +265,36 @@ export default function VipRewards({ levels }) {
            never been shown. Falls back to the ordinal if the ladder has not
            loaded yet, which is briefly true on a cold page. */
         minVipRank: levelName(levels, entry.minVipLevel) || `VIP ${entry.minVipLevel}`,
-        expiry: expiresIn(entry.award?.deadline),
+        expiry: entry.claimable ? expiresIn(entry.award?.deadline) : cooldown,
         status: claimed
           ? STATUS.CLAIMED
           : !entry.eligible
             ? STATUS.LOCKED
             : entry.claimable
               ? STATUS.CLAIMABLE
-              : STATUS.WAGER,
+              : cooldown
+                ? STATUS.COOLDOWN
+                : STATUS.WAGER,
       });
     }
 
     return list;
   }, [rake, bonuses, claims, levels]);
 
-  /* The badge counts what can be acted on right now, which is what the
-     reference's notification count is. */
-  const claimable = cards.filter((c) => c.status === STATUS.CLAIMABLE).length;
+  /* Live count of enabled Claim buttons — not a fixed label. Hidden at 0 so
+     a purple "0" does not read as a static decoration. */
+  const claimableCount = cards.filter((c) => c.status === STATUS.CLAIMABLE).length;
 
   return (
     <div className="VipOverviewSectionWrapper_root">
       <div className="VipRewardsCarousel_headingWrapper">
         <img src="/icons/small-gift.svg" height="24" width="24" alt="gift" className="VipRewardsCarousel_headingIcon" />
         <span className="VipSectionTitle_root">Your Rewards</span>
-        <div className="VipRewardsCarousel_rewardsBadge">{claimable}</div>
+        {claimableCount > 0 ? (
+          <div className="VipRewardsCarousel_rewardsBadge" aria-label={`${claimableCount} rewards claimable`}>
+            {claimableCount}
+          </div>
+        ) : null}
       </div>
 
       {cards.length ? (

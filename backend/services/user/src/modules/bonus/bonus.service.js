@@ -6,7 +6,6 @@ const { money } = require('@ibitplay/common');
 const errors = require('./bonus.errors');
 const {
   BONUS_TYPES,
-  BONUS_CURRENCY,
   CODE_STATUS,
   GAME_COUNTERS,
   BLANK_GAME_COUNTERS,
@@ -15,6 +14,8 @@ const {
 const { resolveVipLadder } = require('@ibitplay/common');
 const { WalletService } = require('../wallet/wallet.service');
 const { REASON } = require('../wallet/wallet.constants');
+const { VipService } = require('../vip/vip.service');
+const { createRewardCurrencyResolver } = require('./rewardCurrencies');
 
 
 /**
@@ -68,12 +69,20 @@ const BLANK_RECORD = Object.freeze({
  */
 class BonusService {
   constructor(deps) {
-    const { models, db, logger, config } = deps;
+    const { models, db, logger, config, clients } = deps;
     this.models = models;
     this.db = db;
     this.logger = logger;
     this.config = config;
+    this.clients = clients;
     this.wallet = new WalletService(deps);
+    this.vip = new VipService(deps);
+    this.rewardCurrencies = createRewardCurrencyResolver(deps);
+  }
+
+  /** Live payout currency from siteconfig (falls back to BONUS_CURRENCY). */
+  async #bonusCurrency() {
+    return this.rewardCurrencies.bonusCurrency();
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -84,8 +93,18 @@ class BonusService {
    * @legacy GET /Userbonus/api/bonuses
    *
    * What this player has, what they can claim, and why not if they cannot.
+   *
+   * Due daily/weekly/monthly awards are materialised here before the read.
+   * The claim path only pays rows that already exist in `bonus_history`; the
+   * hourly worker creates them in bulk, but a player whose wager was just set
+   * (or who opens VIP before the next tick) would otherwise stay on
+   * "Wager to Unlock" with a disabled Claim button despite being eligible.
+   * `awardPeriodic` is idempotent per period, so calling it for one user on
+   * every overview is cheap and safe.
    */
   async overview({ userId }) {
+    await this.vip.awardPeriodic({ userId });
+
     const [wager, bonuses, claimable] = await Promise.all([
       this.models.Userwager.findOne({ where: { uid: userId }, raw: true }),
       this.models.Userbonus.findOne({ where: { userid: userId }, raw: true }),
@@ -104,6 +123,7 @@ class BonusService {
     const ladder = await resolveVipLadder(this.models, { logger: this.logger });
     const vip = ladder.levelFor(this.#wagerAmount(wager));
     const byType = new Map(claimable.map((c) => [c.bonus_type, c]));
+    const nextClaimAt = await this.vip.nextClaimTimes({ userId, vip });
 
     const types = {};
     for (const [type, spec] of Object.entries(BONUS_TYPES)) {
@@ -126,10 +146,12 @@ class BonusService {
               deadline: pending.claim_deadline,
             }
           : null,
+        /** When the next period award is due — drives the FE cooldown state. */
+        nextClaimAt: nextClaimAt[type] ?? null,
       };
     }
 
-    return { vip, currency: BONUS_CURRENCY, types };
+    return { vip, currency: await this.#bonusCurrency(), types };
   }
 
   /** @legacy GET /Userbonus/api/bonus-history */
@@ -178,18 +200,42 @@ class BonusService {
       throw errors.VIP_LEVEL_TOO_LOW({ required: minVipLevel, current: vip.level, type });
     }
 
-    const award = await this.models.BonusClaim.findOne({
-      where: { userid: userId, bonus_type: type, is_claimed: false, is_unclaimable: false },
-      order: [['created_at', 'DESC']],
-      raw: true,
-    });
+    const findAward = () =>
+      this.models.BonusClaim.findOne({
+        where: {
+          userid: userId,
+          bonus_type: type,
+          is_claimed: false,
+          is_unclaimable: false,
+          claim_deadline: { [Op.gt]: new Date() },
+        },
+        order: [['created_at', 'DESC']],
+        raw: true,
+      });
 
-    if (!award) throw errors.NOT_CLAIMABLE({ type });
-    if (new Date(award.claim_deadline) < new Date()) {
-      throw errors.EXPIRED({ type, deadline: award.claim_deadline });
+    let award = await findAward();
+    if (!award) {
+      // Same materialisation as overview — a direct claim must not depend on
+      // the worker having already written the period row.
+      await this.vip.awardPeriodic({ userId });
+      award = await findAward();
+    }
+
+    if (!award) {
+      // Prefer a precise expired error when the newest row simply timed out.
+      const expired = await this.models.BonusClaim.findOne({
+        where: { userid: userId, bonus_type: type, is_claimed: false, is_unclaimable: false },
+        order: [['created_at', 'DESC']],
+        raw: true,
+      });
+      if (expired && new Date(expired.claim_deadline) < new Date()) {
+        throw errors.EXPIRED({ type, deadline: expired.claim_deadline });
+      }
+      throw errors.NOT_CLAIMABLE({ type });
     }
 
     const amount = money.toDecimalString(money.toMinor(award.bonus_amount ?? '0'));
+    const currency = await this.#bonusCurrency();
 
     return this.db.transaction(async (transaction) => {
       /**
@@ -207,7 +253,7 @@ class BonusService {
       const movement = await this.wallet.credit(
         {
           userId,
-          currency: BONUS_CURRENCY,
+          currency,
           amount,
           reason: REASON.BONUS,
           // Derived from the award row: one award, one payment, whatever
@@ -242,7 +288,7 @@ class BonusService {
 
       this.logger?.info({ userId, type, amount, awardId: award.id, ledgerId: movement.ledgerId }, 'Bonus claimed');
 
-      return { type, amount, currency: BONUS_CURRENCY, newBalance: movement.newBalance };
+      return { type, amount, currency, newBalance: movement.newBalance };
     });
   }
 
@@ -257,6 +303,8 @@ class BonusService {
    * legacy would have done since it read `amount` unconditionally.
    */
   async redeemCode({ userId, code }) {
+    const currency = await this.#bonusCurrency();
+
     return this.db.transaction(async (transaction) => {
       /**
        * Locked for the duration. The legacy version selected the code, checked
@@ -293,7 +341,7 @@ class BonusService {
       const movement = await this.wallet.credit(
         {
           userId,
-          currency: BONUS_CURRENCY,
+          currency,
           amount,
           reason: REASON.BONUS,
           idempotencyKey: `redeem:${row.id}`,
@@ -306,7 +354,7 @@ class BonusService {
 
       this.logger?.info({ userId, code, amount }, 'Redeem code claimed');
 
-      return { code, amount, currency: BONUS_CURRENCY, newBalance: movement.newBalance };
+      return { code, amount, currency, newBalance: movement.newBalance };
     });
   }
 
@@ -539,6 +587,7 @@ class BonusService {
       money.toMinor('0')
     );
     const amount = money.toDecimalString(total);
+    const currency = await this.#bonusCurrency();
 
     const existing = await this.models.Bonusgame.findOne({ where: { userid: userId }, raw: true });
     if (!existing) throw errors.NO_GAME_COUNTERS({ userId });
@@ -564,7 +613,7 @@ class BonusService {
         movement = await this.wallet.credit(
           {
             userId,
-            currency: BONUS_CURRENCY,
+            currency,
             amount,
             reason: REASON.BONUS,
             idempotencyKey,
@@ -608,7 +657,7 @@ class BonusService {
       return {
         ...this.#shapeGameCounters(row),
         granted: amount,
-        currency: BONUS_CURRENCY,
+        currency,
         newBalance: movement?.newBalance ?? null,
       };
     });

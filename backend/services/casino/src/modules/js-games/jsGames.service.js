@@ -95,7 +95,7 @@ class JsGamesService {
     this.v1 = v1;
     this.v2 = v2;
     /* Same service, same models — a plain collaborator, not an HTTP hop. */
-    this.games = new GamesService({ models, db, config, logger });
+    this.games = new GamesService({ models, db, config, logger, clients: this.clients });
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -247,7 +247,11 @@ class JsGamesService {
        * requirement measures.
        */
       if (!outcome.duplicate && bet > 0n) {
-        await this.games.recordActivity({ userId, gameRef: payload.game_uid ?? null, wagered: bet });
+        await this.games.recordActivity({
+          userId,
+          gameRef: payload.game_uid ?? null,
+          wagered: money.toDecimalString(bet),
+        });
       }
 
       return {
@@ -688,7 +692,11 @@ class JsGamesService {
        * whether it won, which is what a wagering requirement measures.
        */
       if (bet > 0n) {
-        await this.games.recordActivity({ userId, gameRef: body.game_uid ?? null, wagered: bet });
+        await this.games.recordActivity({
+          userId,
+          gameRef: body.game_uid ?? null,
+          wagered: money.toDecimalString(bet),
+        });
         await this.#accrueRakeback({ userId, stake: bet, currency: settlement, round });
       }
 
@@ -820,15 +828,12 @@ class JsGamesService {
   }
 
   /**
-   * Accrue rakeback on a stake: `RAKEBACK_RATE` of it, in USD terms.
+   * Accrue rakeback on a stake in USD terms.
    *
-   * ── WHY THE CONVERSION IS A WHITELIST AND NOT A RATE LOOKUP ──────────
-   *
-   * The rate is defined against USD. USDT and USD are USD terms already; INR
-   * is converted through `/internal/user/exchange-rate`. A currency that is
-   * neither accrues NOTHING rather than accruing its face value as though it
-   * were dollars — which is what legacy did, and what would pay a BTC staker
-   * roughly 100,000× what they are owed.
+   * The USD conversion stays here (casino knows the settlement currency). The
+   * VIP rate lives on `users.rakeback` and is applied by user-service when we
+   * post `stakeUsd` — so Instant Rakeback tracks the player's tier instead of
+   * a hardcoded 0.2%.
    *
    * Everything here is best effort. It runs after the settlement is already
    * committed, and every failure is logged and swallowed: rakeback is a
@@ -849,12 +854,11 @@ class JsGamesService {
         }
       }
 
-      const accrual = money.toDecimalString(money.multiply(usd, RAKEBACK_RATE));
-      if (money.isZero(accrual)) return;
+      if (money.isZero(usd)) return;
 
       await this.clients.user.post('/internal/user/rakeback/accrue', {
         userId,
-        amount: accrual,
+        stakeUsd: usd,
         source: 'jsgames-v2',
         ref: round,
       });

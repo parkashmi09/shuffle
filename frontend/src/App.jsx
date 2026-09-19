@@ -9,8 +9,10 @@ import ProviderPage from "./pages/ProviderPage";
 import GamePage from "./pages/GamePage";
 import { FavouritesPage, RecentlyPlayedPage } from "./pages/MyGamesPage";
 import BlogPage from "./pages/BlogPage";
+import BlogArticlePage from "./pages/BlogArticlePage";
 import { AffiliatePage } from "./pages/StaticPage";
 import AffiliateProgramPage from "./pages/AffiliateProgramPage";
+import { usePublicSiteConfig } from "./lib/usePublicSiteConfig";
 import VipPage from "./pages/VipPage";
 import TokenPage from "./pages/TokenPage";
 import SportsPage from "./pages/SportsPage";
@@ -47,7 +49,10 @@ function renderPage(path) {
   const Static = pages[path];
   if (Static) return <Static />;
   if (/^\/(sports\/)?promotions\/[^/]+$/.test(path)) return <PromotionArticlePage path={path} />;
-  if (/^\/blog\/[^/]+$/.test(path)) return <PromotionArticlePage path={path} kind="blog" />;
+  if (/^\/blog\/([^/]+)$/.test(path)) {
+    const slug = path.match(/^\/blog\/([^/]+)$/)[1];
+    return <BlogArticlePage slug={slug} />;
+  }
   // The reference's own tab slugs: `/transactions` is Deposits, the rest carry
   // their id. `key` remounts on a tab change so each starts its own read.
   // `/settings` has no page of its own — the reference lands on Account.
@@ -121,7 +126,9 @@ function ShuffleWise() {
 /** Signed out, the dashboard tabs have nothing to show — the marketing page does. */
 function AffiliateProgram({ tab }) {
   const { signedIn, restoring } = useSession();
+  const { affiliateEnabled } = usePublicSiteConfig();
   if (restoring) return <div className="AffiliateProgram_layoutContainer" />;
+  if (!affiliateEnabled) return <AffiliatePage />;
   return signedIn ? <AffiliateProgramPage tab={tab} /> : <AffiliatePage />;
 }
 

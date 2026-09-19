@@ -3,6 +3,7 @@ import { useSession } from "../../lib/sessionContext";
 import { useApi } from "../../lib/useResource";
 import { preferences as preferencesApi } from "../../lib/endpoints";
 import { FIAT_CODES } from "../../lib/currencies";
+import { PREF_DEFAULTS, readStoredPreferences, writeStoredPreferences } from "../../lib/playerPreferences";
 import WalletSelect from "../wallet/CurrencySelect";
 import Switch from "./Switch";
 
@@ -14,28 +15,18 @@ import Switch from "./Switch";
  * hairline between them from its own `:not(:last-child)` rule, so the rows need
  * no separator markup.
  *
- * ── WHERE THESE LIVE ─────────────────────────────────────────────────────
+ * ── WHAT ACTUALLY WORKS ──────────────────────────────────────────────────
  *
- * Fiat View and its currency are the session's own `displayCurrency`, which the
- * header already reads and which already persists — turning the switch off
- * shows balances in the coin's own amount, which is exactly what the reference
- * describes.
- *
- * Three of the switches have a column: the user service's `preferences` module
- * (`GET/PATCH /user/preferences`, the old `userconfig` table) stores
- * `emailNotifications`, `pushNotifications` and `hideBalance`, so Email
- * marketing, Promotion Notifications and Streamer Mode are saved on the server
- * and follow the player to another browser. `hideBalance` is the nearest column
- * to Streamer Mode — both hide figures that should not be on a stream — and is
- * used as such rather than left unwired.
- *
- * Private Mode, Odds Preference and Hide zero balances have no column and no
- * route. They stay in `localStorage` under one key, which at least makes them
- * survive a reload. They are real settings with a local store, not fake ones —
- * and the moment a field exists, `save` is the only thing that changes.
+ * | Control                    | Store                         | Effect                                      |
+ * |----------------------------|-------------------------------|---------------------------------------------|
+ * | Fiat View + currency       | session / localStorage        | Header & wallet show fiat or coin amounts   |
+ * | Email marketing            | `PATCH /user/preferences`     | `emailNotifications` column                 |
+ * | Promotion Notifications    | `PATCH /user/preferences`     | `pushNotifications` column                  |
+ * | Streamer Mode              | `hideBalance` on server       | Masks balances in header & wallet pickers   |
+ * | Hide zero balances         | localStorage + session        | Filters zero rows in header & wallet lists  |
+ * | Odds Preference            | localStorage only             | Sportsbook is still capture — format unused |
+ * | Private Mode               | localStorage only             | No "hide my stats" column on the backend    |
  */
-
-const STORE_KEY = "shuffle.preferences";
 
 const ODDS = [
   { value: "decimal", label: "Decimal" },
@@ -49,24 +40,6 @@ const SERVER_FIELDS = {
   promotionNotifications: "pushNotifications",
   streamerMode: "hideBalance",
 };
-
-const DEFAULTS = {
-  odds: "decimal",
-  privateMode: false,
-  emailMarketing: true,
-  promotionNotifications: true,
-  streamerMode: false,
-  hideZeroBalances: false,
-};
-
-function read() {
-  try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORE_KEY) || "{}") };
-  } catch {
-    // A locked-down browser throws rather than answering null.
-    return { ...DEFAULTS };
-  }
-}
 
 /** A heading, its description, and the switch that owns them. */
 function SwitchRow({ checked, onChange, heading, description, disabled = false }) {
@@ -82,8 +55,18 @@ function SwitchRow({ checked, onChange, heading, description, disabled = false }
 }
 
 export default function SettingsPreferences() {
-  const { displayCurrency, setDisplayCurrency } = useSession();
-  const [local, setLocal] = useState(read);
+  const {
+    displayCurrency,
+    setDisplayCurrency,
+    fiatView,
+    setFiatView,
+    hideZeroBalances,
+    setHideZeroBalances,
+    hideBalance,
+    setHideBalance,
+  } = useSession();
+
+  const [local, setLocal] = useState(readStoredPreferences);
   // Which server-backed switches this visit has already changed. Until one is
   // touched the server's value is the truth; after, the local one is, because
   // `stored` is the answer from before the write.
@@ -91,37 +74,41 @@ export default function SettingsPreferences() {
   const { data: stored } = useApi("settings:preferences", () => preferencesApi.get().catch(() => null));
 
   const prefs = useMemo(() => {
-    if (!stored) return local;
-    const merged = { ...local };
+    const merged = { ...PREF_DEFAULTS, ...local, fiatView, hideZeroBalances, streamerMode: hideBalance };
+    if (!stored) return merged;
     for (const [key, field] of Object.entries(SERVER_FIELDS)) {
+      if (key === "streamerMode") {
+        if (!touched.includes(key)) merged.streamerMode = Boolean(stored[field]);
+        continue;
+      }
       if (!touched.includes(key)) merged[key] = Boolean(stored[field]);
     }
     return merged;
-  }, [local, stored, touched]);
+  }, [local, stored, touched, fiatView, hideZeroBalances, hideBalance]);
 
-  const save = useCallback((patch) => {
-    // A switch with a column goes to the server; the rest only have the
-    // browser. Both paths update the same object, so the UI does not care.
-    const body = {};
-    for (const [key, field] of Object.entries(SERVER_FIELDS)) {
-      if (key in patch) body[field] = patch[key];
-    }
-    const server = Object.keys(SERVER_FIELDS).filter((key) => key in patch);
-    if (server.length) {
-      setTouched((current) => [...new Set([...current, ...server])]);
-      // Nothing to show if it fails — the next read corrects the switch.
-      preferencesApi.update(body).catch(() => {});
-    }
-    setLocal((current) => {
-      const next = { ...current, ...patch };
-      try {
-        localStorage.setItem(STORE_KEY, JSON.stringify(next));
-      } catch {
-        // Nothing to do — the toggle still works for this session.
+  const save = useCallback(
+    (patch) => {
+      const body = {};
+      for (const [key, field] of Object.entries(SERVER_FIELDS)) {
+        if (key in patch) body[field] = patch[key];
       }
-      return next;
-    });
-  }, []);
+      const server = Object.keys(SERVER_FIELDS).filter((key) => key in patch);
+      if (server.length) {
+        setTouched((current) => [...new Set([...current, ...server])]);
+        preferencesApi.update(body).catch(() => {});
+      }
+
+      if ("streamerMode" in patch) setHideBalance(Boolean(patch.streamerMode));
+      if ("fiatView" in patch) setFiatView(Boolean(patch.fiatView));
+      if ("hideZeroBalances" in patch) setHideZeroBalances(Boolean(patch.hideZeroBalances));
+
+      setLocal((current) => {
+        const next = writeStoredPreferences({ ...current, ...patch });
+        return next;
+      });
+    },
+    [setFiatView, setHideZeroBalances, setHideBalance]
+  );
 
   const fiatOptions = useMemo(
     () => FIAT_CODES.map((code) => ({ value: code, label: code, icon: code })),
@@ -135,14 +122,26 @@ export default function SettingsPreferences() {
         <div className="Preferences_preferenceSwitchList">
           <div className="FiatPreference_fiatPreferenceWrapper">
             <div className="Flex_root Flex_lg1" style={{ alignItems: "center" }}>
-              <Switch checked onChange={() => {}} className="SwitchGroup_switch" />
+              <Switch
+                checked={prefs.fiatView}
+                onChange={(on) => save({ fiatView: on })}
+                className="SwitchGroup_switch"
+              />
               <div className="SwitchGroup_switchLabelDesc" style={{ opacity: 1 }}>
                 <h5 className="Heading_root Heading_h5 SwitchGroup_heading">Fiat View</h5>
                 <p>Balances will be displayed in your selected currency</p>
               </div>
             </div>
-            <div className="FiatPreference_fiatPreferenceSelectWrapper">
-              <WalletSelect options={fiatOptions} value={displayCurrency} onChange={setDisplayCurrency} />
+            <div
+              className="FiatPreference_fiatPreferenceSelectWrapper"
+              style={{ opacity: prefs.fiatView ? 1 : 0.5, pointerEvents: prefs.fiatView ? "auto" : "none" }}
+            >
+              <WalletSelect
+                options={fiatOptions}
+                value={displayCurrency}
+                onChange={setDisplayCurrency}
+                disabled={!prefs.fiatView}
+              />
             </div>
           </div>
 
@@ -194,13 +193,11 @@ export default function SettingsPreferences() {
             <div className="ReferenceContainer_actionContainer" />
           </div>
 
-          {/* Disabled on the live page too — it only has meaning once the wallet
-              list it filters is on screen. */}
           <div className="ReferenceContainer_root">
             <div className="ReferenceContainer_content">
               <SwitchRow
-                disabled
                 checked={prefs.hideZeroBalances}
+                onChange={(on) => save({ hideZeroBalances: on })}
                 heading="Hide zero balances"
                 description="Wallets with zero balance are hidden from view"
               />

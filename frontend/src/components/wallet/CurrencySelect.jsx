@@ -39,8 +39,22 @@ export { CoinIcon };
  *   `ButtonVariants_*` instead, which is what the reference does there.
  * @param {import("react").ReactNode} [trigger]  Replaces the label-and-chevron
  *   contents entirely — for a trigger that is only an icon.
+ * @param {number} [menuMinWidth]  Portalled list width floor (px). Icon triggers
+ *   are narrower than their labels — the notification filter uses this.
  */
-export default function WalletSelect({ label, options, value, onChange, disabled = false, variant = "currency", buttonClass = "Select_button", trigger, placeholder }) {
+export default function WalletSelect({
+  label,
+  options,
+  value,
+  onChange,
+  disabled = false,
+  variant = "currency",
+  buttonClass = "Select_button",
+  trigger,
+  placeholder,
+  menuMinWidth,
+  portalClassName,
+}) {
   const plain = variant === "plain";
   const [open, setOpen] = useState(false);
   const root = useRef(null);
@@ -63,8 +77,12 @@ export default function WalletSelect({ label, options, value, onChange, disabled
    */
   const place = useCallback(() => {
     const b = btn.current?.getBoundingClientRect();
-    if (b) setRect({ top: b.bottom + 4, left: b.left, width: b.width });
-  }, []);
+    if (!b) return;
+    const min = Number(menuMinWidth) > 0 ? Number(menuMinWidth) : 0;
+    const width = min ? Math.max(b.width, min) : b.width;
+    const left = width > b.width ? b.right - width : b.left;
+    setRect({ top: b.bottom + 4, left, width });
+  }, [menuMinWidth]);
 
   useLayoutEffect(() => {
     if (open) place();
@@ -197,7 +215,7 @@ export default function WalletSelect({ label, options, value, onChange, disabled
 
       {open && rect && createPortal(
         <ul
-          className="ActivityBoard_selectPopup WalletSelect_portal"
+          className={cx("ActivityBoard_selectPopup WalletSelect_portal", portalClassName)}
           role="listbox"
           style={{ position: "fixed", top: rect.top, left: rect.left, width: rect.width, margin: 0 }}
         >

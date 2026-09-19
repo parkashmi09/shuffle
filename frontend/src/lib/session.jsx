@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, setAuthLostHandler, tokens } from "./api";
-import { auth as authApi, rates as ratesApi, wallet as walletApi } from "./endpoints";
+import {
+  auth as authApi,
+  affiliate as affiliateApi,
+  preferences as preferencesApi,
+  rates as ratesApi,
+  wallet as walletApi,
+} from "./endpoints";
+import {
+  clearStoredReferral,
+  normalizeReferralInput,
+  readStoredCampaign,
+  readStoredReferral,
+} from "./referralCapture";
 import { primaryBalance } from "./adapters";
+import { readStoredPreferences, writeStoredPreferences } from "./playerPreferences";
 import { SessionContext } from "./sessionContext";
 import { pushLogin, pushLogout } from './onesignal.js';
 
@@ -70,6 +83,19 @@ export function SessionProvider({ children }) {
     () => readStored(DISPLAY_KEY) || DEFAULT_DISPLAY
   );
 
+  /**
+   * Preference-driven display — Settings → Preferences.
+   *
+   * `fiatView` / `hideZeroBalances` are client-only (no `userconfig` column).
+   * `hideBalance` is Streamer Mode, loaded from `GET /user/preferences` once
+   * signed in so another browser that toggled it is honoured here too.
+   */
+  const [fiatView, setFiatViewState] = useState(() => Boolean(readStoredPreferences().fiatView));
+  const [hideZeroBalances, setHideZeroBalancesState] = useState(() =>
+    Boolean(readStoredPreferences().hideZeroBalances)
+  );
+  const [hideBalance, setHideBalance] = useState(false);
+
   /** USD-per-unit for every currency the platform prices. Public, so read once at mount. */
   const [rates, setRates] = useState(null);
 
@@ -89,6 +115,18 @@ export function SessionProvider({ children }) {
     } catch {
       /* private mode — the choice lasts for this page only */
     }
+  }, []);
+
+  const setFiatView = useCallback((on) => {
+    const next = Boolean(on);
+    setFiatViewState(next);
+    writeStoredPreferences({ fiatView: next });
+  }, []);
+
+  const setHideZeroBalances = useCallback((on) => {
+    const next = Boolean(on);
+    setHideZeroBalancesState(next);
+    writeStoredPreferences({ hideZeroBalances: next });
   }, []);
 
   const signOutLocal = useCallback(() => {
@@ -189,6 +227,26 @@ export function SessionProvider({ children }) {
     };
   }, [state.status, state.balances]);
 
+  /** Streamer Mode (`hideBalance`) follows the account, not just this browser. */
+  useEffect(() => {
+    if (state.status !== "authenticated") {
+      setHideBalance(false);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const prefs = await preferencesApi.get();
+        if (!cancelled) setHideBalance(Boolean(prefs?.hideBalance));
+      } catch {
+        /* keep local default — Preferences tab will retry on open */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state.status]);
+
   const login = useCallback(async (identifier, password, extra) => {
     const session = await authApi.login(identifier, password, extra);
     tokens.set(session);
@@ -207,8 +265,21 @@ export function SessionProvider({ children }) {
    */
   const register = useCallback(
     async (body) => {
-      const created = await authApi.register(body);
+      const referredBy = normalizeReferralInput(body.referredBy || readStoredReferral());
+      const referralCampaign = readStoredCampaign();
+      const payload = referredBy
+        ? { ...body, referredBy, ...(referralCampaign ? { referralCampaign } : {}) }
+        : body;
+      const created = await authApi.register(payload);
       await login(body.username, body.password);
+      if (referredBy) {
+        try {
+          await affiliateApi.joinTeam(referredBy, referralCampaign);
+        } catch {
+          // Registration may already have joined the team server-side.
+        }
+        clearStoredReferral();
+      }
       return created;
     },
     [login]
@@ -243,13 +314,36 @@ export function SessionProvider({ children }) {
       setCurrency: chooseCurrency,
       displayCurrency,
       setDisplayCurrency: chooseDisplayCurrency,
+      fiatView,
+      setFiatView,
+      hideZeroBalances,
+      setHideZeroBalances,
+      /** Streamer Mode — sensitive figures render as a mask when true. */
+      hideBalance,
+      setHideBalance,
       rates,
       login,
       register,
       logout,
       refreshBalances: loadBalances,
     };
-  }, [state, preferred, chooseCurrency, displayCurrency, chooseDisplayCurrency, rates, login, register, logout, loadBalances]);
+  }, [
+    state,
+    preferred,
+    chooseCurrency,
+    displayCurrency,
+    chooseDisplayCurrency,
+    fiatView,
+    setFiatView,
+    hideZeroBalances,
+    setHideZeroBalances,
+    hideBalance,
+    rates,
+    login,
+    register,
+    logout,
+    loadBalances,
+  ]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

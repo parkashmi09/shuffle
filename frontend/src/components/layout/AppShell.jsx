@@ -13,6 +13,7 @@ import RedeemCodeModal from "../rewards/RedeemCodeModal";
 import NotificationPanel from "./NotificationPanel";
 import Alerts from "../ui/Alerts";
 import { navIdForPath, navigate, routes, usePath, useSearch } from "../../lib/router";
+import { captureReferralFromSearch } from "../../lib/referralCapture";
 import { SessionProvider } from "../../lib/session";
 import { FavouritesProvider } from "../../lib/favourites";
 import { PoppedGameProvider } from "../../lib/poppedGame";
@@ -53,6 +54,10 @@ function Shell({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const path = usePath();
   const search = useSearch();
+
+  useEffect(() => {
+    captureReferralFromSearch(search);
+  }, [search]);
   const [navState, setNav] = useState(null);
   // Promotion articles that are not pinned in the rail still light up the Promotions group.
   // The sportsbook sections (Upcoming, Bet Live) live on `/sports` behind a query string.
@@ -149,7 +154,7 @@ function Shell({ children }) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const selectNav = (id) => {
+  const selectNav = (id, action, href) => {
     setNav(id);
     setMenuOpen(false);
     // The rail's Profile → Wallet opens the modal rather than navigating; the
@@ -171,7 +176,8 @@ function Shell({ children }) {
       if (window.innerWidth < 1140) setRailExpanded(false);
       return;
     }
-    if (routes[id]) navigate(routes[id]);
+    // Only navigate using routes[id] if NavLink didn't already handle it (e.g., if it was a button without a specific href).
+    if (!href && routes[id]) navigate(routes[id]);
     if (window.innerWidth < 1140) setRailExpanded(false);
   };
 

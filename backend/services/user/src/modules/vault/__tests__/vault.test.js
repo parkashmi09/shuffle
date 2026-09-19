@@ -221,6 +221,8 @@ test('vault', async (t) => {
     assert.equal(data.deposits.length, 2);
     assert.equal(data.deposits[0].locked, true);
     assert.ok(data.deposits[0].daysRemaining > 0);
+    assert.equal(typeof data.deposits[0].earlyPayout, 'string');
+    assert.doesNotThrow(() => JSON.stringify(data));
   });
 
   await t.test('a rate change does not reprice an open deposit', async () => {
@@ -257,5 +259,71 @@ test('vault', async (t) => {
     );
 
     assert.equal(await balanceOf(uid), '1000.00000000');
+  });
+
+  await t.test('daily interest accrues once per calendar day', async () => {
+    const uid = newUid();
+    await seed(uid, '1000');
+
+    const deposit = await vault.transferIn({ userId: uid, coin: 'INR', amount: '365', lockPeriod: 't30' });
+
+    const first = await vault.accrueDailyInterest({ limit: 50 });
+    assert.ok(first.accruedDeposits >= 1);
+
+    const row = await connection.models.VaultPro.findByPk(deposit.depositId, { raw: true });
+    assert.ok(money.gt(row.vaultBalance, '365'));
+
+    const history = await connection.models.VaultInterestHistory.count({
+      where: { deposit_id: deposit.depositId },
+    });
+    assert.equal(history, 1);
+
+    const second = await vault.accrueDailyInterest({ limit: 50 });
+    assert.equal(second.accruedDeposits, 0);
+  });
+
+  await t.test('early withdrawal forfeits interest and applies a principal penalty', async () => {
+    await connection.models.VaultLockRate.update(
+      { early_penalty_rate: '10' },
+      { where: { lock_period: 't30' } }
+    );
+
+    const uid = newUid();
+    await seed(uid, '1000');
+
+    const deposit = await vault.transferIn({ userId: uid, coin: 'INR', amount: '100', lockPeriod: 't30' });
+    await connection.models.VaultPro.update(
+      { vaultBalance: '110' },
+      { where: { id: deposit.depositId } }
+    );
+
+    const out = await vault.transferOut({
+      userId: uid,
+      depositId: deposit.depositId,
+      coin: 'INR',
+      early: true,
+    });
+
+    assert.equal(out.amount, '90.00000000', '100 principal minus 10% penalty');
+    assert.equal(out.forfeitedInterest, '10.00000000');
+    assert.equal(await balanceOf(uid), '990.00000000');
+  });
+
+  await t.test('admin stats and user list match the dashboard shape', async () => {
+    const uid = newUid();
+    await seed(uid, '1000');
+    await vault.transferIn({ userId: uid, coin: 'INR', amount: '50', lockPeriod: 't30' });
+
+    const stats = await vault.stats();
+    assert.ok(typeof stats.totalUsers === 'number');
+    assert.ok(typeof stats.totalBalance === 'number');
+    assert.ok(typeof stats.todayInterest === 'number');
+
+    const { rows } = await vault.listVaultUsers({ limit: 10, offset: 0 });
+    assert.ok(rows.length >= 1);
+    const row = rows.find((r) => r.userid === uid);
+    assert.ok(row);
+    assert.equal(row.name, `vault-${uid}`);
+    assert.ok(typeof row.locked === 'boolean');
   });
 });

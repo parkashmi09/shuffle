@@ -15,6 +15,7 @@ import liveData from "../data/sports-live.json";
 import allSports from "../data/sports-all.json";
 import pageData from "../data/sports-pages.json";
 import { bannerForSport, groupsForSport } from "../lib/sportsData";
+import { useSession } from "../lib/sessionContext";
 import seoHtml from "../data/seo-sports.html?raw";
 
 /**
@@ -34,7 +35,15 @@ const PITCH = "/images/sports/banner/sports-soccer.webp";
 const TOOL_ICONS = { "2up": "/icons/2up.svg", "custom bet": "/icons/custom-bet.svg", play: "/icons/play.svg", stats: "/icons/sports-stats.svg" };
 
 /** Featured / Upcoming / Bet Live / All Sports strip — reference `NavTabs` + `TabViewOutline`. */
-function NavTabs({ active, onChange }) {
+const sportsTabsFor = (signedIn) => [
+  { id: "featured", label: "Featured", href: "/sports?section=featured" },
+  signedIn ? { id: "my-bets", label: "My Bets", href: "/sports?section=my-bets" } : null,
+  { id: "upcoming", label: "Upcoming", href: "/sports?section=upcoming" },
+  { id: "bet-live", label: "Bet Live", href: "/sports?section=bet-live", counter: "316" },
+  { id: "all", label: "All Sports", href: "/sports?section=all" },
+].filter(Boolean);
+
+function NavTabs({ active, onChange, tabs }) {
   return (
     <section className="LayoutContainer_root LayoutContainer_mobile-top-sm4 LayoutContainer_tablet-bottom-sm4 LayoutContainer_column">
       <div className="NavTabs_horizontalTabsWithArrowsWrapper">
@@ -45,7 +54,7 @@ function NavTabs({ active, onChange }) {
         </button>
         <div className="TabViewOutline_root">
           <div className="TabViewOutline_tabOutlineWrapper">
-            {sports.tabs.map((t) => (
+            {tabs.map((t) => (
               <a
                 key={t.id}
                 className={cx("TabViewOutline_tabOutline", active === t.id && "TabViewOutline_tabOutlineActive")}
@@ -1020,24 +1029,30 @@ function AllSportsTab() {
   );
 }
 
-const TABS = { featured: FeaturedTab, upcoming: UpcomingTab, "bet-live": BetLiveTab, all: AllSportsTab };
+function MyBetsTab() {
+  return <ActivityBoard initialTab="my-bets" hideTabs={["latest-bets", "high-roller-bets", "race", "airDropRace"]} />;
+}
+
+const TABS = { featured: FeaturedTab, "my-bets": MyBetsTab, upcoming: UpcomingTab, "bet-live": BetLiveTab, all: AllSportsTab };
 
 export default function SportsPage() {
   // The reference keeps the section in the query string, so the rail's Upcoming
   // and Bet Live links and these tabs stay in sync.
+  const { signedIn } = useSession();
   const search = useSearch();
   const params = new URLSearchParams(search);
   const section = params.get("section");
-  const tab = TABS[section] ? section : "featured";
+  const tabs = sportsTabsFor(signedIn);
+  const tab = TABS[section] && (section !== "my-bets" || signedIn) ? section : "featured";
   const Body = TABS[tab];
   return (
     <div>
       <HeroBanners banners={staticData.banners} />
       <div className="SportsHome_root">
-        <NavTabs active={tab} onChange={navigate} />
+        <NavTabs active={tab} onChange={navigate} tabs={tabs} />
         <Body sport={params.get("sport")} />
       </div>
-      <ActivityBoard />
+      {tab !== "my-bets" && <ActivityBoard />}
       <SeoArticle html={seoHtml} />
     </div>
   );

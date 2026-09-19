@@ -3,8 +3,9 @@ import { cx } from "../lib/carousel";
 import { navigate, usePath } from "../lib/router";
 import { useApi } from "../lib/useResource";
 import { useSession } from "../lib/sessionContext";
-import { displayBalance } from "../lib/adapters";
+import { displayFiat, resolveGame } from "../lib/adapters";
 import { betHistory, history, sportsBets, wallet } from "../lib/endpoints";
+import { sections } from "../data/catalog";
 import WalletSelect, { CoinIcon } from "../components/wallet/CurrencySelect";
 import TableSkeleton from "../components/ui/TableSkeleton";
 
@@ -56,6 +57,8 @@ const PAGE_SIZES = [
   { value: "50", label: "50 Positions" },
 ];
 
+const KNOWN_GAMES = sections.flatMap((s) => s.games || []);
+
 /**
  * The six tables.
  *
@@ -79,7 +82,13 @@ const VIEWS = {
   bets: {
     table: "BetTransactions_table",
     header: "BetTransactions_header",
-    columns: ["Game", "Date", "Amount", "Multiplier", "Bet ID"],
+    columns: [
+      { label: "Game", className: "BetTransactions_data" },
+      { label: "Date", className: "BetTransactions_dateTooltipTrigger" },
+      { label: "Amount", className: "BetTransactions_currency" },
+      "Multiplier",
+      { label: "Bet ID", className: "BetTransactions_row" },
+    ],
     skeleton: ["r", "r", "cr", "cr", "r"],
   },
   "sports-bets": {
@@ -112,12 +121,13 @@ function shortDate(value) {
   return date.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-/** A coin mark and its amount, the pairing every money cell on this page uses. */
+/** A coin mark and its amount in the player's display fiat, as on the reference. */
 function Money({ amount, coin }) {
+  const { displayCurrency, rates } = useSession();
   return (
     <span className="IconValue_root FormattedAmount_root">
       <CoinIcon code={coin} />
-      {displayBalance(amount ?? "0", coin)}
+      {displayFiat(amount ?? "0", coin, displayCurrency, rates)}
     </span>
   );
 }
@@ -125,6 +135,131 @@ function Money({ amount, coin }) {
 function shorten(value) {
   const text = String(value ?? "");
   return text.length > 18 ? `${text.slice(0, 8)}…${text.slice(-6)}` : text || "—";
+}
+
+/** `Cf36otA...` — the reference's bet-id shortening. */
+function shortenBetId(value) {
+  const text = String(value ?? "");
+  if (!text) return "—";
+  if (text.length <= 10) return text;
+  return `${text.slice(0, 7)}...`;
+}
+
+function BetGameCell({ title, knownGames }) {
+  const game = resolveGame(title, knownGames);
+  return (
+    <span className="ActivityBaseTable_gameTitle BetTransactions_gameTitle">
+      <img alt={game.name} className="nimg-contain" height="16" src={game.img} width="16" />
+      <span className="GameTitle_root">{game.name}</span>
+    </span>
+  );
+}
+
+function BetMultiplierCell({ row }) {
+  const mult = betMultiplier(row);
+  const lose = mult < 1;
+  return (
+    <span className="MultiplierCell_root">
+      <img
+        alt=""
+        className={cx(lose && "MultiplierCell_greyOut")}
+        height="16"
+        src={`/icons/${lose ? "multi-decrease" : "multi-increase"}.svg`}
+        width="16"
+      />
+      <span className={cx(lose && "MultiplierCell_greyOut")}>{mult.toFixed(2)}x</span>
+    </span>
+  );
+}
+
+function BetIdCell({ id }) {
+  const [copied, setCopied] = useState(false);
+  const full = String(id ?? "");
+  return (
+    <button
+      type="button"
+      className="BetTransactions_betIdLink"
+      aria-label="Copy bet id"
+      onClick={() => {
+        if (!full) return;
+        navigator.clipboard?.writeText(full).then(
+          () => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          },
+          () => {}
+        );
+      }}
+    >
+      <img alt="" height="16" width="16" src={copied ? "/icons/tick-circle-green.svg" : "/icons/copy.svg"} />
+      <span>{shortenBetId(full)}</span>
+    </button>
+  );
+}
+
+/** In-house rounds carry stake and win on one row; separate BET/WIN legs do not. */
+function betMultiplier(row) {
+  const stake = Number(row.amount) || 0;
+  if (stake <= 0) return 0;
+  const profit = Number(row.profit) || 0;
+  if (row.transaction_type === "ROUND") return (stake + profit) / stake;
+  return 0;
+}
+
+/** Player-facing labels for `credits_ledger.reason` (and a few module-specific codes). */
+const LEDGER_REASON_LABELS = {
+  BET_STAKE: "Casino bet",
+  BET_PAYOUT: "Casino win",
+  BET_REFUND: "Bet refund",
+  BET_ROLLBACK: "Bet rollback",
+  DEPOSIT: "Deposit",
+  WITHDRAWAL: "Withdrawal",
+  WITHDRAWAL_REVERSAL: "Withdrawal reversal",
+  ADMIN_CREDIT: "Admin credit",
+  ADMIN_DEBIT: "Admin debit",
+  TRANSFER_IN: "Transfer in",
+  TRANSFER_OUT: "Transfer out",
+  BONUS: "Bonus",
+  BONUS_REVERSAL: "Bonus reversal",
+  rakeback_claim: "Rakeback",
+  p2p_sell_hold: "P2P sell hold",
+  p2p_sell_refund: "P2P refund",
+  p2p_buy_release: "P2P buy release",
+};
+
+function formatLedgerReasonCode(code) {
+  if (!code) return "—";
+  return String(code)
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/** Prefer operator-written descriptions (vault, transfers), then known reason codes. */
+function ledgerTypeLabel({ reason, description }) {
+  const desc = String(description ?? "").trim();
+  if (desc && desc !== reason) return desc;
+  const key = String(reason ?? "");
+  if (LEDGER_REASON_LABELS[key]) return LEDGER_REASON_LABELS[key];
+  if (LEDGER_REASON_LABELS[key.toUpperCase()]) return LEDGER_REASON_LABELS[key.toUpperCase()];
+  return formatLedgerReasonCode(key);
+}
+
+/** `GET /user/wallet/ledger` returns raw `credits_ledger` columns. */
+function mapLedgerRow(row) {
+  const amount = Number(row.amount) || 0;
+  const reason = row.reason;
+  const description = row.description;
+  return {
+    id: row.id,
+    reason,
+    description,
+    type: ledgerTypeLabel({ reason, description }),
+    createdAt: row.created_at,
+    amount: Math.abs(amount),
+    currency: row.currency,
+    direction: amount >= 0 ? "credit" : "debit",
+  };
 }
 
 /**
@@ -142,7 +277,10 @@ const SOURCES = {
    * currency, because fiat-only rows have no rail to name.
    */
   deposits: {
-    fetch: ({ limit, coin }) => history.deposits({ limit, ...(coin ? { currency: coin } : {}) }),
+    fetch: ({ limit, coin }) =>
+      history
+        .deposits({ limit, ...(coin ? { currency: coin } : {}) })
+        .then((rows) => (Array.isArray(rows) ? rows : [])),
     key: (row) => `${row.method}-${row.id}`,
     cells: (row) => [
       shortDate(row.date),
@@ -153,7 +291,10 @@ const SOURCES = {
     ],
   },
   withdrawals: {
-    fetch: ({ limit, coin }) => history.withdrawals({ limit, ...(coin ? { currency: coin } : {}) }),
+    fetch: ({ limit, coin }) =>
+      history
+        .withdrawals({ limit, ...(coin ? { currency: coin } : {}) })
+        .then((rows) => (Array.isArray(rows) ? rows : [])),
     key: (row) => `${row.method}-${row.id}`,
     cells: (row) => [
       shortDate(row.date),
@@ -165,14 +306,21 @@ const SOURCES = {
     ],
   },
   bets: {
-    fetch: ({ limit, coin }) => betHistory.mine({ limit, ...(coin ? { currency: coin } : {}) }).then((r) => r?.data ?? []),
-    key: (row) => row.betId || row.id,
+    // Player history is `.strict()` on the casino route — `currency` is not a
+    // valid query key and would 422. Filter client-side after the page fetch.
+    fetch: ({ limit, coin }) =>
+      betHistory.mine({ limit, page: 1 }).then((r) => {
+        const rows = r?.data ?? [];
+        if (!coin) return rows;
+        return rows.filter((row) => String(row.currency_code || "").toUpperCase() === coin);
+      }),
+    key: (row) => row.transaction_id || row.round_id || row.id,
     cells: (row) => [
-      row.gameName || row.game || "—",
-      shortDate(row.createdAt),
-      <Money amount={row.betAmount ?? row.amount} coin={row.currency} />,
-      `${Number(row.multiplier ?? 0).toFixed(2)}×`,
-      shorten(row.betId || row.id),
+      <BetGameCell title={row.game_title || row.gameName || row.game} knownGames={KNOWN_GAMES} />,
+      shortDate(row.transaction_timestamp || row.createdAt),
+      <Money amount={row.amount} coin={row.currency_code || row.currency} />,
+      <BetMultiplierCell row={row} />,
+      <BetIdCell id={row.transaction_id || row.round_id || row.betId || row.id} />,
     ],
   },
   "sports-bets": {
@@ -190,10 +338,13 @@ const SOURCES = {
   },
   "tip-rain": null,
   other: {
-    fetch: ({ limit, coin }) => wallet.ledger({ limit, ...(coin ? { currency: coin } : {}) }).then((r) => r?.data ?? []),
+    fetch: ({ limit, coin }) =>
+      wallet
+        .ledger({ limit, ...(coin ? { currency: coin } : {}) })
+        .then((r) => (r?.data ?? []).map(mapLedgerRow)),
     key: (row) => row.id,
     cells: (row) => [
-      row.reason || row.type || "—",
+      row.type || ledgerTypeLabel(row) || "—",
       shortDate(row.createdAt),
       <Money amount={row.amount} coin={row.currency} />,
       <span className={row.direction === "credit" ? "OtherTransactions_success" : undefined}>
@@ -206,7 +357,10 @@ const SOURCES = {
 export default function TransactionsPage() {
   const path = usePath();
   const { signedIn, balances } = useSession();
-  const active = TABS.find((t) => pathFor(t.id) === path)?.id || "deposits";
+  const active =
+    TABS.find((t) => pathFor(t.id) === path)?.id ||
+    (path === "/transactions/deposits" ? "deposits" : null) ||
+    "deposits";
   const view = VIEWS[active];
   const source = SOURCES[active];
 
@@ -237,7 +391,7 @@ export default function TransactionsPage() {
   const rows = data || [];
 
   return (
-    <section className="LayoutContainer_root LayoutContainer_mobile-top-lg1 LayoutContainer_mobile-bottom-lg1 LayoutContainer_tablet-top-lg2 LayoutContainer_tablet-bottom-lg2 LayoutContainer_column">
+    <section className="LayoutContainer_root LayoutContainer_mobile-top-lg1 LayoutContainer_mobile-bottom-lg1 LayoutContainer_tablet-top-lg2 LayoutContainer_tablet-bottom-lg2 LayoutContainer_column Transactions_root">
       <div className="Transactions_flexCell">
         <h2 className="Heading_root Heading_h2 TitlePage_root">Transactions</h2>
         {/* Below the desktop breakpoint the Filter button collapses to this
@@ -340,7 +494,7 @@ export default function TransactionsPage() {
           </thead>
           {loading && <TableSkeleton cells={view.skeleton} />}
           {!loading && rows.length > 0 && (
-            <tbody>
+            <tbody className="TableBody_tbody TableBody_even" data-testid="table-body">
               {rows.map((row) => (
                 <tr key={source.key(row)}>
                   {source.cells(row).map((cell, i) => (

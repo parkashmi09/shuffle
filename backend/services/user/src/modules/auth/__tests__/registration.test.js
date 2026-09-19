@@ -80,6 +80,8 @@ test('registration and password reset', async (t) => {
 
   t.after(async () => {
     for (const id of created) {
+      const user = await models.Users.findOne({ where: { id }, attributes: ['name'], raw: true });
+      if (user?.name) await models.Team.destroy({ where: { membername: user.name } });
       await models.AuthVerificationToken.destroy({ where: { user_id: id } });
       await models.AuthSession.destroy({ where: { user_id: id } });
       await models.Credits.destroy({ where: { uid: id } });
@@ -100,6 +102,25 @@ test('registration and password reset', async (t) => {
 
     const credits = await models.Credits.findOne({ where: { uid: account.id }, raw: true });
     assert.ok(credits, 'the wallet row exists');
+  });
+
+  await t.test('a valid referral code on signup joins the referrer team', async () => {
+    const owner = await signUp('own');
+    const ownerRow = await models.Users.findOne({ where: { id: owner.id }, raw: true });
+    const member = await signUp('mem', { referredBy: ownerRow.referalcode });
+    const team = await models.Team.findOne({ where: { membername: member.name }, raw: true });
+    assert.ok(team, 'team row exists');
+    assert.equal(team.referalCode, ownerRow.referalcode);
+    assert.equal(team.ownername, ownerRow.name);
+  });
+
+  await t.test('signup accepts a referrer username as well as their referral code', async () => {
+    const owner = await signUp('own2');
+    const ownerRow = await models.Users.findOne({ where: { id: owner.id }, raw: true });
+    const member = await signUp('mem2', { referredBy: ownerRow.name });
+    const team = await models.Team.findOne({ where: { membername: member.name }, raw: true });
+    assert.ok(team, 'team row exists');
+    assert.equal(team.referalCode, ownerRow.referalcode);
   });
 
   await t.test('THE REPLY CONTAINS NO PASSWORD', async () => {

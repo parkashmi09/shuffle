@@ -1,33 +1,15 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { cx } from "../../lib/carousel";
+import { ApiError } from "../../lib/api";
+import { notifications as notificationsApi } from "../../lib/endpoints";
+import { useSession } from "../../lib/sessionContext";
+import { useApi } from "../../lib/useResource";
 import WalletSelect from "../wallet/CurrencySelect";
 
 /**
- * The notification rail — reference `CasinoAside` + `RightSidebar` +
- * `NotificationsSidebarHeader`, opened from the account menu's Notifications
- * row.
- *
- * ── HOW IT MOVES ─────────────────────────────────────────────────────────
- *
- * It is not an overlay. The reference keeps the `<aside>` in the layout at all
- * times as a flex sibling of the page column, parked off-canvas with
- * `margin-right: -22.5rem`; opening it sets that margin to zero and the
- * transition on `margin-right` (0.25s, `cubic-bezier(0.16, 1, 0.3, 1)`) slides
- * it in while the page column narrows to meet it. That is why the content
- * reflows instead of being covered, and why `magic-container` has to switch to
- * `right-side-opened-only` / `both-side-opened` at the same moment — every
- * rail-aware breakpoint on the site keys off that class.
- *
- * Rendering it always is what makes the close animate too: a panel mounted only
- * while open has nothing to transition out of.
- *
- * ── WHAT IT SHOWS ────────────────────────────────────────────────────────
- *
- * The empty state, always, for now. `modules/notifications` is scoped `staff`
- * and `internal` only (`backend/docs/API-ROUTES.md` §`notifications`) — there
- * is no player-facing list route to read, and the live panel shows the same
- * empty state on an account with nothing waiting. `notifications` is left in
- * `endpoints.js` pointing at the routes a player scope would expose; the moment
- * one exists, this reads it.
+ * The notification rail — opened from the account menu's Notifications row.
+ * Reads `GET /user/notifications` and mark-read routes on user-service.
  */
 
 const FILTERS = [
@@ -36,7 +18,99 @@ const FILTERS = [
   { value: "TRANSACTIONAL", label: "Transactions" },
 ];
 
+const PROMOTIONAL_TYPES = new Set(["promotion", "general", "bonus"]);
+const TRANSACTIONAL_TYPES = new Set(["deposit", "withdrawal", "bet"]);
+
+function matchesFilter(row, filter) {
+  const type = String(row?.type ?? "general").toLowerCase();
+  if (filter === "PROMOTIONAL") return PROMOTIONAL_TYPES.has(type);
+  if (filter === "TRANSACTIONAL") return TRANSACTIONAL_TYPES.has(type);
+  return true;
+}
+
+function formatWhen(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function notifyUnreadChanged(unread) {
+  window.dispatchEvent(new CustomEvent("shuffle:notifications-updated", { detail: { unread } }));
+}
+
 export default function NotificationPanel({ open, filter, onFilterChange, onClose }) {
+  const { signedIn } = useSession();
+  const [actionPending, setActionPending] = useState(false);
+  const [actionError, setActionError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const enabled = Boolean(signedIn && open);
+
+  const { data: inbox, loading, error } = useApi(
+    enabled ? `notifications:inbox:${refreshKey}` : "notifications:inbox:off",
+    () => notificationsApi.list({ limit: 50, offset: 0 }),
+    { enabled }
+  );
+
+  const rows = useMemo(() => (Array.isArray(inbox?.data) ? inbox.data : []), [inbox]);
+
+  const filtered = useMemo(() => rows.filter((row) => matchesFilter(row, filter)), [rows, filter]);
+
+  const unreadTotal = useMemo(() => rows.filter((row) => !row.read).length, [rows]);
+
+  const refreshInbox = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    notificationsApi
+      .unreadCount()
+      .then((res) => notifyUnreadChanged(Number(res?.unread ?? 0)))
+      .catch(() => {});
+  }, [signedIn, refreshKey]);
+
+  useEffect(() => {
+    if (signedIn && open) notifyUnreadChanged(unreadTotal);
+  }, [signedIn, open, unreadTotal]);
+
+  const markAllRead = async () => {
+    if (actionPending || unreadTotal === 0) return;
+    setActionError(null);
+    setActionPending(true);
+    try {
+      await notificationsApi.markAllRead();
+      refreshInbox();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : err?.message || "Could not mark notifications read.");
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const markOneRead = async (row) => {
+    if (actionPending || row.read) return;
+    setActionError(null);
+    setActionPending(true);
+    try {
+      await notificationsApi.markRead(row.id);
+      refreshInbox();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : err?.message || "Could not update notification.");
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const loadError = error instanceof ApiError ? error.message : error?.message;
+  const showEmpty = !loading && !loadError && filtered.length === 0;
+
   return (
     <aside
       className={cx(
@@ -51,17 +125,16 @@ export default function NotificationPanel({ open, filter, onFilterChange, onClos
             <div className="Flex_root Flex_wide" style={{ justifyContent: "space-between", alignItems: "center" }}>
               <h3>Notifications</h3>
               <div className="Flex_root Flex_sm5 NotificationsSidebarHeader_buttonContainer">
-                {/* Mark everything read. Disabled with nothing to mark, which is
-                    how the live panel renders it on an empty account. */}
                 <span className="Tooltip_trigger">
                   <button
                     type="button"
-                    disabled
+                    disabled={!signedIn || loading || actionPending || unreadTotal === 0}
                     aria-label="Mark all as read"
+                    onClick={markAllRead}
                     className="ButtonVariants_root ButtonVariants_buttonHeightSmall ButtonVariants_tertiary NotificationsSidebarHeader_iconButton"
                   >
                     <span className="ButtonVariants_buttonContent">
-                      <img alt="notifications" src="/icons/check-circle.svg" />
+                      <img alt="" src="/icons/check-circle.svg" />
                     </span>
                   </button>
                 </span>
@@ -71,19 +144,18 @@ export default function NotificationPanel({ open, filter, onFilterChange, onClos
                     filter !== "ALL" && "NotificationsSidebarHeader_filterActive"
                   )}
                 >
-                  {/* The reference's trigger here is not the `Select_button`
-                      chrome — it is a tertiary icon button holding the filters
-                      mark, so the select passes its own. */}
                   <WalletSelect
                     label="notification-filter"
                     variant="plain"
                     options={FILTERS}
                     value={filter}
                     onChange={onFilterChange}
+                    menuMinWidth={240}
+                    portalClassName="NotificationsSidebar_filterPopup"
                     buttonClass="ButtonVariants_root ButtonVariants_tertiary ButtonVariants_buttonHeightSmall"
                     trigger={
                       <span className="ButtonVariants_buttonContent Select_blockImg">
-                        <img alt="notifications" src="/icons/filters.svg" />
+                        <img alt="" src="/icons/filters.svg" />
                       </span>
                     }
                   />
@@ -109,13 +181,59 @@ export default function NotificationPanel({ open, filter, onFilterChange, onClos
           </div>
 
           <div className="RightSidebar_rightSidebarScrollable">
-            <div className="RightSidebarEmptyState_emptyStateContainer RightSidebarEmptyState_paddingBottom">
-              <img alt="notification empty state icon" src="/icons/notification-gold.svg" />
-              <div className="Flex_root Flex_column Flex_sm3 Flex_center">
-                <h3 className="RightSidebarEmptyState_title">No notifications</h3>
-                <p className="RightSidebarEmptyState_description">There are no notifications to display</p>
+            {loadError && (
+              <p className="NotificationsSidebar_message NotificationsSidebar_messageError">{loadError}</p>
+            )}
+            {actionError && (
+              <p className="NotificationsSidebar_message NotificationsSidebar_messageError">{actionError}</p>
+            )}
+
+            {loading && rows.length === 0 && (
+              <p className="NotificationsSidebar_message">Loading notifications…</p>
+            )}
+
+            {showEmpty && (
+              <div className="RightSidebarEmptyState_emptyStateContainer RightSidebarEmptyState_paddingBottom">
+                <img alt="" src="/icons/notification-gold.svg" />
+                <div className="Flex_root Flex_column Flex_sm3 Flex_center">
+                  <h3 className="RightSidebarEmptyState_title">No notifications</h3>
+                  <p className="RightSidebarEmptyState_description">
+                    {filter === "ALL"
+                      ? "There are no notifications to display"
+                      : "Nothing in this filter yet"}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {filtered.length > 0 && (
+              <ul className="NotificationsSidebar_list" aria-label="Notifications">
+                {filtered.map((row) => (
+                  <li key={row.id}>
+                    <button
+                      type="button"
+                      className={cx(
+                        "NotificationsSidebar_item",
+                        !row.read && "NotificationsSidebar_itemUnread"
+                      )}
+                      disabled={actionPending}
+                      onClick={() => markOneRead(row)}
+                    >
+                      <span className="NotificationsSidebar_itemMain">
+                        <span className="NotificationsSidebar_title">{row.title || "Notification"}</span>
+                        {row.body ? (
+                          <span className="NotificationsSidebar_body">{row.body}</span>
+                        ) : null}
+                      </span>
+                      <span className="NotificationsSidebar_meta">
+                        <span className="NotificationsSidebar_time">{formatWhen(row.createdAt)}</span>
+                        {!row.read ? <span className="NotificationsSidebar_dot" aria-hidden /> : null}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
       </div>

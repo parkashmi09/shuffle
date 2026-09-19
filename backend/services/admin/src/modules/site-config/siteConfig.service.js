@@ -19,6 +19,11 @@ const AFFILIATE_FIELDS = Object.freeze({
   registerBonus: 'registerbonus',
 });
 
+const AFFILIATE_CURRENCY_FIELDS = Object.freeze({
+  registerBonusCurrency: 'register_bonus_currency',
+  affiliateBonusCurrency: 'affiliate_bonus_currency',
+});
+
 /**
  * The boolean columns a browser may read — see `publicSettings()`.
  *
@@ -138,7 +143,11 @@ class SiteConfigService {
    * The three numbers that decide what the referral programme costs.
    */
   async affiliateSettings() {
-    const row = await this.#configRow(['id', ...Object.values(AFFILIATE_FIELDS)]);
+    const row = await this.#configRow([
+      'id',
+      ...Object.values(AFFILIATE_FIELDS),
+      ...Object.values(AFFILIATE_CURRENCY_FIELDS),
+    ]);
 
     // No config row is a real state on a fresh install, and legacy reported
     // zeros for it rather than erroring. Kept, so the screen renders.
@@ -146,6 +155,8 @@ class SiteConfigService {
       affiliateBonus: this.#amount(row?.affiliatebonus),
       commissionPercent: this.#amount(row?.comissionpercent),
       registerBonus: this.#amount(row?.registerbonus),
+      registerBonusCurrency: this.#currencyCode(row?.register_bonus_currency, 'BJB'),
+      affiliateBonusCurrency: this.#currencyCode(row?.affiliate_bonus_currency, 'BJB'),
       configured: Boolean(row),
     };
   }
@@ -166,6 +177,11 @@ class SiteConfigService {
     const patch = { updatedat: new Date() };
     for (const [name, column] of Object.entries(AFFILIATE_FIELDS)) {
       if (input[name] !== undefined) patch[column] = input[name];
+    }
+    for (const [name, column] of Object.entries(AFFILIATE_CURRENCY_FIELDS)) {
+      if (input[name] !== undefined) {
+        patch[column] = this.#currencyCode(input[name], 'BJB');
+      }
     }
 
     await this.models.Siteconfig.update(patch, { where: { id: row.id } });
@@ -223,6 +239,47 @@ class SiteConfigService {
   }
 
   /**
+   * Currencies VIP bonuses and Instant Rakeback credit into.
+   *
+   * Read by user-service on every claim / overview (cached briefly there).
+   * Defaults match the historical compile-time constants so a missing row or
+   * a pre-043 deploy still pays the same wallets.
+   */
+  async rewardCurrencies() {
+    const row = await this.#configRow(['id', 'bonus_currency', 'rakeback_currency']);
+    return {
+      bonusCurrency: this.#currencyCode(row?.bonus_currency, 'BJB'),
+      rakebackCurrency: this.#currencyCode(row?.rakeback_currency, 'USDT'),
+      configured: Boolean(row),
+    };
+  }
+
+  /** Change one or both reward payout currencies. */
+  async updateRewardCurrencies({ bonusCurrency, rakebackCurrency, staffId = null }) {
+    const row = await this.#configRow(['id']);
+    if (!row) throw errors.NOT_CONFIGURED();
+
+    const patch = { updatedat: new Date() };
+    if (bonusCurrency !== undefined) patch.bonus_currency = this.#currencyCode(bonusCurrency, 'BJB');
+    if (rakebackCurrency !== undefined) {
+      patch.rakeback_currency = this.#currencyCode(rakebackCurrency, 'USDT');
+    }
+
+    await this.models.Siteconfig.update(patch, { where: { id: row.id } });
+
+    this.logger?.info(
+      {
+        staffId,
+        configId: row.id,
+        changed: Object.keys(patch).filter((k) => k !== 'updatedat'),
+      },
+      'Reward payout currencies changed'
+    );
+
+    return this.rewardCurrencies();
+  }
+
+  /**
    * The feature flags a browser is allowed to read.
    *
    * ── WHY THIS EXISTS ───────────────────────────────────────────────────
@@ -244,7 +301,12 @@ class SiteConfigService {
    * names a player or moves anything.
    */
   async publicSettings() {
-    const row = await this.#configRow(['id', ...PUBLIC_FLAGS, ...PUBLIC_AMOUNTS]);
+    const row = await this.#configRow([
+      'id',
+      ...PUBLIC_FLAGS,
+      ...PUBLIC_AMOUNTS,
+      ...Object.values(AFFILIATE_CURRENCY_FIELDS),
+    ]);
 
     // Absent config reads as ON, matching `sportsEnabled()`: a missing row is
     // an unconfigured deployment, not an operator switching the site off. The
@@ -257,7 +319,13 @@ class SiteConfigService {
       PUBLIC_AMOUNTS.map((name) => [name, this.#amount(row?.[name])])
     );
 
-    return { ...flags, ...amounts, configured: Boolean(row) };
+    return {
+      ...flags,
+      ...amounts,
+      registerBonusCurrency: this.#currencyCode(row?.register_bonus_currency, 'BJB'),
+      affiliateBonusCurrency: this.#currencyCode(row?.affiliate_bonus_currency, 'BJB'),
+      configured: Boolean(row),
+    };
   }
 
   /**
@@ -548,6 +616,12 @@ class SiteConfigService {
   /** Exact decimals in, exact decimals out — never a float. */
   #amount(value) {
     return money.toDecimalString(money.toMinor(value ?? '0'));
+  }
+
+  /** Wallet currency code, uppercased; blank / null falls back to the default. */
+  #currencyCode(value, fallback) {
+    const code = String(value ?? '').trim().toUpperCase();
+    return code || fallback;
   }
 }
 

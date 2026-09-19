@@ -1,13 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cx } from "../lib/carousel";
 import { navigate } from "../lib/router";
-import data from "../data/promotions.json";
-
-/**
- * Promotions listing — reference `/promotions`: capitalised heading, the
- * All / Casino / Sports tab strip, a featured (side-by-side) tile followed
- * by a three-column tile grid and the numbered pagination.
- */
+import { site } from "../lib/endpoints";
+import { matchesPromotionTab, promotionListQuery, promotionToTile } from "../lib/promotions";
 
 const TABS = [
   { id: "all", label: "All", icon: "/icons/sports-leagues.svg" },
@@ -15,8 +10,6 @@ const TABS = [
   { id: "sports", label: "Sports", icon: "/icons/sports.svg" },
 ];
 const PER_PAGE = 9;
-// The reference paginates 27 pages of promotions; the captured three pages are cycled to fill them.
-const TOTAL_PAGES = 27;
 
 export function PromotionTile({ tile, featured = false, meta }) {
   return (
@@ -43,9 +36,7 @@ export function PromotionTile({ tile, featured = false, meta }) {
   );
 }
 
-/** Numbered pager — reference `Pagination`: a window around the current page, an ellipsis and the last page. */
 export function Pagination({ page, total, onChange, className = "PromotionList_pagination" }) {
-  // Two pages either side of the current one, plus the first and last page with ellipses where there is a gap.
   const lo = Math.max(1, page - 2);
   const hi = Math.min(total, page + 2);
   const items = [];
@@ -91,18 +82,43 @@ export function Pagination({ page, total, onChange, className = "PromotionList_p
   );
 }
 
-const matches = (tile, tab) => tab === "all" || (tab === "sports" ? tile.href.startsWith("/sports/") : !tile.href.startsWith("/sports/"));
-
 export default function PromotionsPage() {
   const [tab, setTab] = useState("all");
   const [page, setPage] = useState(1);
-  const pool = data.tiles.filter((t) => matches(t, tab));
-  const [featured, ...rest] = pool;
-  const pages = Math.max(1, Math.ceil(rest.length / PER_PAGE));
-  const total = tab === "all" ? TOTAL_PAGES : pages;
-  // Page 1 shows the featured tile plus the first grid; later pages cycle through the captured tiles.
-  const start = (((page - 1) % pages) * PER_PAGE) % Math.max(1, rest.length);
-  const list = rest.length ? Array.from({ length: Math.min(PER_PAGE, rest.length) }, (_, i) => rest[(start + i) % rest.length]) : [];
+  const [rows, setRows] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, meta } = await site.promotions(promotionListQuery(tab, page, PER_PAGE));
+        if (cancelled) return;
+        const list = (Array.isArray(data) ? data : []).filter((p) => matchesPromotionTab(promotionToTile(p), tab));
+        setRows(list);
+        setTotalPages(meta?.pagination?.totalPages ?? 1);
+      } catch (e) {
+        if (!cancelled) {
+          setRows([]);
+          setError(e?.message || "Could not load promotions.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, page]);
+
+  const tiles = useMemo(() => rows.map(promotionToTile), [rows]);
+  const featured = page === 1 ? tiles.find((t) => t.featured) || tiles[0] : null;
+  const rest = featured ? tiles.filter((t) => t.href !== featured.href) : tiles;
+  const list = rest.slice(0, PER_PAGE);
 
   const changeTab = (id) => {
     setTab(id);
@@ -142,18 +158,28 @@ export default function PromotionsPage() {
           </div>
         </div>
         <div>
-          {page === 1 && featured && (
+          {loading ? (
+            <p className="BlogLists_notFound">Loading promotions…</p>
+          ) : error ? (
+            <p className="BlogLists_notFound">{error}</p>
+          ) : tiles.length === 0 ? (
+            <p className="BlogLists_notFound">No promotions yet. Publish promotions from the admin panel to see them here.</p>
+          ) : (
             <>
-              <PromotionTile tile={featured} featured />
-              <hr className="PromotionList_linebreak" />
+              {featured && (
+                <>
+                  <PromotionTile tile={featured} featured />
+                  <hr className="PromotionList_linebreak" />
+                </>
+              )}
+              <div className="BlogLists_root">
+                {list.map((t) => (
+                  <PromotionTile key={t.href} tile={t} />
+                ))}
+              </div>
+              <Pagination page={page} total={totalPages} onChange={changePage} />
             </>
           )}
-          <div className="BlogLists_root">
-            {list.map((t, i) => (
-              <PromotionTile key={`${t.href}-${i}`} tile={t} />
-            ))}
-          </div>
-          <Pagination page={page} total={total} onChange={changePage} />
         </div>
       </section>
     </div>
