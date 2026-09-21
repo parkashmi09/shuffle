@@ -181,6 +181,7 @@ export const navItems: NavItem[] = [
         childItems: [
           { label: 'Features', href: '/site-config/features' },
           { label: 'Feature flags', href: '/site-config/flags' },
+          { label: 'Limits and policy', href: '/site-config/limits' },
           { label: 'Affiliate rates', href: '/site-config/affiliate' },
           { label: 'Email (SMTP)', href: '/site-config/email' },
           { label: 'Sports switch', href: '/site-config/sports' }

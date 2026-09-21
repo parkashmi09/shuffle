@@ -1,14 +1,20 @@
 import { AlertTriangleIcon } from 'lucide-react'
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { errorMessage } from '@/lib/api/client'
 
 const ErrorState = ({ error, title = 'Could not load' }: { error: unknown; title?: string }) => (
-  <Alert variant='destructive'>
-    <AlertTriangleIcon />
-    <AlertTitle>{title}</AlertTitle>
-    <AlertDescription>{errorMessage(error)}</AlertDescription>
-  </Alert>
+  <div
+    role='alert'
+    className='border-border bg-card flex w-full items-start gap-3 rounded-lg border px-4 py-3.5 text-left text-sm'
+  >
+    <span className='bg-danger-soft text-danger flex size-7 shrink-0 items-center justify-center rounded-md'>
+      <AlertTriangleIcon className='size-4' />
+    </span>
+    <div className='min-w-0 space-y-0.5'>
+      <p className='text-foreground font-medium'>{title}</p>
+      <p className='text-muted-foreground break-words'>{errorMessage(error)}</p>
+    </div>
+  </div>
 )
 
 export default ErrorState

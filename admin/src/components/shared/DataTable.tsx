@@ -4,7 +4,16 @@
 import type { ReactNode } from 'react'
 
 // Third-party Imports
-import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon, Loader2Icon, SearchIcon } from 'lucide-react'
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+  ChevronUpIcon,
+  Loader2Icon,
+  SearchIcon
+} from 'lucide-react'
 
 // Component Imports
 import ErrorState from '@/components/shared/ErrorState'
@@ -92,9 +101,9 @@ export default function DataTable<T>({
   }
 
   return (
-    <Card className={cn('gap-0 overflow-hidden py-0 shadow-none', className)}>
+    <Card className={cn('ring-border gap-0 overflow-hidden py-0', className)}>
       {showToolbar && (
-        <div className='flex flex-wrap items-center gap-3 border-b p-4'>
+        <div className='border-border flex flex-wrap items-center gap-3 border-b px-4 py-3.5'>
           {onSearchChange && (
             <div className='relative w-full sm:w-72'>
               <SearchIcon className='text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2' />
@@ -116,37 +125,51 @@ export default function DataTable<T>({
           <ErrorState error={error} />
         </div>
       ) : (
-        <div className='overflow-x-auto'>
+        <div className='relative w-full'>
           <Table>
             <TableHeader>
-              <TableRow className={cn(dense ? 'h-10' : 'h-12')}>
-                {columns.map(col => (
-                  <TableHead
-                    key={col.key}
-                    className={cn(
-                      'text-muted-foreground whitespace-nowrap first:pl-4 last:pr-4',
-                      col.align === 'right' && 'text-right',
-                      col.align === 'center' && 'text-center',
-                      col.sortKey && onSortChange && 'cursor-pointer select-none',
-                      col.headerClassName
-                    )}
-                    onClick={() => toggleSort(col)}
-                  >
-                    <span className='inline-flex items-center gap-1'>
-                      {col.header}
-                      {col.sortKey && sort?.key === col.sortKey && <span className='text-xs'>{sort.order === 'asc' ? '▲' : '▼'}</span>}
-                    </span>
-                  </TableHead>
-                ))}
+              <TableRow className={cn('border-border hover:bg-transparent', dense ? 'h-9' : 'h-11')}>
+                {columns.map(col => {
+                  const sortable = Boolean(col.sortKey && onSortChange)
+                  const active = col.sortKey && sort?.key === col.sortKey
+
+                  return (
+                    <TableHead
+                      key={col.key}
+                      className={cn(
+                        'text-muted-foreground bg-card sticky top-0 z-10 px-3 text-xs font-medium tracking-wide whitespace-nowrap uppercase shadow-[inset_0_-1px_0_var(--border)] first:pl-5 last:pr-5',
+                        col.align === 'right' && 'text-right tabular-nums',
+                        col.align === 'center' && 'text-center',
+                        sortable && 'hover:text-foreground cursor-pointer transition-colors select-none',
+                        active && 'text-foreground',
+                        col.headerClassName
+                      )}
+                      aria-sort={active ? (sort?.order === 'asc' ? 'ascending' : 'descending') : undefined}
+                      onClick={() => toggleSort(col)}
+                    >
+                      <span
+                        className={cn('inline-flex items-center gap-1', col.align === 'right' && 'flex-row-reverse')}
+                      >
+                        {col.header}
+                        {active &&
+                          (sort?.order === 'asc' ? (
+                            <ChevronUpIcon className='size-3.5' />
+                          ) : (
+                            <ChevronDownIcon className='size-3.5' />
+                          ))}
+                      </span>
+                    </TableHead>
+                  )
+                })}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && !rows ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={`s${i}`}>
+                  <TableRow key={`s${i}`} className={cn('border-border hover:bg-transparent', dense ? 'h-9' : 'h-13')}>
                     {columns.map(col => (
-                      <TableCell key={col.key} className='first:pl-4 last:pr-4'>
-                        <Skeleton className='h-4 w-full max-w-40' />
+                      <TableCell key={col.key} className='px-3 first:pl-5 last:pr-5'>
+                        <Skeleton className='h-3.5 w-full max-w-40' />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -155,15 +178,19 @@ export default function DataTable<T>({
                 rows.map((row, i) => (
                   <TableRow
                     key={rowKey(row, i)}
-                    className={cn(dense ? 'h-10' : 'h-13', onRowClick && 'hover:bg-muted/50 cursor-pointer')}
+                    className={cn(
+                      'border-border hover:bg-muted/50',
+                      dense ? 'h-9' : 'h-13',
+                      onRowClick && 'cursor-pointer'
+                    )}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                   >
                     {columns.map(col => (
                       <TableCell
                         key={col.key}
                         className={cn(
-                          'first:pl-4 last:pr-4',
-                          col.align === 'right' && 'text-right',
+                          'px-3 first:pl-5 last:pr-5',
+                          col.align === 'right' && 'text-right tabular-nums',
                           col.align === 'center' && 'text-center',
                           col.className
                         )}
@@ -174,8 +201,11 @@ export default function DataTable<T>({
                   </TableRow>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className='text-muted-foreground h-24 text-center'>
+                <TableRow className='hover:bg-transparent'>
+                  <TableCell
+                    colSpan={columns.length}
+                    className='text-muted-foreground h-28 px-5 text-center text-sm font-normal'
+                  >
                     {emptyMessage}
                   </TableCell>
                 </TableRow>
@@ -186,8 +216,8 @@ export default function DataTable<T>({
       )}
 
       {pagination && (
-        <div className='flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3'>
-          <p className='text-muted-foreground text-sm'>
+        <div className='border-border flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3'>
+          <p className='text-muted-foreground text-sm tabular-nums'>
             {total === 0 ? 'No entries' : `Showing ${from}–${to} of ${total}`}
           </p>
           <div className='flex items-center gap-2'>
@@ -205,19 +235,43 @@ export default function DataTable<T>({
                 </SelectContent>
               </Select>
             )}
-            <Button variant='outline' size='icon-sm' disabled={page <= 1} onClick={() => onPageChange?.(1)} aria-label='First page'>
+            <Button
+              variant='outline'
+              size='icon-sm'
+              disabled={page <= 1}
+              onClick={() => onPageChange?.(1)}
+              aria-label='First page'
+            >
               <ChevronsLeftIcon />
             </Button>
-            <Button variant='outline' size='icon-sm' disabled={page <= 1} onClick={() => onPageChange?.(page - 1)} aria-label='Previous page'>
+            <Button
+              variant='outline'
+              size='icon-sm'
+              disabled={page <= 1}
+              onClick={() => onPageChange?.(page - 1)}
+              aria-label='Previous page'
+            >
               <ChevronLeftIcon />
             </Button>
-            <span className='px-2 text-sm tabular-nums'>
-              {page} / {totalPages}
+            <span className='text-muted-foreground px-2 text-sm tabular-nums'>
+              <span className='text-foreground font-medium'>{page}</span> / {totalPages}
             </span>
-            <Button variant='outline' size='icon-sm' disabled={page >= totalPages} onClick={() => onPageChange?.(page + 1)} aria-label='Next page'>
+            <Button
+              variant='outline'
+              size='icon-sm'
+              disabled={page >= totalPages}
+              onClick={() => onPageChange?.(page + 1)}
+              aria-label='Next page'
+            >
               <ChevronRightIcon />
             </Button>
-            <Button variant='outline' size='icon-sm' disabled={page >= totalPages} onClick={() => onPageChange?.(totalPages)} aria-label='Last page'>
+            <Button
+              variant='outline'
+              size='icon-sm'
+              disabled={page >= totalPages}
+              onClick={() => onPageChange?.(totalPages)}
+              aria-label='Last page'
+            >
               <ChevronsRightIcon />
             </Button>
           </div>

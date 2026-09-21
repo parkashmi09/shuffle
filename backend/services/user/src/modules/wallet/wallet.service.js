@@ -1,6 +1,7 @@
 'use strict';
 
 const { money } = require('@ibitplay/common');
+const { EVENTS, roomForUser, encode } = require('@ibitplay/socket');
 
 const errors = require('./wallet.errors');
 const { WalletRepository } = require('./wallet.repository');
@@ -25,8 +26,26 @@ const { OPERATION, REASON, CREDIT_REASONS, resolveColumn, CURRENCY_COLUMN } = re
  *   4. Every movement carries an idempotency key. A replay returns the original
  *      ledger row; it does not move money a second time.
  */
+/**
+ * The `C.CREDIT` payload: balances keyed by the LOWERCASE coin code, which is
+ * what the client indexes by — see `sockets.js`. Shared by the reply to the
+ * player's ask and by the push after a movement, so the two cannot drift.
+ */
+const creditPayload = (balances) => ({
+  status: true,
+  credit: Object.fromEntries(Object.entries(balances).map(([code, value]) => [code.toLowerCase(), value])),
+});
+
 class WalletService {
-  constructor({ models, db, config, logger, clients }) {
+  constructor(deps) {
+    const { models, db, config, logger, clients } = deps;
+    /**
+     * Held whole, not destructured: the socket server is assigned to the
+     * container (`deps.io`) AFTER the services are built, so the balance push
+     * reads it at the moment it fires. A worker process has no `io` and simply
+     * does not push.
+     */
+    this.deps = deps;
     this.repo = new WalletRepository({ models, db });
     this.db = db;
     this.config = config;
@@ -256,6 +275,13 @@ class WalletService {
         transaction
       );
 
+      // After COMMIT, never before: a push inside the transaction would show a
+      // balance that a rollback then takes back. When the movement rides a
+      // caller's transaction, it fires on that transaction's commit.
+      if (typeof transaction?.afterCommit === 'function') {
+        transaction.afterCommit(() => this.#pushBalances(userId));
+      }
+
       return {
         ledgerId: ledger.id,
         userId,
@@ -268,6 +294,25 @@ class WalletService {
         replayed: false,
       };
     }, { transaction: context.transaction });
+  }
+
+  /**
+   * Push the player's balances to their own sockets — real time, with no timer
+   * on the client. Every open tab of that player is in `user:<id>` and hears
+   * `C.CREDIT`, the event the header wallet already listens on.
+   *
+   * Best effort: the money has moved and is the truth. A failed push is
+   * logged; the next ask reads the row.
+   */
+  async #pushBalances(userId) {
+    const io = this.deps?.io;
+    if (!io) return;
+    try {
+      const balances = await this.getBalances(String(userId));
+      io.to(roomForUser(String(userId))).emit(EVENTS.CREDIT, encode(creditPayload(balances)));
+    } catch (error) {
+      this.logger?.warn({ err: error.message, userId: String(userId) }, 'Could not push the balance to the player');
+    }
   }
 
   /** Ledger + history, written inside the caller's transaction. */
@@ -432,6 +477,13 @@ class WalletService {
         transaction
       );
 
+      // After COMMIT, never before: a push inside the transaction would show a
+      // balance that a rollback then takes back. When the movement rides a
+      // caller's transaction, it fires on that transaction's commit.
+      if (typeof transaction?.afterCommit === 'function') {
+        transaction.afterCommit(() => this.#pushBalances(userId));
+      }
+
       return {
         ledgerId: ledger.id,
         reversedEntry: ledgerId,
@@ -587,4 +639,4 @@ class WalletService {
   }
 }
 
-module.exports = { WalletService, CREDIT_REASONS };
+module.exports = { WalletService, CREDIT_REASONS, creditPayload };

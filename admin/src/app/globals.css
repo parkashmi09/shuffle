@@ -39,6 +39,14 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -52,35 +60,56 @@
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.18 0.01 268);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* ── the one accent ───────────────────────────────────────────────
+     Indigo, and only here: an operator panel is a reading surface, so
+     colour means something — the current page, a primary action, a
+     focus ring. Everything else is ink on paper. */
+  --primary: oklch(0.52 0.19 268);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.975 0.004 268);
+  --secondary-foreground: oklch(0.28 0.03 268);
+  --muted: oklch(0.975 0.003 268);
+  --muted-foreground: oklch(0.52 0.02 268);
+  --accent: oklch(0.96 0.02 268);
+  --accent-foreground: oklch(0.36 0.12 268);
+  --destructive: oklch(0.58 0.21 25);
+  /* Borders are a hair cooler than pure grey, so a table's lines sit
+     under the text rather than competing with it. */
+  --border: oklch(0.93 0.004 268);
+  --input: oklch(0.91 0.005 268);
+  --ring: oklch(0.52 0.19 268);
+
+  /* ── status ───────────────────────────────────────────────────────
+     Money states, named rather than picked per screen: the same green
+     is a credit here, an approved withdrawal there, a passed check in
+     the third. `-soft` is the background a badge sits on. */
+  --success: oklch(0.58 0.15 155);
+  --success-soft: oklch(0.95 0.05 155);
+  --warning: oklch(0.72 0.16 75);
+  --warning-soft: oklch(0.96 0.07 85);
+  --danger: oklch(0.58 0.21 25);
+  --danger-soft: oklch(0.96 0.04 25);
+  --info: oklch(0.6 0.13 240);
+  --info-soft: oklch(0.96 0.03 240);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* The rail is a shade off the page, not a slab of colour: it frames
+     the work without asking to be looked at. */
+  --sidebar: oklch(0.985 0.003 268);
+  --sidebar-foreground: oklch(0.32 0.02 268);
+  --sidebar-primary: oklch(0.52 0.19 268);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.955 0.02 268);
+  --sidebar-accent-foreground: oklch(0.36 0.12 268);
+  --sidebar-border: oklch(0.93 0.004 268);
+  --sidebar-ring: oklch(0.52 0.19 268);
 }
 
 .dark {
@@ -90,15 +119,24 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.7 0.15 268);
+  --primary-foreground: oklch(0.16 0.02 268);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: oklch(0.7 0.19 22);
+
+  --success: oklch(0.72 0.15 155);
+  --success-soft: oklch(0.28 0.06 155);
+  --warning: oklch(0.8 0.15 80);
+  --warning-soft: oklch(0.3 0.07 80);
+  --danger: oklch(0.7 0.19 25);
+  --danger-soft: oklch(0.3 0.08 25);
+  --info: oklch(0.72 0.12 240);
+  --info-soft: oklch(0.28 0.06 240);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);

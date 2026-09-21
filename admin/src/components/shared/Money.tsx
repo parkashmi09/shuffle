@@ -13,12 +13,13 @@ const Money = ({
   className?: string
 }) => {
   const n = value === null || value === undefined ? NaN : Number(value)
-  const tone = signed && Number.isFinite(n) ? (n > 0 ? 'text-green-600 dark:text-green-400' : n < 0 ? 'text-red-600 dark:text-red-400' : '') : ''
+  const tone = signed && Number.isFinite(n) ? (n > 0 ? 'text-success' : n < 0 ? 'text-danger' : '') : ''
 
   return (
-    <span className={cn('font-mono tabular-nums', tone, className)}>
+    <span className={cn('whitespace-nowrap tabular-nums', tone, className)}>
       {signed && Number.isFinite(n) && n > 0 ? '+' : ''}
-      {formatMoney(value, currency ?? undefined)}
+      {formatMoney(value)}
+      {currency && <span className='text-muted-foreground ml-1 text-[0.9em] font-normal'>{currency}</span>}
     </span>
   )
 }

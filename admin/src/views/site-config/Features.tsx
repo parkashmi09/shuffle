@@ -21,9 +21,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useSession } from '@/contexts/SessionContext'
 import { useApi, useApiMutation } from '@/hooks/use-api'
 import { api } from '@/lib/api/client'
-import { CATEGORY_LABELS, CATEGORY_ORDER, type Catalogue, type CatalogueFeature, type SiteFeature, type SiteFeatures } from './featureTypes'
+import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  type Catalogue,
+  type CatalogueFeature,
+  type SiteFeature,
+  type SiteFeatures
+} from './featureTypes'
 
-const Integration = ({ feature, current, canWrite }: { feature: CatalogueFeature; current: SiteFeature; canWrite: boolean }) => {
+const Integration = ({
+  feature,
+  current,
+  canWrite
+}: {
+  feature: CatalogueFeature
+  current: SiteFeature
+  canWrite: boolean
+}) => {
   const [variant, setVariant] = useState(current.variant === 'none' ? feature.variants[0].key : current.variant)
   const spec = feature.variants.find(v => v.key === variant)!
   const [config, setConfig] = useState<Record<string, string>>(current.config ?? {})
@@ -43,8 +58,15 @@ const Integration = ({ feature, current, canWrite }: { feature: CatalogueFeature
     onSuccess: () => setSecrets({})
   })
   const test = useApiMutation({
-    fn: () => api.post<{ accepted: number; failures: string[] }>(`admin/features/${feature.key}/test`, testUser ? { userId: Number(testUser) } : {}),
-    success: r => (r.accepted ? 'Accepted by the provider' : `Sent — nobody subscribed${r.failures.length ? ` (${r.failures.join('; ')})` : ''}`)
+    fn: () =>
+      api.post<{ accepted: number; failures: string[] }>(
+        `admin/features/${feature.key}/test`,
+        testUser ? { userId: Number(testUser) } : {}
+      ),
+    success: r =>
+      r.accepted
+        ? 'Accepted by the provider'
+        : `Sent — nobody subscribed${r.failures.length ? ` (${r.failures.join('; ')})` : ''}`
   })
 
   if (!canWrite) return <Badge variant='outline'>{current.variantLabel}</Badge>
@@ -76,7 +98,15 @@ const Integration = ({ feature, current, canWrite }: { feature: CatalogueFeature
         </SelectContent>
       </Select>
       {spec.configFields.map(f => (
-        <TextField key={f.key} id={`c-${f.key}`} label={f.label} required={f.required} value={config[f.key] ?? ''} onChange={e => setConfig(c => ({ ...c, [f.key]: e.target.value }))} />
+        <TextField
+          key={f.key}
+          id={`c-${f.key}`}
+          label={f.label}
+          required={f.required}
+          placeholder={f.placeholder}
+          value={config[f.key] ?? ''}
+          onChange={e => setConfig(c => ({ ...c, [f.key]: e.target.value }))}
+        />
       ))}
       {spec.secretFields.map(f => (
         <TextField
@@ -93,7 +123,12 @@ const Integration = ({ feature, current, canWrite }: { feature: CatalogueFeature
       ))}
       {current.enabled && current.variant === variant && spec.secretFields.length > 0 && (
         <div className='flex gap-2'>
-          <input className='border-input bg-background h-9 flex-1 rounded-md border px-3 text-sm' placeholder='Player id for a test (blank = segment)' value={testUser} onChange={e => setTestUser(e.target.value.replace(/\D/g, ''))} />
+          <input
+            className='border-input bg-background h-9 flex-1 rounded-md border px-3 text-sm'
+            placeholder='Player id for a test (blank = segment)'
+            value={testUser}
+            onChange={e => setTestUser(e.target.value.replace(/\D/g, ''))}
+          />
           <Button type='button' variant='outline' onClick={() => test.mutate()} disabled={test.isPending}>
             <SendIcon /> Test
           </Button>
@@ -148,9 +183,13 @@ const Features = () => {
         <Card className='mb-4 shadow-none'>
           <CardHeader>
             <CardTitle className='flex items-center gap-2 text-base'>
-              Template {current.data.template ? <Badge>{current.data.template}</Badge> : <Badge variant='outline'>none</Badge>}
+              Template{' '}
+              {current.data.template ? <Badge>{current.data.template}</Badge> : <Badge variant='outline'>none</Badge>}
             </CardTitle>
-            <CardDescription>Sets every feature at once to the variant a clone was built with. Integrations keyed in are left alone.</CardDescription>
+            <CardDescription>
+              Sets every feature at once to the variant that template ships with. Integrations already keyed in are left
+              alone.
+            </CardDescription>
           </CardHeader>
           <CardContent className='flex flex-wrap gap-2'>
             <Select value={template || current.data.template || ''} onValueChange={v => v && setTemplate(v)}>
@@ -182,14 +221,22 @@ const Features = () => {
         {rows.map(({ cat, items }) => (
           <Card key={cat} className='gap-0 py-0 shadow-none'>
             <CardHeader className='border-b py-3'>
-              <CardTitle className='text-sm font-semibold tracking-wide uppercase'>{CATEGORY_LABELS[cat] ?? cat}</CardTitle>
+              <CardTitle className='text-muted-foreground text-xs font-semibold tracking-wider uppercase'>
+                {CATEGORY_LABELS[cat] ?? cat}
+              </CardTitle>
             </CardHeader>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className='pl-4'>Feature</TableHead>
-                  <TableHead>Variant</TableHead>
-                  <TableHead className='pr-4'>On</TableHead>
+                  <TableHead className='text-muted-foreground pl-4 text-xs font-medium tracking-wide uppercase'>
+                    Feature
+                  </TableHead>
+                  <TableHead className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                    Variant
+                  </TableHead>
+                  <TableHead className='text-muted-foreground pr-4 text-xs font-medium tracking-wide uppercase'>
+                    On
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -197,7 +244,9 @@ const Features = () => {
                   <TableRow key={spec.key}>
                     <TableCell className='pl-4'>
                       <span className='block font-medium'>{spec.label}</span>
-                      <span className='text-muted-foreground block max-w-md truncate text-xs'>{spec.variants.find(v => v.key === cur.variant)?.description}</span>
+                      <span className='text-muted-foreground block max-w-md truncate text-xs'>
+                        {spec.variants.find(v => v.key === cur.variant)?.description}
+                      </span>
                     </TableCell>
                     <TableCell>
                       {spec.kind === 'policy' ? (
@@ -212,7 +261,13 @@ const Features = () => {
                       ) : spec.category === 'integration' ? (
                         <Integration feature={spec} current={cur} canWrite={canWrite} />
                       ) : (
-                        <Select value={cur.variant} disabled={!canWrite} onValueChange={v => v && update.mutate({ feature: spec.key, body: { variant: v, enabled: v !== 'none' } })}>
+                        <Select
+                          value={cur.variant}
+                          disabled={!canWrite}
+                          onValueChange={v =>
+                            v && update.mutate({ feature: spec.key, body: { variant: v, enabled: v !== 'none' } })
+                          }
+                        >
                           <SelectTrigger className='w-48'>
                             <SelectValue />
                           </SelectTrigger>
@@ -230,11 +285,11 @@ const Features = () => {
                       {spec.kind === 'policy' ? (
                         <span className='text-muted-foreground text-xs'>always on</span>
                       ) : (
-                      <Switch
-                        checked={cur.enabled}
-                        disabled={!canWrite || cur.variant === 'none'}
-                        onCheckedChange={enabled => update.mutate({ feature: spec.key, body: { enabled } })}
-                      />
+                        <Switch
+                          checked={cur.enabled}
+                          disabled={!canWrite || cur.variant === 'none'}
+                          onCheckedChange={enabled => update.mutate({ feature: spec.key, body: { enabled } })}
+                        />
                       )}
                     </TableCell>
                   </TableRow>

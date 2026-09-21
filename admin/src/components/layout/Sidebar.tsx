@@ -57,8 +57,34 @@ import { useSession } from '@/contexts/SessionContext'
 // Util Imports
 import { cn } from '@/lib/utils'
 
-
 const isSubGroup = (item: MenuSubItem): item is MenuGroupSubItem => 'childItems' in item
+
+// ── Shell styling ────────────────────────────────────────────────────────────
+// One accent (primary) marks the current page and nothing else. Everything at rest
+// is ink on paper: muted icons, muted labels, no fills.
+
+// A top-level row: comfortable height, muted 16px icon, accent only when current.
+const menuRowClass =
+  'relative h-9 rounded-md px-2 [&_svg]:size-4 [&_svg]:text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+
+// The current page: accent wash, accent ink, accent icon, and a 2px left marker.
+const menuRowActiveClass =
+  'data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:[&_svg]:text-primary data-active:before:bg-primary data-active:before:absolute data-active:before:inset-y-1.5 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-r-full'
+
+// A branch that merely *contains* the current page stays flat — only its ink shifts,
+// so exactly one row in the tree ever reads as "here".
+const menuRowBranchClass = 'data-active:bg-transparent! data-active:text-sidebar-accent-foreground'
+
+// Sub-rows sit inside the guide rail, so they take the wash without the marker.
+const subRowClass =
+  'h-8 justify-between rounded-md data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:font-medium'
+
+const subBranchClass =
+  'h-8 justify-between rounded-md data-active:bg-transparent! data-active:text-sidebar-accent-foreground data-active:font-medium'
+
+// Counts are information, not decoration.
+// top-2! re-centres the badge against the taller 36px row.
+const badgeClass = 'bg-muted top-2! max-w-24 truncate rounded-full px-1.5 font-normal tabular-nums'
 
 const isExternalLink = (href: string) => href.startsWith('http://') || href.startsWith('https://')
 
@@ -124,13 +150,13 @@ function getActiveBranchKeys(
 // A single navigable link inside the icon-mode flyout, at either nesting level.
 const FlyoutMenuLink = ({ item, isActive }: { item: MenuLeafSubItem; isActive: boolean }) => (
   <DropdownMenuItem
-    className={cn('justify-between gap-2', isActive && 'bg-primary/10 text-accent-foreground font-medium')}
+    className={cn('justify-between gap-2', isActive && 'bg-accent text-accent-foreground font-medium')}
     render={<Link href={item.href} target={item.target} />}
   >
     <span className='truncate'>{item.label}</span>
     <div className='flex items-center gap-2'>
       {item.badge && (
-        <span className={cn('bg-primary/10 ml-auto rounded-full px-1.5 text-xs font-normal', item.badgeClassName)}>
+        <span className={cn('bg-muted ml-auto rounded-full px-1.5 text-xs font-normal', item.badgeClassName)}>
           {item.badge}
         </span>
       )}
@@ -161,7 +187,7 @@ const FlyoutMenuItem = ({
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<SidebarMenuButton isActive={isChildActive} className='data-active:bg-primary/5!' />}
+          render={<SidebarMenuButton isActive={isChildActive} className={cn(menuRowClass, menuRowActiveClass)} />}
         >
           {Tag && <Tag />}
           <span className='min-w-0 flex-1 truncate'>{item.label}</span>
@@ -173,7 +199,7 @@ const FlyoutMenuItem = ({
             <DropdownMenuLabel className='text-foreground flex items-center gap-2 text-sm'>
               <span className='truncate'>{item.label}</span>
               {item.badge && (
-                <span className={cn('bg-primary/10 rounded-full px-1.5 text-xs font-normal', item.badgeClassName)}>
+                <span className={cn('bg-muted rounded-full px-1.5 text-xs font-normal', item.badgeClassName)}>
                   {item.badge}
                 </span>
               )}
@@ -186,7 +212,7 @@ const FlyoutMenuItem = ({
                     className={cn(
                       subItem.childItems.some(leaf =>
                         isLinkActive(leaf.href, leaf.activePath, pathname, searchParams)
-                      ) && 'bg-primary/10 text-accent-foreground font-medium'
+                      ) && 'bg-accent text-accent-foreground font-medium'
                     )}
                   >
                     <span className='truncate'>{subItem.label}</span>
@@ -234,9 +260,9 @@ const SidebarGroupedMenuItems = ({
   setOpenItem: (key: string, open: boolean) => void
 }) => {
   return (
-    <SidebarGroup>
+    <SidebarGroup className='gap-1 px-2 py-1.5'>
       {groupLabel && (
-        <SidebarGroupLabel className='text-sidebar-foreground/50 tracking-wider uppercase'>
+        <SidebarGroupLabel className='text-sidebar-foreground/55 px-2 text-[11px] font-semibold tracking-[0.09em] uppercase'>
           {groupLabel}
         </SidebarGroupLabel>
       )}
@@ -278,21 +304,14 @@ const SidebarGroupedMenuItems = ({
                       <SidebarMenuButton
                         tooltip={item.label}
                         isActive={isChildActive}
-                        className='data-active:bg-primary/5!'
+                        className={cn(menuRowClass, menuRowBranchClass)}
                       />
                     }
                   >
                     {Tag && <Tag />}
                     <span className={cn('min-w-0 flex-1 truncate', item.badge && 'pr-14')}>{item.label}</span>
                     {item.badge && (
-                      <SidebarMenuBadge
-                        className={cn(
-                          'bg-primary/10 max-w-24 truncate rounded-full px-1.5 font-normal',
-                          item.badgeClassName
-                        )}
-                      >
-                        {item.badge}
-                      </SidebarMenuBadge>
+                      <SidebarMenuBadge className={cn(badgeClass, item.badgeClassName)}>{item.badge}</SidebarMenuBadge>
                     )}
                     <ChevronRightIcon className='ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90' />
                   </CollapsibleTrigger>
@@ -311,7 +330,7 @@ const SidebarGroupedMenuItems = ({
                                 nativeButton={false}
                                 render={
                                   <SidebarMenuSubButton
-                                    className='data-active:bg-primary/10! justify-between'
+                                    className={subBranchClass}
                                     isActive={subItem.childItems.some(leaf =>
                                       isLinkActive(leaf.href, leaf.activePath, pathname, searchParams)
                                     )}
@@ -326,7 +345,7 @@ const SidebarGroupedMenuItems = ({
                                   {subItem.childItems.map(leaf => (
                                     <SidebarMenuSubItem key={leaf.label}>
                                       <SidebarMenuSubButton
-                                        className='data-active:bg-primary/10! justify-between'
+                                        className={subRowClass}
                                         render={<Link href={leaf.href} target={leaf.target} />}
                                         isActive={isLinkActive(leaf.href, leaf.activePath, pathname, searchParams)}
                                       >
@@ -343,7 +362,8 @@ const SidebarGroupedMenuItems = ({
                                         {leaf.badge && (
                                           <SidebarMenuBadge
                                             className={cn(
-                                              'bg-primary/10 max-w-24 truncate rounded-full px-1.5 font-normal',
+                                              badgeClass,
+                                              'top-1.5!',
                                               isExternalLink(leaf.href) && 'right-6',
                                               leaf.badgeClassName
                                             )}
@@ -364,7 +384,7 @@ const SidebarGroupedMenuItems = ({
                         ) : (
                           <SidebarMenuSubItem key={subItem.label}>
                             <SidebarMenuSubButton
-                              className='data-active:bg-primary/10! justify-between'
+                              className={subRowClass}
                               render={<Link href={subItem.href} target={subItem.target} />}
                               isActive={isLinkActive(subItem.href, subItem.activePath, pathname, searchParams)}
                             >
@@ -381,7 +401,8 @@ const SidebarGroupedMenuItems = ({
                               {subItem.badge && (
                                 <SidebarMenuBadge
                                   className={cn(
-                                    'bg-primary/10 max-w-24 truncate rounded-full px-1.5 font-normal',
+                                    badgeClass,
+                                    'top-1.5!',
                                     isExternalLink(subItem.href) && 'right-6',
                                     subItem.badgeClassName
                                   )}
@@ -406,7 +427,7 @@ const SidebarGroupedMenuItems = ({
                   tooltip={item.label}
                   render={<Link href={item.href} target={item.target} />}
                   isActive={pathname === item.href}
-                  className='data-active:bg-primary/10!'
+                  className={cn(menuRowClass, menuRowActiveClass)}
                 >
                   {Tag && <Tag />}
                   <span
@@ -421,11 +442,7 @@ const SidebarGroupedMenuItems = ({
                   </span>
                   {item.badge && (
                     <SidebarMenuBadge
-                      className={cn(
-                        'bg-primary/10 max-w-24 truncate rounded-full px-1.5 font-normal',
-                        isExternalLink(item.href) && 'right-6',
-                        item.badgeClassName
-                      )}
+                      className={cn(badgeClass, isExternalLink(item.href) && 'right-6', item.badgeClassName)}
                     >
                       {item.badge}
                     </SidebarMenuBadge>
@@ -509,24 +526,28 @@ const SidebarLayout = () => {
 
   return (
     <Sidebar collapsible='icon' variant='sidebar'>
-      <SidebarHeader>
+      <SidebarHeader className='border-sidebar-border h-16 justify-center border-b p-2'>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size='lg'
-              className='gap-2.5 bg-transparent! [&>svg]:size-8'
+              className='gap-2.5 bg-transparent! hover:bg-transparent! [&>svg]:size-8'
               render={<Link href={`${themeConfig.homePageUrl}`} />}
             >
-              <LogoSvg className='[&_rect]:fill-sidebar [&_rect:first-child]:fill-primary' />
-              <div className='flex flex-col items-start'>
-                <span className='text-lg font-semibold text-nowrap'>{themeConfig.templateName}</span>
-                <span className='text-xs font-light text-nowrap'>{siteConfig.tagline} · {siteConfig.environment}</span>
+              <LogoSvg />
+              <div className='flex min-w-0 flex-col items-start gap-0.5'>
+                <span className='text-sidebar-foreground text-sm font-medium text-nowrap'>
+                  {themeConfig.templateName}
+                </span>
+                <span className='text-muted-foreground text-xs font-normal text-nowrap'>
+                  {siteConfig.tagline} · {siteConfig.environment}
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className='group-data-[collapsible=icon]:overflow-y-auto'>
+      <SidebarContent className='gap-1 py-2 group-data-[collapsible=icon]:overflow-y-auto'>
         {navGroups.map((navItem, index) => {
           return (
             <SidebarGroupedMenuItems

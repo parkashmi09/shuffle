@@ -47,7 +47,16 @@
  * not exist is worse than no entry, because it reads as coverage.
  */
 const INTERNAL_SURFACE = Object.freeze({
-  'user-service': ['/internal/user/wallet', '/internal/user/exchange-rate', '/internal/user/rakeback', '/internal/user/preferences'],
+  'user-service': [
+    '/internal/user/wallet',
+    '/internal/user/exchange-rate',
+    '/internal/user/rakeback',
+    '/internal/user/preferences',
+    // This site's own: a settled wager moves affiliate commission and VIP
+    // progress, and both columns live here.
+    '/internal/user/affiliate',
+    '/internal/user/vip',
+  ],
   'admin-service': [
     '/internal/admin/audit',
     '/internal/admin/auth',
@@ -143,6 +152,14 @@ const INTERNAL_ACL = Object.freeze({
      * only way to reach it.
      */
     '/internal/user/rakeback',
+    /**
+     * A settled casino wager also moves this site's affiliate commission and
+     * its VIP progress, and both columns are user-service's. Shuffle's own
+     * feature: the hub does not have these routes yet, so the grant is added
+     * here and travels back on the next sync rather than being pushed down.
+     */
+    '/internal/user/affiliate',
+    '/internal/user/vip',
     '/internal/user/wallet',
   ],
 

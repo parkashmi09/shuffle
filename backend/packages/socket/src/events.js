@@ -324,6 +324,18 @@ const PLATFORM_EVENTS = Object.freeze({
    * client replaces its list rather than re-reading it.
    */
   FEATURES_UPDATED: 'featuresUpdated',
+  /**
+   * Load the site's public config over the socket — the flags and the
+   * feature list together, as `{ flags, features }` on the ack.
+   *
+   * PUBLIC audience: a signed-out visitor needs the config as much as a
+   * player does. The handler also emits `siteConfigUpdated` and
+   * `featuresUpdated` to the asking socket, so a client that only listens
+   * for the pushes is filled by the same call. user-service reads the
+   * snapshot from admin-service (`GET /internal/admin/site-config/public`),
+   * the owner of both tables.
+   */
+  GET_SITE_CONFIG: 'getSiteConfig',
 });
 
 /**

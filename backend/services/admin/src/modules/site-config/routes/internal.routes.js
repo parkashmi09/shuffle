@@ -4,6 +4,7 @@ const { Router } = require('express');
 const { response, asyncHandler } = require('@ibitplay/common');
 
 const { SiteConfigService } = require('../siteConfig.service');
+const { FeaturesService } = require('../../features/features.service');
 
 /**
  * How other services read the settings they need.
@@ -19,6 +20,7 @@ const { SiteConfigService } = require('../siteConfig.service');
  */
 module.exports = function internalRoutes(deps) {
   const service = new SiteConfigService(deps);
+  const featuresService = new FeaturesService(deps);
   const router = Router();
 
   router.get(
@@ -46,6 +48,23 @@ module.exports = function internalRoutes(deps) {
   router.get(
     '/rewards',
     asyncHandler(async (_req, res) => response.ok(res, await service.rewardCurrencies()))
+  );
+
+  /**
+   * The public flags and the public feature list, in one read — for
+   * user-service's `getSiteConfig` socket event, which is how a player page
+   * loads its config over the socket instead of two HTTP GETs.
+   *
+   * Both halves are the SAME allow-lists `GET /admin/site-config/public` and
+   * `GET /admin/features/public` serve, so the socket can never carry more
+   * than HTTP does.
+   */
+  router.get(
+    '/public',
+    asyncHandler(async (_req, res) => {
+      const [flags, features] = await Promise.all([service.publicSettings(), featuresService.publicList()]);
+      return response.ok(res, { flags, features });
+    })
   );
 
   return router;

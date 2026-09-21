@@ -5,6 +5,7 @@ import { useState } from 'react'
 
 // Next Imports
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 
 // Third-party Imports
 import { EyeIcon, EyeOffIcon, Loader2Icon } from 'lucide-react'
@@ -34,6 +35,7 @@ type Mode = 'staff' | 'executive'
 
 const Login = () => {
   const router = useRouter()
+  const qc = useQueryClient()
   const params = useSearchParams()
   const [mode, setMode] = useState<Mode>('staff')
   const [identifier, setIdentifier] = useState('')
@@ -80,8 +82,17 @@ const Login = () => {
       })
 
       toast.success(`Signed in${data?.actor?.name ? ` as ${data.actor.name}` : ''}`)
-      router.replace(params.get('next') || '/dashboard')
-      router.refresh()
+
+      /* A FULL PAGE LOAD, not a client-side route change.
+         `/api/auth/me` 401s on the login screen and that failure sits in the
+         query cache; carrying it into the app left the panel believing it had
+         no permissions, so every nav item was filtered out and the sidebar
+         showed "My account" alone until the operator reloaded by hand.
+         Invalidating the query did not clear it either. Signing in happens
+         once a session — starting the app from scratch is the cheap, certain
+         fix. */
+      qc.clear()
+      window.location.assign(params.get('next') || '/dashboard')
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.is('TWO_FACTOR_REQUIRED')) {

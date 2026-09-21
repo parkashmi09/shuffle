@@ -31,9 +31,9 @@ test('vip ladders', async (t) => {
     assert.equal(vipLevelFor('500').name, 'Wood');
   });
 
-  await t.test("addaplay is the reference's 75 bands, named VIP 01 … VIP 75", () => {
-    const a = vipLadderFor('addaplay');
-    assert.equal(a.key, 'addaplay');
+  await t.test("club_ladder is the reference's 75 bands, named VIP 01 … VIP 75", () => {
+    const a = vipLadderFor('club_ladder');
+    assert.equal(a.key, 'club_ladder');
     assert.equal(a.levels.length, 75);
     assert.equal(a.levels[0].name, 'VIP 01');
     assert.equal(a.top.name, 'VIP 75');
@@ -65,14 +65,20 @@ test('vip ladders', async (t) => {
     assert.deepEqual(VIP_LADDERS.addaplay.bonusGates, { daily: 20, weekly: 25, monthly: 30 });
     // 1,000 wagered clears the platform daily gate; on addaplay it takes 29,000.
     assert.ok(PLATFORM_LADDER.levelFor('1000').level >= PLATFORM_LADDER.bonusGates.daily);
-    assert.ok(VIP_LADDERS.addaplay.levelFor('1000').level < VIP_LADDERS.addaplay.bonusGates.daily);
-    assert.ok(VIP_LADDERS.addaplay.levelFor('29000').level >= VIP_LADDERS.addaplay.bonusGates.daily);
+    assert.ok(VIP_LADDERS.club_ladder.levelFor('1000').level < VIP_LADDERS.club_ladder.bonusGates.daily);
+    assert.ok(VIP_LADDERS.club_ladder.levelFor('29000').level >= VIP_LADDERS.club_ladder.bonusGates.daily);
+    // `addaplay` is what the variant was called before 048; rows still holding
+    // it must land on the same ladder, not on the platform one.
+    assert.equal(VIP_LADDERS.addaplay, VIP_LADDERS.club_ladder);
   });
 
   await t.test("resolveVipLadder reads the site's vip variant, and never throws", async () => {
     const withRow = (variant) => ({ SiteFeature: { findByPk: async (pk) => (pk === 'vip' && variant != null ? { variant } : null) } });
-    assert.equal((await resolveVipLadder(withRow('addaplay'))).key, 'addaplay');
-    assert.equal((await resolveVipLadder(withRow('stake'))).key, 'platform');
+    assert.equal((await resolveVipLadder(withRow('club_ladder'))).key, 'club_ladder');
+    // A row written before 048 still selects it.
+    assert.equal((await resolveVipLadder(withRow('addaplay'))).key, 'club_ladder');
+    // A variant that names no ladder of its own reads the platform one.
+    assert.equal((await resolveVipLadder(withRow('club_slider'))).key, 'platform');
     assert.equal((await resolveVipLadder(withRow(null))).key, 'platform');
     // No SiteFeature model on this service: platform.
     assert.equal((await resolveVipLadder({})).key, 'platform');

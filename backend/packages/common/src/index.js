@@ -31,6 +31,15 @@ const { VIP_LEVELS, UNRANKED, vipLevelName, vipLevelFor, PLATFORM_LADDER } = req
 /** Every ladder a site can choose through its `vip` variant, and the resolver that reads the choice. */
 const { VIP_LADDERS, vipLadderFor, resolveVipLadder } = require('./vipLadders');
 /**
+ * The rewards table behind a VIP card — the rakeback rate and the rest.
+ *
+ * Exported WHOLE, as `vipRewards`, because that is how it is asked for:
+ * `const { vipRewards } = require('@ibitplay/common')`. The file was in the
+ * package and this line was not, so user-service could not load
+ * `rakeback.service.js` at all.
+ */
+const vipRewards = require('./vipRewards');
+/**
  * The wagering race's game buckets. Shared for the same reason the VIP ladder
  * is: THREE services read it — casino and sports classify their rows into
  * these names, user-service multiplies each name by an operator's number — and
@@ -81,6 +90,7 @@ module.exports = {
   VIP_LADDERS,
   vipLadderFor,
   resolveVipLadder,
+  vipRewards,
   ...raceBuckets,
   featureCatalogue,
   sitePolicy,

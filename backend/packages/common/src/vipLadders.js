@@ -119,8 +119,10 @@ const ADDAPLAY_BANDS = Object.freeze([
 ]);
 
 const ADDAPLAY_LADDER = makeLadder({
-  key: 'addaplay',
-  label: 'Addaplay ladder — 75 levels, VIP 01 to VIP 75',
+  /* Keyed on the VIP VARIANT that selects it, which is `club_ladder` since the
+     variants stopped being named after the clone they came from. */
+  key: 'club_ladder',
+  label: '75-level ladder — VIP 01 to VIP 75',
   bands: ADDAPLAY_BANDS,
   unranked: { level: 0, name: name(0), card: 'brownz' },
   bonusGates: { daily: 20, weekly: 25, monthly: 30 },
@@ -129,6 +131,8 @@ const ADDAPLAY_LADDER = makeLadder({
 /** Every ladder, by key. */
 const VIP_LADDERS = Object.freeze({
   platform: PLATFORM_LADDER,
+  club_ladder: ADDAPLAY_LADDER,
+  /** Pre-048 rows and any client still sending the old name. */
   addaplay: ADDAPLAY_LADDER,
 });
 

@@ -7,7 +7,7 @@ const errors = require('./features.errors');
 const { SiteConfigService } = require('../site-config/siteConfig.service');
 const { OneSignalProvider } = require('../notifications/providers/onesignal');
 
-const { FEATURES, TEMPLATES, featureByKey, variantOf, defaultVariantOf, isPolicy } = featureCatalogue;
+const { FEATURES, TEMPLATES, featureByKey, variantOf, defaultVariantOf, isPolicy, resolveVariantKey } = featureCatalogue;
 
 /** The row that remembers which template the site was last set from. */
 const TEMPLATE_ROW = '_template';
@@ -76,7 +76,8 @@ class FeaturesService {
       features: FEATURES.map((f) => {
         const row = rows.get(f.key);
         const policy = isPolicy(f.key);
-        const variant = row?.variant ?? defaultVariantOf(f.key);
+        // A row written before migration 048 still holds the old name.
+        const variant = resolveVariantKey(f.key, row?.variant ?? defaultVariantOf(f.key));
         const spec = variantOf(f.key, variant);
         return {
           feature: f.key,
@@ -109,12 +110,13 @@ class FeaturesService {
       const row = rows.get(f.key);
       // A policy is always published — a front end needs to know a cashier is
       // CLOSED as much as which kind it is, so `none` is listed too.
-      if (isPolicy(f.key)) return [{ feature: f.key, kind: 'policy', variant: row?.variant ?? defaultVariantOf(f.key) }];
+      if (isPolicy(f.key)) return [{ feature: f.key, kind: 'policy', variant: resolveVariantKey(f.key, row?.variant ?? defaultVariantOf(f.key)) }];
       if (!row?.enabled || row.variant === 'none') return [];
-      const spec = variantOf(f.key, row.variant);
+      const variant = resolveVariantKey(f.key, row.variant);
+      const spec = variantOf(f.key, variant);
       const publicFields = spec?.publicFields ?? [];
       const config = Object.fromEntries(publicFields.filter((k) => row.config?.[k]).map((k) => [k, row.config[k]]));
-      return [{ feature: f.key, variant: row.variant, ...(publicFields.length ? { config } : {}) }];
+      return [{ feature: f.key, variant, ...(publicFields.length ? { config } : {}) }];
     });
   }
 
@@ -149,7 +151,9 @@ class FeaturesService {
 
     const current = await this.models.SiteFeature.findByPk(feature, { raw: true });
     const policy = isPolicy(feature);
-    const variant = patch.variant ?? current?.variant ?? defaultVariantOf(feature);
+    // An old name from a client that has not been redeployed is accepted and
+    // stored under the current one — see LEGACY_VARIANTS.
+    const variant = resolveVariantKey(feature, patch.variant ?? current?.variant ?? defaultVariantOf(feature));
     if (!variantOf(feature, variant)) {
       throw errors.UNKNOWN_VARIANT({ feature, variant, allowed: f.variants.map((v) => v.key) });
     }

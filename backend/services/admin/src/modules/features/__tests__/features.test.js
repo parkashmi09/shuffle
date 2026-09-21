@@ -159,7 +159,9 @@ test('features', async (t) => {
     const { template, features } = await service.list();
     assert.equal(template, 'stake');
     const byKey = Object.fromEntries(features.map((f) => [f.feature, f]));
-    assert.equal(byKey.vip.variant, 'stake');
+    // The template's own value, read from the catalogue rather than typed here,
+    // so renaming a variant cannot make this test lie.
+    assert.equal(byKey.vip.variant, featureCatalogue.TEMPLATES.stake.variants.vip);
     assert.equal(byKey.vip.enabled, true);
     // Whatever the stake template leaves at `none` must read as off.
     const offInStake = Object.entries(featureCatalogue.TEMPLATES.stake.variants).find(([, v]) => v === 'none')[0];

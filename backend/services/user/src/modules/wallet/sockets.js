@@ -5,7 +5,7 @@ const { EVENTS, AUDIENCE } = require('@ibitplay/socket');
 const { money } = require('@ibitplay/common');
 
 const errors = require('./wallet.errors');
-const { WalletService } = require('./wallet.service');
+const { WalletService, creditPayload } = require('./wallet.service');
 const { REASON } = require('./wallet.constants');
 const { MAX_RAIN_PLAYERS, MIN_TIP, TIP_BLOCKED_CURRENCIES, CHAT_ROOMS } = require('./social.constants');
 
@@ -247,12 +247,8 @@ function register({ on, deps }) {
   on(EVENTS.CREDIT, {
     audience: AUDIENCE.USER,
     handle: async (_payload, context) => {
-      const balances = await wallet.getBalances(String(context.userId));
-      return ok({
-        credit: Object.fromEntries(
-          Object.entries(balances).map(([code, value]) => [code.toLowerCase(), value])
-        ),
-      });
+      // The same payload the wallet pushes after every movement.
+      return creditPayload(await wallet.getBalances(String(context.userId)));
     },
   });
 

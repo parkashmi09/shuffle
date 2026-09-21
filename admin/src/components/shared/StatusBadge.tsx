@@ -1,40 +1,66 @@
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
+/**
+ * A state, in the one green / amber / red the whole panel agrees on.
+ *
+ * ── WHY THE TONES ARE NAMED, NOT PICKED ─────────────────────────────────
+ *
+ * Every state here means one of four things to an operator: it WORKED, it is
+ * WAITING on somebody, it FAILED, or it is simply not in play. The colours are
+ * the theme's status tokens (`--success`, `--warning`, `--danger`), so an
+ * approved withdrawal, a verified document and a settled bet are the same
+ * green wherever they appear — and changing that green is one edit, not a
+ * search across every screen that hardcoded `green-500/15`.
+ *
+ * A state nobody listed gets the neutral tone rather than a guess. Colour that
+ * means nothing is worse than no colour: it teaches an operator to ignore it.
+ */
+const SUCCESS = [
+  'active',
+  'approved',
+  'completed',
+  'settled',
+  'won',
+  'verified',
+  'published',
+  'enabled',
+  'paid',
+  'credited'
+]
+const WARNING = ['pending', 'processing', 'open', 'submitted', 'review', 'awaiting', 'partial']
+const DANGER = [
+  'suspended',
+  'rejected',
+  'cancelled',
+  'failed',
+  'lost',
+  'locked',
+  'closed',
+  'disabled',
+  'blocked',
+  'expired'
+]
+/** In the system, but not in play — no colour, because nothing is happening. */
+const NEUTRAL = ['void', 'inactive', 'draft', 'archived', 'unknown']
+
 const TONES: Record<string, string> = {
-  active: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  approved: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  completed: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  settled: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  won: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  verified: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  published: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  enabled: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  pending: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  processing: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  open: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  submitted: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  suspended: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  rejected: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  cancelled: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  failed: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  lost: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  locked: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  closed: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  disabled: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  blocked: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  void: 'bg-muted text-muted-foreground',
-  inactive: 'bg-muted text-muted-foreground',
-  draft: 'bg-muted text-muted-foreground'
+  ...Object.fromEntries(SUCCESS.map(s => [s, 'bg-success-soft text-success'])),
+  ...Object.fromEntries(WARNING.map(s => [s, 'bg-warning-soft text-warning'])),
+  ...Object.fromEntries(DANGER.map(s => [s, 'bg-danger-soft text-danger'])),
+  ...Object.fromEntries(NEUTRAL.map(s => [s, 'bg-muted text-muted-foreground']))
 }
 
 const StatusBadge = ({ value, className }: { value: string | boolean | null | undefined; className?: string }) => {
   if (value === null || value === undefined || value === '') return <span className='text-muted-foreground'>—</span>
   const text = typeof value === 'boolean' ? (value ? 'enabled' : 'disabled') : String(value)
-  const tone = TONES[text.toLowerCase()] ?? 'bg-secondary text-secondary-foreground'
+  const tone = TONES[text.toLowerCase()] ?? 'bg-muted text-muted-foreground'
 
   return (
-    <Badge variant='outline' className={cn('border-transparent font-medium capitalize', tone, className)}>
+    <Badge
+      variant='outline'
+      className={cn('rounded-full border-transparent px-2 py-0.5 text-xs font-medium capitalize', tone, className)}
+    >
       {text.replace(/[_-]+/g, ' ')}
     </Badge>
   )
