@@ -47,7 +47,14 @@
  * not exist is worse than no entry, because it reads as coverage.
  */
 const INTERNAL_SURFACE = Object.freeze({
-  'user-service': ['/internal/user/wallet', '/internal/user/exchange-rate', '/internal/user/rakeback', '/internal/user/preferences'],
+  'user-service': [
+    '/internal/user/wallet',
+    '/internal/user/exchange-rate',
+    '/internal/user/rakeback',
+    '/internal/user/preferences',
+    '/internal/user/vip',
+    '/internal/user/affiliate',
+  ],
   'admin-service': [
     '/internal/admin/audit',
     '/internal/admin/auth',
@@ -143,6 +150,17 @@ const INTERNAL_ACL = Object.freeze({
      * only way to reach it.
      */
     '/internal/user/rakeback',
+    /**
+     * The other two halves of the same settlement callback.
+     *
+     * `vip/on-wager` syncs the player's rakeback rate and pays level/rank-up
+     * credits; `affiliate/on-wager` pays the upline its commission. Both are
+     * called from `games.service.js` right after the wager row moves, and both
+     * are wrapped in a `try/catch` that only warns — so a missing grant here
+     * does not fail a bet, it silently stops paying people.
+     */
+    '/internal/user/vip',
+    '/internal/user/affiliate',
     '/internal/user/wallet',
   ],
 

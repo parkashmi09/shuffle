@@ -31,6 +31,13 @@ const { VIP_LEVELS, UNRANKED, vipLevelName, vipLevelFor, PLATFORM_LADDER } = req
 /** Every ladder a site can choose through its `vip` variant, and the resolver that reads the choice. */
 const { VIP_LADDERS, vipLadderFor, resolveVipLadder } = require('./vipLadders');
 /**
+ * What each rank PAYS — rakeback rates and BJB awards keyed on card. The ladder
+ * above decides which rank a wager buys; this decides what that rank is worth.
+ * Exported as a namespace, not spread, because names like `rewardsForLevel` mean
+ * nothing without the `vipRewards.` in front of them.
+ */
+const vipRewards = require('./vipRewards');
+/**
  * The wagering race's game buckets. Shared for the same reason the VIP ladder
  * is: THREE services read it — casino and sports classify their rows into
  * these names, user-service multiplies each name by an operator's number — and
@@ -81,6 +88,7 @@ module.exports = {
   VIP_LADDERS,
   vipLadderFor,
   resolveVipLadder,
+  vipRewards,
   ...raceBuckets,
   featureCatalogue,
   sitePolicy,

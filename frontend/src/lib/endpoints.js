@@ -103,8 +103,19 @@ export const sportsBets = {
 export const vip = {
   /** The caller's own progress. Player route — needs a token. */
   progress: () => get("/user/vip"),
-  /** All 75 tiers. Public. */
-  levels: () => get("/user/vip/levels"),
+  /**
+   * The ladder's bands, as an ARRAY.
+   *
+   * The route answers `{ ladder, label, unranked, bonusGates, levels }` and
+   * `get` resolves the envelope's `data`, so the bare call hands back that
+   * wrapper. Every consumer treats what it gets as the band list —
+   * `groupByTier` does `for (const band of levels)`, `levelName` does
+   * `levels.find(…)` — so the wrapper reached them as a non-iterable object.
+   * Unwrapped once here rather than at each of the four call sites; nothing on
+   * this side reads the other four fields.
+   */
+  levels: () =>
+    get("/user/vip/levels").then((res) => (Array.isArray(res) ? res : res?.levels ?? [])),
 };
 
 /**

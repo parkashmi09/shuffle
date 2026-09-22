@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { ApiError } from "../../lib/api";
 import { funding } from "../../lib/endpoints";
@@ -8,7 +8,8 @@ import { currencyName } from "../../lib/currencies";
 import { networkLabel, networksFor } from "../../lib/networks";
 import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import WalletSelect, { CoinIcon } from "./CurrencySelect";
-import { currencyOptions } from "../../lib/walletOptions";
+import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
+import { useSiteFeatures } from "../../lib/useSiteFeatures";
 
 /**
  * The Withdraw tab — reference `Withdraw`.
@@ -173,18 +174,34 @@ export default function WithdrawTab({
   onWithdrawalHistory,
 }) {
   const { refreshBalances } = useSession();
+  /* Payout rails this site runs — the withdrawal half of the same policy the
+     deposit tab reads. `both` leaves the list untouched. */
+  const { withdrawalRoutes } = useSiteFeatures();
+  const { manual, automatic } = withdrawalRoutes();
+
   const options = useMemo(
     () =>
-      currencyOptions(balances, {
-        displayCurrency,
-        rates,
-        fiatEquivalent: fiatView,
-        hideZeroBalances,
-        hideBalance,
-        keep: coin,
-      }),
-    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin]
+      optionsForRoutes(
+        currencyOptions(balances, {
+          displayCurrency,
+          rates,
+          fiatEquivalent: fiatView,
+          hideZeroBalances,
+          hideBalance,
+          keep: coin,
+        }),
+        { manual, automatic }
+      ),
+    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin, manual, automatic]
   );
+
+  /* A currency whose payout rail is off must not stay selected — same reason
+     as the deposit tab: the form below branches on `isFiat(coin)`. */
+  useEffect(() => {
+    if (!options.length) return;
+    if (options.some((option) => option.value === coin)) return;
+    onCoinChange?.(options[0].value);
+  }, [options, coin, onCoinChange]);
 
   const available = balances?.[coin] ?? "0";
   const currencySelect = (

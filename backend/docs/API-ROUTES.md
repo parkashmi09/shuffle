@@ -573,9 +573,9 @@ attaches and the shape the handler answers with. Regenerate with
 
 | | |
 | --- | ---: |
-| Routes mounted | 613 |
-| Modules | 69 |
-| Answering outside the envelope | 55 |
+| Routes mounted | 664 |
+| Modules | 73 |
+| Answering outside the envelope | 56 |
 
 **Guard** is the audience the loader mounted the router under, plus anything
 the route adds. `public` carries no token. `player` and `staff` carry one.
@@ -597,7 +597,7 @@ listed per route: they are thrown from the service layer, so a module's whole
 error catalogue is reachable from every route in it, and the catalogues are at
 the end of this appendix.
 
-### admin-service — :4002 (129 routes)
+### admin-service — :4002 (147 routes)
 
 #### `access`
 
@@ -660,6 +660,17 @@ the end of this appendix.
 | `GET` | `/api/v1/admin/dashboard/totals` | `staff` + `reports:read` | `200` `service.lifetimeTotals(…)` |
 | `GET` | `/api/v1/admin/dashboard/user-stats` | `staff` + `reports:read` | `200` `service.userStats(…)` |
 
+#### `features`
+
+| Method | Path | Guard | Response |
+|---|---|---|---|
+| `GET` | `/api/v1/admin/features/public` | `public` + rate-limited | `200` `service.publicList(…)` |
+| `GET` | `/api/v1/admin/features` | `staff` + `config:read` | `200` `service.list(…)` |
+| `PUT` | `/api/v1/admin/features/:feature` | `staff` + `config:write` | `200` `service.update(…)` |
+| `POST` | `/api/v1/admin/features/:feature/test` | `staff` + `config:write` | `200` `service.test(…)` |
+| `GET` | `/api/v1/admin/features/catalogue` | `staff` + `config:read` | `200` `service.catalogue(…)` |
+| `PUT` | `/api/v1/admin/features/template` | `staff` + `config:write` | `200` `service.applyTemplate(…)` |
+
 #### `locks`
 
 | Method | Path | Guard | Response |
@@ -714,6 +725,20 @@ the end of this appendix.
 | `DELETE` | `/api/v1/admin/players/:playerId` | `staff` + `users:write` | `200` `service.close(…)` |
 | `PATCH` | `/api/v1/admin/players/:playerId` | `staff` + `users:write` | `200` `service.update(…)` |
 
+#### `promotions`
+
+| Method | Path | Guard | Response |
+|---|---|---|---|
+| `GET` | `/api/v1/admin/promotions` | `public` | `200` `[…]` + `meta.pagination` |
+| `GET` | `/api/v1/admin/promotions/:id` | `public` | `200` `service.byId(…)` |
+| `GET` | `/api/v1/admin/promotions/:id/image` | `public` | **raw** `Content-Type: image.contentType` · **raw** `res.send(…)` |
+| `GET` | `/api/v1/admin/promotions/sidebar` | `public` | `200` `service.sidebar(…)` |
+| `GET` | `/api/v1/admin/promotions/slug/:segment/:slug` | `public` | `200` `service.bySlug(…)` |
+| `POST` | `/api/v1/admin/promotions` | `staff` + `config:write` | `201` `service.create(…)` |
+| `DELETE` | `/api/v1/admin/promotions/:id` | `staff` + `config:write` | `200` `service.remove(…)` |
+| `PATCH` | `/api/v1/admin/promotions/:id` | `staff` + `config:write` | `200` `service.update(…)` |
+| `DELETE` | `/api/v1/admin/promotions/slug/:segment/:slug` | `staff` + `config:write` | `200` `service.remove(…)` |
+
 #### `reports`
 
 | Method | Path | Guard | Response |
@@ -739,11 +764,14 @@ the end of this appendix.
 | `POST` | `/api/v1/admin/site-config/email/test` | `staff` + `config:write` | `200` `service.sendTestEmail(…)` |
 | `GET` | `/api/v1/admin/site-config/global` | `staff` + `config:read` | `200` `service.globalSettings(…)` |
 | `PUT` | `/api/v1/admin/site-config/global` | `staff` + `config:write` | `200` `service.updateGlobalSettings(…)` |
+| `GET` | `/api/v1/admin/site-config/rewards` | `staff` + `config:read` | `200` `service.rewardCurrencies(…)` |
+| `PUT` | `/api/v1/admin/site-config/rewards` | `staff` + `config:write` | `200` `service.updateRewardCurrencies(…)` |
 | `GET` | `/api/v1/admin/site-config/sports` | `staff` + `config:read` | `200` `service.sportsEnabled(…)` |
 | `PUT` | `/api/v1/admin/site-config/sports` | `staff` + `config:write` | `200` `service.setSportsEnabled(…)` |
 | `GET` | `/api/v1/admin/site-config/user/:userId` | `staff` + `config:read` | `200` `service.userSettings(…)` |
 | `PUT` | `/api/v1/admin/site-config/user/:userId` | `staff` + `config:write` | `200` `service.updateUserSettings(…)` |
 | `GET` | `/internal/admin/site-config/affiliate` | `internal` | `200` `service.affiliateSettings(…)` |
+| `GET` | `/internal/admin/site-config/rewards` | `internal` | `200` `service.rewardCurrencies(…)` |
 | `GET` | `/internal/admin/site-config/sports` | `internal` | `200` `service.sportsEnabled(…)` |
 
 #### `staff`
@@ -808,7 +836,7 @@ the end of this appendix.
 | `GET` | `/api/v1/admin/statements/user/:userId/pdf` | `staff` + `reports:read` | **raw** `Content-Type: application/pdf` · **raw** `streamed to res` |
 | `GET` | `/api/v1/admin/statements/user/:userId/statement` | `staff` + `reports:read` | `200` `service.userStatement(…)` |
 
-### casino-service — :4003 (120 routes)
+### casino-service — :4003 (133 routes)
 
 #### `aggregators`
 
@@ -822,12 +850,14 @@ the end of this appendix.
 
 | Method | Path | Guard | Response |
 |---|---|---|---|
+| `GET` | `/api/v1/casino/bet-history/activity` | `public` | `200` `service.activity(…)` |
 | `GET` | `/api/v1/casino/bet-history/leaderboard` | `public` | `200` `service.leaderboard(…)` |
 | `GET` | `/api/v1/casino/bet-history/live` | `public` | `200` `service.liveFeed(…)` |
 | `GET` | `/api/v1/casino/bet-history/top-wins` | `public` | `200` `service.topWins(…)` |
 | `GET` | `/api/v1/casino/bet-history` | `player` | `200` `[…]` + `meta.pagination` |
 | `GET` | `/api/v1/casino/bet-history/:betId` | `player` | `200` `service.myBet(…)` |
 | `GET` | `/api/v1/casino/bet-history/leaderboard/me` | `player` | `200` `service.myPosition(…)` |
+| `GET` | `/api/v1/casino/bet-history/recent-games` | `player` | `200` `service.recentGames(…)` |
 | `GET` | `/api/v1/casino/bet-history/stats` | `player` | `200` `service.playerStats(…)` |
 | `GET` | `/api/v1/casino/bet-history/timed-rounds` | `player` | `200` `service.myTimedRounds(…)` |
 | `GET` | `/api/v1/admin/casino/bet-history/analytics` | `staff` + `reports:read` | `200` `service.analytics(…)` |
@@ -865,6 +895,7 @@ the end of this appendix.
 |---|---|---|---|
 | `GET` | `/api/v1/casino/games` | `public` | `200` `[…]` + `meta.pagination` |
 | `GET` | `/api/v1/casino/games/collections/:collection` | `public` | `200` `[…]` + `meta.pagination` |
+| `GET` | `/api/v1/casino/games/detail/:uuid` | `public` | `200` `service.byUuid(…)` |
 | `GET` | `/api/v1/casino/games/provider/:provider` | `public` | `200` `[…]` + `meta.pagination` |
 | `GET` | `/api/v1/casino/games/providers` | `public` | `200` `service.listProviders(…)` |
 | `GET` | `/api/v1/casino/games/search` | `public` | `200` `service.search(…)` |
@@ -894,6 +925,7 @@ the end of this appendix.
 |---|---|---|---|
 | `POST` | `/api/v1/casino/gis/callback/transactions` | `public` + rate-limited | **raw** `res.json(…)` |
 | `GET` | `/api/v1/casino/gis/freespins/bets` | `player` | `200` `service.freespinBets(…)` |
+| `GET` | `/api/v1/casino/gis/freespins/mine` | `player` | `200` `service.listMyFreespins(…)` |
 | `GET` | `/api/v1/casino/gis/game-tags` | `player` | `200` `service.gameTags(…)` |
 | `GET` | `/api/v1/casino/gis/jackpots` | `player` | `200` `service.jackpots(…)` |
 | `POST` | `/api/v1/casino/gis/launch` | `player` | `201` `service.launch(…)` |
@@ -927,6 +959,7 @@ the end of this appendix.
 | Method | Path | Guard | Response |
 |---|---|---|---|
 | `POST` | `/api/v1/casino/js-games/v1/bet-callback` | `public` + rate-limited | **raw** `res.json(…)` |
+| `GET` | `/api/v1/casino/js-games/v1/collections/:collection` | `public` | `200` `[…]` + `meta.pagination` |
 | `GET` | `/api/v1/casino/js-games/v1/games` | `public` | `200` `[…]` + `meta.pagination` |
 | `GET` | `/api/v1/casino/js-games/v1/games/search` | `public` | `200` `[…]` + `meta.pagination` |
 | `POST` | `/api/v1/casino/js-games/v2/bet-callback` | `public` + rate-limited | **raw** `res.json(…)` |
@@ -935,8 +968,15 @@ the end of this appendix.
 | `POST` | `/api/v1/casino/js-games/v1/launch` | `player` | `201` `service.launchV1(…)` |
 | `GET` | `/api/v1/casino/js-games/v2/history` | `player` | `200` `service.historyV2(…)` |
 | `POST` | `/api/v1/casino/js-games/v2/launch` | `player` | `201` `service.launchV2(…)` |
+| `PUT` | `/api/v1/admin/casino/js-games/v1/catalogue/:gameUid/icon` | `staff` + `casino:manage` | `200` `service.updateIcon(…)` |
+| `GET` | `/api/v1/admin/casino/js-games/v1/catalogue/search` | `staff` + `casino:read` | `200` `service.search(…)` |
+| `GET` | `/api/v1/admin/casino/js-games/v1/collections` | `staff` + `casino:read` | `200` `service.collectionList(…)` |
+| `GET` | `/api/v1/admin/casino/js-games/v1/curation/:scope/:key` | `staff` + `casino:read` | `200` `service.read(…)` |
+| `PUT` | `/api/v1/admin/casino/js-games/v1/curation/:scope/:key` | `staff` + `casino:manage` | `200` `service.write(…)` |
 | `POST` | `/api/v1/admin/casino/js-games/v1/transactions` | `staff` + `casino:read` | `200` `service.transactionsV1(…)` |
 | `POST` | `/api/v1/admin/casino/js-games/v1/transfer` | `staff` + `wallet:credit` | `200` `service.transferV1(…)` |
+| `GET` | `/api/v1/admin/casino/js-games/v1/types` | `staff` + `casino:read` | `200` `service.typeList(…)` |
+| `GET` | `/api/v1/admin/casino/js-games/v1/vendors` | `staff` + `casino:read` | `200` `service.vendorList(…)` |
 | `GET` | `/api/v1/admin/casino/js-games/v2/history` | `staff` + `casino:read` | `200` `service.historyAllV2(…)` |
 
 #### `seamless`
@@ -968,6 +1008,7 @@ the end of this appendix.
 
 | Method | Path | Guard | Response |
 |---|---|---|---|
+| `GET` | `/internal/casino/wager/race-points` | `internal` | `200` `race.racePoints(…)` |
 | `GET` | `/internal/casino/wager/turnover/:userId` | `internal` | `200` `service.turnover(…)` |
 
 #### `x-casino`
@@ -990,7 +1031,7 @@ the end of this appendix.
 | `GET` | `/api/v1/casino/x-gaming/games/search` | `public` | `200` `[…]` + `meta.pagination` |
 | `GET` | `/api/v1/casino/x-gaming/vendors` | `public` | `200` `service.vendors(…)` |
 
-### sports-service — :4004 (74 routes)
+### sports-service — :4004 (75 routes)
 
 #### `bet-admin`
 
@@ -1099,9 +1140,10 @@ the end of this appendix.
 
 | Method | Path | Guard | Response |
 |---|---|---|---|
+| `GET` | `/internal/sports/wager/race-points` | `internal` | `200` `service.racePoints(…)` |
 | `GET` | `/internal/sports/wager/turnover/:userId` | `internal` | `200` `service.turnover(…)` |
 
-### user-service — :4001 (290 routes)
+### user-service — :4001 (309 routes)
 
 #### `affiliate`
 
@@ -1122,6 +1164,7 @@ the end of this appendix.
 | `GET` | `/api/v1/admin/user/affiliate/teams/:owner/members` | `staff` + `reports:read` | `200` `[…]` + `meta.pagination` |
 | `GET` | `/api/v1/admin/user/affiliate/top` | `staff` + `reports:read` | `200` `service.topAffiliates(…)` |
 | `POST` | `/api/v1/admin/user/affiliate/unlock` | `staff` + `config:write` | `200` `service.unlockFor(…)` |
+| `POST` | `/internal/user/affiliate/on-wager` | `internal` | `200` `service.onWager(…)` |
 
 #### `auth`
 
@@ -1130,7 +1173,7 @@ the end of this appendix.
 | `POST` | `/api/v1/user/auth/forgot-password` | `public` + rate-limited | `200` `service.requestPasswordReset(…)` |
 | `POST` | `/api/v1/user/auth/login` | `public` + rate-limited | `200` `service.login(…)` |
 | `POST` | `/api/v1/user/auth/refresh` | `public` | `200` `service.refresh(…)` |
-| `POST` | `/api/v1/user/auth/register` | `public` + rate-limited | `201` `{ ...created, id }` |
+| `POST` | `/api/v1/user/auth/register` | `public` + rate-limited | `201` `service.registerAndSignIn(…)` |
 | `POST` | `/api/v1/user/auth/reset-password` | `public` + rate-limited | `200` `service.completePasswordReset(…)` |
 | `POST` | `/api/v1/user/auth/change-password` | `player` | `200` `{ ...result, message }` |
 | `POST` | `/api/v1/user/auth/logout` | `player` | `200` `service.logout(…)` |
@@ -1163,7 +1206,7 @@ the end of this appendix.
 | `POST` | `/api/v1/user/bonus/redeem` | `player` | `200` `service.redeemCode(…)` |
 | `GET` | `/api/v1/admin/user/bonus/awards` | `staff` + `reports:read` | `200` `[…]` + `meta.pagination` |
 | `GET` | `/api/v1/admin/user/bonus/codes` | `staff` + `reports:read` | `200` `[…]` + `meta.pagination` |
-| `POST` | `/api/v1/admin/user/bonus/codes` | `staff` + `config:write` | `201` `service.createCode(…)` |
+| `POST` | `/api/v1/admin/user/bonus/codes` | `staff` + `config:write | redeem:write` | `201` `service.createCode(…)` |
 | `GET` | `/api/v1/admin/user/bonus/dashboard` | `staff` + `reports:read` | `200` `service.adminDashboard(…)` |
 | `GET` | `/api/v1/admin/user/bonus/events` | `staff` + `reports:read` | `200` `[…]` + `meta.pagination` |
 | `POST` | `/api/v1/admin/user/bonus/events` | `staff` + `config:write` | `201` `service.createEvent(…)` |
@@ -1402,6 +1445,13 @@ the end of this appendix.
 |---|---|---|---|
 | `GET` | `/api/v1/user/preferences` | `player` | `200` `service.get(…)` |
 | `PATCH` | `/api/v1/user/preferences` | `player` | `200` `service.update(…)` |
+| `POST` | `/internal/user/preferences/site-config` | `internal` | `200` `{ pushed, reason }` · `200` `{ pushed, clients }` |
+
+#### `presence`
+
+| Method | Path | Guard | Response |
+|---|---|---|---|
+| `GET` | `/api/v1/user/presence` | `public` | `200` `service.count(…)` |
 
 #### `profile`
 
@@ -1423,12 +1473,31 @@ the end of this appendix.
 | `GET` | `/api/v1/user/psp/:provider/status/:reference` | `player` | `200` `service.getStatus(…)` |
 | `GET` | `/api/v1/admin/user/psp/:provider/status/:reference` | `staff` + `deposits:read` | `200` `service.getStatus(…)` |
 
+#### `race`
+
+| Method | Path | Guard | Response |
+|---|---|---|---|
+| `GET` | `/api/v1/user/race` | `public` | `200` `service.listConfigs(…)` |
+| `GET` | `/api/v1/user/race/:type/leaderboard` | `public` | `200` `service.leaderboard(…)` |
+| `GET` | `/api/v1/user/race/rewards` | `player` | `200` `[…]` + `meta.pagination` |
+| `POST` | `/api/v1/user/race/rewards/:rewardId/claim` | `player` + rate-limited | `200` `service.claim(…)` |
+| `GET` | `/api/v1/admin/user/race/boats` | `staff` + `reports:read` | `200` `service.listBoats(…)` |
+| `POST` | `/api/v1/admin/user/race/boats` | `staff` + `config:write` | `201` `service.addBoat(…)` |
+| `DELETE` | `/api/v1/admin/user/race/boats/:id` | `staff` + `config:write` | `200` `service.removeBoat(…)` |
+| `PUT` | `/api/v1/admin/user/race/boats/:id` | `staff` + `config:write` | `200` `service.updateBoat(…)` |
+| `GET` | `/api/v1/admin/user/race/config/:type` | `staff` + `reports:read` | `200` `service.getConfig(…)` |
+| `PUT` | `/api/v1/admin/user/race/config/:type` | `staff` + `config:write` | `200` `service.updateConfig(…)` |
+| `GET` | `/api/v1/admin/user/race/races` | `staff` + `reports:read` | `200` `[…]` + `meta.pagination` |
+| `POST` | `/api/v1/admin/user/race/races/:id/settle` | `staff` + `config:write` | `200` `service.settle(…)` |
+| `GET` | `/api/v1/admin/user/race/rewards` | `staff` + `reports:read` | `200` `[…]` + `meta.pagination` |
+
 #### `rakeback`
 
 | Method | Path | Guard | Response |
 |---|---|---|---|
 | `GET` | `/api/v1/user/rakeback` | `player` | `200` `service.amount(…)` |
 | `POST` | `/api/v1/user/rakeback/claim` | `player` + rate-limited | `200` `service.claim(…)` |
+| `POST` | `/internal/user/rakeback/accrue` | `internal` | `200` `service.accrue(…)` |
 
 #### `spin-wheel`
 
@@ -1509,6 +1578,8 @@ the end of this appendix.
 |---|---|---|---|
 | `GET` | `/api/v1/user/vip/levels` | `public` | `200` `service.levels(…)` |
 | `GET` | `/api/v1/user/vip` | `player` | `200` `service.standing(…)` |
+| `POST` | `/internal/user/vip/award-periodic` | `internal` | `200` `service.awardPeriodic(…)` |
+| `POST` | `/internal/user/vip/on-wager` | `internal` | `200` `service.onWager(…)` |
 
 #### `wager`
 
@@ -1747,17 +1818,18 @@ the service layer, so a code is reachable from any route in its module.
 | `422` | `CLUBCAST_IMAGE_TYPE_NOT_ALLOWED` | Banners must be a JPEG, PNG or WebP image |
 | `409` | `CLUBCAST_TOO_MANY_BANNERS` | This club already has the maximum number of banners |
 
-#### `CRYPTO` — user/crypto (5)
+#### `CRYPTO` — user/crypto (6)
 
 | Status | Code | Message |
 |---:|---|---|
 | `401` | `CRYPTO_BAD_SIGNATURE` | Signature verification failed |
 | `422` | `CRYPTO_UNSUPPORTED_COIN` | That coin is not one this platform holds |
 | `502` | `CRYPTO_PROVIDER_ERROR` | The payment provider rejected the request |
+| `503` | `CRYPTO_NOT_CONFIGURED` | The crypto payment provider is not configured |
 | `503` | `CRYPTO_PROVIDER_DISABLED` | The crypto payment provider is not configured |
 | `404` | `CRYPTO_PLAYER_NOT_FOUND` | Player not found |
 
-#### `CRYPTO_WITHDRAW` — user/crypto-withdraw (10)
+#### `CRYPTO_WITHDRAW` — user/crypto-withdraw (11)
 
 | Status | Code | Message |
 |---:|---|---|
@@ -1770,6 +1842,7 @@ the service layer, so a code is reachable from any route in its module.
 | `404` | `CRYPTO_WITHDRAW_PLAYER_NOT_FOUND` | Player not found |
 | `401` | `CRYPTO_WITHDRAW_PASSWORD_INCORRECT` | Your password is wrong |
 | `403` | `CRYPTO_WITHDRAW_ACCOUNT_LOCKED` | That account cannot withdraw |
+| `403` | `CRYPTO_WITHDRAW_WITHDRAW_COOLDOWN` | Withdrawals are paused for 24 hours after a password change |
 | `422` | `CRYPTO_WITHDRAW_INSUFFICIENT_BALANCE` | Your credit is not enough |
 
 #### `DASHBOARD` — admin/dashboard (2)
@@ -1811,6 +1884,20 @@ the service layer, so a code is reachable from any route in its module.
 | `422` | `EXCHANGE_RATE_INVALID_RATE` | The rate must be greater than zero |
 | `409` | `EXCHANGE_RATE_RATE_IN_USE` | This currency still holds player balances and cannot be removed |
 
+#### `FEATURES` — admin/features (9)
+
+| Status | Code | Message |
+|---:|---|---|
+| `404` | `FEATURES_UNKNOWN_FEATURE` | There is no such feature in the catalogue |
+| `422` | `FEATURES_UNKNOWN_VARIANT` | That feature has no such variant |
+| `422` | `FEATURES_UNKNOWN_TEMPLATE` | There is no such site template |
+| `422` | `FEATURES_UNEXPECTED_FIELD` | That field does not belong to this variant |
+| `422` | `FEATURES_MISSING_FIELD` | This variant needs a value that was not given |
+| `422` | `FEATURES_INVALID_FIELD` | A value does not have the shape this variant expects |
+| `409` | `FEATURES_NOT_ENABLED` | The feature is not switched on for this site |
+| `422` | `FEATURES_NOT_TESTABLE` | This feature has no connection test |
+| `502` | `FEATURES_PROVIDER_FAILED` | The provider refused the request |
+
 #### `FEED` — sports/feed (5)
 
 | Status | Code | Message |
@@ -1834,7 +1921,7 @@ the service layer, so a code is reachable from any route in its module.
 | `409` | `FIAT_DEPOSIT_DUPLICATE_TRANSACTION` | A deposit with this transaction reference already exists |
 | `422` | `FIAT_DEPOSIT_REJECTION_REASON_REQUIRED` | A reason is required when rejecting a deposit |
 
-#### `FIAT_WITHDRAW` — user/fiat-withdraw (7)
+#### `FIAT_WITHDRAW` — user/fiat-withdraw (8)
 
 | Status | Code | Message |
 |---:|---|---|
@@ -1845,6 +1932,7 @@ the service layer, so a code is reachable from any route in its module.
 | `422` | `FIAT_WITHDRAW_UPI_OR_IFSC_REQUIRED` | For INR withdrawals, either an IFSC code or a UPI id is required |
 | `422` | `FIAT_WITHDRAW_BELOW_MINIMUM` | The amount is below the minimum withdrawal |
 | `403` | `FIAT_WITHDRAW_KYC_REQUIRED` | Identity verification must be completed before withdrawing |
+| `403` | `FIAT_WITHDRAW_WITHDRAW_COOLDOWN` | Withdrawals are paused for 24 hours after a password change |
 
 #### `GAMES` — casino/games (9)
 
@@ -1914,6 +2002,15 @@ the service layer, so a code is reachable from any route in its module.
 | `404` | `INHOUSE_UNKNOWN_GAME` | No such game |
 | `409` | `INHOUSE_ROUND_ALREADY_OPEN` | You already have a round of that game open |
 | `404` | `INHOUSE_NO_OPEN_ROUND` | You have no round of that game open |
+
+#### `JSCURATION` — casino/js-games (4)
+
+| Status | Code | Message |
+|---:|---|---|
+| `404` | `JSCURATION_COLLECTION_NOT_FOUND` | No such collection |
+| `404` | `JSCURATION_SCOPE_NOT_FOUND` | No such curation scope |
+| `422` | `JSCURATION_UNKNOWN_GAMES` | Some of those games are not in the catalogue |
+| `422` | `JSCURATION_LIST_TOO_LARGE` | That list is longer than a curated list may be |
 
 #### `JSGAMES` — casino/js-games (8)
 
@@ -2054,6 +2151,20 @@ the service layer, so a code is reachable from any route in its module.
 | `400` | `PROFILE_EMAIL_UNCHANGED` | That is already the email address on this account |
 | `404` | `PROFILE_NOT_FOUND` | Not found |
 
+#### `PROMOTIONS` — admin/promotions (9)
+
+| Status | Code | Message |
+|---:|---|---|
+| `404` | `PROMOTIONS_NOT_FOUND` | Promotion not found |
+| `400` | `PROMOTIONS_NO_FILE` | No image was uploaded |
+| `415` | `PROMOTIONS_NOT_AN_IMAGE` | That file is not a PNG, JPEG or WebP image |
+| `415` | `PROMOTIONS_FORMAT_REFUSED` | That image format is not accepted here |
+| `413` | `PROMOTIONS_TOO_LARGE` |  |
+| `400` | `PROMOTIONS_TOO_SMALL` | That upload is too small to be an image — it may have been truncated |
+| `409` | `PROMOTIONS_SLUG_TAKEN` | A promotion with that address already exists in this segment |
+| `400` | `PROMOTIONS_NOTHING_TO_UPDATE` | The request changed nothing |
+| `404` | `PROMOTIONS_NO_IMAGE` | That promotion has no image |
+
 #### `PSP` — user/psp (10)
 
 | Status | Code | Message |
@@ -2069,12 +2180,24 @@ the service layer, so a code is reachable from any route in its module.
 | `502` | `PSP_PROVIDER_ERROR` | The payment provider rejected the request |
 | `504` | `PSP_PROVIDER_UNREACHABLE` | The payment provider did not respond |
 
-#### `RAKEBACK` — user/rakeback (3)
+#### `RACE` — user/race (6)
+
+| Status | Code | Message |
+|---:|---|---|
+| `404` | `RACE_NOT_CONFIGURED` | That race has not been set up |
+| `404` | `RACE_NOT_RUNNING` | That race is not currently running |
+| `503` | `RACE_NO_ACTIVE_RACE` | No race window is open right now — please try again shortly |
+| `404` | `RACE_REWARD_NOT_FOUND` | That race reward does not exist |
+| `409` | `RACE_ALREADY_CLAIMED` | That race reward has already been claimed |
+| `422` | `RACE_INVALID_CONFIG` | That race configuration is not valid |
+
+#### `RAKEBACK` — user/rakeback (4)
 
 | Status | Code | Message |
 |---:|---|---|
 | `409` | `RAKEBACK_NOTHING_TO_CLAIM` |  |
 | `404` | `RAKEBACK_USER_NOT_FOUND` | Player not found |
+| `422` | `RAKEBACK_ACCRUAL_NOT_POSITIVE` | A rakeback accrual must be a positive amount |
 | `409` | `RAKEBACK_CLAIM_IN_PROGRESS` | A rakeback claim is already being processed |
 
 #### `REPORTS` — admin/reports (6)
@@ -2220,7 +2343,7 @@ the service layer, so a code is reachable from any route in its module.
 | `403` | `TWOFA_INVALID_CODE` | That code is not correct |
 | `403` | `TWOFA_PASSWORD_REQUIRED` | Your account password is required to disable two-factor authentication |
 
-#### `VAULT` — user/vault (9)
+#### `VAULT` — user/vault (11)
 
 | Status | Code | Message |
 |---:|---|---|
@@ -2233,6 +2356,8 @@ the service layer, so a code is reachable from any route in its module.
 | `402` | `VAULT_INSUFFICIENT_BALANCE` | Insufficient balance to move into the vault |
 | `422` | `VAULT_BELOW_MINIMUM` | The amount is below the vault minimum |
 | `409` | `VAULT_LOCK_PERIOD_IN_USE` | This lock period has open deposits and cannot be removed |
+| `409` | `VAULT_EARLY_WITHDRAWAL_NOT_ALLOWED` | Early withdrawal is not available for this deposit |
+| `409` | `VAULT_EARLY_WITHDRAWAL_FORBIDDEN` | This deposit is already matured — withdraw without the early-exit penalty |
 
 #### `WAGER` — user/wager (3)
 

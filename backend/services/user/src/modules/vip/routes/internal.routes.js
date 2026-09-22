@@ -53,12 +53,23 @@ module.exports = function internalRoutes(deps) {
    * Restricted to internal callers; useful so E2E tests do not need a worker
    * process spinning.
    */
+  /**
+   * `userId` picks one player; without it this sweeps everyone, which is what
+   * `limit` is for and what the validator has always accepted. Sending no
+   * body used to reach `awardPeriodic` with no id, which returned `{awarded:
+   * 0}` immediately — so the documented sweep above answered "nothing due"
+   * for the whole book rather than doing anything.
+   */
   router.post(
     '/award-periodic',
     validate(awardPeriodic),
-    asyncHandler(async (req, res) =>
-      response.ok(res, await service.awardPeriodic(req.body ?? {}))
-    )
+    asyncHandler(async (req, res) => {
+      const { userId, limit } = req.body ?? {};
+      const result = userId
+        ? await service.awardPeriodic({ userId })
+        : await service.sweepPeriodic(limit ? { limit } : {});
+      return response.ok(res, result);
+    })
   );
 
   return router;

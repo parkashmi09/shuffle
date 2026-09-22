@@ -6,6 +6,7 @@ import { SportsBreadcrumb } from "./SportPage";
 import { GameCard } from "../components/casino/GameCarousel";
 import { sections } from "../data/catalog";
 import { bannerForSport, fixtureRowFor } from "../lib/sportsData";
+import { selectionId, useBetSlip } from "../lib/betSlipContext";
 import pageData from "../data/sports-pages.json";
 import fixtureData from "../data/sports-fixtures-detail.json";
 
@@ -101,11 +102,21 @@ function TournamentBanner({ fx }) {
   );
 }
 
-/** A single odds button — reference `SportsBetSelectionButton`. */
-function Selection({ sel, picked, onPick }) {
+/**
+ * A single odds button — reference `SportsBetSelectionButton`.
+ *
+ * Lit because the price is in the slip, not because this button remembers
+ * being pressed: markets here collapse and re-mount, and local state did not
+ * survive that. `odds` is already the struck price — `original` is the
+ * crossed-out one beside a boost — so the slip takes `odds`.
+ */
+function Selection({ sel, fixture }) {
+  const slip = useBetSlip();
   const [name, odds, icon, original] = sel;
   const suspended = odds === "Suspended" || !odds;
-  const on = picked === name;
+  const leg = { ...fixture, name, odds };
+  const id = selectionId(leg);
+  const on = slip.has(id);
   return (
     <button
       className={cx(
@@ -114,7 +125,7 @@ function Selection({ sel, picked, onPick }) {
       )}
       disabled={suspended}
       type="button"
-      onClick={() => onPick(on ? null : name)}
+      onClick={() => slip.toggle({ ...leg, id })}
     >
       <span className="ButtonVariants_buttonContent SportsBetSelectionButton_buttonBackground SportsBetSelectionButton_horizontal">
         <div className="SportsBetSelectionButton_selectionDetails">
@@ -158,8 +169,9 @@ function Selection({ sel, picked, onPick }) {
 }
 
 /** One collapsible market — reference `SportsMarketCollapse` inside `StackedCollapseGroup`. */
-function Market({ m, open, onToggle }) {
-  const [picked, setPicked] = useState(null);
+function Market({ m, open, onToggle, fixture }) {
+  /** The market's own title is part of a leg's identity — see `selectionId`. */
+  const marketFixture = { ...fixture, market: m.title };
   return (
     <div className="Collapse_collapseRoot StackedCollapseGroup_item" aria-expanded={open}>
       <div className="Collapse_collapseHeader StackedCollapseGroup_itemHeader" aria-expanded={open}>
@@ -194,7 +206,7 @@ function Market({ m, open, onToggle }) {
                       </div>
                       <div className="LadderMarketLayout_selections">
                         {col.sels.map((s) => (
-                          <Selection key={s[0]} sel={s} picked={picked} onPick={setPicked} />
+                          <Selection key={s[0]} sel={s} fixture={marketFixture} />
                         ))}
                       </div>
                     </div>
@@ -210,7 +222,7 @@ function Market({ m, open, onToggle }) {
                   )}
                 >
                   {m.sels.map((s) => (
-                    <Selection key={s[0]} sel={s} picked={picked} onPick={setPicked} />
+                    <Selection key={s[0]} sel={s} fixture={marketFixture} />
                   ))}
                 </section>
               </div>
@@ -459,6 +471,17 @@ export default function FixturePage({ sport, category, competition, event }) {
   const vs = labelFromSlug(event).split(/\s+Vs\s+/i);
   const eventName = fx && fx.name ? fx.name : vs.filter(Boolean).join(" vs ");
   const sportIcon = fx ? fx.sportIcon : page ? page.icon : "/icons/globe.svg";
+  /**
+   * What a leg picked on this page carries into the bet slip. The market is
+   * filled in per market by `Market`; everything else is the fixture and is the
+   * same for all of them.
+   */
+  const slipFixture = {
+    href,
+    event: eventName,
+    league: fx?.competitionName || labelFromSlug(competition),
+    live: Boolean(fx?.live),
+  };
   const tabs = fx ? fx.tabs : [];
   const crumbs = fx && fx.crumbs;
   const banner = bannerForSport(sport);
@@ -570,7 +593,7 @@ export default function FixturePage({ sport, category, competition, event }) {
                       {fx && markets.length > 0 ? (
                         <div>
                           {markets.map((m) => (
-                            <Market key={m.title} m={m} open={!collapsed.has(m.title)} onToggle={() => toggleOne(m.title)} />
+                            <Market key={m.title} m={m} open={!collapsed.has(m.title)} onToggle={() => toggleOne(m.title)} fixture={slipFixture} />
                           ))}
                         </div>
                       ) : (

@@ -25,6 +25,7 @@
  */
 import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
+import { useSiteFeatures } from "../../lib/useSiteFeatures";
 import BalanceSelect from "./header/BalanceSelect";
 import IconMenu from "./header/IconMenu";
 import UserMenu from "./header/UserMenu";
@@ -116,6 +117,9 @@ function SignedInActions() {
 }
 
 function SignedOutActions({ onAuth }) {
+  const { canSignUp: allowed } = useSiteFeatures();
+  const canSignUp = allowed();
+
   return (
     <div className="HeaderWalletActions_navMenu">
       <button
@@ -125,13 +129,18 @@ function SignedOutActions({ onAuth }) {
       >
         <span className="ButtonVariants_buttonContent">Login</span>
       </button>
-      <button
-        className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary HeaderLoginRegister_authButton"
-        type="button"
-        onClick={() => onAuth("register")}
-      >
-        <span className="ButtonVariants_buttonContent">Register</span>
-      </button>
+      {/* A B2B site has no public signup — players are created by the
+          operator — so the button comes off rather than opening a form the
+          backend will refuse. Login stays: those accounts still sign in. */}
+      {canSignUp && (
+        <button
+          className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary HeaderLoginRegister_authButton"
+          type="button"
+          onClick={() => onAuth("register")}
+        >
+          <span className="ButtonVariants_buttonContent">Register</span>
+        </button>
+      )}
     </div>
   );
 }

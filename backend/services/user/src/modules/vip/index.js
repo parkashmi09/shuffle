@@ -46,5 +46,34 @@ module.exports = {
   routers: {
     public: require('./routes/public.routes'),
     user: require('./routes/user.routes'),
+    /**
+     * casino-service posts here after every stake that moves `userwager`, so
+     * the rakeback rate and the level/rank-up credits follow the ladder the
+     * player actually holds. The file existed and was never listed, which is
+     * indistinguishable from the route not existing: the caller wraps it in a
+     * `try/catch` that only warns, so a 404 here stopped VIP progression
+     * without stopping — or reporting — anything else.
+     */
+    internal: require('./routes/internal.routes'),
   },
+  /**
+   * Run by `worker.js`, not by the HTTP service — the same separation the race
+   * jobs use, and for the first of their reasons: this must run ONCE. Two HTTP
+   * instances sweeping would be two passes competing for the same row locks.
+   *
+   * Every fifteen minutes because an award is a CONDITION — "the period has
+   * rolled and nothing has been written for it" — not an event at a fixed
+   * hour. A worker that was down at midnight catches up on its next tick
+   * instead of skipping a day, and a player who opens the VIP page in the
+   * meantime has their awards materialised by `overview` anyway. This is the
+   * backstop for everyone who does not.
+   */
+  jobs: [
+    {
+      name: 'vip:award-periodic',
+      intervalMs: 15 * 60_000,
+      immediate: true,
+      run: (container) => require('./vip.jobs').createAwardPeriodicJob(container)(),
+    },
+  ],
 };

@@ -6,6 +6,7 @@ import { auth as authApi } from "../../lib/endpoints";
 import Modal from "../ui/Modal";
 import { clearStoredReferral, normalizeReferralInput, readStoredReferral } from "../../lib/referralCapture";
 import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
+import { useSiteFeatures } from "../../lib/useSiteFeatures";
 
 /**
  * Login / Register modal — a 1:1 port of the reference AuthModal
@@ -414,6 +415,18 @@ function RegisterForm({ onDone }) {
 
 /** Mount only while open (the shell does this) so the enter animation restarts each time. */
 export default function AuthModal({ open = true, tab = "login", onTabChange, onClose }) {
+  /**
+   * Signup off means the Register TAB goes too, not just the header button.
+   *
+   * The modal opens from seven places — the header, a game page, the VIP and
+   * affiliate pages, the bet slip, the VIP rail and a favourite — and several
+   * of them ask for `register` by name. Coercing the tab here is what makes
+   * one policy hold for all of them; hiding the button in `TopBar` alone
+   * would leave every other entry point opening a form the backend refuses.
+   */
+  const { canSignUp: signupAllowed } = useSiteFeatures();
+  const canSignUp = signupAllowed();
+  const active = canSignUp ? tab : "login";
   // The enter transition and the Escape key belong to `Modal` now; the page
   // behind still has to stop scrolling while the dialog is up.
   useEffect(() => {
@@ -428,7 +441,7 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
   if (!open) return null;
 
   return (
-    <Modal onClose={onClose} label={tab === "login" ? "Login" : "Register"} bodyClass="GlobalModal_authModalBody" contentClass="GlobalModal_authModalContent">
+    <Modal onClose={onClose} label={active === "login" ? "Login" : "Register"} bodyClass="GlobalModal_authModalBody" contentClass="GlobalModal_authModalContent">
       <div style={{ height: 768 }}>
         <div>
           <div className="AuthModal_desktop">
@@ -447,16 +460,19 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
                 <div className="TabViewOutline_root">
                   <div className="TabViewOutline_tabOutlineWrapper">
                     {[
-                      ["register", "Register"],
+                      // Register is dropped entirely on a site that does not
+                      // take public signups — not disabled, which would still
+                      // advertise a door that does not open.
+                      ...(canSignUp ? [["register", "Register"]] : []),
                       ["login", "Login"],
                     ].map(([id, label]) => (
                       <button
                         key={id}
                         type="button"
-                        className={cx("TabViewOutline_tabOutline TabViewOutline_tabOutlineFullWidth TabViewOutline_tabOutlineSm", tab === id && "TabViewOutline_tabOutlineActive")}
+                        className={cx("TabViewOutline_tabOutline TabViewOutline_tabOutlineFullWidth TabViewOutline_tabOutlineSm", active === id && "TabViewOutline_tabOutlineActive")}
                         id={`auth-tab-${id}`}
                         data-text={label}
-                        disabled={tab === id}
+                        disabled={active === id}
                         onClick={() => onTabChange(id)}
                       >
                         <span className="TabViewOutline_tabName">{label}</span>
@@ -465,7 +481,7 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
                   </div>
                 </div>
                 <div className="LoginAndRegister_content">
-                  {tab === "login" ? <LoginForm onDone={onClose} /> : <RegisterForm onDone={onClose} />}
+                  {active === "login" ? <LoginForm onDone={onClose} /> : <RegisterForm onDone={onClose} />}
                 </div>
               </div>
             </div>

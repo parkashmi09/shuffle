@@ -86,28 +86,31 @@ const REPO = path.resolve(BACKEND, '..');
  *
  * If this breaks again, fix the path rather than deleting the entry.
  */
-const WORKSPACE = path.resolve(REPO, '..');
-const LEGACY = path.join(REPO, 'test-automation-and-updated-admin');
-
 const REGISTRIES = [
-  { app: 'adminpanel', file: path.join(WORKSPACE, 'adminpanel/src/services/endpoints.ts') },
-  { app: 'Addaplay', file: path.join(LEGACY, 'Addaplay/src/services/api/endpoints.js') },
   /**
-   * This app — the third target Phase 10 asks for.
+   * The operator console. Its registry writes full paths (`${ADMIN}/auth/login`)
+   * because `apiFetch` does not prefix.
+   */
+  { app: 'adminpanel', file: path.join(REPO, 'adminpanel/src/services/endpoints.ts') },
+  /**
+   * The player app.
    *
    * Its registry is the ONLY way it addresses the API: every call goes through
-   * `request(ENDPOINTS.x.y)`, so there are no hardcoded paths for the call-site
-   * pass to catch. That is the stronger position to be in, and it is why the
-   * registry pass matters more here than it did for the two apps above — a
-   * renamed route breaks the registry, and the registry breaks every caller.
+   * a verb helper from `lib/api`, so there are no hardcoded paths for the
+   * call-site pass to catch. That is the stronger position to be in, and it is
+   * why the registry pass matters more here — a renamed route breaks the
+   * registry, and the registry breaks every caller.
+   *
+   * Its entries are SERVICE-RELATIVE (`/user/auth/me`): `lib/api` prepends
+   * `VITE_API_BASE || '/api/v1'`, so `prefix` below stands in for that.
    */
-  { app: 'stake-site', file: path.join(REPO, 'src/api/endpoints.js') },
+  { app: 'frontend', file: path.join(REPO, 'frontend/src/lib/endpoints.js'), prefix: '/api/v1' },
 ];
 
 /** Source trees walked for `apiFetch('/literal-path')` call sites. */
 const SOURCES = [
-  { app: 'adminpanel', dir: path.join(WORKSPACE, 'adminpanel/src') },
-  { app: 'stake-site', dir: path.join(REPO, 'src') },
+  { app: 'adminpanel', dir: path.join(REPO, 'adminpanel/src') },
+  { app: 'frontend', dir: path.join(REPO, 'frontend/src') },
 ];
 
 /** Mount the four services and read back every concrete route they expose. */
@@ -147,12 +150,21 @@ function normalise(p) {
 /**
  * Pull every string literal that looks like an API path out of a registry.
  *
- * Template literals are the norm there (`` `${USER}/wallet/balances` ``), so
- * the service-root variables are resolved first and the interpolation is
- * replaced with the prefix it stands for.
+ * TWO SHAPES, because the two apps address the API differently.
+ *
+ *   adminpanel   `key: `${ADMIN}/auth/login``   — a root constant plus a tail,
+ *                a bare path string that `apiFetch` sends as-is.
+ *
+ *   frontend     `key: () => get("/user/profile")` — the path is an argument to
+ *                a verb helper, and `lib/api` prepends `/api/v1`. That prefix
+ *                is supplied by the registry entry rather than parsed, because
+ *                it comes from a Vite env var this tool cannot read.
+ *
+ * Reading only the first shape is how this check came to pass while examining
+ * ZERO of the player app's endpoints.
  */
-function readRegistry(file) {
-  const source = fs.readFileSync(file, 'utf8');
+function readRegistry(file, prefix = '') {
+  const source = stripComments(fs.readFileSync(file, 'utf8'));
 
   const roots = {};
   for (const [, name, value] of source.matchAll(
@@ -162,12 +174,21 @@ function readRegistry(file) {
   }
 
   const found = [];
-  // `key: `${ROOT}/rest``  — the only shape the registries use.
+
+  // Shape one — `key: `${ROOT}/rest``.
   for (const [, key, root, rest] of source.matchAll(
     /(\w+)\s*:\s*`\$\{([A-Z_]+)\}([^`]*)`/g
   )) {
     if (!(root in roots)) continue;
     found.push({ key, path: `${roots[root]}${rest}` });
+  }
+
+  // Shape two — `verb("/path")` / `verb(`/path/${id}`)`.
+  for (const [, verb, raw] of source.matchAll(
+    /\b(get|post|put|patch|del|delete)\(\s*[`'"](\/[^`'"]*)[`'"]/g
+  )) {
+    // `${id}` in a template literal is a path parameter by another name.
+    found.push({ key: `${verb} ${raw}`, path: `${prefix}${raw.replace(/\$\{[^}]*\}/g, ':p')}` });
   }
 
   return found;
@@ -300,14 +321,14 @@ function main() {
   let checked = 0;
   const missing = [];
 
-  for (const { app, file } of REGISTRIES) {
+  for (const { app, file, prefix } of REGISTRIES) {
     if (!fs.existsSync(file)) {
       console.error(`  ✗ ${app}: no registry at ${path.relative(REPO, file)}`);
       process.exitCode = 1;
       continue;
     }
 
-    const entries = readRegistry(file);
+    const entries = readRegistry(file, prefix ?? '');
     if (entries.length === 0) {
       console.error(`  ✗ ${app}: registry parsed to zero entries — its shape changed`);
       process.exitCode = 1;

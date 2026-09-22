@@ -1,6 +1,11 @@
 'use strict';
 
-const { Op, fn, col } = require('sequelize');
+/* `where` is the odd one out and was missing: `fn`/`col` build an expression,
+   but comparing one to a value needs `where(fn(...), value)`. Without it
+   `#resolveReferrerOwner` threw ReferenceError the moment the exact-code
+   lookup missed — so every case-variant code and every username referral
+   answered 500 instead of matching. */
+const { Op, fn, col, where } = require('sequelize');
 const { money } = require('@ibitplay/common');
 
 const errors = require('./affiliate.errors');
