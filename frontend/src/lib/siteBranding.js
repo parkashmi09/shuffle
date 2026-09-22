@@ -10,10 +10,10 @@
  * picks one by name.
  *
  *   applySiteBranding()                 // document.title + <meta name="description">
- *   siteLogo({ own: 'stake' })          // '/brand/roobet.svg', or null → draw your own
- *   <img src={siteLogo({ own: 'stake' }) ?? ownLogo} alt={siteTitle() ?? 'Stake'} />
+ *   siteLogo({ own: 'stake-site' })     // '/brand/roobet.svg', or null → draw your own
+ *   <img src={siteLogo({ own: 'stake-site' }) ?? ownLogo} alt={siteTitle() ?? 'Stake'} />
  *
- * `own` is the logo this front end already draws. Asked for its own, it gets
+ * `own` is this front end's own site key. Asked for its own logo, it gets
  * null — its imported images have light, dark and small variants that one file
  * under public/brand/ does not.
  *
@@ -21,45 +21,42 @@
  * keeps the title in its index.html and the logo its own code imports.
  */
 
-/** The static images under public/brand/, and the names that mean each one. */
-const LOGOS = [
-  { file: 'shuffle.svg', names: ['shuffle'] },
-  { file: 'bcgame.png', names: ['bcgame', 'bcgames', 'hashgames', 'hashgame'] },
-  { file: 'stake.svg', names: ['stake'] },
-  { file: 'addaplay.webp', names: ['addaplay', 'adda'] },
-  { file: 'roobet.svg', names: ['roobet'] },
-];
+/**
+ * The static images under public/brand/. The NAME IS THE SITE KEY, exactly as
+ * the owner panel registers it — `hash-games` finds hash-games.png and nothing
+ * else does. No aliases, no partial matches: one name, one file.
+ */
+const LOGOS = {
+  shuffle: 'shuffle.svg',
+  'hash-games': 'hash-games.png',
+  'stake-site': 'stake-site.svg',
+  addaplay: 'addaplay.webp',
+  roobet: 'roobet.svg',
+};
 
 const env = (key) => {
   const value = import.meta.env?.[key];
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 };
 
-const squash = (text) => String(text ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+const exact = (name) => (LOGOS[String(name ?? '').trim().toLowerCase()] ? String(name).trim().toLowerCase() : null);
 
 /**
- * The image for a name, or null. "Stake", "stake-site" and "Stake Casino" all
- * find stake.svg — the match is on the squashed name CONTAINING a known one,
- * so the owner types what the site is called and not a file name.
+ * The image for a name, or null. `own` is this front end's own site key: asked
+ * for its own logo it gets null, so its imported images stay in use.
  */
-function match(name) {
-  const wanted = squash(name);
-  if (!wanted) return null;
-  return LOGOS.find((l) => l.names.includes(wanted)) ?? LOGOS.find((l) => l.names.some((n) => wanted.includes(n))) ?? null;
-}
-
 export function logoFor(name, { own } = {}) {
-  const hit = match(name);
-  if (!hit || hit === match(own)) return null;
+  const key = exact(name);
+  if (!key || key === exact(own)) return null;
   const base = String(import.meta.env?.BASE_URL ?? '/').replace(/\/*$/, '/');
-  return `${base}brand/${hit.file}`;
+  return `${base}brand/${LOGOS[key]}`;
 }
 
 export const siteTitle = () => env('VITE_SITE_TITLE');
 export const siteDescription = () => env('VITE_SITE_DESCRIPTION');
 
-/** The logo the owner chose; failing that, whichever one the site's title names. */
-export const siteLogo = (options) => (match(env('VITE_SITE_LOGO')) ? logoFor(env('VITE_SITE_LOGO'), options) : logoFor(siteTitle(), options));
+/** The logo the owner chose, by exact name. Nothing chosen is null: the site's own. */
+export const siteLogo = (options) => logoFor(env('VITE_SITE_LOGO'), options);
 
 /** Call once, before the first render. Leaves index.html's own values where nothing is set. */
 export function applySiteBranding() {
