@@ -3,8 +3,24 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-// `legacy/` is a sibling of `backend/`, so this climbs out of the backend.
-const legacyConstants = require('../../../../legacy/General/Constant');
+/**
+ * `legacy/` is a sibling of `backend/`, so this climbs out of the backend —
+ * and it is NOT in every checkout.
+ *
+ * It used to be required at the top level, which meant a missing `legacy/`
+ * threw before the first test registered and took the whole file with it:
+ * frame encoding, the rate limiter and the non-ASCII name fix were all lost
+ * to a dependency none of them have. Only the protocol comparison below
+ * genuinely needs the monolith, so only that part stands down when it is
+ * absent — and it SKIPS rather than passes, because "the wire protocol still
+ * matches" is a claim this file cannot make without the thing to compare to.
+ */
+let legacyConstants = null;
+try {
+  legacyConstants = require('../../../../legacy/General/Constant');
+} catch (error) {
+  if (error?.code !== 'MODULE_NOT_FOUND') throw error;
+}
 const { EVENTS, NAME_OF, encode, decode, MAX_FRAME_BYTES, createRateLimiter } = require('../src');
 
 /**
@@ -17,6 +33,11 @@ const { EVENTS, NAME_OF, encode, decode, MAX_FRAME_BYTES, createRateLimiter } = 
  */
 
 test('the event table is the legacy protocol, byte for byte', async (t) => {
+  if (!legacyConstants) {
+    t.skip('legacy/ is not in this checkout — nothing to compare the wire protocol against');
+    return;
+  }
+
   await t.test('every legacy key is present with the same value', () => {
     const differences = [];
 

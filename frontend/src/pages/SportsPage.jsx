@@ -15,6 +15,7 @@ import liveData from "../data/sports-live.json";
 import allSports from "../data/sports-all.json";
 import pageData from "../data/sports-pages.json";
 import { bannerForSport, groupsForSport } from "../lib/sportsData";
+import { selectionId, useBetSlip } from "../lib/betSlipContext";
 import { useSession } from "../lib/sessionContext";
 import seoHtml from "../data/seo-sports.html?raw";
 
@@ -199,10 +200,13 @@ function ToolbarIcon({ alt, href }) {
 
 /** Live match tile with 1X2 odds — reference `FeaturedFixtureCard`. */
 function FixtureCard({ f }) {
-  const [picked, setPicked] = useState(null);
+  // `picked` is no longer local: a price is lit because it is IN the slip, so
+  // the highlight survives leaving the page and cannot disagree with the panel.
+  const slip = useBetSlip();
   // The reference paints each card on its own sport's pitch, and shows either a
   // live scoreboard or, before kick-off, the two names either side of "vs.".
   const names = f.teams ? f.teams.map((t) => t[0]) : f.competitors.map((c) => c[0]);
+  const event = names.join(" vs ");
   const banner = bannerForSport(f.href.split("/")[2]);
   return (
     <div className="FeaturedFixtureCard_cardWrapper">
@@ -281,14 +285,30 @@ function FixtureCard({ f }) {
         <div className="FeaturedFixtureCard_selections">
           {f.selections.map(([name, odds], i) => {
             const suspended = odds === "Suspended";
+            const leg = {
+              href: f.href,
+              market: "Match Result",
+              name,
+              odds,
+              event,
+              league: f.league,
+              live: Boolean(f.live),
+            };
+            const id = selectionId(leg);
             return (
               <button
                 key={name}
                 data-testid={i === 0 ? "bet-select" : ""}
                 disabled={suspended}
-                className={cx("ButtonVariants_root ButtonVariants_buttonHeightXLarge ButtonVariants_sportsBet SportsBetSelectionButton_root", picked === i && "SportsBetSelectionButton_selected")}
+                className={cx("ButtonVariants_root ButtonVariants_buttonHeightXLarge ButtonVariants_sportsBet SportsBetSelectionButton_root", slip.has(id) && "SportsBetSelectionButton_selected")}
                 type="button"
-                onClick={() => setPicked((p) => (p === i ? null : i))}
+                onClick={(e) => {
+                  // The whole card is an overlaid link to the fixture; without
+                  // this the pick navigates away from the page it just landed on.
+                  e.stopPropagation();
+                  e.preventDefault();
+                  slip.toggle({ ...leg, id });
+                }}
               >
                 <span className="ButtonVariants_buttonContent SportsBetSelectionButton_buttonBackground SportsBetSelectionButton_vertical">
                   <div className="SportsBetSelectionButton_selectionDetails">
@@ -471,13 +491,23 @@ function Competitor({ team, href, away }) {
   );
 }
 
-/** Odds button inside an expanded group — reference `SportsBetSelectionButton`. */
-function GroupSelection({ sel, outright, first, picked, onPick }) {
+/**
+ * Odds button inside an expanded group — reference `SportsBetSelectionButton`.
+ *
+ * `fixture` is what the slip needs to describe the leg once the row that drew
+ * it is gone: the match, its league and the market this price belongs to.
+ */
+function GroupSelection({ sel, outright, first, fixture }) {
+  const slip = useBetSlip();
   const name = sel[0];
   const odds = outright ? sel[2] : sel[1];
   const boosted = outright ? sel[3] : null;
   const suspended = odds === "Suspended";
-  const on = picked === name;
+  // A boosted price is the one that would be struck, so that is the one the
+  // slip takes — showing 4.10 and banking 3.15 would be the wrong way round.
+  const leg = { ...fixture, name, odds: boosted || odds };
+  const id = selectionId(leg);
+  const on = slip.has(id);
   return (
     <button
       className={cx(
@@ -489,7 +519,13 @@ function GroupSelection({ sel, outright, first, picked, onPick }) {
       data-testid={first ? "bet-select" : ""}
       disabled={suspended}
       type="button"
-      onClick={() => onPick(on ? null : name)}
+      onClick={(e) => {
+        // `MatchEventTiles_linkOverlay` covers the whole tile with a link to
+        // the fixture, so a pick has to stop before it reaches that.
+        e.stopPropagation();
+        e.preventDefault();
+        slip.toggle({ ...leg, id });
+      }}
     >
       <span className={cx("ButtonVariants_buttonContent SportsBetSelectionButton_buttonBackground", outright ? "SportsBetSelectionButton_horizontal" : "SportsBetSelectionButton_vertical")}>
         <div className="SportsBetSelectionButton_selectionDetails">
@@ -533,7 +569,7 @@ function GroupSelection({ sel, outright, first, picked, onPick }) {
 }
 
 /** Outright market body: the winner list — reference `MatchEventTileRaceWinner`. */
-function OutrightBody({ f, picked, onPick }) {
+function OutrightBody({ f, fixture }) {
   const [showAll, setShowAll] = useState(false);
   return (
     <div className="MatchEventTileRaceWinner_root">
@@ -542,7 +578,7 @@ function OutrightBody({ f, picked, onPick }) {
           <div className="MatchEventTileRaceWinner_selections">
             <div className="MatchEventTileRaceWinner_container">
               {f.sels.map((s, i) => (
-                <GroupSelection key={s[0]} sel={s} outright first={i === 0} picked={picked} onPick={onPick} />
+                <GroupSelection key={s[0]} sel={s} outright first={i === 0} fixture={fixture} />
               ))}
             </div>
           </div>
@@ -557,8 +593,19 @@ function OutrightBody({ f, picked, onPick }) {
 
 /** One fixture inside an expanded group — reference `MatchEventTiles` + `MatchEventTile`. */
 export function MatchRow({ f, market, cols, outright, first, noTopMargin }) {
-  const [picked, setPicked] = useState(null);
   const columns = cols || f.cols || 2;
+  /**
+   * What the slip keeps about this row. An outright has no two competitors, so
+   * the market's own title is the event — "US Open Women Singles", not
+   * "undefined vs undefined".
+   */
+  const fixture = {
+    href: f.href,
+    market: market || (outright ? "Outright" : "Match Result"),
+    event: outright ? market || f.title : [f.home?.[0], f.away?.[0]].filter(Boolean).join(" vs "),
+    league: f.league || f.compName,
+    live: Boolean(f.live),
+  };
   return (
     <section className={cx("MatchEventTiles_marketCardWrapper", (first || noTopMargin) && "MatchEventTiles_marketCardNoMarginTop", first && outright && "MatchEventTiles_firstAndNoHeading")}>
       {market && (
@@ -572,7 +619,7 @@ export function MatchRow({ f, market, cols, outright, first, noTopMargin }) {
         <FixtureHeader f={f} />
         <div className="MatchEventTiles_matchElementBody">
           {outright ? (
-            <OutrightBody f={f} picked={picked} onPick={setPicked} />
+            <OutrightBody f={f} fixture={fixture} />
           ) : (
             <div className="Flex_root Flex_column Flex_md2 MatchEventTile_eventWrapper">
               <div className="MatchEventInfoSection_eventInfoSection">
@@ -585,7 +632,7 @@ export function MatchRow({ f, market, cols, outright, first, noTopMargin }) {
               <div className="Flex_root Flex_column Flex_spaced MatchEventTile_eventSelectionSection">
                 <div className={cx("MatchEventTile_container", columns === 3 ? "MatchEventTile_marketSelectionsWithThreeEqualColumns" : "MatchEventTile_marketSelectionsWithTwoEqualColumns")}>
                   {f.sels.map((s, i) => (
-                    <GroupSelection key={s[0]} sel={s} first={i === 0} picked={picked} onPick={setPicked} />
+                    <GroupSelection key={s[0]} sel={s} first={i === 0} fixture={fixture} />
                   ))}
                 </div>
               </div>

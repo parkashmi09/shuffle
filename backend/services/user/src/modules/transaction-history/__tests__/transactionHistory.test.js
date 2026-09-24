@@ -247,8 +247,16 @@ test('transaction history: every rail', async (t) => {
     const uid = await seedPlayer();
     const { rows } = await service.allWithdrawals({ userId: uid });
 
+    /*
+     * Masked, not full. `transactionHistory.constants.js` states the decision
+     * against this exact field: the tail is what lets a player recognise WHICH
+     * account they used, and the rest "is the part worth not repeating back
+     * over the wire". The row still says where the payout went, which is what
+     * this test is for — it just says it the way the crypto rail beside it
+     * already does.
+     */
     const manual = rows.find((r) => r.method === 'manual');
-    assert.equal(manual.destination.accountNumber, '938939939939393');
+    assert.equal(manual.destination.accountNumber, '••••9393');
 
     // A-Pay keeps the account inside a JSONB column whose shape varies per
     // payment system, which is why it is flattened rather than passed through.

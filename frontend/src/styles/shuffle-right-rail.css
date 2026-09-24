@@ -50,7 +50,16 @@
   background-color: var(--color-gray900);
 }
 
-.RightSidebarHeader_rightSidebarHeaderElement > h3 {
+/*
+ * Descendant, not `> h3`.
+ *
+ * The reference's own rule is a direct-child one, but BOTH panels here put the
+ * heading inside the `Flex_root` row that also carries the header buttons — so
+ * the rule matched nothing and every rail heading fell back to the browser's
+ * default h3 (about 18.7px) instead of the reference's 20px/700. The bet slip
+ * nests it one deeper still, inside the button the chevron belongs to.
+ */
+.RightSidebarHeader_rightSidebarHeaderElement h3 {
   margin-right: var(--spacing-md);
   font-size: var(--text-title);
   font-weight: 700;
@@ -269,4 +278,624 @@ ul.WalletSelect_portal.NotificationsSidebar_filterPopup .ActivityBoard_selectOpt
 
 @media (min-width: 1303px) {
   .magic-container.both-side-opened .HeaderLogo_partnerLogo { margin-right: 0; }
+}
+
+/* ==========================================================================
+   The bet slip, in the same rail.
+
+   Only the inside is dressed here. The slide, the width and the phone sheet
+   all come from `CasinoAside_*` in `shuffle-sports.css`, exactly as they do
+   for the notification panel — see the note at the top of this file.
+
+   `BetSlip_*` in `shuffle-sports.css` is the capture's own, and it dresses the
+   RECEIPT (the footer notch, the logo medallion, the loading dots) rather than
+   the slip body, so it is left alone and these carry the list and the totals.
+   ========================================================================== */
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+/*
+ * The title is a button because the chevron beside it folds the slip away, so
+ * the whole "Bet Slip v" group is one target rather than a heading with a
+ * separate control after it.
+ */
+.BetSlipSidebar_titleButton {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.BetSlipSidebar_titleButton > h3 { margin: 0; }
+
+.BetSlipSidebar_titleChevron {
+  width: 1rem;
+  height: 1rem;
+  transition: transform var(--animation-duration, 0.2s);
+}
+
+.BetSlipSidebar_titleChevronOpen { transform: rotate(180deg); }
+
+/*
+ * No gap at all, and flush with the panel edge.
+ *
+ * Both are safe because the gear and the cross are 40px boxes around 16px
+ * glyphs: 12px of each box is empty on every side, so the glyphs still read as
+ * 24px apart with the boxes touching, and the cross still has 12px of air
+ * before the panel edge with its box against it.
+ *
+ * The negative margin cancels the header's own `RightSidebarHeader_md2` gutter
+ * (16px) exactly, rather than trimming it — `md2-neg` is that same token
+ * negated, so the two stay in step if the header's padding is ever changed.
+ */
+.BetSlipSidebar_headerButtons {
+  align-items: center;
+  gap: 0;
+  margin-right: var(--spacing-md2-neg);
+}
+
+.BetSlipSidebar_iconButton {
+  width: var(--spacing-lg3);
+  max-width: var(--spacing-lg3);
+  height: var(--spacing-lg3);
+  max-height: var(--spacing-lg3);
+}
+
+/* ── Settings ───────────────────────────────────────────────────────────── */
+
+.BetSlipSidebar_settings {
+  border-bottom: 1px solid var(--color-gray700);
+  background: var(--color-gray800);
+}
+
+.BetSlipSidebar_settingsRow {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-sm5) var(--spacing-md2);
+  border: none;
+  background: none;
+  color: var(--color-gray200);
+  font-size: var(--text-lg);
+  text-align: left;
+  cursor: pointer;
+}
+
+.BetSlipSidebar_settingsRow:hover:not(:disabled) { color: var(--color-white); }
+
+.BetSlipSidebar_settingsRow:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+/*
+ * The panel reuses `RightSidebarEmptyState_*` — the capture's own container,
+ * title and description — so the type scale is the reference's rather than a
+ * second one invented here. All this adds is the illustration's size; the
+ * container supplies the centring, the gap and the button's 18rem cap.
+ */
+/* `sport-bet-empty.svg`, the reference's own asset, at its natural 160px. */
+.BetSlipSidebar_art {
+  width: 10rem;
+  height: 10rem;
+  max-width: 100%;
+}
+
+/* ── Singles / Multi ────────────────────────────────────────────────────── */
+
+.BetSlipSidebar_tabs {
+  display: flex;
+  gap: var(--spacing-sm3);
+  padding: var(--spacing-md2) var(--spacing-md2) 0;
+}
+
+.BetSlipSidebar_tab {
+  flex: 1;
+  padding: var(--spacing-sm4) var(--spacing-sm5);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--spacing-sm4);
+  background: transparent;
+  color: var(--color-gray300);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.BetSlipSidebar_tab:disabled { opacity: 0.4; cursor: default; }
+
+.BetSlipSidebar_tabActive {
+  background: var(--color-gray800);
+  border-color: var(--color-primaryViolet);
+  color: var(--color-white);
+}
+
+/* ── Legs ───────────────────────────────────────────────────────────────── */
+
+.BetSlipSidebar_legs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.BetSlipSidebar_leg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm4);
+  padding: var(--spacing-md2);
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.BetSlipSidebar_legHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm3);
+}
+
+.BetSlipSidebar_legMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  flex: 1;
+}
+
+.BetSlipSidebar_legName {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.BetSlipSidebar_legMarket {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-gray300);
+}
+
+/* The fixture is a link back to the match, so it reads as one. */
+.BetSlipSidebar_legEvent {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm3);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-gray400);
+  font-size: var(--text-md);
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.BetSlipSidebar_legEvent:hover { color: var(--color-gray200); }
+
+.BetSlipSidebar_liveDot {
+  flex-shrink: 0;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--color-greenLive);
+}
+
+.BetSlipSidebar_legRight {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--spacing-sm4);
+}
+
+.BetSlipSidebar_legOdds {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.BetSlipSidebar_legOddsUnpriced {
+  font-size: var(--text-md);
+  color: var(--color-warning);
+}
+
+.BetSlipSidebar_legRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-gray800);
+  cursor: pointer;
+}
+
+.BetSlipSidebar_legRemove:hover { background: var(--color-gray700); }
+
+/* ── Stake ──────────────────────────────────────────────────────────────── */
+
+.BetSlipSidebar_legStake {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm3);
+}
+
+.BetSlipSidebar_stakeField {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  padding: var(--spacing-sm4) var(--spacing-sm5);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--spacing-sm4);
+  background: var(--color-gray900);
+}
+
+.BetSlipSidebar_stakeField:focus-within { border-color: var(--color-primaryViolet); }
+
+.BetSlipSidebar_stakeLabel {
+  flex-shrink: 0;
+  font-size: var(--text-md);
+  color: var(--color-gray400);
+}
+
+.BetSlipSidebar_stakeField input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--color-white);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-align: right;
+  outline: none;
+}
+
+.BetSlipSidebar_stakeCurrency {
+  flex-shrink: 0;
+  font-size: var(--text-md);
+  color: var(--color-gray300);
+}
+
+.BetSlipSidebar_legReturn {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-gray300);
+}
+
+.BetSlipSidebar_legReturnValue {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+.BetSlipSidebar_totals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm4);
+  padding: var(--spacing-md2);
+}
+
+/*
+ * The footer stands whether or not the slip holds anything — it is what keeps
+ * the empty panel from ending in dead space.
+ *
+ * ── WHY IT DOES NOT TAKE THE RAIL FOOTER'S PADDING ──────────────────────
+ *
+ * `RightSidebar_rightSidebarFooter` is `padding: var(--spacing-lg1)` — 24px on
+ * every side, which it can afford because the notification panel puts no
+ * button in its footer. Around a button that is both too tall and too narrow:
+ * the button is `width: 100%`, so the gutter is the only thing setting its
+ * width. 16px on all four sides instead — the bar comes to
+ * 16 + 48 (`buttonHeightMedium`) + 16 + 1px border = 81px, and the button
+ * gains 16px of width.
+ */
+.BetSlipSidebar_footer { padding: var(--spacing-md2); }
+
+.BetSlipSidebar_viewAll { width: 100%; }
+
+.BetSlipSidebar_multiStake {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm3);
+  padding-bottom: var(--spacing-sm4);
+  border-bottom: 1px solid var(--color-gray700);
+}
+
+.BetSlipSidebar_summaryRow {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-gray300);
+}
+
+.BetSlipSidebar_summaryValue { color: var(--color-white); font-weight: 600; }
+
+.BetSlipSidebar_summaryPayout .BetSlipSidebar_summaryValue { color: var(--color-success); }
+
+.BetSlipSidebar_notice {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-warning);
+}
+
+.BetSlipSidebar_place { width: 100%; }
+
+.BetSlipSidebar_placeNote {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-gray400);
+  text-align: center;
+}
+
+/* ==========================================================================
+   The VIP rail — third panel in the same dock.
+
+   The slide, the width and the phone sheet are `CasinoAside_*`'s. The rewards
+   grid is `VipRewards`, whose `VipSidebarRewardBlock_*` / `VipRewardsCarousel_*`
+   classes were captured from THIS panel and are already in `shuffle-vip.css`,
+   so nothing about the four cards is restyled here. What is left is the
+   progress card, the redeem fold and the footer link.
+   ========================================================================== */
+
+.VipSidebar_headerButtons {
+  align-items: center;
+  gap: 0;
+  margin-right: var(--spacing-md2-neg);
+}
+
+.VipSidebar_iconButton {
+  width: var(--spacing-lg3);
+  max-width: var(--spacing-lg3);
+  height: var(--spacing-lg3);
+  max-height: var(--spacing-lg3);
+}
+
+/*
+ * The panel's own gutter. 16px on all four sides, which is what sets the
+ * progress card's and the rewards grid's inset from the rail edge.
+ *
+ * It has to stay within what the narrow rail can carry: at
+ * `--side-panel-sm-width` (320px) this leaves 288px, so the two reward cards
+ * are 140px each and their one-line labels still fit inside the shell's 16px
+ * padding. Going wider here is what starts pushing "Wager to Unlock" out.
+ */
+.VipSidebar_body { padding: var(--spacing-md2); }
+
+/* ── The progress card ──────────────────────────────────────────────────── */
+
+.VipSidebar_card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm5);
+  padding: var(--spacing-sm5);
+  border-radius: var(--spacing-md);
+  background: var(--color-gray800);
+}
+
+/*
+ * The artwork is a banner, not an icon: it spans the card and is cropped to a
+ * fixed ratio so the source — a 3840x2160 page banner — cannot set its own
+ * height. 2.1:1 is the reference's, measured off its panel.
+ */
+/*
+ * A fixed height rather than a ratio: the source is a 3840x2160 page banner,
+ * and an `aspect-ratio` still let a narrow rail compute its own box. 136px
+ * reads as about 2.1:1 at 320px and 2.4:1 at 360px, which brackets the
+ * reference's crop across both rail widths.
+ */
+.VipSidebar_art {
+  width: 100%;
+  height: 8.5rem;
+  border-radius: var(--spacing-sm4);
+  object-fit: cover;
+}
+
+/*
+ * ── THE BAR SITS ON THE CARD, NOT IN A BLACK BOX OF ITS OWN ──────────────
+ *
+ * `ProgressBarSection_graphContent` is the shared VIP-progress block, and it
+ * carries `padding: var(--spacing-lg1)` on a `--color-gray900` ground. That is
+ * right on the VIP page, where it IS the panel; inside this card it draws a
+ * dark inset box around the bar and adds 24px of space on every side.
+ * `UserMenuVipCard_progressBarContent` cancels the same two declarations for
+ * the account menu's card — see the note in `shuffle-header.css`.
+ *
+ * Element plus two classes, which beats the one-class base. The four
+ * container-scoped copies that forced that file to go a class heavier are all
+ * scoped to `.magic-container`, and this rail is a SIBLING of that element
+ * rather than inside it, so they cannot reach here.
+ */
+div.VipSidebar_graphContent.ProgressBarSection_graphContent {
+  padding: 0;
+  background: none;
+  gap: var(--spacing-sm3);
+}
+
+/*
+ * The bar's label row is a `<label>` the capture lays out for the VIP page's
+ * width; in a rail the two ends are pinned instead of left to that rule.
+ */
+.VipSidebar_graph label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm3);
+}
+
+.VipSidebar_progressTitle {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.VipSidebar_progressValue {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.VipSidebar_cta { width: 100%; }
+
+/* ── Signed out ─────────────────────────────────────────────────────────── */
+
+.VipSidebar_signedOut {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+  padding: var(--spacing-md2) 0;
+  text-align: center;
+}
+
+.VipSidebar_signedOutText {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-gray300);
+}
+
+/* ── Redeem Code ────────────────────────────────────────────────────────── */
+
+/*
+ * Pinned between the scroller and the footer, as the reference has it — the
+ * rewards grid scrolls behind it and this row stays put.
+ */
+.VipSidebar_redeem {
+  flex-shrink: 0;
+  border-top: 1px solid var(--color-gray700);
+}
+
+.VipSidebar_redeemToggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md2);
+  border: none;
+  background: none;
+  color: var(--color-white);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.VipSidebar_redeemChevron {
+  width: 1rem;
+  height: 1rem;
+  transition: transform var(--animation-duration, 0.2s);
+}
+
+.VipSidebar_redeemChevronOpen { transform: rotate(180deg); }
+
+.VipSidebar_redeemForm {
+  display: flex;
+  gap: var(--spacing-sm4);
+  padding: 0 var(--spacing-md2) var(--spacing-md2);
+}
+
+.VipSidebar_redeemForm input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-sm4) var(--spacing-sm5);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--spacing-sm4);
+  background: var(--color-gray900);
+  color: var(--color-white);
+  font-size: var(--text-lg);
+  outline: none;
+}
+
+.VipSidebar_redeemForm input:focus { border-color: var(--color-primaryViolet); }
+
+.VipSidebar_redeemForm button { width: auto; flex-shrink: 0; }
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+/* A link, not a button — the reference underlines it and centres it. */
+.VipSidebar_footer {
+  padding: var(--spacing-md2);
+  text-align: center;
+}
+
+.VipSidebar_learnMore {
+  font-size: var(--text-lg);
+  color: var(--color-primaryViolet);
+  text-decoration: underline;
+}
+
+.VipSidebar_learnMore:hover { color: var(--color-light-purple); }
+
+/* ── The rewards grid, at rail width ────────────────────────────────────── */
+
+/*
+ * `variant="sidebar"` already drops the card off `Card_pageVariant`, which is
+ * what takes the padding back to 16px and the artwork to 48px. These are the
+ * two things the variant does not cover.
+ *
+ * Two cards across about 320px leaves roughly 130px of content each, and both
+ * of these strings are wider than that at the shell's inherited size —
+ * "Wager to Unlock" and "Instant Rakeback" each wrapped to two lines, which is
+ * what made the cards uneven as well as tall. Held on one line and stepped
+ * down to the shell's own `--text-md`.
+ */
+.VipSidebar_body .VipSidebarRewardBlock_vipStatusText,
+.VipSidebar_body .VipSidebarRewardBlock_vipRewardHeader,
+.VipSidebar_body .VipSidebarRewardBlock_vipAlternativeBtn {
+  white-space: nowrap;
+  font-size: var(--text-lg);
+}
+
+/*
+ * A little taller than the bare sidebar shell, without going back to
+ * `Card_pageVariant`'s 24px / 80px — that is the size that wrapped the labels.
+ * Two gaps and the artwork, each up one step: about 16px on the card.
+ */
+/*
+ * Horizontal padding down a step to pay for the larger type.
+ *
+ * At `--side-panel-sm-width` (320px) the card is 140px wide; 16px a side left
+ * 108px of content, which `--text-lg` overruns on "Instant Rakeback". 12px
+ * leaves 116px, which it fits inside. The vertical padding is untouched — it
+ * is the card's height, not its width, and the height is wanted.
+ */
+.VipSidebar_body .Card_root {
+  gap: var(--spacing-md);
+  padding: var(--spacing-md2) var(--spacing-md);
+}
+
+.VipSidebar_body .Card_content img {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.VipSidebar_body .Card_root .Card_heading { font-size: var(--text-lg); }
+
+/* The claim / locked control follows the panel's other buttons down to 40px. */
+.VipSidebar_body .VipSidebarRewardBlock_button .ButtonVariants_buttonContent {
+  min-height: var(--spacing-lg3);
+  font-size: var(--text-lg);
+}
+
+/*
+ * "Your Rewards" is `VipSectionTitle_root`, a PAGE heading at `--text-h3`
+ * (22px). In the rail that is larger than the panel's own "VIP" title (20px),
+ * so the section read louder than the thing containing it. `--text-xl` puts it
+ * level with the "Redeem Code" row and gives the panel one hierarchy:
+ *
+ *     VIP                 20px   the panel
+ *     Your Rewards        16px   a section in it
+ *     Instant Rakeback    14px   a card in that
+ *
+ * The gift mark comes down with it — `VipRewards` renders it at 24 to match
+ * the page heading, and leaving it there beside 16px text reads as an icon
+ * that lost its label.
+ */
+.VipSidebar_body .VipSectionTitle_root { font-size: var(--text-xl); }
+
+.VipSidebar_body .VipRewardsCarousel_headingIcon {
+  width: 1.25rem;
+  height: 1.25rem;
 }

@@ -52,10 +52,8 @@ const INTERNAL_SURFACE = Object.freeze({
     '/internal/user/exchange-rate',
     '/internal/user/rakeback',
     '/internal/user/preferences',
-    // This site's own: a settled wager moves affiliate commission and VIP
-    // progress, and both columns live here.
-    '/internal/user/affiliate',
     '/internal/user/vip',
+    '/internal/user/affiliate',
   ],
   'admin-service': [
     '/internal/admin/audit',
@@ -153,13 +151,16 @@ const INTERNAL_ACL = Object.freeze({
      */
     '/internal/user/rakeback',
     /**
-     * A settled casino wager also moves this site's affiliate commission and
-     * its VIP progress, and both columns are user-service's. Shuffle's own
-     * feature: the hub does not have these routes yet, so the grant is added
-     * here and travels back on the next sync rather than being pushed down.
+     * The other two halves of the same settlement callback.
+     *
+     * `vip/on-wager` syncs the player's rakeback rate and pays level/rank-up
+     * credits; `affiliate/on-wager` pays the upline its commission. Both are
+     * called from `games.service.js` right after the wager row moves, and both
+     * are wrapped in a `try/catch` that only warns — so a missing grant here
+     * does not fail a bet, it silently stops paying people.
      */
-    '/internal/user/affiliate',
     '/internal/user/vip',
+    '/internal/user/affiliate',
     '/internal/user/wallet',
   ],
 

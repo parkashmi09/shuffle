@@ -6,6 +6,7 @@ const assert = require('node:assert');
 const db = require('@ibitplay/db');
 const { createLogger, money, vipRewards, vipLevelFor } = require('@ibitplay/common');
 
+const { BONUS_CURRENCY } = require('../../bonus/bonus.constants');
 const { VipService } = require('../vip.service');
 const { BonusService } = require('../../bonus/bonus.service');
 const { RakebackService } = require('../../rakeback/rakeback.service');
@@ -91,6 +92,12 @@ test('vip', async (t) => {
     return money.toDecimalString(money.toMinor(row?.bjb ?? '0'));
   };
 
+  /** The same read, against whichever wallet column a currency lands in. */
+  const balanceIn = async (uid, currency) => {
+    const row = await connection.models.Credits.findOne({ where: { uid }, raw: true });
+    return money.toDecimalString(money.toMinor(row?.[String(currency).toLowerCase()] ?? '0'));
+  };
+
   await t.test('on-wager syncs the rakeback rate to the player card', async () => {
     const uid = newUid();
     await seed(uid);
@@ -155,7 +162,15 @@ test('vip', async (t) => {
 
     const claimed = await bonus.claim({ userId: uid, type: 'daily' });
     assert.ok(money.gt(claimed.amount, '0'));
-    assert.ok(money.gt(await bjb(uid), '0'));
+    /*
+     * Claims pay into the SITE'S bonus currency, not BJB. `rewardCurrencies`
+     * reads it from siteconfig over the internal API and falls back to
+     * `BONUS_CURRENCY` when there is no admin client — which is this test.
+     * Asserting on `bjb` here checked a column the claim path stopped writing
+     * when the currency became configurable, so it failed against working
+     * code. Reading the constant the service reads keeps the two in step.
+     */
+    assert.ok(money.gt(await balanceIn(uid, BONUS_CURRENCY), '0'));
 
     // Same period — no second award.
     const second = await vip.awardPeriodic({ userId: uid });

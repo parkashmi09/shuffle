@@ -15,6 +15,9 @@ const {
 
 const errors = require('./auth.errors');
 const { sitePolicy } = require('@ibitplay/common');
+/* Registration is where a referral becomes a team. Safe to require here —
+   the affiliate module does not reach back into auth. */
+const { AffiliateService } = require('../affiliate/affiliate.service');
 /**
  * The player role id and the empty wallet blob, shared with `admin/players`
  * so an operator-created account and a self-registered one are the same shape.
@@ -72,12 +75,16 @@ const redactEmail = (address) => {
 };
 
 class AuthService {
-  constructor({ models, db, config, logger, mailer }) {
+  constructor({ models, db, config, logger, mailer, clients }) {
     this.models = models;
     this.db = db;
     this.config = config;
     this.logger = logger;
     this.mailer = mailer ?? null;
+    /* Kept so `register` can build an AffiliateService from the same deps.
+       Absent in unit tests, where the affiliate settings resolver falls back
+       to its own defaults rather than calling admin-service. */
+    this.clients = clients ?? null;
     this.tokens = new TokenService(config);
     // `users.two_fa` holds an encrypted secret now, so the login path needs the
     // same box the twofa module writes with.
@@ -420,6 +427,19 @@ class AuthService {
       return user;
     });
 
+    /*
+     * The referral becomes a TEAM here, not later.
+     *
+     * `refree` on the user row records who was named; it is not the link.
+     * Commission, tier unlocks and the joining bonus all read `team`, so
+     * until that row exists the referrer earns nothing from this player. It
+     * used to appear only when the referrer happened to open their team page
+     * — `myTeam` backfills from `refree` — which meant a referrer who never
+     * looked was never paid, and the register/joining bonuses were never
+     * applied at all because nothing called `applyRegistrationBonuses`.
+     */
+    await this.#linkReferrer({ userId: created.id, referredBy });
+
     this.logger?.info(
       // No password, and no email — the id is enough to find the row.
       { userId: String(created.id), referredBy: referredBy || null },
@@ -427,6 +447,61 @@ class AuthService {
     );
 
     return { id: created.id, name: created.name, email: created.email };
+  }
+
+  /**
+   * Put a new player on their referrer's team and apply the signup bonuses.
+   *
+   * ── NEITHER STEP MAY FAIL THE REGISTRATION ──────────────────────────────
+   *
+   * The account and its wallet are already committed by the time this runs.
+   * A referral code with a typo in it, or an admin-service that is down when
+   * the bonus settings are read, must not turn a successful signup into an
+   * error the player sees — they would retry and hit "username taken" on
+   * their own account. So both steps are logged and swallowed.
+   *
+   * That is the opposite of the `joinTeam` ENDPOINT, which rejects an unknown
+   * code loudly: there the player is asking to join a specific team and a
+   * silent no-op would be a lie. Here they are asking to register.
+   *
+   * `joined` gates the joining bonus rather than being assumed: the referrer
+   * is only owed it if the team row actually exists, and
+   * `applyRegistrationBonuses` re-checks that the row names them. The
+   * registration bonus is owed either way, which is why it is not inside the
+   * `if`.
+   */
+  async #linkReferrer({ userId, referredBy }) {
+    const affiliate = new AffiliateService({
+      models: this.models,
+      db: this.db,
+      logger: this.logger,
+      config: this.config,
+      clients: this.clients,
+    });
+
+    let joined = false;
+    const code = String(referredBy ?? '').trim();
+
+    if (code) {
+      try {
+        await affiliate.joinTeam({ userId, referralCode: code });
+        joined = true;
+      } catch (error) {
+        this.logger?.warn(
+          { err: error, userId: String(userId), referredBy: code },
+          'Referral code on signup did not resolve to a team'
+        );
+      }
+    }
+
+    try {
+      await affiliate.applyRegistrationBonuses({ userId, referredBy: code || null, joined });
+    } catch (error) {
+      this.logger?.warn(
+        { err: error, userId: String(userId) },
+        'Registration bonuses were not applied'
+      );
+    }
   }
 
   /**

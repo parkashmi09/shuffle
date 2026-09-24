@@ -1,4 +1,4 @@
-import { displayBalance, displayFiat } from "./adapters";
+import { displayBalance, displayFiat, isFiat } from "./adapters";
 import { currencyLabel } from "./currencies";
 import { MASKED_AMOUNT } from "./playerPreferences";
 
@@ -51,4 +51,21 @@ export function currencyOptions(
           ? displayFiat(amount, code, displayCurrency, rates)
           : displayBalance(amount, code),
     }));
+}
+
+/**
+ * Narrow a currency list to the funding rails this site actually offers.
+ *
+ * The two rails ARE the two kinds of currency here: fiat is the manual one —
+ * a bank transfer the operator settles by hand — and crypto is the automatic
+ * one, settled by CCPayment. `DepositTab` and `WithdrawTab` both branch on
+ * `isFiat(coin)` for exactly that reason, so switching a rail off is the same
+ * thing as taking its currencies out of the picker.
+ *
+ * The common case is `both`, where this returns the list untouched rather
+ * than rebuilding an identical array.
+ */
+export function optionsForRoutes(options, routes) {
+  if (!routes || (routes.manual && routes.automatic)) return options;
+  return options.filter((option) => (isFiat(option.value) ? routes.manual : routes.automatic));
 }

@@ -37,6 +37,10 @@ const { VIP_LADDERS, vipLadderFor, resolveVipLadder } = require('./vipLadders');
  * `const { vipRewards } = require('@ibitplay/common')`. The file was in the
  * package and this line was not, so user-service could not load
  * `rakeback.service.js` at all.
+ * What each rank PAYS — rakeback rates and BJB awards keyed on card. The ladder
+ * above decides which rank a wager buys; this decides what that rank is worth.
+ * Exported as a namespace, not spread, because names like `rewardsForLevel` mean
+ * nothing without the `vipRewards.` in front of them.
  */
 const vipRewards = require('./vipRewards');
 /**

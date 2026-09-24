@@ -122,17 +122,29 @@ function statusText(status, { expiry, error }) {
 }
 
 /**
- * One card. `Card_root` + `Card_pageVariant` is the reference's shared card
- * shell; everything `VipSidebarRewardBlock_*` on top of it is the reward
- * skin — the header line, the coloured status text and the not-a-button that
- * stands in for the claim button when there is nothing to claim.
+ * One card. `Card_root` is the reference's shared card shell; everything
+ * `VipSidebarRewardBlock_*` on top of it is the reward skin — the header line,
+ * the coloured status text and the not-a-button that stands in for the claim
+ * button when there is nothing to claim.
+ *
+ * ── `Card_pageVariant` IS A SIZE, AND IT IS THE PAGE'S ───────────────────
+ *
+ * It is not decoration: it takes the card's padding from 16px to 24px and its
+ * artwork from 48px to 80px. That is right on the VIP page, where four of
+ * these span a full-width column. In the VIP rail the same four sit two-up in
+ * about 320px, where the bigger padding pushes the card tall and wraps
+ * "Wager to Unlock" onto two lines.
+ *
+ * So the variant travels with the caller. The base shell — 16px and 48px — is
+ * the sidebar's, which is what `VipSidebarRewardBlock_*` was named for.
  */
-function RewardCard({ heading, icon, status, expiry, minVipRank, busy, error, onClaim }) {
+function RewardCard({ heading, icon, status, expiry, minVipRank, busy, error, onClaim, variant }) {
+  const page = variant !== "sidebar";
   const tone = status === STATUS.CLAIMED ? "claimed" : status === STATUS.LOCKED ? "locked" : null;
   const toneClass = tone ? `VipSidebarRewardBlock_${tone}` : null;
 
   return (
-    <section className="Card_root Card_pageVariant" data-testid={heading}>
+    <section className={cx("Card_root", page && "Card_pageVariant")} data-testid={heading}>
       <div className="Card_header VipRewardsCarousel_vipRewardBlockIconContainer">
         <p className={cx("VipSidebarRewardBlock_vipStatusText", toneClass)}>
           {statusText(status, { expiry, error })}
@@ -146,7 +158,7 @@ function RewardCard({ heading, icon, status, expiry, minVipRank, busy, error, on
         />
       </div>
 
-      <div className="Flex_root Flex_column Flex_sm5 Card_content Card_pageVariant">
+      <div className={cx("Flex_root Flex_column Flex_sm5 Card_content", page && "Card_pageVariant")}>
         <img src={icon} alt="" />
         {/* Heading only. The reference renders no `Card_description` here —
             an earlier pass put the pending amount under the name, which is a
@@ -196,7 +208,7 @@ function RewardCard({ heading, icon, status, expiry, minVipRank, busy, error, on
   );
 }
 
-export default function VipRewards({ levels }) {
+export default function VipRewards({ levels, variant = "page" }) {
   const { data: rake, reload: reloadRake } = useApi("vip:rakeback", () => rakebackApi.amount());
   const { data: bonuses, reload: reloadBonuses } = useApi("vip:bonus", () => bonusApi.overview());
 
@@ -305,6 +317,7 @@ export default function VipRewards({ levels }) {
               <div key={card.id} className="VipRewardsCarousel_rewardsWrapper">
                 <RewardCard
                   {...card}
+                  variant={variant}
                   busy={state === "busy"}
                   error={state && state !== "busy" && state !== "claimed" ? state : null}
                   onClaim={() =>

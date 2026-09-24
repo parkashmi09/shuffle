@@ -121,7 +121,27 @@ test('casino bet history', async (t) => {
   }
 
   /** A player owned by a staff member, with one in-house bet. */
-  const seedPlayer = async (staffId, { profit = '10', amount = '20' } = {}) => {
+  /**
+   * A player with one round of history.
+   *
+   * ── THE ROUND IS SETTLED, AND THAT MATTERS ──────────────────────────────
+   *
+   * `result` was never set here, which made every seeded row an OPEN round —
+   * and `activity()`, `recentGames()` and `liveFeed()` all filter on
+   * `result IS NOT NULL AND result::text <> '"refunded"'`, because an open or
+   * voided round is not a public result. So those three saw nothing this
+   * helper produced and were passing vacuously; the live-feed test only
+   * noticed because it asserts `rows.length > 0` before checking that no
+   * player id leaks.
+   *
+   * The value only has to be non-null and not the `"refunded"` marker — the
+   * WIN/LOSS/PUSH split comes from `profit` via `classify()`, not from here.
+   * Pass `result: null` to seed a round that is still open.
+   */
+  const seedPlayer = async (
+    staffId,
+    { profit = '10', amount = '20', result = { settled: true } } = {}
+  ) => {
     const uid = newUid();
     await models.Bets.destroy({ where: { uid } });
     await models.Users.destroy({ where: { id: uid } });
@@ -141,6 +161,7 @@ test('casino bet history', async (t) => {
       profit,
       coin: 'usdt',
       game: 'dice',
+      result,
       created: new Date(),
     });
     return uid;

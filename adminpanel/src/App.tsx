@@ -73,7 +73,27 @@ import MarketingDashboard from './components/marketing/MarketingDashboard';
 import MarketingCustomers from './components/marketing/MarketingCustomers';
 import MarketingUsersTab from './components/admin-management/MarketingUsersTab';
 import NotFound from './components/NotFound';
-import SportsAdminUnavailable from './components/SportsAdminUnavailable';
+/**
+ * The sports operator screens.
+ *
+ * These were routed to a placeholder that said the sports service "does not
+ * boot (missing legacy module)". That is no longer true — sports-service
+ * starts with all seven modules and mounts `/api/v1/admin/sports/*`, which is
+ * what every screen below calls. The placeholder outlived its reason and was
+ * hiding nine working screens, so it is gone.
+ *
+ * `SportsDashboard` answers to two paths on purpose: it reads `location`
+ * itself and opens on its "betlock" tab for `/sports-lock`, so pointing both
+ * routes at it is what the component already expects, not a duplicate.
+ */
+import MarketHistory from './components/MarketWins';
+import MarketInternalSettle from './components/MOsettle';
+import FanInternalSettle from './components/FanmanualSettle';
+import FancyResultReport from './components/FancyResult';
+import FanWins from './components/FanwinsHistory';
+import SportsBetting from './components/SportsBetting';
+import SportsDashboard from './components/sportsbetStats';
+import SportsConfigSection from './components/SportsConfig';
 
 
 /**
@@ -191,17 +211,17 @@ function App() {
             <Route path="history" element={<RequirePermission><History /></RequirePermission>} />
             <Route path="seo-manager" element={<RequirePermission><SEO /></RequirePermission>} />
             <Route path="affiliate" element={<RequirePermission><Referal /></RequirePermission>} />
-            <Route path="marketwins" element={<RequirePermission><SportsAdminUnavailable /></RequirePermission>} />
-            <Route path="MOsettle" element={<RequirePermission authority="canSettleSports"><SportsAdminUnavailable /></RequirePermission>} />
-            <Route path="Fansettle" element={<RequirePermission authority="canSettleFancy"><SportsAdminUnavailable /></RequirePermission>} />
-            <Route path="fancyreport" element={<RequirePermission><SportsAdminUnavailable /></RequirePermission>} />
-            <Route path="fanwins" element={<RequirePermission><SportsAdminUnavailable /></RequirePermission>} />
+            <Route path="marketwins" element={<RequirePermission><MarketHistory /></RequirePermission>} />
+            <Route path="MOsettle" element={<RequirePermission authority="canSettleSports"><MarketInternalSettle /></RequirePermission>} />
+            <Route path="Fansettle" element={<RequirePermission authority="canSettleFancy"><FanInternalSettle /></RequirePermission>} />
+            <Route path="fancyreport" element={<RequirePermission><FancyResultReport /></RequirePermission>} />
+            <Route path="fanwins" element={<RequirePermission><FanWins /></RequirePermission>} />
             <Route path="bonus" element={<RequirePermission authority="canIssueBonus"><Bonus /></RequirePermission>} />
             <Route path="club" element={<RequirePermission><ClubMemberShip /></RequirePermission>} />
             <Route path="banner" element={<RequirePermission><Banner /></RequirePermission>} />
             <Route path="bankdetails" element={<RequirePermission><BankDetails /></RequirePermission>} />
             <Route path="redeemcode" element={<RequirePermission authority="canCreateRedeemCode"><RedeemCode /></RequirePermission>} />
-            <Route path="sportsbeting" element={<RequirePermission><SportsAdminUnavailable /></RequirePermission>} />
+            <Route path="sportsbeting" element={<RequirePermission><SportsBetting /></RequirePermission>} />
             <Route path="sports-betting" element={<Navigate to="/sportsbeting" replace />} />
             <Route path="exchangerate" element={<RequirePermission><ExchangeRate /></RequirePermission>} />
             <Route path="notification" element={<RequirePermission authority="canSendNotification"><Notification /></RequirePermission>} />
@@ -227,9 +247,9 @@ function App() {
             <Route path="turnover-report" element={<RequirePermission authority="canViewReports"><TurnoverReport /></RequirePermission>} />
             <Route path="vaultpro" element={<RequirePermission><VaultPro /></RequirePermission>} />
             <Route path="peer-trade" element={<RequirePermission><PeerTrade /></RequirePermission>} />
-            <Route path="sports-dashboard" element={<RequirePermission><SportsAdminUnavailable /></RequirePermission>} />
-            <Route path="sports-lock" element={<RequirePermission><SportsAdminUnavailable /></RequirePermission>} />
-            <Route path="sports-config" element={<RequirePermission authority="canEditSiteConfig"><SportsAdminUnavailable /></RequirePermission>} />
+            <Route path="sports-dashboard" element={<RequirePermission><SportsDashboard /></RequirePermission>} />
+            <Route path="sports-lock" element={<RequirePermission><SportsDashboard /></RequirePermission>} />
+            <Route path="sports-config" element={<RequirePermission authority="canEditSiteConfig"><SportsConfigSection /></RequirePermission>} />
             <Route path="only-on-shuffle" element={<Navigate to="/only-on-stake" replace />} />
             <Route path="spinwheel" element={<RequirePermission><SpinWheel /></RequirePermission>} />
             {/* The wagering race. Reads need `reports:read` and every write

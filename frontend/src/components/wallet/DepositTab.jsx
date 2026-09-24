@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { ApiError } from "../../lib/api";
 import { funding } from "../../lib/endpoints";
@@ -6,9 +6,10 @@ import { useApi } from "../../lib/useResource";
 import { isFiat } from "../../lib/adapters";
 import { currencyName } from "../../lib/currencies";
 import { networkLabel, networksFor } from "../../lib/networks";
+import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
+import { useSiteFeatures } from "../../lib/useSiteFeatures";
 import WalletSelect from "./CurrencySelect";
 import QrCode from "./QrCode";
-import { currencyOptions } from "../../lib/walletOptions";
 
 /**
  * The Deposit tab — reference `Deposit`.
@@ -290,18 +291,38 @@ export default function DepositTab({
   hideBalance = false,
   onDepositHistory,
 }) {
+  /* Which funding rails this site offers. `both` is the default and leaves
+     the list exactly as it was — see `optionsForRoutes`. */
+  const { depositRoutes } = useSiteFeatures();
+  const { manual, automatic } = depositRoutes();
+
   const options = useMemo(
     () =>
-      currencyOptions(balances, {
-        displayCurrency,
-        rates,
-        fiatEquivalent: fiatView,
-        hideZeroBalances,
-        hideBalance,
-        keep: coin,
-      }),
-    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin]
+      optionsForRoutes(
+        currencyOptions(balances, {
+          displayCurrency,
+          rates,
+          fiatEquivalent: fiatView,
+          hideZeroBalances,
+          hideBalance,
+          keep: coin,
+        }),
+        { manual, automatic }
+      ),
+    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin, manual, automatic]
   );
+
+  /*
+   * `keep: coin` holds the selected currency in the list even when it has a
+   * zero balance — but a currency whose RAIL is switched off has to go, and
+   * leaving it selected would render a deposit form for a route this site
+   * does not run. Move to the first currency that survives instead.
+   */
+  useEffect(() => {
+    if (!options.length) return;
+    if (options.some((option) => option.value === coin)) return;
+    onCoinChange?.(options[0].value);
+  }, [options, coin, onCoinChange]);
 
   // Built once and handed to whichever branch renders, so both share the single
   // grid the reference uses rather than each opening its own.
