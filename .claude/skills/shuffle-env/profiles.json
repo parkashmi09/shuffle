@@ -1,0 +1,14 @@
+{
+  "local": {
+    "api": "http://127.0.0.1:4600",
+    "admin": "http://localhost:3140",
+    "owner": "http://localhost:3145",
+    "site": "http://localhost:5174"
+  },
+  "production": {
+    "api": "https://api.CHANGE-ME.com",
+    "admin": "https://admin.CHANGE-ME.com",
+    "owner": "https://admin.CHANGE-ME.com/owner",
+    "site": "https://CHANGE-ME.com"
+  }
+}
