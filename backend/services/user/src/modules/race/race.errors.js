@@ -35,4 +35,11 @@ module.exports = defineErrors('RACE', {
   },
 
   INVALID_CONFIG: { status: 422, message: 'That race configuration is not valid' },
+
+  /** Settle or cancel on a race that has already been settled or cancelled. */
+  NOT_OPEN: { status: 409, message: 'That race is no longer open' },
+
+  /** Test race: one OPEN race per type, so staff settle or cancel the running one first. */
+  ALREADY_OPEN: { status: 409, message: 'A race of that type is already open — settle or cancel it first' },
+  INVALID_WINDOW: { status: 422, message: 'That race window is not valid' },
 });

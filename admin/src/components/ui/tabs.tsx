@@ -16,13 +16,20 @@ function Tabs({ className, orientation = 'horizontal', ...props }: TabsPrimitive
   )
 }
 
+// ccpayment's tabs (its MUI theme follows Minimal UI): bare text tabs 40px apart (16px on phones) over a hairline
+// divider, the active one in ink with a sliding 2px ink underline. Too wide for the screen (phones): it scrolls sideways, never clips.
 const tabsListVariants = cva(
-  'group/tabs-list text-muted-foreground inline-flex w-fit items-center justify-center rounded-lg p-[3px] group-data-horizontal/tabs:h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none',
+  'group/tabs-list text-muted-foreground relative inline-flex w-fit max-w-full items-center overflow-x-auto overflow-y-hidden [scrollbar-width:none] justify-start group-data-horizontal/tabs:h-auto group-data-horizontal/tabs:min-h-12 group-data-horizontal/tabs:gap-4 group-data-horizontal/tabs:shadow-[inset_0_-1px_0_0_var(--border)] sm:group-data-horizontal/tabs:gap-10 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col group-data-vertical/tabs:items-stretch',
   {
     variants: {
       variant: {
-        default: 'bg-muted',
-        line: 'gap-1 bg-transparent'
+        default: 'bg-transparent',
+        line: 'bg-transparent',
+
+        // A mode switch (Direct / Agent): a grey track with the active choice on a raised pill, so it never
+        // reads as the same level as the page's underline tabs beneath it.
+        segmented:
+          'bg-muted rounded-lg p-1 group-data-horizontal/tabs:min-h-0 group-data-horizontal/tabs:gap-1! group-data-horizontal/tabs:shadow-none!'
       }
     },
     defaultVariants: {
@@ -34,6 +41,7 @@ const tabsListVariants = cva(
 function TabsList({
   className,
   variant = 'default',
+  children,
   ...props
 }: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
   return (
@@ -42,7 +50,11 @@ function TabsList({
       data-variant={variant}
       className={cn(tabsListVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {children}
+      {/* Box over the active tab (works when the list wraps); its bottom/right border is the indicator. */}
+      <TabsPrimitive.Indicator className='border-heading group-data-[variant=segmented]/tabs-list:bg-card dark:group-data-[variant=segmented]/tabs-list:bg-[rgb(113_117_126/32%)] pointer-events-none group-data-[variant=segmented]/tabs-list:rounded-md group-data-[variant=segmented]/tabs-list:border-0! group-data-[variant=segmented]/tabs-list:shadow-[0_1px_3px_rgb(113_117_126/24%)] absolute top-(--active-tab-top) left-(--active-tab-left) h-(--active-tab-height) w-(--active-tab-width) transition-[left,top,width,height] duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none group-data-horizontal/tabs:border-b-2 group-data-vertical/tabs:border-r-2' />
+    </TabsPrimitive.List>
   )
 }
 
@@ -51,10 +63,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot='tabs-trigger'
       className={cn(
-        "text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:text-muted-foreground dark:hover:text-foreground relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        'group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent',
-        'data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground',
-        'after:bg-foreground after:absolute after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100',
+        "text-muted-foreground not-data-active:hover:text-foreground focus-visible:bg-[rgb(113_117_126/8%)] data-active:text-heading relative inline-flex min-h-12 min-w-12 flex-none items-center justify-center gap-2 px-0 py-3 text-sm leading-[1.5] font-semibold whitespace-nowrap group-data-vertical/tabs:px-4 in-data-[variant=segmented]:z-10 in-data-[variant=segmented]:min-h-9 in-data-[variant=segmented]:px-4 in-data-[variant=segmented]:py-1.5 in-data-[variant=segmented]:not-data-active:hover:text-heading transition-colors duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] outline-none motion-reduce:transition-none group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

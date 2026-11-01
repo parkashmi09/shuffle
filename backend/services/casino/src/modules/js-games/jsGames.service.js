@@ -5,12 +5,15 @@ const { Op } = require('sequelize');
 const { money } = require('@ibitplay/common');
 
 const E = require('./jsGames.errors');
+const { addChildGamePoints } = require('./pointLedger');
 /**
  * `recordPlay` and its trim live with the catalogue they are about. Imported
  * rather than duplicated — the alternative was a second copy of the "keep the
  * newest N" delete, which is exactly how two lists drift apart.
  */
 const { GamesService } = require('../games/games.service');
+const { ChallengeService } = require('../challenges/challenges.service');
+const { catalogueConditions, assertVendorEntitled } = require('../games/gameEntitlement');
 const {
   CODE,
   MESSAGE,
@@ -20,7 +23,6 @@ const {
   V2_STAKED_TYPES,
   settlementType,
   RAKEBACK_RATE,
-  RAKEBACK_USD_CURRENCIES,
 } = require('./jsGames.constants');
 
 /**
@@ -96,6 +98,8 @@ class JsGamesService {
     this.v2 = v2;
     /* Same service, same models — a plain collaborator, not an HTTP hop. */
     this.games = new GamesService({ models, db, config, logger, clients: this.clients });
+    /** rainbet: casino challenges, checked as a winning round settles. */
+    this.challenges = new ChallengeService({ models, logger, clients: this.clients, wallet });
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -209,6 +213,19 @@ class JsGamesService {
       const delta = win - bet;
       const type = bet > 0n && win > 0n ? 'settle' : bet > 0n ? 'bet' : win > 0n ? 'win' : 'loss';
 
+      // A win alone that names its round needs this player's stake in that round.
+      if (type === 'win' && payload.game_round != null) {
+        const stake = await this.models.JsGameTransactions.findOne({
+          where: { user_id: userId, external_transaction_id: String(payload.game_round), transaction_type: ['bet', 'settle'] },
+          attributes: ['id'],
+          raw: true,
+        });
+        if (!stake) {
+          this.logger?.error({ serial, userId, round: payload.game_round }, 'jsGames v1 win refused: no bet in this round');
+          return this.#v1Error(CODE.BAD_PARAMETERS);
+        }
+      }
+
       const outcome = await this.#applyMovement({
         model: this.models.JsGameTransactions,
         where: { serial_number: serial },
@@ -246,11 +263,26 @@ class JsGamesService {
        * the stake, independent of whether it won, which is what a wagering
        * requirement measures.
        */
+      // rainbet: a winning round against the open challenges on its game (never awaited, never throws).
+      if (!outcome.duplicate && bet > 0n && win > 0n) {
+        void this.challenges.onSettled({
+          userId,
+          game: payload.game_uid ?? null,
+          coin: settlement,
+          amount: money.toDecimalString(bet),
+          profit: money.toDecimalString(win - bet),
+          betId: `v1:${serial}`,
+        });
+      }
+
       if (!outcome.duplicate && bet > 0n) {
         await this.games.recordActivity({
           userId,
           gameRef: payload.game_uid ?? null,
           wagered: money.toDecimalString(bet),
+          currency: settlement,
+          source: 'jsgames-v1',
+          ref: serial,
         });
       }
 
@@ -388,7 +420,12 @@ class JsGamesService {
 
   /** @legacy GET /jsGames/games */
   async listGamesV1({ vendor, page, per_page: perPage }) {
-    const where = { is_active: true, ...(vendor ? { vendor } : {}) };
+    // The owner's plan (games/gameEntitlement.js): a switched-off vendor asked
+    // for by name is refused; otherwise its rows (and a switched-off
+    // category's) are simply not in the list.
+    await assertVendorEntitled(vendor);
+    const plan = await catalogueConditions();
+    const where = { is_active: true, ...(vendor ? { vendor } : {}), ...(plan.length ? { [Op.and]: plan } : {}) };
 
     const priority = vendor ? await this.#vendorPriority(vendor) : [];
 
@@ -458,9 +495,12 @@ class JsGamesService {
   async searchGamesV1({ keyword, vendor, page, per_page: perPage }) {
     const term = String(keyword ?? '').trim();
 
+    await assertVendorEntitled(vendor);
+    const plan = await catalogueConditions();
     const where = {
       is_active: true,
       ...(vendor ? { vendor } : {}),
+      ...(plan.length ? { [Op.and]: plan } : {}),
       ...(term
         ? {
             [Op.or]: [
@@ -650,7 +690,7 @@ class JsGamesService {
 
       const outcome = await this.#applyMovement({
         model: this.models.GameTransaction,
-        where: { external_transaction_id: round, transaction_type: type },
+        where: { user_id: userId, external_transaction_id: round, transaction_type: type },
         record: {
           user_id: userId,
           game_uid: body.game_uid ?? null,
@@ -667,7 +707,9 @@ class JsGamesService {
         userId,
         currency: settlement,
         delta,
-        refId: `v2:${round}:${type}`,
+        // Per player, like the row's unique key (migration 095): another
+        // player's same round id is a different movement, not a replay.
+        refId: `v2:${userId}:${round}:${type}`,
       });
 
       if (outcome.duplicate) {
@@ -691,13 +733,51 @@ class JsGamesService {
        * `bet` and not `delta`: what was WAGERED is the stake, independent of
        * whether it won, which is what a wagering requirement measures.
        */
+      /* The wager key is PER PLAYER, like the settlement row (migration 095):
+         `wager_activity` is unique on (source, ref), so a bare round id let
+         one player's stake swallow another's on the same round. A retried
+         callback never reaches here — the settlement row's unique index
+         answers it as a duplicate first — so the change of key cannot count
+         an old round twice. */
+      const wagerRef = `${userId}:${round}`;
+      // rainbet: a v2 leg carries the round's own bet_amount / win_amount, so the win leg prices the
+      // round's multiplier for the open challenges on its game (never awaited, never throws).
+      if (win > 0n && bet > 0n) {
+        void this.challenges.onSettled({
+          userId,
+          game: body.game_uid ?? null,
+          coin: settlement,
+          amount: money.toDecimalString(bet),
+          profit: money.toDecimalString(win - bet),
+          betId: `v2:${userId}:${round}`,
+        });
+      }
       if (bet > 0n) {
+        // Counted in USD and rakeback accrued by user-service.
         await this.games.recordActivity({
           userId,
           gameRef: body.game_uid ?? null,
           wagered: money.toDecimalString(bet),
+          currency: settlement,
+          source: 'jsgames-v2',
+          ref: wagerRef,
         });
-        await this.#accrueRakeback({ userId, stake: bet, currency: settlement, round });
+      } else if (bet < 0n) {
+        /* A negative bet is the provider taking back a stake it recorded
+           wrongly: that part of the stake was never risked, so it stops
+           counting (wager, rakeback) — a PARTIAL reversal of the
+           `jsgames-v2:<player>:<round>` stake, keyed by this correction so a retried
+           callback reverses once. Best-effort, queued in the outbox on failure. */
+        await this.games
+          .reverseActivity({
+            userId,
+            source: 'jsgames-v2',
+            ref: wagerRef,
+            amount: money.toDecimalString(-bet),
+            refundRef: `${type}:${body.serial_number ?? round}`,
+            outbox: true,
+          })
+          .catch((error) => this.logger?.warn({ err: error, round }, 'Wager reversal failed — the correction stands'));
       }
 
       const balance = outcome.balance ?? (await this.#balanceOf(userId, settlement)) ?? '0';
@@ -767,7 +847,7 @@ class JsGamesService {
     const magnitude = money.toDecimalString(isCredit ? delta : -delta);
 
     try {
-      return await this.db.transaction(async (transaction) => {
+      const result = await this.db.transaction(async (transaction) => {
         const created = await model.create(record, { transaction });
 
         const movement = await this.wallet[isCredit ? 'credit' : 'debit']({
@@ -777,12 +857,31 @@ class JsGamesService {
           reason: isCredit ? 'BET_PAYOUT' : 'BET_STAKE',
           ref: { type: 'JSGAMES', id: refId },
           description: `jsGames ${record.transaction_type} ${refId}`,
+          gameType: record.game_type ?? record.game_uid ?? undefined,
         });
 
         await model.update({ ledger_id: movement.ledgerId ?? null }, { where: { id: created.id }, transaction });
 
         return { balance: movement.newBalance };
       });
+
+      // Child user (agent ke neeche) ka point ledger — paisa move hone ke baad, alag transaction me.
+      // Fail ho to paisa wapas nahi hota (wo user-service me ho chuka); sirf zor se log.
+      if (currency === 'INR') {
+        try {
+          await addChildGamePoints(this.models.Users.sequelize, {
+            userId,
+            delta: money.toDecimalString(delta),
+            entryRef: `jsgames:${refId}`,
+            gameType: record.game_type ?? record.game_uid ?? null,
+            remark: `jsGames ${record.transaction_type ?? ''} ${refId}`,
+          });
+        } catch (error) {
+          this.logger?.error({ err: error, refId, userId }, 'jsGames point ledger write failed — all_point drift');
+        }
+      }
+
+      return result;
     } catch (error) {
       if (error?.name === 'SequelizeUniqueConstraintError') return { duplicate: true };
       if (error?.code === 'WALLET_INSUFFICIENT_FUNDS' || error?.status === 402) return { insufficient: true };
@@ -824,65 +923,6 @@ class JsGamesService {
     } catch (error) {
       this.logger?.warn({ err: error, gameUid }, 'jsGames catalogue lookup failed — settling without it');
       return { gameType: null, gameName: null };
-    }
-  }
-
-  /**
-   * Accrue rakeback on a stake in USD terms.
-   *
-   * The USD conversion stays here (casino knows the settlement currency). The
-   * VIP rate lives on `users.rakeback` and is applied by user-service when we
-   * post `stakeUsd` — so Instant Rakeback tracks the player's tier instead of
-   * a hardcoded 0.2%.
-   *
-   * Everything here is best effort. It runs after the settlement is already
-   * committed, and every failure is logged and swallowed: rakeback is a
-   * loyalty accrual, and it does not get to fail a payout.
-   */
-  async #accrueRakeback({ userId, stake, currency, round }) {
-    try {
-      if (!(stake > 0n)) return;
-
-      let usd = money.toDecimalString(stake);
-
-      if (!RAKEBACK_USD_CURRENCIES.includes(currency)) {
-        usd = await this.#usdValue(usd, currency);
-        // No rate, no guess.
-        if (usd == null) {
-          this.logger?.warn({ currency, round }, 'No USD rate — rakeback not accrued for this stake');
-          return;
-        }
-      }
-
-      if (money.isZero(usd)) return;
-
-      await this.clients.user.post('/internal/user/rakeback/accrue', {
-        userId,
-        stakeUsd: usd,
-        source: 'jsgames-v2',
-        ref: round,
-      });
-    } catch (error) {
-      this.logger?.error({ err: error, userId, round }, 'Rakeback accrual failed — settlement stands');
-    }
-  }
-
-  /**
-   * `amount` of `currency` in USD, or null when the platform has no rate.
-   *
-   * `/internal/user/exchange-rate/convert` already computes this — it is the
-   * same route sports uses to convert stakes, and `usdValue` is the leg of the
-   * conversion we want, before it is turned back into the target currency.
-   */
-  async #usdValue(amount, currency) {
-    try {
-      const result = await this.clients.user.get('/internal/user/exchange-rate/convert', {
-        query: { from: currency, to: 'USDT', amount },
-      });
-      return result?.usdValue == null ? null : String(result.usdValue);
-    } catch (error) {
-      this.logger?.warn({ err: error, currency }, 'Exchange-rate lookup failed');
-      return null;
     }
   }
 
@@ -957,7 +997,21 @@ class JsGamesService {
       return await call();
     } catch (error) {
       this.logger?.error({ err: error, status: error?.status }, 'jsGames upstream call failed');
-      if (error?.status >= 400 && error.status < 500) throw E.UPSTREAM_REJECTED({ status: error.status });
+      /*
+       * A REFUSAL IS A REFUSAL WHATEVER THE HTTP STATUS. v2 answers some refusals as
+       * HTTP 200 with `{success: false, error: {code, message}}` (`XGamesApiClient#call`
+       * throws those with `status: 200` and the provider's `upstreamCode`), and those
+       * fell through to UPSTREAM_FAILED — "could not be reached" — for a provider that
+       * had answered perfectly well. The provider's own code goes in `details` so the
+       * refusal can be told apart (10004 currency/launch, 20004 signature, 20001 key).
+       */
+      const refused = (error?.status >= 400 && error.status < 500) || error?.body?.success === false;
+      if (refused) {
+        throw E.UPSTREAM_REJECTED({
+          status: error.status,
+          ...(error.upstreamCode !== undefined ? { upstreamCode: error.upstreamCode } : {}),
+        });
+      }
       throw E.UPSTREAM_FAILED();
     }
   }

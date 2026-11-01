@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { BanIcon, CheckIcon, EyeIcon, GavelIcon, PlusIcon } from 'lucide-react'
 
 import Can from '@/components/shared/Can'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import DateTime from '@/components/shared/DateTime'
 import FormDialog from '@/components/shared/FormDialog'
@@ -24,7 +23,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useApi, useApiMutation, useListState } from '@/hooks/use-api'
 import { api } from '@/lib/api/client'
 import { truncateId } from '@/lib/format'
+import { check } from '@/lib/validate'
 import { Details, ImageDialog, ViewDialog, stop, usePageNumbered } from './shared'
+import { TxnPasswordLabel } from './StaffFloat'
 import {
   P2P_COINS,
   P2P_DISPUTE_STATUSES,
@@ -38,9 +39,13 @@ import {
   type P2pPaymentAccount,
   type P2pPaymentType
 } from './types'
+import { useOwnerCoinFilter } from './useCurrencyCodes'
 
 const BASE = 'admin/user/p2p'
 const ALL_LISTS = [['paged', `${BASE}/orders`], ['paged', `${BASE}/sell-orders`], ['paged', `${BASE}/disputes`], ['paged', `${BASE}/offers`]]
+
+/** p2p.validators.js `amount`: a decimal > 0 with up to 8 places. */
+const p2pAmount = (v: string, label: string, optional = false) => check.number(v, label, { positive: true, decimals: 8, optional })
 
 const s = (v: unknown) => (v === null || v === undefined ? undefined : String(v))
 const at = (r: Record<string, unknown>) => s(r.created_at ?? r.createdAt)
@@ -66,6 +71,8 @@ const StatusFilter = ({ value, onChange, options }: { value: string; onChange: (
 const NoteAction = ({ path, title, description, label, icon, destructive, success, multipart }: { path: string; title: string; description: ReactNode; label: string; icon: ReactNode; destructive?: boolean; success: string; multipart?: boolean }) => {
   const [note, setNote] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  const [code, setCode] = useState('')
+
   const run = useApiMutation({
     fn: () => {
       if (multipart) {
@@ -73,11 +80,12 @@ const NoteAction = ({ path, title, description, label, icon, destructive, succes
 
         if (note) form.append('note', note)
         if (file) form.append('admin_payment_proof', file)
+        form.append('transactionPassword', code)
 
         return api.upload(path, form)
       }
 
-      return api.post(path, note ? { note } : {})
+      return api.post(path, { ...(note ? { note } : {}), transactionPassword: code })
     },
     invalidate: ALL_LISTS,
     success
@@ -94,6 +102,11 @@ const NoteAction = ({ path, title, description, label, icon, destructive, succes
       description={description}
       submitLabel={label}
       destructive={destructive}
+      validate={() => ({
+        [`na-${path}`]: check.length(note, 'Note', { max: 2000 }),
+        [`nf-${path}`]: file && !['image/png', 'image/jpeg'].includes(file.type) ? 'Payment proof must be a PNG or JPEG image' : undefined,
+        [`nt-${path}`]: code ? undefined : 'Transaction password is required'
+      })}
       onSubmit={() => run.mutateAsync()}
     >
       <TextAreaField id={`na-${path}`} label='Note' value={note} onChange={e => setNote(e.target.value)} />
@@ -105,12 +118,14 @@ const NoteAction = ({ path, title, description, label, icon, destructive, succes
           <Input id={`nf-${path}`} type='file' accept='image/png,image/jpeg' onChange={e => setFile(e.target.files?.[0] ?? null)} />
         </div>
       )}
+      <TextField id={`nt-${path}`} name='transactionPassword' label={<TxnPasswordLabel />} type='password' autoComplete='new-password' required value={code} onChange={e => setCode(e.target.value)} />
     </FormDialog>
   )
 }
 
 const OrderStatus = ({ id }: { id: string | number }) => {
   const [form, setForm] = useState({ status: 'DISPUTED', note: '' })
+
   const set = useApiMutation({
     fn: () => api.patch(`${BASE}/orders/${id}/status`, form.note ? form : { status: form.status }),
     invalidate: ALL_LISTS,
@@ -127,6 +142,7 @@ const OrderStatus = ({ id }: { id: string | number }) => {
       title={`Order #${id} — set status`}
       description='Only the two transitions that move no money. Releasing and cancelling have their own actions.'
       submitLabel='Set status'
+      validate={() => ({ [`on-${id}`]: check.length(form.note, 'Note', { max: 2000 }) })}
       onSubmit={() => set.mutateAsync()}
     >
       <SelectField id={`os-${id}`} label='Status' value={form.status} onChange={status => setForm({ ...form, status })} options={['DISPUTED', 'EXPIRED'].map(v => ({ value: v, label: v }))} />
@@ -152,7 +168,7 @@ const OrderDetail = ({ row, kind }: { row: P2pOrderRow; kind: 'orders' | 'sell-o
   >
     <Details
       items={[
-        ['Player', row.user_id ? <Link key='u' href={`/players/${row.user_id}`} className='underline'>#{row.user_id}</Link> : null],
+        ['User', row.user_id ? <Link key='u' href={`/users/${row.user_id}`} className='underline'>#{row.user_id}</Link> : null],
         ['Offer', s(row.offer_id)],
         ['Crypto', <Money key='c' value={s(row.crypto_amount)} currency={row.coin} />],
         ['Fiat', <Money key='f' value={s(row.fiat_amount)} currency={row.fiat} />],
@@ -175,7 +191,7 @@ const OrderDetail = ({ row, kind }: { row: P2pOrderRow; kind: 'orders' | 'sell-o
 
 const orderColumns = (kind: 'orders' | 'sell-orders'): Column<P2pOrderRow>[] => [
   { key: 'no', header: 'Order', cell: r => <span className='font-mono text-xs'>{r.order_no ?? r.id}</span> },
-  { key: 'user', header: 'Player', cell: r => (r.user_id ? <Link href={`/players/${r.user_id}`} className='font-mono text-xs hover:underline'>#{r.user_id}</Link> : '—') },
+  { key: 'user', header: 'User', cell: r => (r.user_id ? <Link href={`/users/${r.user_id}`} className='font-mono text-xs hover:underline'>#{r.user_id}</Link> : '—') },
   { key: 'crypto', header: 'Crypto', align: 'right', cell: r => <Money value={s(r.crypto_amount)} currency={r.coin} /> },
   { key: 'fiat', header: 'Fiat', align: 'right', cell: r => <Money value={s(r.fiat_amount)} currency={r.fiat} /> },
   { key: 'status', header: 'Status', cell: r => <StatusBadge value={r.status} /> },
@@ -199,7 +215,7 @@ const orderColumns = (kind: 'orders' | 'sell-orders'): Column<P2pOrderRow>[] => 
                 <NoteAction
                   path={`${BASE}/${kind}/${r.id}/release`}
                   title={`Release ${r.order_no ?? `#${r.id}`}?`}
-                  description={kind === 'orders' ? <>Credits <Money value={s(r.crypto_amount)} currency={r.coin} /> to player #{r.user_id}. Only valid once the order is PAID. Idempotent.</> : <>Records that you paid the seller <Money value={s(r.fiat_amount)} currency={r.fiat} /> and closes the order. The crypto was already taken when it opened.</>}
+                  description={kind === 'orders' ? <>Credits <Money value={s(r.crypto_amount)} currency={r.coin} /> to user #{r.user_id}. Only valid once the order is PAID. Idempotent.</> : <>Records that you paid the seller <Money value={s(r.fiat_amount)} currency={r.fiat} /> and closes the order. The crypto was already taken when it opened.</>}
                   label='Release'
                   icon={<CheckIcon />}
                   success='Order released'
@@ -228,9 +244,12 @@ const orderColumns = (kind: 'orders' | 'sell-orders'): Column<P2pOrderRow>[] => 
   }
 ]
 
+/** The coins P2P trades that are in the owner's plan. */
+const useP2pCoins = () => useOwnerCoinFilter()(P2P_COINS)
+
 const Orders = ({ kind }: { kind: 'orders' | 'sell-orders' }) => {
-  const { state, set, query } = useListState(['status', 'userId', 'coin'])
-  const list = usePageNumbered<P2pOrderRow>(`${BASE}/${kind}`, { page: query.page, limit: query.limit, status: query.status, userId: query.userId, coin: query.coin })
+  const { state, set, query } = useListState(['status', 'userId'])
+  const list = usePageNumbered<P2pOrderRow>(`${BASE}/${kind}`, { page: query.page, limit: query.limit, status: query.status, userId: query.userId })
 
   return (
     <DataTable
@@ -246,20 +265,7 @@ const Orders = ({ kind }: { kind: 'orders' | 'sell-orders' }) => {
       toolbar={
         <>
           <StatusFilter value={String(state.status ?? '')} onChange={status => set({ status })} options={kind === 'orders' ? P2P_ORDER_STATUSES : P2P_SELL_STATUSES} />
-          <Input placeholder='Player id' aria-label='Player id' value={String(state.userId ?? '')} onChange={e => set({ userId: e.target.value })} className='w-32' />
-          <Select value={String(state.coin || 'all')} onValueChange={v => v && set({ coin: v === 'all' ? '' : v })}>
-            <SelectTrigger className='w-28'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All coins</SelectItem>
-              {P2P_COINS.map(c => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input placeholder='User id' aria-label='User id' value={String(state.userId ?? '')} onChange={e => set({ userId: e.target.value })} className='w-32' />
         </>
       }
     />
@@ -268,6 +274,7 @@ const Orders = ({ kind }: { kind: 'orders' | 'sell-orders' }) => {
 
 const DisputeStatus = ({ row }: { row: P2pDisputeRow }) => {
   const [form, setForm] = useState({ status: row.status === 'OPEN' ? 'UNDER_REVIEW' : 'RESOLVED', adminNote: '' })
+
   const set = useApiMutation({
     fn: () => api.patch(`${BASE}/disputes/${row.id}/status`, form.adminNote ? form : { status: form.status }),
     invalidate: ALL_LISTS,
@@ -284,6 +291,7 @@ const DisputeStatus = ({ row }: { row: P2pDisputeRow }) => {
       title={`Dispute #${row.id} — ${row.order_no ?? `order ${row.order_id}`}`}
       description='Resolving takes the order out of DISPUTED so it can be released or cancelled. No money moves here.'
       submitLabel='Apply'
+      validate={() => ({ [`dn-${row.id}`]: check.length(form.adminNote, 'Admin note', { max: 4000 }) })}
       onSubmit={() => set.mutateAsync()}
     >
       <SelectField id={`ds-${row.id}`} label='Status' value={form.status} onChange={status => setForm({ ...form, status })} options={P2P_DISPUTE_STATUSES.map(v => ({ value: v, label: v.replace(/_/g, ' ') }))} />
@@ -296,7 +304,7 @@ const disputeColumns: Column<P2pDisputeRow>[] = [
   { key: 'id', header: 'ID', cell: r => <span className='font-mono text-xs'>{r.id}</span> },
   { key: 'order', header: 'Order', cell: r => <span className='font-mono text-xs'>{r.order_no ?? `#${r.order_id}`}</span> },
   { key: 'type', header: 'Type', cell: r => <Badge variant='outline'>{r.order_type ?? '—'}</Badge> },
-  { key: 'user', header: 'Player', cell: r => (r.user_id ? <Link href={`/players/${r.user_id}`} className='font-mono text-xs hover:underline'>#{r.user_id}</Link> : '—') },
+  { key: 'user', header: 'User', cell: r => (r.user_id ? <Link href={`/users/${r.user_id}`} className='font-mono text-xs hover:underline'>#{r.user_id}</Link> : '—') },
   { key: 'reason', header: 'Reason', cell: r => <span className='text-sm' title={r.message ?? ''}>{r.reason ?? '—'}{r.message ? <span className='text-muted-foreground'> — {truncateId(r.message, 20)}</span> : null}</span> },
   { key: 'status', header: 'Status', cell: r => <StatusBadge value={r.status} /> },
   { key: 'at', header: 'Opened', cell: r => <DateTime value={at(r)} /> },
@@ -339,10 +347,11 @@ const Disputes = () => {
 
 const OfferStatus = ({ row }: { row: P2pOfferRow }) => {
   const [status, setStatus] = useState(String(row.status ?? 'ACTIVE'))
+
   const set = useApiMutation({
     fn: () => api.patch(`${BASE}/offers/${row.id}/status`, { status }),
     invalidate: ALL_LISTS,
-    success: 'Offer status updated'
+    success: `Offer #${row.id} set to ${status}`
   })
 
   return (
@@ -362,11 +371,17 @@ const OfferStatus = ({ row }: { row: P2pOfferRow }) => {
 }
 
 const CreateOffer = ({ accounts }: { accounts: P2pPaymentAccount[] }) => {
+  const coins = useP2pCoins()
+  const ownerCoins = useOwnerCoinFilter()
   const [form, setForm] = useState({ coin: 'USDT', fiat: 'INR', segment: 'BUY', price: '', availableAmount: '', minLimit: '', maxLimit: '', username: '', paymentAccountIds: '', paymentTime: '', isFeatured: false, isVerified: false, isKycVerified: false })
+
+  // USDT is the usual pick; when the owner has it off, the first coin P2P still trades.
+  const coin = coins.includes(form.coin) ? form.coin : (coins[0] ?? '')
+
   const create = useApiMutation({
     fn: () => {
       const body: Record<string, unknown> = {
-        coin: form.coin,
+        coin,
         fiat: form.fiat,
         segment: form.segment,
         price: form.price,
@@ -396,27 +411,49 @@ const CreateOffer = ({ accounts }: { accounts: P2pPaymentAccount[] }) => {
         </Button>
       }
       title='Create a P2P offer'
-      description='A house offer players trade against. Amounts and price are decimal strings.'
+      description='A house offer users trade against. Amounts and price are decimal strings.'
       submitLabel='Create'
       wide
+      validate={() => {
+        const ids = form.paymentAccountIds.split(/[\s,]+/).filter(Boolean)
+
+        return {
+          coin: coin ? undefined : 'No P2P coin is enabled for this site',
+          price: p2pAmount(form.price, 'Price'),
+          availableAmount: p2pAmount(form.availableAmount, 'Available amount'),
+          minLimit: p2pAmount(form.minLimit, 'Min limit', true),
+          maxLimit:
+            p2pAmount(form.maxLimit, 'Max limit', true) ??
+            (form.minLimit && form.maxLimit && Number(form.minLimit) > Number(form.maxLimit) ? 'Max limit cannot be below the min limit' : undefined),
+          paymentTime: check.number(form.paymentTime, 'Payment window', { integer: true, min: 5, max: 1440, optional: true }),
+          username: check.required(form.username, 'Merchant display name') ?? check.length(form.username, 'Merchant display name', { max: 255 }),
+          paymentAccountIds: !ids.length
+            ? 'Payment account ids are required'
+            : ids.some(x => !/^\d+$/.test(x) || Number(x) <= 0)
+              ? 'Payment account ids must be positive numbers, comma-separated'
+              : ids.length > 20
+                ? 'At most 20 payment accounts'
+                : undefined
+        }
+      }}
       onSubmit={() => create.mutateAsync()}
     >
       <div className='grid grid-cols-3 gap-4'>
-        <SelectField id='of-coin' label='Coin' value={form.coin} onChange={coin => setForm({ ...form, coin })} options={P2P_COINS.map(c => ({ value: c, label: c }))} />
-        <SelectField id='of-fiat' label='Fiat' value={form.fiat} onChange={fiat => setForm({ ...form, fiat })} options={P2P_FIAT.map(c => ({ value: c, label: c }))} />
-        <SelectField id='of-seg' label='Segment' value={form.segment} onChange={segment => setForm({ ...form, segment })} options={[{ value: 'BUY', label: 'BUY (player buys crypto)' }, { value: 'SELL', label: 'SELL (player sells crypto)' }]} />
+        <SelectField id='of-coin' name='coin' label='Coin' value={coin} onChange={coin => setForm({ ...form, coin })} options={coins.map(c => ({ value: c, label: c }))} />
+        <SelectField id='of-fiat' label='Fiat' value={form.fiat} onChange={fiat => setForm({ ...form, fiat })} options={ownerCoins(P2P_FIAT).map(c => ({ value: c, label: c }))} />
+        <SelectField id='of-seg' label='Segment' value={form.segment} onChange={segment => setForm({ ...form, segment })} options={[{ value: 'BUY', label: 'BUY (user buys crypto)' }, { value: 'SELL', label: 'SELL (user sells crypto)' }]} />
       </div>
       <div className='grid grid-cols-2 gap-4'>
-        <TextField id='of-price' label={`Price (${form.fiat} per ${form.coin})`} required value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
-        <TextField id='of-avail' label={`Available (${form.coin})`} required value={form.availableAmount} onChange={e => setForm({ ...form, availableAmount: e.target.value })} />
+        <TextField id='of-price' name='price' inputMode='decimal' label={`Price (${form.fiat} per ${coin})`} required value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
+        <TextField id='of-avail' name='availableAmount' inputMode='decimal' label={`Available (${coin})`} required value={form.availableAmount} onChange={e => setForm({ ...form, availableAmount: e.target.value })} />
       </div>
       <div className='grid grid-cols-3 gap-4'>
-        <TextField id='of-min' label='Min limit' value={form.minLimit} onChange={e => setForm({ ...form, minLimit: e.target.value })} />
-        <TextField id='of-max' label='Max limit' value={form.maxLimit} onChange={e => setForm({ ...form, maxLimit: e.target.value })} />
-        <TextField id='of-time' label='Payment window (min)' type='number' min={5} max={1440} value={form.paymentTime} onChange={e => setForm({ ...form, paymentTime: e.target.value })} />
+        <TextField id='of-min' name='minLimit' inputMode='decimal' label='Min limit' value={form.minLimit} onChange={e => setForm({ ...form, minLimit: e.target.value })} />
+        <TextField id='of-max' name='maxLimit' inputMode='decimal' label='Max limit' value={form.maxLimit} onChange={e => setForm({ ...form, maxLimit: e.target.value })} />
+        <TextField id='of-time' name='paymentTime' label='Payment window (min)' type='number' min={5} max={1440} value={form.paymentTime} onChange={e => setForm({ ...form, paymentTime: e.target.value })} />
       </div>
-      <TextField id='of-user' label='Merchant display name' required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
-      <TextField id='of-acc' label='Payment account ids' required placeholder='1, 2' hint={accounts.length ? `Known: ${accounts.map(a => `#${a.id} ${a.accountName ?? a.upiId ?? a.accountNumber ?? ''}`).join(', ')}` : 'Comma-separated ids from the Payment accounts tab'} value={form.paymentAccountIds} onChange={e => setForm({ ...form, paymentAccountIds: e.target.value })} />
+      <TextField id='of-user' name='username' label='Merchant display name' required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
+      <TextField id='of-acc' name='paymentAccountIds' label='Payment account ids' required placeholder='1, 2' hint={accounts.length ? `Known: ${accounts.map(a => `#${a.id} ${a.accountName ?? a.upiId ?? a.accountNumber ?? ''}`).join(', ')}` : 'Comma-separated ids from the Payment accounts tab'} value={form.paymentAccountIds} onChange={e => setForm({ ...form, paymentAccountIds: e.target.value })} />
       <div className='grid grid-cols-3 gap-2'>
         <SwitchField id='of-feat' label='Featured' checked={form.isFeatured} onChange={isFeatured => setForm({ ...form, isFeatured })} />
         <SwitchField id='of-ver' label='Verified' checked={form.isVerified} onChange={isVerified => setForm({ ...form, isVerified })} />
@@ -449,8 +486,8 @@ const offerColumns: Column<P2pOfferRow>[] = [
 ]
 
 const Offers = ({ accounts }: { accounts: P2pPaymentAccount[] }) => {
-  const { state, set, query } = useListState(['coin'])
-  const list = usePageNumbered<P2pOfferRow>(`${BASE}/offers`, { page: query.page, limit: query.limit, coin: query.coin })
+  const { set, query } = useListState()
+  const list = usePageNumbered<P2pOfferRow>(`${BASE}/offers`, { page: query.page, limit: query.limit })
 
   return (
     <DataTable
@@ -465,19 +502,6 @@ const Offers = ({ accounts }: { accounts: P2pPaymentAccount[] }) => {
       onLimitChange={limit => set({ limit })}
       toolbar={
         <>
-          <Select value={String(state.coin || 'all')} onValueChange={v => v && set({ coin: v === 'all' ? '' : v })}>
-            <SelectTrigger className='w-28'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All coins</SelectItem>
-              {P2P_COINS.map(c => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Can permission='config:write'>
             <CreateOffer accounts={accounts} />
           </Can>
@@ -500,10 +524,17 @@ const CreateType = () => {
       }
       title='New payment type'
       submitLabel='Add'
+      validate={() => ({
+        name: check.required(form.name, 'Name') ?? check.length(form.name, 'Name', { max: 100 }),
+        code:
+          check.required(form.code, 'Code') ??
+          check.length(form.code, 'Code', { max: 50 }) ??
+          (/^[a-z0-9][a-z0-9_-]*$/.test(form.code.trim()) ? undefined : 'Code must be lowercase letters, digits, dash and underscore')
+      })}
       onSubmit={() => create.mutateAsync()}
     >
-      <TextField id='pt-name' label='Name' required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-      <TextField id='pt-code' label='Code' required placeholder='upi' hint='Lowercase letters, digits, dash, underscore' value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
+      <TextField id='pt-name' name='name' label='Name' required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+      <TextField id='pt-code' name='code' label='Code' required placeholder='upi' hint='Lowercase letters, digits, dash, underscore' value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
     </FormDialog>
   )
 }
@@ -511,11 +542,12 @@ const CreateType = () => {
 const CreateAccount = ({ types }: { types: P2pPaymentType[] }) => {
   const [form, setForm] = useState({ paymentTypeId: String(types[0]?.id ?? ''), accountName: '', accountNumber: '', ifscCode: '', upiId: '', extraDetails: '' })
   const [file, setFile] = useState<File | null>(null)
+
   const create = useApiMutation({
     fn: () => {
       const fd = new FormData()
 
-      fd.append('paymentTypeId', form.paymentTypeId)
+      fd.append('paymentTypeId', form.paymentTypeId || String(types[0]?.id ?? ''))
       for (const k of ['accountName', 'accountNumber', 'ifscCode', 'upiId', 'extraDetails'] as const) if (form[k]) fd.append(k, form[k])
       if (file) fd.append('qr_image', file)
 
@@ -533,18 +565,27 @@ const CreateAccount = ({ types }: { types: P2pPaymentType[] }) => {
         </Button>
       }
       title='New payment account'
-      description='A house account players pay into. Needs an account number or a UPI id.'
+      description='A house account users pay into. Needs an account number or a UPI id.'
       submitLabel='Add'
+      validate={() => ({
+        paymentTypeId: form.paymentTypeId || types[0]?.id ? undefined : 'Create a payment type first',
+        accountName: check.length(form.accountName, 'Account name', { max: 255 }),
+        accountNumber: !form.accountNumber.trim() && !form.upiId.trim() ? 'A payment account needs an account number or a UPI id' : check.length(form.accountNumber, 'Account number', { max: 100 }),
+        ifscCode: check.length(form.ifscCode, 'IFSC', { max: 50 }),
+        upiId: check.length(form.upiId, 'UPI id', { max: 255 }),
+        extraDetails: check.length(form.extraDetails, 'Extra details', { max: 2000 }),
+        'pa-qr': file && !['image/png', 'image/jpeg'].includes(file.type) ? 'QR image must be a PNG or JPEG' : undefined
+      })}
       onSubmit={() => create.mutateAsync()}
     >
-      <SelectField id='pa-type' label='Payment type' value={form.paymentTypeId} onChange={paymentTypeId => setForm({ ...form, paymentTypeId })} options={types.map(t => ({ value: String(t.id), label: `${t.name ?? t.code ?? t.id}` }))} placeholder='Create a payment type first' />
-      <TextField id='pa-name' label='Account name' value={form.accountName} onChange={e => setForm({ ...form, accountName: e.target.value })} />
+      <SelectField id='pa-type' name='paymentTypeId' label='Payment type' required value={form.paymentTypeId || String(types[0]?.id ?? '')} onChange={paymentTypeId => setForm({ ...form, paymentTypeId })} options={types.map(t => ({ value: String(t.id), label: `${t.name ?? t.code ?? t.id}` }))} placeholder='Create a payment type first' />
+      <TextField id='pa-name' name='accountName' label='Account name' value={form.accountName} onChange={e => setForm({ ...form, accountName: e.target.value })} />
       <div className='grid grid-cols-2 gap-4'>
-        <TextField id='pa-num' label='Account number' value={form.accountNumber} onChange={e => setForm({ ...form, accountNumber: e.target.value })} />
-        <TextField id='pa-ifsc' label='IFSC' value={form.ifscCode} onChange={e => setForm({ ...form, ifscCode: e.target.value })} />
+        <TextField id='pa-num' name='accountNumber' label='Account number' value={form.accountNumber} onChange={e => setForm({ ...form, accountNumber: e.target.value })} />
+        <TextField id='pa-ifsc' name='ifscCode' label='IFSC' value={form.ifscCode} onChange={e => setForm({ ...form, ifscCode: e.target.value })} />
       </div>
-      <TextField id='pa-upi' label='UPI id' value={form.upiId} onChange={e => setForm({ ...form, upiId: e.target.value })} />
-      <TextAreaField id='pa-extra' label='Extra details' value={form.extraDetails} onChange={e => setForm({ ...form, extraDetails: e.target.value })} />
+      <TextField id='pa-upi' name='upiId' label='UPI id' value={form.upiId} onChange={e => setForm({ ...form, upiId: e.target.value })} />
+      <TextAreaField id='pa-extra' name='extraDetails' label='Extra details' value={form.extraDetails} onChange={e => setForm({ ...form, extraDetails: e.target.value })} />
       <div className='grid gap-2'>
         <label htmlFor='pa-qr' className='text-sm font-medium'>
           QR image

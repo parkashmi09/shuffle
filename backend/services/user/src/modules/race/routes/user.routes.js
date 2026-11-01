@@ -1,7 +1,8 @@
 'use strict';
 
 const { Router } = require('express');
-const { validate, createRateLimiter } = require('@ibitplay/common');
+const { validate, createRateLimiter, entitlements, noBody } = require('@ibitplay/common');
+const { denyAgentPlayer } = require('@ibitplay/auth');
 
 const v = require('../race.validators');
 const { RaceService } = require('../race.service');
@@ -11,6 +12,11 @@ const { createControllers } = require('../controllers');
 module.exports = function userRoutes(deps) {
   const ctrl = createControllers({ service: new RaceService(deps) });
   const router = Router();
+
+  // Not in the owner's plan: every route here answers 403 NOT_ENTITLED (docs/OWNER-PANEL.md §4).
+  router.use(entitlements.requireFeature('races'));
+  // After the plan check: agent-tree players (owner at staff level 4–6) have no promotions.
+  router.use(denyAgentPlayer('promotions'));
 
   /**
    * A claim moves money, which is the shape that attracts a double-click and a
@@ -25,7 +31,7 @@ module.exports = function userRoutes(deps) {
   });
 
   router.get('/rewards', validate(v.listing), ctrl.myRewards);
-  router.post('/rewards/:rewardId/claim', claimLimiter, validate(v.rewardParam), ctrl.claim);
+  router.post('/rewards/:rewardId/claim', noBody(), claimLimiter, validate(v.rewardParam), ctrl.claim);
 
   return router;
 };

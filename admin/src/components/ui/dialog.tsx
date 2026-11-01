@@ -30,7 +30,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot='dialog-overlay'
       className={cn(
-        'data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs',
+        'motion-safe:data-open:animate-in motion-safe:data-open:fade-in-0 motion-safe:data-closed:animate-out motion-safe:data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-[rgb(31_32_37/48%)] duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]',
         className
       )}
       {...props}
@@ -52,7 +52,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot='dialog-content'
         className={cn(
-          'bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl p-6 text-sm ring-1 duration-100 outline-none sm:max-w-md',
+          'bg-popover text-popover-foreground motion-safe:data-open:animate-in motion-safe:data-open:fade-in-0 motion-safe:data-open:slide-in-from-top-12 motion-safe:data-closed:animate-out motion-safe:data-closed:fade-out-0 motion-safe:data-closed:slide-out-to-top-12 fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 overflow-y-auto *:min-w-0 rounded-[16px] p-6 text-sm shadow-[0px_0px_2px_0px_rgb(113_117_126/16%),-40px_40px_80px_4px_rgb(113_117_126/24%)] dark:shadow-[-40px_40px_80px_4px_rgb(0_0_0/56%),0px_0px_2px_0px_rgb(0_0_0/24%)] duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] outline-none sm:max-w-md',
           className
         )}
         {...props}
@@ -100,7 +100,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot='dialog-title'
-      className={cn('font-heading leading-none font-medium', className)}
+      className={cn('font-heading text-heading text-lg leading-[1.55] font-semibold', className)}
       {...props}
     />
   )

@@ -1,13 +1,13 @@
 import { Suspense } from 'react'
 
-import MyAccount from '@/views/account/MyAccount'
+import AccountPage from '@/views/account/AccountPage'
 
 export const metadata = { title: 'My account' }
 
 export default function Page() {
   return (
     <Suspense>
-      <MyAccount />
+      <AccountPage />
     </Suspense>
   )
 }

@@ -56,7 +56,12 @@ function createActivityRecorder({ client, logger, serviceName }) {
 
         let described = {};
         try {
-          described = describe ? describe(req) || {} : {};
+          // `res` too: a CREATE learns its target id only in the handler, which
+          // runs before this does — it leaves it on `res.locals.activityTargetId`.
+          described = describe ? describe(req, res) || {} : {};
+          if (described.targetId == null && res.locals?.activityTargetId != null) {
+            described.targetId = res.locals.activityTargetId;
+          }
         } catch (error) {
           logger?.warn({ err: error, action }, 'Activity describe() threw — recording without details');
         }

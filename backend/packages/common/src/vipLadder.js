@@ -56,13 +56,16 @@ function makeLadder({ key, label, bands, unranked, bonusGates }) {
         level: zero.level,
         name: zero.name,
         card: zero.card,
+        badgeUrl: zero.badgeUrl ?? null,
         wager: String(wager ?? '0'),
         nextLevel: first.level,
         nextName: first.name,
         // Distance to the first band, not the band's floor — a player 300 into
         // a 500 threshold needs 200 more, not 500.
         wagerToNextLevel: String(Number(first.minXp) - amount),
-        progressPct: '0.00',
+        // How far toward the first band. A flat 0.00 here kept every unranked player's bar empty
+        // however much they had wagered (the "VIP level not moving" report).
+        progressPct: Number(first.minXp) > 0 ? Math.min(100, Math.max(0, (amount / Number(first.minXp)) * 100)).toFixed(2) : '0.00',
       };
     }
 
@@ -71,6 +74,7 @@ function makeLadder({ key, label, bands, unranked, bonusGates }) {
         level: top.level,
         name: top.name,
         card: top.card,
+        badgeUrl: top.badgeUrl ?? null,
         wager: String(wager ?? '0'),
         nextLevel: null,
         nextName: null,
@@ -79,7 +83,12 @@ function makeLadder({ key, label, bands, unranked, bonusGates }) {
       };
     }
 
-    const index = levels.findIndex((v) => amount >= Number(v.minXp) && amount <= Number(v.maxXp));
+    // The highest band whose floor the wager has reached. Bands are integers
+    // (maxXp = next.minXp − 1), so a fractional wager such as 999.5 sits in no
+    // band's [minXp, maxXp]; it belongs to the lower one until it reaches the
+    // next floor.
+    let index = 0;
+    while (index + 1 < levels.length && amount >= Number(levels[index + 1].minXp)) index += 1;
     const band = levels[index];
     const next = levels[index + 1] ?? null;
 
@@ -90,6 +99,7 @@ function makeLadder({ key, label, bands, unranked, bonusGates }) {
       level: band.level,
       name: band.name,
       card: band.card,
+      badgeUrl: band.badgeUrl ?? null,
       wager: String(wager ?? '0'),
       nextLevel: next ? next.level : null,
       nextName: next ? next.name : null,
@@ -111,6 +121,9 @@ function makeLadder({ key, label, bands, unranked, bonusGates }) {
       minXp: String(band.minXp),
       maxXp: band.level === top.level ? null : String(band.maxXp),
       card: band.card,
+      badgeUrl: band.badgeUrl ?? null,
+      // Loyalty Club ladder only: what the page prints per level.
+      ...(band.multiplier != null && { multiplier: band.multiplier, milestones: band.milestones ?? null }),
     }));
 
   return Object.freeze({

@@ -5,12 +5,14 @@ const { validate, response, asyncHandler, createActivityRecorder } = require('@i
 const { PERMISSIONS } = require('@ibitplay/auth');
 
 const v = require('../features.validators');
+const templateErrors = require('../template.errors');
 const { FeaturesService } = require('../features.service');
 
 /**
  * The operator's view of this site's features.
  *
  * Reads need `config:read`; every write needs `config:write` and is audited.
+ * The catalogue carries no `builtFor`: which site a variant came from is never shown.
  * The audit line records WHICH secret names changed and never their values —
  * the recorder is handed the body, so `details` is built here by hand rather
  * than passed through.
@@ -27,19 +29,19 @@ module.exports = function adminRoutes(deps) {
 
   router.get('/', canRead, asyncHandler(async (_req, res) => response.ok(res, await service.list())));
 
-  router.put(
-    '/template',
-    canWrite,
-    validate(v.applyTemplate),
-    withActivity({
-      action: 'features.template',
-      describe: (req) => ({ targetType: 'SITE', targetId: req.body.template, details: { enable: req.body.enable } }),
-    }),
-    asyncHandler(async (req, res) =>
-      response.ok(res, await service.applyTemplate({ ...req.body, staff: req.staff }))
-    )
-  );
+  /**
+   * The template is the owner's (docs/OWNER-PANEL.md §4): it arrives in the
+   * entitlement document and the entitlements store applies it. Staff are refused whatever
+   * the body says; registered before `/:feature` so `template` is never read as
+   * a feature key.
+   */
+  router.put('/template', canWrite, (_req, _res, next) => next(templateErrors.OWNER_ONLY()));
 
+  /**
+   * With an owner panel, a feature's on/off and variant are the owner's
+   * (403 OWNER_MANAGED, see owner.errors.js); staff may still save the config
+   * and keys of the current variant.
+   */
   router.put(
     '/:feature',
     canWrite,

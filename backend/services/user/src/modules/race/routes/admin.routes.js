@@ -1,8 +1,8 @@
 'use strict';
 
 const { Router } = require('express');
-const { validate, createActivityRecorder } = require('@ibitplay/common');
-const { PERMISSIONS } = require('@ibitplay/auth');
+const { validate, createActivityRecorder, noBody } = require('@ibitplay/common');
+const { PERMISSIONS, denyAgentTree } = require('@ibitplay/auth');
 
 const v = require('../race.validators');
 const { RaceService } = require('../race.service');
@@ -25,6 +25,10 @@ module.exports = function adminRoutes(deps) {
   });
 
   const router = Router();
+
+  // Promotions are house business: SUPER_MASTER / MASTER / AGENT (and their
+  // executives) are refused every route below — PROMOTIONS_NOT_FOR_AGENTS.
+  router.use(denyAgentTree());
   const canRead = auth.requirePermission(PERMISSIONS.REPORTS_READ);
   const canWrite = auth.requirePermission(PERMISSIONS.CONFIG_WRITE);
 
@@ -35,6 +39,7 @@ module.exports = function adminRoutes(deps) {
   router.get('/rewards', canRead, validate(v.adminListing), ctrl.listRewards);
   router.get('/boats', canRead, ctrl.listBoats);
   router.get('/config/:type', canRead, validate(v.typeParam), ctrl.getConfig);
+  router.get('/leaderboard/:type', canRead, validate(v.typeParam), ctrl.adminLeaderboard);
 
   // ── Configuration ───────────────────────────────────────────────────
   router.put(
@@ -58,9 +63,32 @@ module.exports = function adminRoutes(deps) {
    */
   router.post(
     '/races/:id/settle',
+    noBody(),
     canWrite,
     audit('race.settle', (req) => ({ targetType: 'RACE', targetId: req.params.id })),
     ctrl.settle
+  );
+
+  /** Close an open race with no prizes. `config:write`, audited with the reason. */
+  router.post(
+    '/races/:id/cancel',
+    canWrite,
+    validate(v.cancel),
+    audit('race.cancel', (req) => ({ targetType: 'RACE', targetId: req.params.id, details: req.body })),
+    ctrl.cancel
+  );
+
+  /**
+   * Open a test race with a staff-chosen window (e.g. the next 10 minutes), so daily/weekly
+   * payouts and booked seats can be tried without waiting for midnight or Monday. It settles
+   * like any race: End & pay, or the roll job once it has ended.
+   */
+  router.post(
+    '/races/test',
+    canWrite,
+    validate(v.testRace),
+    audit('race.test', (req) => ({ targetType: 'RACE', targetId: req.body.type, details: req.body })),
+    ctrl.startTestRace
   );
 
   // ── Decorative entries ──────────────────────────────────────────────
@@ -82,6 +110,7 @@ module.exports = function adminRoutes(deps) {
 
   router.delete(
     '/boats/:id',
+    noBody(),
     canWrite,
     validate(v.boatParam),
     audit('race.boat.delete', (req) => ({ targetType: 'RACE_BOAT', targetId: req.params.id })),

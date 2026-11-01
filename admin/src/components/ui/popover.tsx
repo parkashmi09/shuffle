@@ -35,7 +35,7 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot='popover-content'
           className={cn(
-            'bg-popover text-popover-foreground ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 z-50 flex w-72 origin-(--transform-origin) flex-col gap-4 rounded-md p-4 text-sm shadow-md ring-1 outline-hidden duration-100',
+            'bg-popover text-popover-foreground motion-safe:data-open:animate-morph-in motion-safe:data-closed:animate-morph-out z-50 flex w-72 origin-(--transform-origin) flex-col gap-4 rounded-lg p-4 text-sm shadow-[var(--shadow-dropdown)] outline-hidden',
             className
           )}
           {...props}
@@ -50,7 +50,7 @@ function PopoverHeader({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
-  return <PopoverPrimitive.Title data-slot='popover-title' className={cn('font-medium', className)} {...props} />
+  return <PopoverPrimitive.Title data-slot='popover-title' className={cn('text-heading font-semibold', className)} {...props} />
 }
 
 function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {

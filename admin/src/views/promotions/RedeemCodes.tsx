@@ -13,6 +13,7 @@ import FormDialog from '@/components/shared/FormDialog'
 import { TextField } from '@/components/shared/FormField'
 import Money from '@/components/shared/Money'
 import PageHeader from '@/components/shared/PageHeader'
+import { useRewardCurrency } from '@/components/shared/RewardCurrency'
 import StatusBadge from '@/components/shared/StatusBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useApi, useApiMutation, useListState, usePagedApi } from '@/hooks/use-api'
 import { api } from '@/lib/api/client'
+import { check } from '@/lib/validate'
 import { CODE_STATUSES, type BonusUserId, type RedeemCode } from './types'
 
 const generateCode = () => {
@@ -31,13 +33,13 @@ const generateCode = () => {
   return `RC-${s}`
 }
 
-const columns: Column<RedeemCode>[] = [
+const columnsFor = (cur: string): Column<RedeemCode>[] => [
   { key: 'code', header: 'Code', cell: r => <span className='font-mono text-sm font-medium'>{r.code}</span> },
   {
     key: 'user',
-    header: 'Player',
+    header: 'User',
     cell: r => (
-      <Link href={`/players/${r.userId}`} className='font-mono text-xs hover:underline'>
+      <Link href={`/users/${r.userId}`} className='font-mono text-xs hover:underline'>
         #{String(r.userId)}
       </Link>
     )
@@ -46,7 +48,7 @@ const columns: Column<RedeemCode>[] = [
     key: 'amount',
     header: 'Value',
     align: 'right',
-    cell: r => (r.kind === 'percentage' ? <span className='font-mono tabular-nums'>{r.bonusPct}% of deposit</span> : <Money value={r.amount} />)
+    cell: r => (r.kind === 'percentage' ? <span className='font-mono tabular-nums'>{r.bonusPct}% of deposit</span> : <Money value={r.amount} currency={cur} />)
   },
   { key: 'kind', header: 'Kind', cell: r => <Badge variant='outline' className='capitalize'>{r.kind}</Badge> },
   { key: 'status', header: 'Status', cell: r => <StatusBadge value={r.status} /> },
@@ -55,13 +57,14 @@ const columns: Column<RedeemCode>[] = [
 ]
 
 const CreateCode = () => {
+  const { code: cur } = useRewardCurrency()
   const [form, setForm] = useState({ userId: '', code: generateCode(), amount: '' })
-  const users = useApi<BonusUserId[]>('admin/user/bonus/users', { limit: 200 })
+  const users = useApi<BonusUserId[]>('admin/user/bonus/users', { channel: 'direct', limit: 200 })
 
   const create = useApiMutation({
     fn: () => api.post('admin/user/bonus/codes', { userId: Number(form.userId), code: form.code.trim().toUpperCase(), amount: form.amount }),
     invalidate: [['paged', 'admin/user/bonus/codes']],
-    success: r => `Code issued`,
+    success: 'Code issued',
     onSuccess: () => setForm({ userId: '', code: generateCode(), amount: '' })
   })
 
@@ -73,9 +76,14 @@ const CreateCode = () => {
         </Button>
       }
       title='Issue a redeem code'
-      description='A fixed-amount code for one player. It pays out when they redeem it, in USDT. Nothing moves now.'
+      description='A fixed-amount code for one user. It pays out when they redeem it, in the site’s reward currency. Nothing moves now.'
       submitLabel='Issue'
       onSubmit={() => create.mutateAsync()}
+      validate={() => ({
+        'rc-uid': check.id(form.userId, 'User id'),
+        'rc-code': check.required(form.code, 'Code') || check.length(form.code, 'Code', { min: 4, max: 40 }) || (/^[A-Za-z0-9-]+$/.test(form.code.trim()) ? undefined : 'Code may only contain letters, digits and dashes'),
+        'rc-amt': check.amount(form.amount)
+      })}
     >
       <TextField
         id='rc-uid'
@@ -83,7 +91,7 @@ const CreateCode = () => {
         required
         inputMode='numeric'
         list='rc-users'
-        hint={users.data?.length ? 'Players with a bonus record are suggested; any player id works.' : undefined}
+        hint={users.data?.length ? 'Users with a bonus record are suggested; any user id works.' : undefined}
         value={form.userId}
         onChange={e => setForm({ ...form, userId: e.target.value.replace(/\D/g, '') })}
       />
@@ -102,14 +110,18 @@ const CreateCode = () => {
           <RefreshCwIcon />
         </Button>
       </div>
-      <TextField id='rc-amt' label='Amount' required placeholder='25.00' hint='Decimal string, USDT.' value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
+      <TextField id='rc-amt' label='Amount' required placeholder='25.00' hint={`Decimal string, in ${cur} (the reward currency).`} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
     </FormDialog>
   )
 }
 
 const RedeemCodes = () => {
   const { state, set, query } = useListState(['status', 'userId'], { status: 'all' })
+  const { code: cur } = useRewardCurrency()
+
   const list = usePagedApi<RedeemCode>('admin/user/bonus/codes', {
+    // Agent ke users ye use nahi kar sakte — sirf direct users.
+    channel: 'direct',
     limit: query.limit,
     page: query.page,
     status: state.status && state.status !== 'all' ? state.status : undefined,
@@ -120,7 +132,7 @@ const RedeemCodes = () => {
     <div>
       <PageHeader
         title='Redeem codes'
-        description='Codes issued to players by staff or minted by the spin wheel. A code is single-use; the platform marks it redeemed, expired or superseded — there is no manual disable.'
+        description='Codes issued to users by staff or minted by the spin wheel. A code is single-use; the platform marks it redeemed, expired or superseded — there is no manual disable.'
         actions={
           <Can permission='config:write'>
             <CreateCode />
@@ -128,7 +140,7 @@ const RedeemCodes = () => {
         }
       />
       <DataTable
-        columns={columns}
+        columns={columnsFor(cur)}
         rows={list.data?.rows}
         rowKey={r => r.id}
         loading={list.isLoading}

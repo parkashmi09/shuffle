@@ -2,7 +2,7 @@
 
 const { defineErrors } = require('@ibitplay/common');
 
-const { MIN_CLAIM, RAKEBACK_CURRENCY } = require('./rakeback.constants');
+const { MIN_CLAIM } = require('./rakeback.constants');
 
 /**
  * Legacy had no error path at all on the read:
@@ -16,7 +16,7 @@ const { MIN_CLAIM, RAKEBACK_CURRENCY } = require('./rakeback.constants');
 module.exports = defineErrors('RAKEBACK', {
   NOTHING_TO_CLAIM: {
     status: 409,
-    message: `There is less than ${MIN_CLAIM} ${RAKEBACK_CURRENCY} of rakeback to claim`,
+    message: `There is less than ${MIN_CLAIM} USD of rakeback to claim`,
   },
 
   USER_NOT_FOUND: {

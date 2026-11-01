@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import Link from 'next/link'
 
-import { CheckIcon, EyeIcon, XIcon } from 'lucide-react'
+import { CheckIcon, CircleCheckIcon, CircleXIcon, ClockIcon, EyeIcon, SearchIcon, SunIcon, XIcon } from 'lucide-react'
 
 import Can from '@/components/shared/Can'
 import DataTable, { type Column } from '@/components/shared/DataTable'
@@ -12,6 +12,7 @@ import DateTime from '@/components/shared/DateTime'
 import FormDialog from '@/components/shared/FormDialog'
 import { TextAreaField, TextField } from '@/components/shared/FormField'
 import Money from '@/components/shared/Money'
+import { FilterBar, PRESETS, toApiRange, useStatsFilters, type StatsFilters } from '@/components/shared/charts'
 import PageHeader from '@/components/shared/PageHeader'
 import StatCard from '@/components/shared/StatCard'
 import StatusBadge from '@/components/shared/StatusBadge'
@@ -21,27 +22,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSession } from '@/contexts/SessionContext'
 import { useApi, useApiMutation, useListState, usePagedApi } from '@/hooks/use-api'
 import { api } from '@/lib/api/client'
-import { formatNumber } from '@/lib/format'
-import { Details, ImageDialog, ViewDialog, stop } from './shared'
-import { FIAT_CURRENCIES, type DepositStats, type FiatDepositRow } from './types'
+import { check } from '@/lib/validate'
+import FinanceStatsPanel, { useStatsQuery, type FinanceStats } from './FinanceStatsPanel'
+import ListStatsTabs from './ListStatsTabs'
+import { CopyButton, Details, ImageDialog, ViewDialog, stop } from './shared'
+import { PlayerAvatar } from '@/views/players/users/shared'
+
+import type { FiatDepositRow } from './types'
 
 const LIST = 'admin/user/deposits/fiat'
-const INVALIDATE = [['paged', LIST], ['api', 'admin/user/history/fiat/stats']]
+const STATS = 'admin/reports/finance-stats'
+const INVALIDATE = [['paged', LIST], ['api', 'admin/reports/finance-stats']]
 
 /** The server mounts approve/reject behind `deposits:approve`; the inventory lists `withdrawals:approve`. Either shows the buttons; the platform decides. */
 const APPROVE = ['deposits:approve', 'withdrawals:approve']
 
 const Approve = ({ row }: { row: FiatDepositRow }) => {
-  const [form, setForm] = useState({ creditAmount: '', comment: '' })
+  const [transactionPassword, setTransactionPassword] = useState('')
+
+  // The requested amount is credited as it is; staff cannot edit it (user, 2026-10-27).
   const approve = useApiMutation({
-    fn: () => {
-      const body: Record<string, string> = {}
-
-      if (form.creditAmount) body.creditAmount = form.creditAmount
-      if (form.comment) body.comment = form.comment
-
-      return api.put(`${LIST}/${row.depositId}/approve`, body)
-    },
+    fn: () => api.put(`${LIST}/${row.depositId}/approve`, { transactionPassword }),
     invalidate: INVALIDATE,
     success: 'Deposit approved and credited'
   })
@@ -56,22 +57,24 @@ const Approve = ({ row }: { row: FiatDepositRow }) => {
       title={`Approve deposit #${row.depositId}`}
       description={
         <>
-          Credits player #{row.userId} with <Money value={row.amount} currency={row.currency} /> unless you enter a different amount below (when the bank statement disagrees).
+          Credits user #{row.userId} with <Money value={row.amount} currency={row.currency} />.
         </>
       }
       submitLabel='Approve & credit'
+      validate={() => ({ transactionPassword: transactionPassword ? undefined : 'Enter your transaction password' })}
       onSubmit={() => approve.mutateAsync()}
     >
-      <TextField id={`ap-amt-${row.depositId}`} label='Credit amount' placeholder={row.amount} hint='Leave blank to credit the claimed amount' value={form.creditAmount} onChange={e => setForm({ ...form, creditAmount: e.target.value })} />
-      <TextAreaField id={`ap-c-${row.depositId}`} label='Comment' value={form.comment} onChange={e => setForm({ ...form, comment: e.target.value })} />
+      <TextField id={`ap-amt-${row.depositId}`} name='creditAmount' label='Credit amount' value={`${Number(row.amount).toLocaleString('en-IN')} ${row.currency}`} disabled readOnly />
+      <TextField id={`ap-pw-${row.depositId}`} name='transactionPassword' label='Transaction password' type='password' autoComplete='new-password' required value={transactionPassword} onChange={e => setTransactionPassword(e.target.value)} />
     </FormDialog>
   )
 }
 
 const Reject = ({ row }: { row: FiatDepositRow }) => {
   const [comment, setComment] = useState('')
+
   const reject = useApiMutation({
-    fn: () => api.put(`${LIST}/${row.depositId}/reject`, { comment }),
+    fn: () => api.put(`${LIST}/${row.depositId}/reject`, { comment: comment.trim() }),
     invalidate: INVALIDATE,
     success: 'Deposit rejected'
   })
@@ -79,17 +82,18 @@ const Reject = ({ row }: { row: FiatDepositRow }) => {
   return (
     <FormDialog
       trigger={
-        <Button size='sm' variant='destructive'>
+        <Button size='sm' variant='outline' className='text-danger hover:bg-danger-soft hover:text-danger'>
           <XIcon /> Reject
         </Button>
       }
       title={`Reject deposit #${row.depositId}`}
-      description='The player sees this reason on their deposit history.'
+      description='The user sees this reason on their deposit history.'
       submitLabel='Reject'
       destructive
+      validate={() => ({ comment: check.required(comment, 'Reason') ?? check.length(comment, 'Reason', { max: 500 }) })}
       onSubmit={() => reject.mutateAsync()}
     >
-      <TextAreaField id={`rj-c-${row.depositId}`} label='Reason' required value={comment} onChange={e => setComment(e.target.value)} />
+      <TextAreaField id={`rj-c-${row.depositId}`} name='comment' label='Reason' required value={comment} onChange={e => setComment(e.target.value)} />
     </FormDialog>
   )
 }
@@ -97,8 +101,8 @@ const Reject = ({ row }: { row: FiatDepositRow }) => {
 const Detail = ({ row }: { row: FiatDepositRow }) => (
   <ViewDialog
     trigger={
-      <Button variant='ghost' size='sm'>
-        <EyeIcon /> View
+      <Button variant='ghost' size='icon-sm' aria-label={`View deposit #${row.depositId}`} title='View details'>
+        <EyeIcon />
       </Button>
     }
     title={`Deposit #${row.depositId}`}
@@ -110,9 +114,16 @@ const Detail = ({ row }: { row: FiatDepositRow }) => (
   >
     <Details
       items={[
-        ['Player', <Link key='p' href={`/players/${row.userId}`} className='underline'>#{row.userId}</Link>],
+        ['User', <Link key='p' href={`/users/${row.userId}`} className='underline'>#{row.userId}</Link>],
         ['Amount', <Money key='a' value={row.amount} currency={row.currency} />],
-        ['Bank reference', <span key='t' className='font-mono'>{row.transactionId}</span>],
+        [
+          row.network ? 'Transaction hash' : 'Bank reference',
+          <span key='t' className='inline-flex items-start gap-1'>
+            <span className='font-mono break-all'>{row.transactionId}</span>
+            {row.transactionId && <CopyButton value={row.transactionId} label='Copy reference' />}
+          </span>
+        ],
+        ['Method', <DepositMethod key='m' row={row} />],
         ['Bank', row.bankName],
         ['Account holder', row.accountHolderName],
         ['Account number', row.accountNumber],
@@ -133,102 +144,192 @@ const Detail = ({ row }: { row: FiatDepositRow }) => (
   </ViewDialog>
 )
 
+/**
+ * How the player paid. The site sends the UPI id for a UPI deposit and the bank account for a
+ * bank transfer; older rows carry both (the site used to send every receiving detail), so a row
+ * with a UPI id and no account number is UPI, one with both shows both.
+ */
+const DepositMethod = ({ row }: { row: FiatDepositRow }) => {
+  if (row.network)
+    return (
+      <span className='text-sm'>
+        Crypto · {row.currency}·{row.network} <span className='text-muted-foreground block font-mono text-xs'>{row.walletAddress ?? ''}</span>
+      </span>
+    )
+  if (row.upiId && !row.accountNumber) return <span className='text-sm'>UPI <span className='text-muted-foreground font-mono text-xs'>{row.upiId}</span></span>
+  if (row.upiId && row.bankName) return <span className='text-sm'>UPI or {row.bankName} <span className='text-muted-foreground font-mono text-xs'>{row.upiId}</span></span>
+
+  return <span className='text-sm'>{row.bankName ? `Bank · ${row.bankName}` : '—'}</span>
+}
+
 const columns: Column<FiatDepositRow>[] = [
-  { key: 'id', header: 'ID', cell: r => <span className='font-mono text-xs'>{r.depositId}</span> },
-  { key: 'user', header: 'Player', cell: r => <Link href={`/players/${r.userId}`} className='font-mono text-xs hover:underline'>#{r.userId}</Link> },
-  { key: 'amount', header: 'Amount', align: 'right', cell: r => <Money value={r.amount} currency={r.currency} /> },
-  { key: 'ref', header: 'Bank reference', cell: r => <span className='font-mono text-xs'>{r.transactionId}</span> },
-  { key: 'bank', header: 'Bank / UPI', cell: r => <span className='text-sm'>{r.bankName ?? r.upiId ?? '—'}</span> },
+  {
+    key: 'user',
+    header: 'Player',
+    cell: r => (
+      <Link href={`/users/${r.userId}`} className='group flex items-center gap-2.5' onClick={stop}>
+        <PlayerAvatar name={r.username} avatar={r.avatar} className='size-8 text-[11px]' />
+        <span className='min-w-0'>
+          <span className='block truncate font-medium group-hover:underline'>{r.username || `#${r.userId}`}</span>
+          <span className='text-muted-foreground block font-mono text-xs'>
+            {r.username ? `#${r.userId} · ` : ''}dep {r.depositId}
+          </span>
+        </span>
+      </Link>
+    )
+  },
+  { key: 'amount', header: 'Amount', align: 'right', cell: r => <Money value={r.amount} currency={r.currency} className='font-semibold' /> },
+  {
+    key: 'ref',
+    header: 'UTR / tx id',
+    cell: r =>
+      r.transactionId ? (
+        <span className='flex max-w-56 items-center gap-1'>
+          <span className='truncate font-mono text-xs' title={r.transactionId}>
+            {r.transactionId}
+          </span>
+          <CopyButton value={r.transactionId} label='Copy reference' />
+        </span>
+      ) : (
+        <span className='text-muted-foreground'>—</span>
+      )
+  },
+  { key: 'bank', header: 'Method', cell: r => <DepositMethod row={r} /> },
   { key: 'status', header: 'Status', cell: r => <StatusBadge value={r.status} /> },
-  { key: 'proof', header: 'Proof', cell: r => (r.hasScreenshot ? <span className='text-xs'>yes</span> : <span className='text-muted-foreground text-xs'>none</span>) },
-  { key: 'at', header: 'Created', cell: r => <DateTime value={r.createdAt} /> },
+  {
+    key: 'proof',
+    header: 'Proof',
+    cell: r =>
+      r.hasScreenshot ? (
+        <span onClick={stop}>
+          <ImageDialog thumbnail path={`${LIST}/${r.depositId}/screenshot`} title={`Proof of payment — deposit #${r.depositId}`} label='View screenshot' />
+        </span>
+      ) : (
+        <span className='text-muted-foreground text-xs'>None</span>
+      )
+  },
+  { key: 'at', header: 'Created', cell: r => <DateTime value={r.createdAt} relative /> },
   {
     key: 'actions',
     header: '',
     align: 'right',
     cell: r => (
-      <div className='flex justify-end gap-1' onClick={stop}>
-        <Detail row={r} />
+      <div className='flex justify-end gap-1.5' onClick={stop}>
         {r.status === 'pending' && (
           <Can permission={APPROVE}>
             <Approve row={r} />
             <Reject row={r} />
           </Can>
         )}
+        <Detail row={r} />
       </div>
     )
   }
 ]
 
+/**
+ * Headline tiles above the queue, from the same `admin/reports/finance-stats` the Stats tab reads
+ * (reports:read): the selected period's pending / approved / rejected, plus today's approvals.
+ */
+const Summary = ({ filters }: { filters: StatsFilters }) => {
+  const query = useStatsQuery('deposits', 'fiat', filters)
+  const today = new Date().toISOString().slice(0, 10)
+  const period = useApi<FinanceStats>(STATS, query)
+  const todays = useApi<FinanceStats>(STATS, { ...query, ...toApiRange(today, today) })
+  const t = period.data?.totals.byStatus
+  const currency = period.data?.currency ?? query.convertTo
+  const label = PRESETS.find(p => p.value === filters.preset)?.label ?? 'Selected period'
+  const count = (n?: number) => (n ?? 0).toLocaleString('en-IN')
+
+  return (
+    <div className='mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4'>
+      <StatCard
+        label='Pending review'
+        icon={<ClockIcon />}
+        loading={period.isLoading}
+        value={<span className='text-warning'>{count(t?.pending.count)}</span>}
+        hint={<><Money value={t?.pending.amount ?? 0} currency={currency} /> · {label}</>}
+      />
+      <StatCard
+        label='Approved today'
+        icon={<SunIcon />}
+        loading={todays.isLoading}
+        value={<Money value={todays.data?.totals.byStatus.success.amount ?? 0} currency={todays.data?.currency ?? currency} />}
+        hint={`${count(todays.data?.totals.byStatus.success.count)} deposits`}
+      />
+      <StatCard
+        label='Approved'
+        icon={<CircleCheckIcon />}
+        loading={period.isLoading}
+        value={<Money value={t?.success.amount ?? 0} currency={currency} />}
+        hint={`${count(t?.success.count)} deposits · ${label}`}
+      />
+      <StatCard
+        label='Rejected'
+        icon={<CircleXIcon />}
+        loading={period.isLoading}
+        value={<span className='text-danger'>{count(t?.failed.count)}</span>}
+        hint={<><Money value={t?.failed.amount ?? 0} currency={currency} /> · {label}</>}
+      />
+    </div>
+  )
+}
+
 const FiatDeposits = () => {
   const { can } = useSession()
-  const { state, set, query } = useListState(['status', 'currency', 'userId'], { status: 'pending' })
+  const { state, set, query } = useListState(['status', 'userId'], { status: 'pending' })
+
+  // Period and bucket size for the charts (every currency, in the default coin). The review queue
+  // lists every currency and has no date filter.
+  const filters = useStatsFilters()
+
   const list = usePagedApi<FiatDepositRow>(LIST, {
+    // Agent ke users ye use nahi kar sakte — sirf direct users.
+    channel: 'direct',
     limit: query.limit,
     page: query.page,
     status: query.status,
-    currency: query.currency,
     userId: query.userId,
     search: query.search
   })
-  const stats = useApi<DepositStats>('admin/user/history/fiat/stats', { currency: query.currency }, { enabled: can('reports:read') })
-  const s = stats.data
 
   return (
     <div>
-      <PageHeader title='Fiat deposits' description='Manual bank-transfer deposits awaiting review. Approving credits the player; rejecting records a reason they can see.' />
-      {can('reports:read') && (
-        <div className='mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4'>
-          <StatCard label='Transactions' value={formatNumber(s?.totalTransactions)} loading={stats.isLoading} hint={`${formatNumber(s?.successfulTransactions)} successful · ${formatNumber(s?.processingTransactions)} processing · ${formatNumber(s?.failedTransactions)} failed`} />
-          <StatCard label='Total amount' value={<Money value={s?.totalAmount} currency={s?.currency} />} loading={stats.isLoading} />
-          <StatCard label='Successful amount' value={<Money value={s?.successfulAmount} currency={s?.currency} />} loading={stats.isLoading} />
-          <StatCard label='Pending amount' value={<Money value={s?.processingAmount} currency={s?.currency} />} loading={stats.isLoading} />
+      <PageHeader title='Manual deposits' description='Manual bank-transfer deposits awaiting review. Approving credits the user; rejecting records a reason they can see.' />
+      {can('reports:read') && <Summary filters={filters} />}
+      <FilterBar filters={filters} className='mb-4'>
+        <Select value={String(state.status || 'all')} onValueChange={v => v && set({ status: v === 'all' ? '' : v })}>
+          <SelectTrigger className='w-36' aria-label='Status'>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>All statuses</SelectItem>
+            <SelectItem value='pending'>Pending</SelectItem>
+            <SelectItem value='approved'>Approved</SelectItem>
+            <SelectItem value='rejected'>Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input placeholder='User id' inputMode='numeric' aria-label='User id' value={String(state.userId ?? '')} onChange={e => set({ userId: e.target.value.replace(/\D/g, '') })} className='w-28' />
+        <div className='relative w-full sm:w-64'>
+          <SearchIcon className='text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2' />
+          <Input value={String(state.search ?? '')} onChange={e => set({ search: e.target.value })} placeholder='UTR, bank reference, holder…' aria-label='Search' className='pl-8' />
         </div>
-      )}
-      <DataTable
-        columns={columns}
-        rows={list.data?.rows}
-        rowKey={r => r.depositId}
-        loading={list.isLoading}
-        fetching={list.isFetching}
-        error={list.error}
-        pagination={list.data?.pagination}
-        onPageChange={page => set({ page })}
-        onLimitChange={limit => set({ limit })}
-        search={String(state.search ?? '')}
-        onSearchChange={search => set({ search })}
-        searchPlaceholder='Bank reference, holder…'
-        emptyMessage={state.status ? `No ${state.status} deposits.` : 'No deposits.'}
-        toolbar={
-          <>
-            <Select value={String(state.status || 'all')} onValueChange={v => v && set({ status: v === 'all' ? '' : v })}>
-              <SelectTrigger className='w-36'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All statuses</SelectItem>
-                <SelectItem value='pending'>Pending</SelectItem>
-                <SelectItem value='approved'>Approved</SelectItem>
-                <SelectItem value='rejected'>Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={String(state.currency || 'all')} onValueChange={v => v && set({ currency: v === 'all' ? '' : v })}>
-              <SelectTrigger className='w-32'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All currencies</SelectItem>
-                {FIAT_CURRENCIES.map(c => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input placeholder='Player id' inputMode='numeric' aria-label='Player id' value={String(state.userId ?? '')} onChange={e => set({ userId: e.target.value.replace(/\D/g, '') })} className='w-28' />
-          </>
-        }
-      />
+      </FilterBar>
+      <ListStatsTabs stats={can('reports:read') ? <FinanceStatsPanel kind='deposits' rail='fiat' filters={filters} statusLabels={{ success: 'Successful', pending: 'Pending', failed: 'Failed' }} /> : null}>
+        <DataTable
+          dense
+          columns={columns}
+          rows={list.data?.rows}
+          rowKey={r => r.depositId}
+          loading={list.isLoading}
+          fetching={list.isFetching}
+          error={list.error}
+          pagination={list.data?.pagination}
+          onPageChange={page => set({ page })}
+          onLimitChange={limit => set({ limit })}
+          emptyMessage={state.status ? `No ${state.status} deposits.` : 'No deposits.'}
+        />
+      </ListStatsTabs>
     </div>
   )
 }

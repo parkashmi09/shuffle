@@ -1,8 +1,9 @@
 'use strict';
 
 const { Router } = require('express');
-const { response, asyncHandler } = require('@ibitplay/common');
+const { response, asyncHandler, entitlements, currencyRegistry } = require('@ibitplay/common');
 const { LITERAL_EVENTS, PLATFORM_EVENTS, encode } = require('@ibitplay/socket');
+const { invalidateSiteState } = require('../../sync/sockets');
 
 /**
  * Site-wide pushes that another service asks for.
@@ -32,14 +33,22 @@ module.exports = function internalRoutes(deps) {
   /**
    * `POST /internal/user/preferences/site-config`
    *
-   *   { flags?: object, features?: array }
+   *   { flags?: object, features?: array, currencies?: array }
    *
-   * Either half may be absent; each present half is one broadcast.
+   * Any part may be absent; each present part is one broadcast. `currencies`
+   * is the public coin list (`GET /admin/currencies/public`).
    */
   router.post(
     '/site-config',
     asyncHandler(async (req, res) => {
-      const { flags, features } = req.body ?? {};
+      const { flags, features, currencies, content } = req.body ?? {};
+      // A push follows every owner entitlement change too: re-read the plan on
+      // the next player request instead of serving the cached copy for its TTL.
+      entitlements.invalidateEntitlements();
+      // …and the coin registry (names, networks, switches) likewise.
+      if (currencies) currencyRegistry.invalidateCurrencyRegistry();
+      // …and the sockets' shared site state, so the re-sync each push triggers is already new.
+      invalidateSiteState();
       const io = deps.io;
       if (!io) return response.ok(res, { pushed: [], reason: 'socket transport not attached' });
 
@@ -51,6 +60,17 @@ module.exports = function internalRoutes(deps) {
       if (Array.isArray(features)) {
         io.emit(PLATFORM_EVENTS.FEATURES_UPDATED, encode(features));
         pushed.push(PLATFORM_EVENTS.FEATURES_UPDATED);
+      }
+      if (Array.isArray(currencies)) {
+        io.emit(PLATFORM_EVENTS.CURRENCIES_UPDATED, encode(currencies));
+        pushed.push(PLATFORM_EVENTS.CURRENCIES_UPDATED);
+      }
+
+      // rainbet: content scopes (names only, allow-listed by the sender; see contentPush.js).
+      if (Array.isArray(content) && content.length) {
+        const scopes = content.filter((s) => typeof s === 'string' && s.length <= 60).slice(0, 50);
+        io.emit(PLATFORM_EVENTS.CONTENT_UPDATED, encode({ scopes }));
+        pushed.push(PLATFORM_EVENTS.CONTENT_UPDATED);
       }
 
       deps.logger?.info({ pushed, caller: req.internalCaller ?? null, clients: io.engine?.clientsCount ?? null }, 'Site config pushed to every socket');

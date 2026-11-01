@@ -18,16 +18,18 @@ async function main() {
   const config = loadEnv(
     {
       REDIS_URL: coercers.str(''),
+      RATE_LIMIT_REDIS_URL: coercers.str(''),
       REDIS_PREFIX: coercers.str('ibitplay'),
       NODE_ENV: coercers.str('development'),
     },
     { serviceDir: path.resolve(__dirname, '..') }
   );
 
-  const url = config.REDIS_URL || process.env.REDIS_URL;
+  // Same resolution order as packages/common/src/middleware/rateLimit.js.
+  const url = config.RATE_LIMIT_REDIS_URL || config.REDIS_URL;
   if (!url) {
     logger.info(
-      'REDIS_URL is not set — HTTP sign-in limits are in the admin process only. Restart admin (or npm run dev) to clear them.'
+      'Neither RATE_LIMIT_REDIS_URL nor REDIS_URL is set — HTTP sign-in limits are in the admin process only. Restart admin (or npm run dev) to clear them.'
     );
     return;
   }

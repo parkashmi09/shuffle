@@ -9,8 +9,10 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-card text-card-foreground',
-        destructive: 'bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current'
+        // ccpayment standard Alert: soft tint, no visible border (views can still pass border-*/bg-*).
+        default: 'border-transparent bg-info-soft text-foreground',
+        destructive:
+          'border-transparent bg-danger-soft text-danger *:data-[slot=alert-description]:text-danger/90 *:[svg]:text-current'
       }
     },
     defaultVariants: {
@@ -28,7 +30,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot='alert-title'
       className={cn(
-        '[&_a]:hover:text-foreground font-medium group-has-[>svg]/alert:col-start-2 [&_a]:underline [&_a]:underline-offset-3',
+        '[&_a]:hover:text-foreground font-semibold group-has-[>svg]/alert:col-start-2 [&_a]:underline [&_a]:underline-offset-3',
         className
       )}
       {...props}

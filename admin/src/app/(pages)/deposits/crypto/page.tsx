@@ -1,13 +1,6 @@
-import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 
-import View from '@/views/finance/CryptoDeposits'
-
-export const metadata = { title: 'Crypto deposits' }
-
+// Purana link — ab Transactions → Deposit me hai.
 export default function Page() {
-  return (
-    <Suspense>
-      <View />
-    </Suspense>
-  )
+  redirect('/transactions/deposit')
 }

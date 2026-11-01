@@ -15,7 +15,8 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useApi, useApiMutation, useListState, usePagedApi } from '@/hooks/use-api'
-import { api } from '@/lib/api/client'
+import { api, errorMessage } from '@/lib/api/client'
+import { check } from '@/lib/validate'
 import type { Blog } from './types'
 
 /**
@@ -25,6 +26,7 @@ import type { Blog } from './types'
  */
 const BlogForm = ({ existing }: { existing?: Blog }) => {
   const full = useApi<Blog>(existing ? `admin/blogs/${existing.id}` : null, undefined, { enabled: !!existing })
+
   const [form, setForm] = useState({
     title: existing?.title ?? '',
     subheading: existing?.subheading ?? '',
@@ -34,6 +36,7 @@ const BlogForm = ({ existing }: { existing?: Blog }) => {
     isPublished: existing?.published ?? false,
     regenerateSlug: false
   })
+
   const [touched, setTouched] = useState(false)
   const [file, setFile] = useState<File | null>(null)
 
@@ -77,9 +80,22 @@ const BlogForm = ({ existing }: { existing?: Blog }) => {
       description={existing ? `Slug: ${existing.slug}` : 'The slug is generated from the title.'}
       submitLabel={existing ? 'Save' : 'Create'}
       onSubmit={() => save.mutateAsync()}
+      validate={() => {
+        if (existing && full.isLoading) return 'Wait for the current body to load'
+        if (existing && full.error) return `Could not load the post body: ${errorMessage(full.error)}`
+
+        return {
+          'bl-title': check.required(form.title, 'Title') || check.length(form.title, 'Title', { max: 512 }),
+          'bl-sub': check.length(form.subheading, 'Subheading', { max: 1000 }),
+          'bl-author': check.length(form.author, 'Author', { max: 255 }),
+          'bl-cat': check.length(form.category, 'Category', { max: 128 }),
+          'bl-body': check.required(form.description, 'Body') || check.length(form.description, 'Body', { max: 200000 }),
+          'bl-img': file && !file.type.startsWith('image/') ? 'The cover must be an image file' : file && file.size > 4 * 1024 * 1024 ? 'The cover image must be 4 MB or smaller' : undefined
+        }
+      }}
       wide
     >
-      <TextField id='bl-title' label='Title' required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
+      <TextField id='bl-title' name='title' label='Title' required maxLength={512} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
       <TextField id='bl-sub' label='Subheading' value={form.subheading} onChange={e => setForm({ ...form, subheading: e.target.value })} />
       <div className='grid grid-cols-2 gap-4'>
         <TextField id='bl-author' label='Author' value={form.author} onChange={e => setForm({ ...form, author: e.target.value })} />
@@ -90,7 +106,7 @@ const BlogForm = ({ existing }: { existing?: Blog }) => {
         label='Body'
         required
         rows={12}
-        hint={existing && full.isLoading ? 'Loading the current body…' : 'HTML or markdown, as the site renders it.'}
+        hint={existing && full.isLoading ? 'Loading the current body…' : existing && full.error ? `Could not load the current body: ${errorMessage(full.error)}` : 'HTML or markdown, as the site renders it.'}
         value={form.description}
         onChange={e => {
           setTouched(true)
@@ -112,6 +128,7 @@ const BlogForm = ({ existing }: { existing?: Blog }) => {
 const Blogs = () => {
   const { state, set, query } = useListState(['category'])
   const list = usePagedApi<Blog>('admin/blogs', { page: query.page, limit: query.limit, search: query.search, category: query.category })
+
   const remove = useApiMutation({
     fn: (id: number) => api.delete(`admin/blogs/${id}`),
     invalidate: [['paged', 'admin/blogs']],

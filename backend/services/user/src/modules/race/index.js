@@ -62,7 +62,8 @@ module.exports = {
     },
     {
       name: 'race:boats',
-      intervalMs: 10 * 60_000,
+      // Every minute: a booked seat must follow the board as players climb past it.
+      intervalMs: 60_000,
       run: (container) => require('./race.jobs').createBoatJob(container)(),
     },
   ],

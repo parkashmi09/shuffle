@@ -1,6 +1,7 @@
 'use strict';
 
 const { z } = require('@ibitplay/common');
+const { CATEGORY_NAMES } = require('./categories');
 
 /**
  * `?unreadOnly=false` MUST NOT MEAN TRUE.
@@ -32,6 +33,8 @@ const list = {
       limit: z.coerce.number().int().min(1).max(200).default(50),
       offset: z.coerce.number().int().min(0).default(0),
       unreadOnly: flag(false),
+      /** The panel's tab; `all` is every notification the player may see. */
+      category: z.enum(CATEGORY_NAMES).default('all'),
     })
     .strict(),
 };

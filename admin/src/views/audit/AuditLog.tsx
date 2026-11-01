@@ -18,12 +18,18 @@ type Activity = {
   action: string
   staffId: number
   staffName?: string
+  actorName?: string | null
+  actorRole?: string | null
   executiveId?: number | null
   service?: string
   method?: string
   path?: string
   statusCode?: number
   outcome?: string
+
+  /** What the API sends: 'success' | 'failed'. `outcome`/`statusCode` are older shapes. */
+  status?: string
+  errorMessage?: string | null
   targetType?: string | null
   targetId?: string | null
   details?: Record<string, unknown> | null
@@ -32,8 +38,18 @@ type Activity = {
   created_at?: string
 }
 
+const outcomeOf = (r: Activity) => {
+  const v = r.status ?? r.outcome
+
+  if (v) return v === 'success' ? 'success' : 'failed'
+  const code = r.statusCode ?? Number((r.details as { statusCode?: unknown } | null)?.statusCode)
+
+  return Number.isFinite(code) && code < 400 ? 'success' : 'failed'
+}
+
 const AuditLog = () => {
   const { state, set, query } = useListState(['status', 'action', 'staffId'])
+
   const list = usePagedApi<Activity>('admin/audit/activity', {
     limit: query.limit,
     page: query.page,
@@ -42,15 +58,16 @@ const AuditLog = () => {
     action: query.action,
     staffId: query.staffId
   })
+
   const [selected, setSelected] = useState<Activity | null>(null)
 
   const columns: Column<Activity>[] = [
     { key: 'at', header: 'When', cell: r => <DateTime value={r.createdAt ?? r.created_at} /> },
-    { key: 'staff', header: 'Staff', cell: r => <span>{r.staffName ?? `#${r.staffId}`}{r.executiveId ? <span className='text-muted-foreground'> · exec #{r.executiveId}</span> : null}</span> },
+    { key: 'staff', header: 'Staff', cell: r => <span>{r.actorName ?? r.staffName ?? `#${r.staffId}`}{r.executiveId ? <span className='text-muted-foreground'> · exec #{r.executiveId}</span> : null}</span> },
     { key: 'action', header: 'Action', cell: r => <code className='text-xs'>{r.action}</code> },
     { key: 'req', header: 'Request', cell: r => <span className='font-mono text-xs'>{r.method} {r.path}</span> },
     { key: 'target', header: 'Target', cell: r => (r.targetType ? <Badge variant='outline'>{r.targetType} {r.targetId}</Badge> : '—') },
-    { key: 'outcome', header: 'Outcome', cell: r => <StatusBadge value={r.outcome === 'success' ? 'success' : r.outcome ?? (r.statusCode && r.statusCode < 400 ? 'success' : 'failed')} /> },
+    { key: 'outcome', header: 'Outcome', cell: r => <StatusBadge value={outcomeOf(r)} /> },
     { key: 'ip', header: 'IP', cell: r => <span className='font-mono text-xs'>{r.ip ?? '—'}</span> }
   ]
 

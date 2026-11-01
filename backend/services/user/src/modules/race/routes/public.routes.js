@@ -36,6 +36,12 @@ module.exports = function publicRoutes(deps) {
   /** Both races, their multipliers and whether each is running. */
   router.get('/', ctrl.configs);
 
+  /** Finished races, newest first, with each one's podium. */
+  router.get('/history', withOptionalSession, validate(v.history), ctrl.history);
+
+  /** The previous window's standings: Last Champion and the History dialog. */
+  router.get('/:type/last', validate(v.typeParam), ctrl.last);
+
   /** Standings for one race. A caller with a token also gets their own rank. */
   router.get('/:type/leaderboard', withOptionalSession, validate(v.typeParam), ctrl.leaderboard);
 

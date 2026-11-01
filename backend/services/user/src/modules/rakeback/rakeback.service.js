@@ -1,14 +1,17 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { money } = require('@ibitplay/common');
+const { money, wagerCategory } = require('@ibitplay/common');
+const { createRewardFormula } = require('../../lib/rewardFormula');
+const { promotionsBlocked } = require('@ibitplay/auth');
 
 const { WalletService } = require('../wallet/wallet.service');
 const errors = require('./rakeback.errors');
 const { ACCRUED_COLUMN, MIN_CLAIM, REASON } = require('./rakeback.constants');
 const { vipRewards } = require('@ibitplay/common');
 const { DEFAULT_RAKEBACK_RATE } = vipRewards;
-const { createRewardCurrencyResolver } = require('../bonus/rewardCurrencies');
+const { createRewardMoney } = require('../../lib/rewardMoney');
+const { afterBonus } = require('../notifications/notifyPlayer');
 
 /**
  * Rakeback — a share of the house edge, accrued from wagering and claimed.
@@ -70,13 +73,19 @@ class RakebackService {
     this.config = config;
     this.clients = clients;
     this.wallet = deps.wallet ?? new WalletService(deps);
-    this.rewardCurrencies = createRewardCurrencyResolver(deps);
+    this.rewardMoney = deps.rewardMoney ?? createRewardMoney(deps);
+    this.rewardFormula = deps.rewardFormula ?? createRewardFormula(deps);
   }
 
-  /** Live payout currency from siteconfig (falls back to RAKEBACK_CURRENCY). */
-  async #rakebackCurrency() {
-    return this.rewardCurrencies.rakebackCurrency();
-  }
+  /*
+   * ── UNITS ──────────────────────────────────────────────────────────────
+   *
+   * `users.rakeamount` (and every `rakeback_accruals` row) is in USD: the
+   * stake arrives USD-converted and the VIP rate is applied to it. The
+   * balance is converted into the site's reward currency only when it is
+   * SHOWN or PAID (`rewardMoney.fromUsd`), so an owner changing the reward
+   * currency never re-denominates an accrued balance. `MIN_CLAIM` is USD.
+   */
 
   /**
    * What is claimable.
@@ -96,11 +105,12 @@ class RakebackService {
     if (!user) throw errors.USER_NOT_FOUND({ userId: String(userId) });
 
     const accrued = money.toDecimalString(money.toMinor(user[ACCRUED_COLUMN] ?? '0'));
-    const currency = await this.#rakebackCurrency();
+    const quote = await this.rewardMoney.fromUsd(accrued);
 
     return {
-      amount: accrued,
-      currency,
+      amount: quote.amount,
+      currency: quote.currency,
+      amountUsd: accrued,
       claimable: money.gte(accrued, MIN_CLAIM),
       minimum: MIN_CLAIM,
       /** The player's rate. A different column, and read-only here. */
@@ -139,11 +149,25 @@ class RakebackService {
    * VIP rate is read from `users.rakeback` (preferred — casino converts the
    * stake to USD, this service owns the loyalty rate).
    */
-  async accrue({ userId, amount, stakeUsd, source, ref }) {
+  async accrue({ userId, amount, stakeUsd, source, ref, kind = null }) {
+    /* Rakeback is a promotion: nothing accrues on a B2B site (for anybody) or for an agent-tree
+       player (packages/auth/src/agentPlayers.js `promotionsBlocked`, fails closed). A no-op, not
+       an error — the stake itself still counts, and a retry must not see a failure. */
+    if (await promotionsBlocked(userId)) {
+      return { accrued: null, amount: '0.00000000', currency: 'USD', duplicate: false, skipped: 'PROMOTIONS_BLOCKED' };
+    }
+
     let value;
 
+    const formula = amount == null && kind ? await this.rewardFormula() : null;
     if (amount != null) {
       value = money.toDecimalString(money.toMinor(amount));
+    } else if (formula?.mode === 'hash') {
+      /* hash.game "Instant": Wagered × house edge × 10% — the bet's own house edge (1 − RTP,
+         capped at 4%; originals 1%, slots 4%), not a flat per-card rate. */
+      const edge = String(kind.house_edge ?? wagerCategory.DEFAULT_HOUSE_EDGE[kind.category] ?? wagerCategory.DEFAULT_HOUSE_EDGE.slots);
+      value = money.toDecimalString(money.percentOf(money.toDecimalString(money.multiply(stakeUsd, edge)), formula.instant ?? '10'));
+      if (!money.gt(value, '0')) return { accrued: null, amount: '0.00000000', currency: 'USD', duplicate: false, skipped: 'ZERO' };
     } else {
       const user = await this.models.Users.findByPk(userId, {
         attributes: ['id', 'rakeback'],
@@ -161,7 +185,7 @@ class RakebackService {
     // of a stake; there is no such thing as a negative share of one.
     if (!money.gt(value, '0')) throw errors.ACCRUAL_NOT_POSITIVE({ amount: String(amount ?? value) });
 
-    const currency = await this.#rakebackCurrency();
+    const currency = 'USD';
 
     try {
       return await this.db.transaction(async (transaction) => {
@@ -217,7 +241,6 @@ class RakebackService {
    * @legacy SOCKET k2089ht7ae660578ed9gffgh8hkk7vxj (C.ADD_RAKEBACK)
    */
   async claim({ userId }) {
-    const currency = await this.#rakebackCurrency();
 
     return this.db.transaction(async (transaction) => {
       /**
@@ -274,11 +297,14 @@ class RakebackService {
         throw errors.CLAIM_IN_PROGRESS({ userId: String(userId) });
       }
 
+      // Priced now, in the site's reward currency, from the USD balance.
+      const { amount: payout, currency } = await this.rewardMoney.fromUsd(accrued);
+
       const movement = await this.wallet.credit(
         {
           userId,
           currency,
-          amount: accrued,
+          amount: payout,
           reason: REASON.CLAIM,
           /**
            * A second line of defence behind the guarded UPDATE, and the reason
@@ -328,9 +354,9 @@ class RakebackService {
 
       await bonusRow.update(
         {
-          rakebonus: money.toDecimalString(money.add(money.toMinor(bonusRow.rakebonus ?? '0'), money.toMinor(accrued))),
+          rakebonus: money.toDecimalString(money.add(money.toMinor(bonusRow.rakebonus ?? '0'), money.toMinor(payout))),
           totalbonus: money.toDecimalString(
-            money.add(money.toMinor(bonusRow.totalbonus ?? '0'), money.toMinor(accrued))
+            money.add(money.toMinor(bonusRow.totalbonus ?? '0'), money.toMinor(payout))
           ),
         },
         { transaction }
@@ -342,7 +368,8 @@ class RakebackService {
       );
 
       return {
-        claimed: accrued,
+        claimed: payout,
+        claimedUsd: accrued,
         currency,
         newBalance: movement.newBalance,
         /**
@@ -353,7 +380,8 @@ class RakebackService {
          */
         remaining: money.toDecimalString(money.toMinor('0')),
       };
-    });
+      // A second claim is refused before it gets here, so the time names this one.
+    }).then(afterBonus(userId, (r) => ({ key: `rakeback:claim:${Date.now()}`, title: 'Rakeback claimed', amount: r.claimed, currency: r.currency, link: '/vip' })));
   }
 }
 

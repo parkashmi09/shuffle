@@ -23,13 +23,18 @@ const HOP_BY_HOP = new Set([
   'content-length',
   'host',
   'cookie',
-  'authorization'
+  'authorization',
+
+  // Server-to-server call: the browser's origin (localhost, a bare IP) must not trip the gateway's CORS list.
+  'origin'
 ])
 
 async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const { path } = await ctx.params
   const target = `${serverConfig.apiUrl}/${path.join('/')}${req.nextUrl.search}`
-  const token = await readSessionToken()
+
+  // The branch panel's calls carry the branch cookie, every other call the staff one.
+  const token = await readSessionToken(path.slice(0, 5).join('/') === 'api/v1/admin/branches/portal' ? serverConfig.branchCookieName : undefined)
 
   const headers = new Headers()
 
@@ -48,7 +53,14 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
     cache: 'no-store'
   }
 
-  if (hasBody) {
+  if (hasBody && req.method === 'DELETE') {
+    // A DELETE body must go with a Content-Length. Streamed (chunked), the gateway's
+    // http.request does not chunk-encode a DELETE, so the upstream never sees the body
+    // and answers 400 — e.g. the sports config "reset to Inherit" routes.
+    const buf = await req.arrayBuffer()
+
+    if (buf.byteLength) init.body = buf
+  } else if (hasBody) {
     init.body = req.body
     init.duplex = 'half'
   }

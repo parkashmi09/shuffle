@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { validate } = require('@ibitplay/common');
+const { validate, requireTxnPassword } = require('@ibitplay/common');
 const { PERMISSIONS } = require('@ibitplay/auth');
 
 const v = require('../jsGames.validators');
@@ -43,7 +43,12 @@ module.exports = function adminRoutes(deps) {
   /** @legacy POST /jsGames/game/transfer */
   router.post(
     '/v1/transfer',
-    auth.requirePermission(PERMISSIONS.WALLET_CREDIT),
+    // wallet:adjust (house level), not wallet:credit: the body names ANY player and this route has no
+    // tree check, so an agent holding wallet:credit could move another tree's balance. No screen
+    // calls it (docs/SECURITY-CHECKLIST.md, 2026-10-25 findings).
+    auth.requirePermission(PERMISSIONS.WALLET_ADJUST),
+    // Moves the player's wallet: the staff caller's transaction code first.
+    requireTxnPassword({ clients: deps.clients }),
     validate(v.transferV1),
     ctrl.transferV1
   );

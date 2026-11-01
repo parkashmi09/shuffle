@@ -14,7 +14,9 @@ import PageHeader from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useApi, useApiMutation } from '@/hooks/use-api'
 import { api } from '@/lib/api/client'
-import { SUPPORTED_CURRENCIES, type ExchangeRateRow } from './types'
+import { check } from '@/lib/validate'
+import { type ExchangeRateRow } from './types'
+import { useCurrencyCodes } from './useCurrencyCodes'
 
 /** Reads are the PUBLIC route; the admin router only writes. */
 const READ = 'user/exchange-rate/rates'
@@ -28,8 +30,12 @@ const perUsd = (usdRate: string) => {
   return Number.isFinite(n) && n > 0 ? (1 / n).toLocaleString('en-IN', { maximumFractionDigits: 8 }) : '—'
 }
 
+/** exchangeRate.validators.js `rate`: a decimal > 0 with up to 8 places. */
+const rateError = (v: string) => check.number(v, 'USD rate', { positive: true, decimals: 8 })
+
 const EditRate = ({ row }: { row: ExchangeRateRow }) => {
   const [usdRate, setUsdRate] = useState(row.usdRate)
+
   const update = useApiMutation({
     fn: () => api.put(`${WRITE}/${row.currency}`, { usdRate }),
     invalidate: INVALIDATE,
@@ -46,9 +52,10 @@ const EditRate = ({ row }: { row: ExchangeRateRow }) => {
       title={`${row.currency} rate`}
       description='The USD value of one unit. Every subsequent swap and conversion uses it, so double-check the decimal point.'
       submitLabel='Save rate'
+      validate={() => ({ usdRate: rateError(usdRate) })}
       onSubmit={() => update.mutateAsync()}
     >
-      <TextField id={`er-${row.currency}`} label={`1 ${row.currency} = ? USD`} required value={usdRate} onChange={e => setUsdRate(e.target.value)} hint={`Currently 1 USD = ${perUsd(usdRate)} ${row.currency}`} />
+      <TextField id={`er-${row.currency}`} name='usdRate' inputMode='decimal' label={`1 ${row.currency} = ? USD`} required value={usdRate} onChange={e => setUsdRate(e.target.value)} hint={`Currently 1 USD = ${perUsd(usdRate)} ${row.currency}`} />
     </FormDialog>
   )
 }
@@ -77,12 +84,18 @@ const DeleteRate = ({ row }: { row: ExchangeRateRow }) => {
 }
 
 const AddRate = ({ existing }: { existing: string[] }) => {
-  const free = SUPPORTED_CURRENCIES.filter(c => !existing.includes(c))
+  // The coin registry (Finance → Coins), or the built-in list when it cannot be read.
+  const codes = useCurrencyCodes()
+  const free = codes.filter(c => !existing.includes(c))
   const [form, setForm] = useState({ currency: free[0] ?? '', usdRate: '' })
+
+  // The registry may load after the first render: fall back to the first free code.
+  const currency = form.currency || free[0] || ''
+
   const add = useApiMutation({
-    fn: () => api.post(WRITE, { currency: form.currency, usdRate: form.usdRate }),
+    fn: () => api.post(WRITE, { currency, usdRate: form.usdRate.trim() }),
     invalidate: INVALIDATE,
-    success: `${form.currency} rate added`,
+    success: `${currency} rate added`,
     onSuccess: () => setForm(f => ({ ...f, usdRate: '' }))
   })
 
@@ -96,10 +109,14 @@ const AddRate = ({ existing }: { existing: string[] }) => {
       title='Add an exchange rate'
       description='Only currencies the wallet supports can carry a rate.'
       submitLabel='Add'
+      validate={() => ({
+        currency: !currency ? 'Pick a currency' : existing.includes(currency) ? `${currency} already has a rate — edit it instead` : undefined,
+        usdRate: rateError(form.usdRate)
+      })}
       onSubmit={() => add.mutateAsync()}
     >
-      <SelectField id='ar-cur' label='Currency' value={form.currency} onChange={currency => setForm({ ...form, currency: currency as (typeof SUPPORTED_CURRENCIES)[number] })} options={(free.length ? free : [...SUPPORTED_CURRENCIES]).map(c => ({ value: c, label: c }))} />
-      <TextField id='ar-rate' label={`1 ${form.currency || 'unit'} = ? USD`} required placeholder='0.01200000' value={form.usdRate} onChange={e => setForm({ ...form, usdRate: e.target.value })} />
+      <SelectField id='ar-cur' name='currency' label='Currency' required value={currency} onChange={currency => setForm({ ...form, currency })} options={(free.length ? free : codes).map(c => ({ value: c, label: c }))} />
+      <TextField id='ar-rate' name='usdRate' inputMode='decimal' label={`1 ${currency || 'unit'} = ? USD`} required placeholder='0.01200000' value={form.usdRate} onChange={e => setForm({ ...form, usdRate: e.target.value })} />
     </FormDialog>
   )
 }

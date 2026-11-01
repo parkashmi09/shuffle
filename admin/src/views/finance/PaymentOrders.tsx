@@ -6,6 +6,8 @@ import Link from 'next/link'
 
 import { SearchIcon, WrenchIcon } from 'lucide-react'
 
+import { toast } from 'sonner'
+
 import Can from '@/components/shared/Can'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import DateTime from '@/components/shared/DateTime'
@@ -18,20 +20,23 @@ import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DateRangePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useSession } from '@/contexts/SessionContext'
 import { useApi, useApiMutation, useListState, usePagedApi } from '@/hooks/use-api'
 import { api } from '@/lib/api/client'
 import { truncateId } from '@/lib/format'
-import { DateInput } from './shared'
+import { check } from '@/lib/validate'
 import { PSP_PROVIDERS, type PaymentOrderRow, type RailTransactionRow } from './types'
 
 /** `POST admin/user/payments/utr-repair { reference, utr }` — attaches a bank UTR to a provider order. */
 const UtrRepair = ({ reference: initial = '' }: { reference?: string }) => {
   const [form, setForm] = useState({ reference: initial, utr: '' })
+
   const repair = useApiMutation({
-    fn: () => api.post('admin/user/payments/utr-repair', { reference: form.reference, utr: form.utr }),
+    fn: () => api.post('admin/user/payments/utr-repair', { reference: form.reference.trim(), utr: form.utr.trim() }),
     invalidate: [['paged']],
     success: 'UTR attached to the order',
     onSuccess: () => setForm(f => ({ ...f, utr: '' }))
@@ -45,12 +50,17 @@ const UtrRepair = ({ reference: initial = '' }: { reference?: string }) => {
         </Button>
       }
       title='Attach a bank UTR to an order'
-      description='Use when a player paid but the gateway callback never carried the bank reference. Audited: a UTR is the evidence a payment happened.'
+      description='Use when a user paid but the gateway callback never carried the bank reference. Audited: a UTR is the evidence a payment happened.'
       submitLabel='Attach UTR'
+      validate={() => ({
+        // paymentOrders.validators.js repairUtr: reference 1–255; utr 6–40 alphanumerics.
+        reference: check.required(form.reference, 'Order reference') ?? check.length(form.reference, 'Order reference', { max: 255 }),
+        utr: check.required(form.utr, 'Bank UTR') ?? (/^[A-Za-z0-9]{6,40}$/.test(form.utr.trim()) ? undefined : 'Bank UTR must be 6–40 letters and digits')
+      })}
       onSubmit={() => repair.mutateAsync()}
     >
-      <TextField id='utr-ref' label='Order reference' required value={form.reference} onChange={e => setForm({ ...form, reference: e.target.value })} />
-      <TextField id='utr-utr' label='Bank UTR' required minLength={6} maxLength={40} hint='6–40 letters and digits' value={form.utr} onChange={e => setForm({ ...form, utr: e.target.value })} />
+      <TextField id='utr-ref' name='reference' label='Order reference' required value={form.reference} onChange={e => setForm({ ...form, reference: e.target.value })} />
+      <TextField id='utr-utr' name='utr' label='Bank UTR' required minLength={6} maxLength={40} hint='6–40 letters and digits' value={form.utr} onChange={e => setForm({ ...form, utr: e.target.value })} />
     </FormDialog>
   )
 }
@@ -75,7 +85,7 @@ const orderColumns: Column<PaymentOrderRow>[] = [
   }
 ]
 
-/** One player's provider orders — `admin/user/payments/users/:userId/orders`. */
+/** One user's provider orders — `admin/user/payments/users/:userId/orders`. */
 const PlayerOrders = () => {
   const { state, set, query } = useListState(['userId', 'flow'])
   const userId = String(state.userId ?? '')
@@ -93,7 +103,7 @@ const PlayerOrders = () => {
       pagination={list.data?.pagination}
       onPageChange={page => set({ page })}
       onLimitChange={limit => set({ limit })}
-      emptyMessage={userId ? 'No provider orders for this player.' : 'Enter a player id to look up their gateway orders.'}
+      emptyMessage={userId ? 'No provider orders for this user.' : 'Enter a user id to look up their gateway orders.'}
       toolbar={
         <form
           className='flex flex-wrap items-center gap-2'
@@ -102,7 +112,7 @@ const PlayerOrders = () => {
             set({ userId: draft })
           }}
         >
-          <Input placeholder='Player id' aria-label='Player id' inputMode='numeric' value={draft} onChange={e => setDraft(e.target.value.replace(/\D/g, ''))} className='w-32' />
+          <Input placeholder='User id' aria-label='User id' inputMode='numeric' value={draft} onChange={e => setDraft(e.target.value.replace(/\D/g, ''))} className='w-32' />
           <Button type='submit' variant='outline'>
             <SearchIcon /> Look up
           </Button>
@@ -125,7 +135,7 @@ const PlayerOrders = () => {
 const railColumns: Column<RailTransactionRow>[] = [
   { key: 'provider', header: 'Provider', cell: r => <span className='text-sm'>{r.provider}</span> },
   { key: 'id', header: 'ID', cell: r => <span className='font-mono text-xs'>{r.id}</span> },
-  { key: 'user', header: 'Player', cell: r => <Link href={`/players/${r.userId}`} className='font-mono text-xs hover:underline'>#{r.userId}</Link> },
+  { key: 'user', header: 'User', cell: r => <Link href={`/users/${r.userId}`} className='font-mono text-xs hover:underline'>#{r.userId}</Link> },
   { key: 'ref', header: 'Reference', cell: r => <span className='font-mono text-xs' title={r.reference ?? ''}>{truncateId(r.reference, 10)}</span> },
   { key: 'amount', header: 'Amount', align: 'right', cell: r => <Money value={r.amount} currency={r.currency} /> },
   { key: 'status', header: 'Status', cell: r => <span className='inline-flex items-center gap-1'><StatusBadge value={r.status} />{r.rawStatus && r.rawStatus !== r.status && <span className='text-muted-foreground text-xs'>({r.rawStatus})</span>}</span> },
@@ -142,9 +152,11 @@ const railColumns: Column<RailTransactionRow>[] = [
   }
 ]
 
-/** Every rail merged — `admin/user/history/deposits` or `/withdrawals` (limit, offset, from, to, currency, userId, status). */
-const AllRails = ({ kind }: { kind: 'deposits' | 'withdrawals' }) => {
+/** Every rail merged — `admin/user/history/deposits` or `/withdrawals` (limit, offset, from, to, userId, status; no currency filter). */
+export const AllRails = ({ kind }: { kind: 'deposits' | 'withdrawals' }) => {
   const { state, set, query } = useListState(['status', 'userId', 'from', 'to'])
+
+  // Every currency; each row carries its own.
   const list = usePagedApi<RailTransactionRow>(`admin/user/history/${kind}`, { limit: query.limit, page: query.page, status: query.status, userId: query.userId, from: query.from, to: query.to })
 
   return (
@@ -161,9 +173,8 @@ const AllRails = ({ kind }: { kind: 'deposits' | 'withdrawals' }) => {
       toolbar={
         <>
           <Input placeholder='Status (success, pending, failed…)' aria-label='Status' value={String(state.status ?? '')} onChange={e => set({ status: e.target.value })} className='w-56' />
-          <Input placeholder='Player id' aria-label='Player id' inputMode='numeric' value={String(state.userId ?? '')} onChange={e => set({ userId: e.target.value.replace(/\D/g, '') })} className='w-28' />
-          <DateInput value={String(state.from ?? '')} onChange={from => set({ from })} placeholder='From' />
-          <DateInput value={String(state.to ?? '')} onChange={to => set({ to })} placeholder='To' />
+          <Input placeholder='User id' aria-label='User id' inputMode='numeric' value={String(state.userId ?? '')} onChange={e => set({ userId: e.target.value.replace(/\D/g, '') })} className='w-28' />
+          <DateRangePicker aria-label='Date range' from={String(state.from ?? '')} to={String(state.to ?? '')} onChange={set} />
         </>
       }
     />
@@ -172,7 +183,11 @@ const AllRails = ({ kind }: { kind: 'deposits' | 'withdrawals' }) => {
 
 /** `admin/user/psp/:provider/status/:reference` — asks the provider directly. */
 const PspProbe = () => {
-  const [form, setForm] = useState({ provider: PSP_PROVIDERS[0] as string, reference: '' })
+  // Only the gateways that are on: owner panel on AND the Super Admin's switch (Settings → Payment Methods).
+  const gateways = useApi<{ name: string; enabled: boolean }[]>('admin/site-config/payment-gateways')
+  const active = PSP_PROVIDERS.filter(p => gateways.data?.some(g => g.name === p && g.enabled))
+  const [form, setForm] = useState({ provider: '', reference: '' })
+  const provider = active.includes(form.provider as (typeof active)[number]) ? form.provider : (active[0] ?? '')
   const [probe, setProbe] = useState<{ provider: string; reference: string } | null>(null)
   const q = useApi<unknown>(probe ? `admin/user/psp/${probe.provider}/status/${encodeURIComponent(probe.reference)}` : null)
 
@@ -186,15 +201,28 @@ const PspProbe = () => {
           className='flex flex-wrap items-end gap-2'
           onSubmit={e => {
             e.preventDefault()
-            if (form.reference.trim()) setProbe({ provider: form.provider, reference: form.reference.trim() })
+
+            if (!provider) {
+              toast.error('No payment gateway is active')
+
+              return
+            }
+
+            if (!form.reference.trim()) {
+              toast.error('Enter the order reference to probe')
+
+              return
+            }
+
+            setProbe({ provider, reference: form.reference.trim() })
           }}
         >
-          <Select value={form.provider} onValueChange={v => v && setForm({ ...form, provider: v })}>
+          <Select value={provider} onValueChange={v => v && setForm({ ...form, provider: v })} disabled={!active.length}>
             <SelectTrigger className='w-36'>
-              <SelectValue />
+              <SelectValue placeholder={gateways.isLoading ? 'Loading…' : 'No active gateway'} />
             </SelectTrigger>
             <SelectContent>
-              {PSP_PROVIDERS.map(p => (
+              {active.map(p => (
                 <SelectItem key={p} value={p}>
                   {p}
                 </SelectItem>
@@ -213,38 +241,61 @@ const PspProbe = () => {
   )
 }
 
-const PaymentOrders = () => (
-  <div>
-    <PageHeader
-      title='Payment orders'
-      description='Gateway (PSP) orders across every rail, a per-player order lookup, UTR repair and a live provider status probe.'
-      actions={
-        <Can permission='deposits:approve'>
-          <UtrRepair />
-        </Can>
-      }
-    />
-    <Tabs defaultValue='deposits'>
-      <TabsList className='mb-4 flex-wrap'>
-        <TabsTrigger value='deposits'>Gateway deposits</TabsTrigger>
-        <TabsTrigger value='withdrawals'>Gateway payouts</TabsTrigger>
-        <TabsTrigger value='player'>By player</TabsTrigger>
-        <TabsTrigger value='probe'>Provider probe</TabsTrigger>
-      </TabsList>
-      <TabsContent value='deposits'>
-        <AllRails kind='deposits' />
-      </TabsContent>
-      <TabsContent value='withdrawals'>
-        <AllRails kind='withdrawals' />
-      </TabsContent>
-      <TabsContent value='player'>
-        <PlayerOrders />
-      </TabsContent>
-      <TabsContent value='probe'>
-        <PspProbe />
-      </TabsContent>
-    </Tabs>
-  </div>
-)
+/**
+ * Each tab is offered only with the grant its API needs, so no tab is a control that can only 403:
+ * the rail history takes deposits:read OR withdrawals:read; the per-user order list
+ * (`admin/user/payments/users/:id/orders`) and the provider probe (`admin/user/psp/…/status/…`)
+ * both take deposits:read.
+ */
+// Gateway payouts yahan nahi — wo Transactions → Withdraw → Fiat me hain (AllRails kind='withdrawals').
+const PaymentOrders = () => {
+  const { can } = useSession()
+  const canRails = can(['deposits:read', 'withdrawals:read'])
+  const canOrders = can('deposits:read')
+
+  const tabs = [
+    canRails && 'deposits',
+    canOrders && 'player',
+    canOrders && 'probe'
+  ].filter((t): t is string => Boolean(t))
+
+  return (
+    <div>
+      <PageHeader
+        title='Payment orders'
+        description='Gateway (PSP) orders across every rail, a per-user order lookup, UTR repair and a live provider status probe.'
+        actions={
+          <Can permission='deposits:approve'>
+            <UtrRepair />
+          </Can>
+        }
+      />
+      {tabs.length > 0 && (
+        <Tabs defaultValue={tabs[0]}>
+          <TabsList className='mb-4 flex-wrap'>
+            {canRails && <TabsTrigger value='deposits'>Gateway deposits</TabsTrigger>}
+            {canOrders && <TabsTrigger value='player'>By user</TabsTrigger>}
+            {canOrders && <TabsTrigger value='probe'>Provider probe</TabsTrigger>}
+          </TabsList>
+          {canRails && (
+            <TabsContent value='deposits'>
+              <AllRails kind='deposits' />
+            </TabsContent>
+          )}
+          {canOrders && (
+            <TabsContent value='player'>
+              <PlayerOrders />
+            </TabsContent>
+          )}
+          {canOrders && (
+            <TabsContent value='probe'>
+              <PspProbe />
+            </TabsContent>
+          )}
+        </Tabs>
+      )}
+    </div>
+  )
+}
 
 export default PaymentOrders

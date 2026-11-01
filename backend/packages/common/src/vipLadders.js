@@ -128,10 +128,36 @@ const ADDAPLAY_LADDER = makeLadder({
   bonusGates: { daily: 20, weekly: 25, monthly: 30 },
 });
 
+/**
+ * The Loyalty Club ladder (bitcasino.io/loyalty): seven levels on loyalty points,
+ * Beginner 0–4, Fan 5, Expert 3,750, Master 30,000, Guru 250,000, Legend 750,000,
+ * Hero 3,750,000 and up. One point = $1 wagered, the same XP every ladder counts.
+ * `multiplier` and `milestones` are what the reference prints per level; they are
+ * published for the page and change no payout.
+ * bitcasino + smartbet only (not in hash-game-exchange): keep when porting hash's copy.
+ */
+const LOYALTY_BANDS = Object.freeze([
+  { level: 1, name: 'Fan', card: 'fan', minXp: 5, maxXp: 3749, multiplier: '1', milestones: '1' },
+  { level: 2, name: 'Expert', card: 'expert', minXp: 3750, maxXp: 29999, multiplier: '1', milestones: '6' },
+  { level: 3, name: 'Master', card: 'master', minXp: 30000, maxXp: 249999, multiplier: '1.25', milestones: '12' },
+  { level: 4, name: 'Guru', card: 'guru', minXp: 250000, maxXp: 749999, multiplier: '1.5', milestones: '11' },
+  { level: 5, name: 'Legend', card: 'legend', minXp: 750000, maxXp: 3749999, multiplier: '2', milestones: '12' },
+  { level: 6, name: 'Hero', card: 'hero', minXp: 3750000, maxXp: 99999999999999, multiplier: '3', milestones: 'unlimited' },
+]);
+
+const LOYALTY_LADDER = makeLadder({
+  key: 'loyalty_club',
+  label: 'Loyalty Club — 7 levels, Beginner to Hero (points)',
+  bands: LOYALTY_BANDS,
+  unranked: { level: 0, name: 'Beginner', card: 'beginner', multiplier: '1' },
+  bonusGates: { daily: 1, weekly: 1, monthly: 1 },
+});
+
 /** Every ladder, by key. */
 const VIP_LADDERS = Object.freeze({
   platform: PLATFORM_LADDER,
   club_ladder: ADDAPLAY_LADDER,
+  loyalty_club: LOYALTY_LADDER,
   /** Pre-048 rows and any client still sending the old name. */
   addaplay: ADDAPLAY_LADDER,
 });
@@ -160,13 +186,94 @@ const vipLadderFor = (variant) => VIP_LADDERS[variant] ?? PLATFORM_LADDER;
 async function resolveVipLadder(models, { logger } = {}) {
   const SiteFeature = models?.SiteFeature;
   if (!SiteFeature) return PLATFORM_LADDER;
+  let ladder = PLATFORM_LADDER;
   try {
     const row = await SiteFeature.findByPk('vip', { raw: true, attributes: ['variant'] });
-    return vipLadderFor(row?.variant);
+    ladder = vipLadderFor(row?.variant);
   } catch (error) {
     logger?.warn({ err: error }, 'vip: could not read the site ladder, using the platform ladder');
     return PLATFORM_LADDER;
   }
+  return rebrand(ladder, await vipBranding(SiteFeature.sequelize, { logger }));
 }
 
-module.exports = { VIP_LADDERS, ADDAPLAY_LADDER, ADDAPLAY_BANDS, PLATFORM_BANDS, vipLadderFor, resolveVipLadder };
+/* ── Admin branding: per-level display names and per-card badges (migration 120) ──────────────
+ * Names and pictures only. Bands, thresholds, cards and every reward key are untouched, so a
+ * rename can never move a player or re-pay a reward. Read at most every BRANDING_TTL_MS. */
+const BRANDING_TTL_MS = 10_000;
+let branding = { at: 0, value: null };
+
+/** For the admin routes: drop the cache after a rename or a badge upload. */
+function clearVipBranding() {
+  branding = { at: 0, value: null };
+}
+
+async function vipBranding(sequelize, { logger } = {}) {
+  if (!sequelize?.query) return { names: new Map(), badges: new Map(), thresholds: new Map(), disabled: new Set(), custom: [] };
+  if (branding.value && Date.now() - branding.at < BRANDING_TTL_MS) return branding.value;
+  try {
+    const [names, badges] = await Promise.all([
+      sequelize.query('SELECT level, name, min_xp, enabled, card FROM vip_level_names', { type: 'SELECT' }).catch(() =>
+        // Before migration 175 there is no enabled or card; before 133 no min_xp: names only.
+        sequelize.query('SELECT level, name, min_xp FROM vip_level_names', { type: 'SELECT' }).catch(() =>
+          sequelize.query('SELECT level, name FROM vip_level_names', { type: 'SELECT' })
+        )
+      ),
+      sequelize.query('SELECT card, version FROM vip_badges', { type: 'SELECT' }),
+    ]);
+    branding = {
+      at: Date.now(),
+      value: {
+        names: new Map(names.map((r) => [Number(r.level), String(r.name)])),
+        thresholds: new Map(names.filter((r) => r.min_xp != null).map((r) => [Number(r.level), String(Number(r.min_xp))])),
+        badges: new Map(badges.map((r) => [String(r.card), String(r.version)])),
+        disabled: new Set(names.filter((r) => r.enabled === false).map((r) => Number(r.level))),
+        custom: names.filter((r) => r.card != null && r.min_xp != null).map((r) => ({ level: Number(r.level), name: String(r.name), card: String(r.card), minXp: Number(r.min_xp) })),
+      },
+    };
+  } catch (error) {
+    // Tables not migrated yet (or unreadable): the built-in names, no badges.
+    logger?.warn({ err: error.message }, 'vip: branding unreadable, using the built-in names');
+    branding = { at: Date.now(), value: { names: new Map(), badges: new Map(), thresholds: new Map(), disabled: new Set(), custom: [] } };
+  }
+  return branding.value;
+}
+
+const badgeUrlOf = (card, badges) =>
+  badges.has(card) ? `/api/v1/admin/vip-branding/badges/${encodeURIComponent(card)}/image?v=${badges.get(card)}` : null;
+
+/** The ladder with admin names and badge URLs laid over it; the same ladder when there are none. */
+function rebrand(ladder, { names, badges, thresholds = new Map(), disabled = new Set(), custom = [] }) {
+  if (!names.size && !badges.size && !thresholds.size && !disabled.size && !custom.length) return ladder;
+  const builtIn = ladder.levels.filter((b) => !disabled.has(b.level));
+  const added = custom
+    .filter((c) => !disabled.has(c.level) && !ladder.levels.some((b) => b.level === c.level))
+    .sort((a, b) => a.level - b.level)
+    .map((c) => ({ ...c, maxXp: c.minXp }));
+  const wanted = [...builtIn, ...added];
+  const floors = wanted.map((b) => thresholds.get(b.level) ?? String(b.minXp));
+  /* Thresholds the admin set must still climb; a set that does not (a half-finished edit) is
+     ignored whole rather than ranking players on a broken ladder. */
+  const climbs = floors.every((xp, i) => i === 0 || Number(xp) > Number(floors[i - 1]));
+  /* A ladder needs a band: with every level switched off, the built-in one stands. */
+  const kept = climbs ? wanted : builtIn;
+  const bands = kept.length ? kept : ladder.levels;
+  const edges = climbs && kept.length ? floors : bands.map((b) => String(b.minXp));
+  const reshaped = (climbs && thresholds.size > 0) || disabled.size > 0 || added.length > 0;
+  return makeLadder({
+    key: ladder.key,
+    label: ladder.label,
+    bonusGates: ladder.bonusGates,
+    unranked: { ...ladder.unranked, name: names.get(0) ?? ladder.unranked.name, badgeUrl: badgeUrlOf(ladder.unranked.card, badges) },
+    bands: bands.map((b, i) => ({
+      ...b,
+      name: names.get(b.level) ?? b.name,
+      badgeUrl: badgeUrlOf(b.card, badges),
+      ...(reshaped
+        ? { minXp: Number(edges[i]), maxXp: i + 1 < edges.length ? Number(edges[i + 1]) - 1 : b.maxXp }
+        : {}),
+    })),
+  });
+}
+
+module.exports = { VIP_LADDERS, ADDAPLAY_LADDER, ADDAPLAY_BANDS, LOYALTY_LADDER, PLATFORM_BANDS, vipLadderFor, resolveVipLadder, rebrand, clearVipBranding };

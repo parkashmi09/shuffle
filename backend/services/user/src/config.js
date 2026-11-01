@@ -11,6 +11,7 @@ const {
   secretEncryptionEnvShape,
   internalKeysEnvShape,
   serviceDiscoveryEnvShape,
+  geoEnvShape,
 } = require('@ibitplay/common');
 
 /** user-service configuration. Validated once at boot; a bad value stops the process here. */
@@ -25,6 +26,8 @@ const config = loadEnv(
     // Identify this service to the others — see `internalAcl.js`.
     ...internalKeysEnvShape,
     ...serviceDiscoveryEnvShape,
+    // IP → location for the login history — see `geoEnvShape`.
+    ...geoEnvShape,
     USER_SERVICE_PORT: coercers.int(4001),
     USER_WORKER_PORT: coercers.int(4101),
 
@@ -120,6 +123,23 @@ const config = loadEnv(
     CCPAYMENT_APP_ID: coercers.optionalStr(),
     CCPAYMENT_APP_SECRET: coercers.optionalStr(),
     CCPAYMENT_BASE_URL: coercers.optionalStr(),
+    // Optional override of CCPayment's live coin list, as JSON: {"USDT":1280,"BTC":1155}. Unset = live list.
+    CCPAYMENT_COIN_IDS: coercers.optionalStr(),
+    CCPAYMENT_RETURN_URL: coercers.optionalStr(),
+    // Crypto withdrawals sent through CCPayment: true = the site pays the network fee; false (default,
+    // CCPayment's own default) = it comes out of the amount the player receives.
+    CCPAYMENT_MERCHANT_PAYS_NETWORK_FEE: coercers.bool(false),
+
+    // F2Pay — deposits (cashier page). Only its keys live here; its methods are the
+    // `payment_methods` table (owner panel + Super Admin). Every request is RSA-SHA256 signed with our
+    // private key; every answer and callback is verified with F2PAY_PUBLIC_KEY (the key F2Pay
+    // gave for checking its signatures). Keys: PEM, or the bare base64 body on one line.
+    F2PAY_MERCHANT_ID: coercers.optionalStr(),
+    F2PAY_BASE_URL: coercers.optionalStr(),
+    F2PAY_PRIVATE_KEY: coercers.optionalStr(),
+    F2PAY_PUBLIC_KEY: coercers.optionalStr(),
+    // Where the cashier page sends the player back after paying.
+    F2PAY_RETURN_URL: coercers.optionalStr(),
 
     // Where providers should send their callbacks. Ours, always — legacy read
     // this from the request body, which let the caller redirect the result of
@@ -131,6 +151,13 @@ const config = loadEnv(
     // affiliate controller, so every non-production environment handed players
     // a link to production.
     PUBLIC_SITE_URL: coercers.str('http://localhost:3000'),
+
+    // Google sign-in (modules/auth/google.js). All three set = the button shows; any missing =
+    // sign-in with Google is off and its routes answer 503. The redirect URI is registered in the
+    // Google Cloud console: <API origin>/api/v1/user/auth/google/callback.
+    GOOGLE_CLIENT_ID: coercers.optionalStr(),
+    GOOGLE_CLIENT_SECRET: coercers.optionalStr(),
+    GOOGLE_REDIRECT_URI: coercers.optionalStr(),
 
     // ── Payment limits ────────────────────────────────────────────────
     // Legacy had none, in either direction. A missing upper bound on a payout
@@ -154,7 +181,7 @@ const config = loadEnv(
      * SMTP.
      *
      * Legacy built a transport per request with
-     * `support@camelbit.games` / `camelbit@123` written into
+     * `<redacted, see backend/docs/ROTATION.md>` / `<redacted, see backend/docs/ROTATION.md>` written into
      * `legacy/index.js:3996`. That password is in the repository history and
      * must be rotated.
      *
@@ -168,6 +195,11 @@ const config = loadEnv(
     SMTP_PASSWORD: coercers.optionalStr(),
     SMTP_MAX_CONNECTIONS: coercers.int(5),
     MAIL_FROM: coercers.optionalStr(),
+    /**
+     * rainbet: with no SMTP, log what WOULD have been sent (subject, text, links) so a developer
+     * can follow reset links and codes locally. Ignored in production.
+     */
+    MAIL_DRY_RUN: coercers.bool(false),
 
     /**
      * Where club banner images are written.

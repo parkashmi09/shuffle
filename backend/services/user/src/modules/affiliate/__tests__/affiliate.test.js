@@ -73,7 +73,12 @@ test('affiliate', async (t) => {
     return { uid, name, code: `REF${uid}` };
   };
 
+  /** Affiliate rewards pay in USDT (`REWARD_CURRENCY`) — BJB is retired. */
   const bonusBalance = async (uid) => {
+    const row = await connection.models.Credits.findOne({ where: { uid }, raw: true });
+    return money.toDecimalString(money.toMinor(row?.usdt ?? '0'));
+  };
+  const bjbBalance = async (uid) => {
     const row = await connection.models.Credits.findOne({ where: { uid }, raw: true });
     return money.toDecimalString(money.toMinor(row?.bjb ?? '0'));
   };
@@ -96,7 +101,8 @@ test('affiliate', async (t) => {
     assert.equal(result.unlocked, true);
     // 1,200 reaches the 1,000 tier, worth 0.50 — not the top tier.
     assert.equal(result.tier, '1000');
-    assert.equal(result.amount, '0.50');
+    assert.equal(result.amount, '0.50000000');
+    assert.equal(result.currency, 'USDT');
   });
 
   await t.test('a member below the first tier unlocks nothing', async () => {
@@ -111,6 +117,19 @@ test('affiliate', async (t) => {
     assert.equal(rewards, 0);
   });
 
+  await t.test("the admin's total wager pays, even on a row named after a VIP level", async () => {
+    // Bronze I's ladder floor is 1,000; the admin saved 50, and /referral/rules prints 50.
+    const admin = new AffiliateService({ models: connection.models, db: connection, logger, config: { SERVICE_NAME: 'user-service' } });
+    admin.settings = { read: async () => ({ unlockTiers: [{ level: 'Bronze I', wager: '50', reward: '0.50' }] }) };
+    const owner = await seed(newUid());
+    const member = await seed(newUid(), { wager: '60' });
+    await service.joinTeam({ userId: member.uid, referralCode: owner.code });
+
+    const result = await admin.unlockFor({ memberName: member.name });
+    assert.equal(result.unlocked, true);
+    assert.equal(result.tier, '50');
+  });
+
   await t.test('the same tier cannot be unlocked twice', async () => {
     const owner = await seed(newUid());
     const member = await seed(newUid(), { wager: '6000' });
@@ -120,9 +139,11 @@ test('affiliate', async (t) => {
     const second = await service.unlockFor({ memberName: member.name });
 
     assert.equal(first.unlocked, true);
-    assert.equal(first.tier, '5000');
+    // 6,000 passes Bronze I (1,000) and Bronze II (3,000): both steps, once each.
+    assert.equal(first.tier, '3000');
+    assert.equal(first.granted.length, 2);
     assert.equal(second.unlocked, false);
-    assert.equal(await connection.models.UnlockedRewards.count({ where: { uid: owner.uid } }), 1);
+    assert.equal(await connection.models.UnlockedRewards.count({ where: { uid: owner.uid } }), 2);
   });
 
   await t.test('reaching a HIGHER tier unlocks again', async () => {
@@ -135,8 +156,10 @@ test('affiliate', async (t) => {
 
     const second = await service.unlockFor({ memberName: member.name });
     assert.equal(second.unlocked, true);
-    assert.equal(second.tier, '17000');
-    assert.equal(second.amount, '5.00');
+    // 1,500 → 20,000 passes Bronze II (3,000) and Bronze IV (15,000).
+    assert.equal(second.tier, '15000');
+    assert.equal(second.amount, '5.00000000');
+    assert.deepEqual(second.granted.map((g) => g.amountUsd), ['2.50000000', '5.00000000']);
   });
 
   await t.test('a wager with thousands separators still finds the right tier', async () => {
@@ -145,7 +168,21 @@ test('affiliate', async (t) => {
     await service.joinTeam({ userId: member.uid, referralCode: owner.code });
 
     const result = await service.unlockFor({ memberName: member.name });
-    assert.equal(result.tier, '49000');
+    assert.equal(result.tier, '30000');
+  });
+
+  await t.test('a friend who jumps levels pays every step, and the rest stays locked (hash.game $1,000)', async () => {
+    const owner = await seed(newUid());
+    const member = await seed(newUid(), { wager: '30000' });
+    await service.joinTeam({ userId: member.uid, referralCode: owner.code });
+
+    const result = await service.unlockFor({ memberName: member.name });
+    // Bronze I 0.50 + Bronze II 2.50 + Bronze IV 5 + Silver I 12 = 20 of the 1,000.
+    assert.deepEqual(result.granted.map((g) => g.level), ['Bronze I', 'Bronze II', 'Bronze IV', 'Silver I']);
+    const locked = await service.lockedRewards({ ownerName: owner.name });
+    assert.equal(locked.friends, 1);
+    assert.equal(locked.perFriendUsd, '1000.00000000');
+    assert.equal(locked.lockedUsd, '980.00000000');
   });
 
   // ══════════════════════════════════════════════════════════════════════
@@ -250,7 +287,51 @@ test('affiliate', async (t) => {
 
     assert.equal(result.count, 3);
     assert.equal(result.total, '8.50000000');
+    // Legacy rows still say BJB; a retired coin cannot be credited, so they pay
+    // in USDT and say so.
+    assert.equal(result.currency, 'USDT');
     assert.equal(await bonusBalance(owner.uid), '8.50000000');
+    assert.equal(await bjbBalance(owner.uid), '0.00000000');
+  });
+
+  await t.test('register and joining bonuses pay USDT whatever siteconfig names', async () => {
+    const owner = await seed(newUid());
+    const member = await seed(newUid());
+    await service.joinTeam({ userId: member.uid, referralCode: owner.code });
+    // The register bonus is keyed per player; a uid reused from an older run
+    // would otherwise replay instead of paying.
+    await connection.models.CreditsLedger.destroy({ where: { user_id: String(member.uid) } }).catch(() => {});
+
+    const configured = new AffiliateService({
+      models: connection.models,
+      db: connection,
+      logger,
+      config: { SERVICE_NAME: 'user-service', PUBLIC_SITE_URL: 'https://play.example.test' },
+      clients: {
+        admin: {
+          get: async () => ({
+            commissionPercent: '0', affiliateBonus: '2', registerBonus: '5', registerBonusEnabled: true,
+            registerBonusCurrency: 'BJB', affiliateBonusCurrency: 'INR',
+            // Sign-up booking (the deposit gate is covered in rewardsUsd.test.js).
+            affiliateBonusRequiresDeposit: false,
+          }),
+        },
+      },
+    });
+
+    const result = await configured.applyRegistrationBonuses({
+      userId: member.uid, referredBy: owner.code, joined: true,
+    });
+    assert.equal(result.registerBonus, true);
+    assert.equal(result.affiliateBonus, true);
+
+    assert.equal(await bonusBalance(member.uid), '5.00000000');
+    assert.equal(await bjbBalance(member.uid), '0.00000000');
+
+    const joining = await connection.models.UnlockedRewards.findOne({
+      where: { uid: owner.uid, membername: member.name, wager_amount: '0' }, raw: true,
+    });
+    assert.equal(joining.cointype, 'USDT');
   });
 
   // ══════════════════════════════════════════════════════════════════════
@@ -298,27 +379,68 @@ test('affiliate', async (t) => {
     assert.equal(team.referalCode, owner.code);
   });
 
-  await t.test('myTeam backfills members who registered with refree but have no team row', async () => {
-    const owner = await seed(newUid());
-    const memberUid = newUid();
-    const memberName = `aff-${memberUid}`;
+  /** A player row with `refree` set and no team row — what a failed link leaves. */
+  const orphan = async (refree) => {
+    const uid = newUid();
+    const name = `aff-${uid}`;
     await connection.models.Users.create({
-      id: memberUid,
-      name: memberName,
-      password: 'x',
-      status: 'active',
-      referalcode: `REF${memberUid}`,
-      refree: owner.name,
+      id: uid, name, password: 'x', status: 'active', referalcode: `REF${uid}`, refree,
     });
-    await connection.models.Credits.create({ uid: memberUid, bjb: '0' });
+    await connection.models.Credits.create({ uid, bjb: '0' });
+    return { uid, name };
+  };
+  const dropOrphan = async ({ uid, name }) => {
+    await connection.models.Team.destroy({ where: { membername: name } });
+    await connection.models.Credits.destroy({ where: { uid } });
+    await connection.models.Users.destroy({ where: { id: uid } });
+  };
+
+  await t.test('myTeam backfills a member whose refree is the owner\'s exact code', async () => {
+    const owner = await seed(newUid());
+    const member = await orphan(owner.code);
 
     const team = await service.myTeam({ userId: owner.uid });
     assert.equal(team.total, 1);
-    assert.equal(team.members[0].name, memberName);
+    assert.equal(team.members[0].name, member.name);
 
-    await connection.models.Team.destroy({ where: { membername: memberName } });
-    await connection.models.Credits.destroy({ where: { uid: memberUid } });
-    await connection.models.Users.destroy({ where: { id: memberUid } });
+    await dropOrphan(member);
+  });
+
+  await t.test('THE BACKFILL NO LONGER CLAIMS PLAYERS BY USERNAME OR CASE-FOLDED TEXT', async () => {
+    /**
+     * `refree` used to be free text, matched case-insensitively against the
+     * owner's NAME. A player who typed a name nobody had yet could be claimed
+     * by whoever registered it and opened their team page first — and paid
+     * commission on that player from then on.
+     */
+    const owner = await seed(newUid());
+    const byName = await orphan(owner.name);
+    const byUpperName = await orphan(owner.name.toUpperCase());
+    const byLowerCode = await orphan(owner.code.toLowerCase());
+
+    const team = await service.myTeam({ userId: owner.uid });
+    assert.equal(team.total, 0, 'none of the free-text rows were attached');
+    for (const m of [byName, byUpperName, byLowerCode]) {
+      assert.equal(await connection.models.Team.count({ where: { membername: m.name } }), 0);
+      await dropOrphan(m);
+    }
+  });
+
+  await t.test('myTeam gives each member their id and the last 7 days of deposits in USD', async () => {
+    const owner = await seed(newUid());
+    const member = await seed(newUid());
+    await service.joinTeam({ userId: member.uid, referralCode: owner.code });
+    const q = (sql) => connection.sequelize.query(sql, { replacements: { uid: member.uid } });
+    await q(`INSERT INTO fiat_deposits (user_id, amount, currency, status, created_at, handled_at)
+             VALUES (:uid, 25, 'USDT', 'approved', now(), now()), (:uid, 40, 'USDT', 'approved', now() - interval '9 days', now() - interval '9 days'),
+                    (:uid, 70, 'USDT', 'pending', now(), NULL)`);
+    try {
+      const [row] = (await service.myTeam({ userId: owner.uid })).members;
+      assert.equal(row.id, String(member.uid));
+      assert.equal(row.deposits7dUsd, '25.00000000', 'only approved, only the last 7 days');
+    } finally {
+      await q('DELETE FROM fiat_deposits WHERE user_id = :uid');
+    }
   });
 
   await t.test('on-wager unlocks tiers for players on a team', async () => {
@@ -336,7 +458,7 @@ test('affiliate', async (t) => {
     assert.equal(result.unlock.unlocked, true);
   });
 
-  await t.test('on-wager records commission from site-config percent', async () => {
+  await t.test("on-wager records hash.game's commission: wager × 1% × rate × game rate", async () => {
     const owner = await seed(newUid());
     const member = await seed(newUid());
     await service.joinTeam({ userId: member.uid, referralCode: owner.code });
@@ -350,7 +472,7 @@ test('affiliate', async (t) => {
         admin: {
           get: async (path) => {
             assert.match(path, /site-config\/affiliate/);
-            return { commissionPercent: '10.00000000', affiliateBonus: '0', registerBonus: '0' };
+            return { commissionRate: '25', gameRates: { originals: '28', slots: '60', live: '60', sports: '100' }, affiliateBonus: '0', registerBonus: '0' };
           },
         },
       },
@@ -363,14 +485,21 @@ test('affiliate', async (t) => {
     });
 
     assert.equal(result.commissionRecorded, true);
-    assert.equal(result.commission, '10.00000000');
+    // $100 of slots: 100 × 1% × 25% × 60% = 0.15.
+    assert.equal(result.commission, '0.15000000');
+
+    // The same $100 on an original: × 28% → 0.07; on sports: × 100% → 0.25.
+    const original = await rated.onWager({ userId: member.uid, previousWager: '200', newWager: '300', kind: { category: 'originals' } });
+    assert.equal(original.commission, '0.07000000');
+    const sports = await rated.onWager({ userId: member.uid, previousWager: '300', newWager: '400', kind: { category: 'sports' } });
+    assert.equal(sports.commission, '0.25000000');
 
     const rows = await connection.models.Rewards.findAll({
       where: { ownername: owner.name, membername: member.name },
       raw: true,
     });
-    assert.equal(rows.length, 1);
-    assert.equal(String(rows[0].referalmount), '100.00000000');
+    assert.equal(rows.length, 3);
+    assert.ok(rows.every((r) => String(r.referalmount) === '100.00000000'));
   });
 
   await t.test('a team listing does not include member email addresses', async () => {
@@ -445,6 +574,22 @@ test('affiliate', async (t) => {
     const summary = await service.unclaimedRewards({ userId: owner.uid });
     assert.equal(summary.claimedTotal, '3.00000000');
     assert.equal(summary.total, '4.00000000');
+  });
+
+  await t.test('reward history lists one kind, claimed and available, newest first', async () => {
+    const owner = await seed(newUid());
+    for (const [amount, claimed] of [['3.00', true], ['4.00', false]]) {
+      await connection.models.UnlockedRewards.create({
+        uid: owner.uid, ownername: owner.name, membername: 'member',
+        amount, cointype: 'USDT', wager_amount: '0', claimed, referalCode: owner.code,
+      });
+    }
+
+    const referral = await service.rewardHistory({ userId: owner.uid, kind: 'referral' });
+    assert.equal(referral.total, 2);
+    assert.deepEqual(referral.rows.map((r) => [r.amount, r.status]), [['4.00000000', 'available'], ['3.00000000', 'claimed']]);
+    assert.ok(referral.rows[0].createdAt);
+    assert.equal((await service.rewardHistory({ userId: owner.uid, kind: 'commission' })).total, 0);
   });
 
   await t.test('the dashboard reports what is still owed', async () => {
@@ -536,4 +681,26 @@ test('affiliate', async (t) => {
     const result = await service.myRewards({ userId: uid });
     assert.deepEqual(result, { total: 0, totalAmount: '0', rows: [] });
   });
+});
+
+test("default currency INR: the admin's referral steps are rupees, shown and paid as is", async () => {
+  const { AffiliateService: Service } = require('../affiliate.service');
+  const rate = '0.0105'; // 1 INR in USD
+  const rewardMoney = {
+    currency: async () => 'INR',
+    toUsd: async (amount, from) => (from === 'INR' ? (Number(amount) * Number(rate)).toFixed(8) : String(amount)),
+    convert: async (amount, from, to) => (from === to ? String(amount) : from === 'USD' && to === 'INR' ? String(Number(amount) / Number(rate)) : null),
+  };
+  const service = new Service({
+    models: { Team: { findAll: async () => [] }, SiteFeature: { findByPk: async (key) => (key === 'default_currency' ? { variant: 'INR' } : null) } },
+    db: {},
+    logger: null,
+    config: {},
+    rewardMoney,
+  });
+  service.settings = { read: async () => ({ unlockTiers: [{ level: 'Bronze I', wager: '1000', reward: '0.5' }, { level: 'Gold', wager: '5000', reward: '9.5' }] }) };
+  const locked = await service.lockedRewards({ ownerName: 'nobody' });
+  assert.equal(locked.currency, 'INR');
+  assert.equal(locked.perFriend, '10.00000000', '₹10 per friend, not $10 converted');
+  assert.equal(locked.perFriendUsd, '0.10500000');
 });

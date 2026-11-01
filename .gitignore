@@ -1,38 +1,18 @@
-# Dependencies
 node_modules/
-
-# Captured third-party site assets (kept locally, not part of the project)
-assets/
-
-# Build output
+.next/
 dist/
-dist-ssr/
-build/
-
-# Environment and secrets
+logs/
+.run/
+*.log
+*.tsbuildinfo
+.DS_Store
 .env
 .env.*
 !.env.example
-*.pem
-*.key
+backend/data/
+*.local.md
+*.local.json
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Editor / OS
-.vscode/*
-!.vscode/extensions.json
-.idea/
-.DS_Store
-Thumbs.db
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.vercel
+# local runs
+frontend/buildlog.txt
+.claude/theme-shots/

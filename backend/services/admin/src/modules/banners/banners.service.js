@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 
 const errors = require('./banners.errors');
 const { inspect } = require('./upload');
+const { AGENT_PREFIX, modeOf } = require('./banners.constants');
 
 /**
  * The banners on the front of the site.
@@ -36,6 +37,18 @@ class BannersService {
    * from the signature that matched — not from the request.
    */
   async putBanner({ staff, type, label, title, subtitle, ctaLabel, ctaHref, sortOrder, file }) {
+    /**
+     * No file on an EXISTING placement is an edit of its copy: the image stays.
+     * The admin's Replace form says "leave empty to keep the current one", and
+     * without this an operator could not fix a typo in a headline without
+     * re-uploading the picture. A placement that does not exist yet still needs
+     * an image, so that case falls through to `inspect` and its NO_FILE.
+     */
+    if (!file?.buffer?.length) {
+      const existing = await this.models.Banners.findOne({ where: { type }, attributes: ['id'], raw: true });
+      if (existing) return this.#putCopy({ staff, type, label, title, subtitle, ctaLabel, ctaHref, sortOrder });
+    }
+
     const image = inspect(file);
 
     /**
@@ -97,6 +110,31 @@ class BannersService {
   }
 
   /**
+   * The copy-only half of `putBanner`: same replace-the-whole-banner semantics
+   * for the text (anything not sent is blanked), the bytes untouched.
+   */
+  async #putCopy({ staff, type, label, title, subtitle, ctaLabel, ctaHref, sortOrder }) {
+    await this.models.Banners.update(
+      {
+        title: title ?? null,
+        subtitle: subtitle ?? null,
+        cta_label: ctaLabel ?? null,
+        cta_href: ctaHref ?? null,
+        sort_order: sortOrder ?? 0,
+        uploaded_by: staff?.id ?? null,
+        is_active: true,
+        updated_at: new Date(),
+      },
+      { where: { type } }
+    );
+
+    this.logger?.info({ type, staffId: staff?.id, label: label ?? null }, 'Banner copy updated, image kept');
+
+    const row = await this.models.Banners.findOne({ where: { type }, attributes: this.#metaColumns(), raw: true });
+    return this.#describe(row, { includeUrl: true });
+  }
+
+  /**
    * Take a placement down without destroying it.
    *
    * Legacy had no way to do this — the only removal was replacing the image
@@ -130,9 +168,12 @@ class BannersService {
   }
 
   /** @legacy GET /api/banners/getBannerAll */
-  async list({ includeInactive = false }) {
+  async list({ includeInactive = false, mode }) {
+    const byMode = mode
+      ? { type: mode === 'agent' ? { [Op.startsWith]: AGENT_PREFIX } : { [Op.notLike]: `${AGENT_PREFIX}%` } }
+      : {};
     const rows = await this.models.Banners.findAll({
-      where: includeInactive ? {} : { is_active: true },
+      where: { ...(includeInactive ? {} : { is_active: true }), ...byMode },
       attributes: this.#metaColumns(),
       /* Slide order, then placement — see migration 037. Ordering on `type`
          alone puts hero-10 before hero-2. */
@@ -230,6 +271,7 @@ class BannersService {
     return {
       id: row.id,
       type: row.type,
+      mode: modeOf(row.type),
       contentType: row.content_type ?? null,
       byteSize: row.byte_size ?? null,
       active: row.is_active !== false,

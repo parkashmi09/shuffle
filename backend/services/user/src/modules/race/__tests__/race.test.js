@@ -6,7 +6,7 @@ const assert = require('node:assert');
 const db = require('@ibitplay/db');
 const { createLogger, money, bucketFor } = require('@ibitplay/common');
 
-const { buildRankPrizes } = require('../race.prizes');
+const { buildRankPrizes, buildCustomLadder } = require('../race.prizes');
 const { windowFor } = require('../race.window');
 const { RaceService } = require('../race.service');
 const { MIN_REWARD } = require('../race.constants');
@@ -88,6 +88,16 @@ test('the prize curve', async (t) => {
     });
     assert.strictEqual(netPool, '0.00000000');
     assert.deepStrictEqual(ranks, []);
+  });
+
+  await t.test('a short tail never pays more than the podium (pool 5, 5 ranks, 60%)', () => {
+    // Uncapped this was 1.714 / 0.857 / 0.429 / 1.111 / 0.889: ranks 4 and 5 above rank 3.
+    const { netPool, ranks } = buildRankPrizes({ prizePool: '5', winnerCount: 5, platformFeePercent: 0, top3Percentage: 60 });
+    for (let i = 1; i < ranks.length; i += 1) {
+      assert.ok(money.lte(ranks[i].amount, ranks[i - 1].amount), `rank ${i + 1} (${ranks[i].amount}) pays more than rank ${i} (${ranks[i - 1].amount})`);
+    }
+    assert.strictEqual(money.toDecimalString(money.sum(ranks.map((r) => r.amount))), netPool);
+    assert.strictEqual(ranks[4].amount, ranks[3].amount); // both capped
   });
 
   await t.test('a long tail reaches amounts below the minimum reward', () => {
@@ -194,6 +204,71 @@ test('game buckets', async (t) => {
 // ══════════════════════════════════════════════════════════════════════
 //  The claim — needs the real wallet and the real constraints
 // ══════════════════════════════════════════════════════════════════════
+
+test("the operator's own ladder", async (t) => {
+  await t.test('shares of the net pool, adding up to exactly the net pool', () => {
+    const { netPool, ranks } = buildCustomLadder({ prizePool: '100', platformFeePercent: 10, shares: [50, 30, 20] });
+    assert.strictEqual(netPool, '90.00000000');
+    assert.deepStrictEqual(ranks.map((r) => r.amount), ['45.00000000', '27.00000000', '18.00000000']);
+    assert.ok(ranks.every((r) => r.custom));
+  });
+
+  await t.test('shares that do not add up to 100, or rise down the ladder, are refused', () => {
+    assert.match(buildCustomLadder({ prizePool: '100', shares: [50, 30] }).error, /80\.00%/);
+    assert.match(buildCustomLadder({ prizePool: '100', shares: [40, 60] }).error, /rank 2 would pay more/);
+    assert.ok(buildCustomLadder({ prizePool: '100', shares: [] }).error);
+  });
+
+  await t.test('a remainder lands on the last rank, never lost', () => {
+    const { ranks } = buildCustomLadder({ prizePool: '10', shares: [33.3334, 33.3333, 33.3333] });
+    assert.strictEqual(money.toDecimalString(money.sum(ranks.map((r) => r.amount))), '10.00000000');
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  What a player is shown as paid
+// ══════════════════════════════════════════════════════════════════════
+
+test('payout figures on the public reads', async (t) => {
+  const row = {
+    type: 'daily', enabled: true, prize_pool: '100', platform_fee_percent: '0', winner_count: 3,
+    top3_percentage: '60', min_points: '0', currency: 'USDT', rank_percentage: [],
+    sports_points: '1', casino_points: '1', slot_points: '1', crash_points: '1', other_points: '1',
+  };
+  const make = (rewardMoney) => new RaceService({
+    models: { RaceConfig: { findAll: async () => [row] } },
+    logger: createLogger({ name: 'race-test', level: 'silent' }),
+    config: { RACE_TIMEZONE: IST },
+    clients: {},
+    wallet: {},
+    rewardMoney,
+  });
+
+  await t.test('a USDT reward currency shows the pool as configured', async () => {
+    const service = make({ fromUsd: async (usd) => ({ currency: 'USDT', amount: usd, usd }), toUsd: async (a) => a });
+    const [daily, weekly] = await service.listConfigs();
+    assert.strictEqual(daily.payout.currency, 'USDT');
+    assert.strictEqual(daily.payout.prizePool, '100.00000000');
+    assert.strictEqual(
+      money.toDecimalString(money.sum(daily.payout.ranks.map((r) => r.amount))),
+      daily.payout.netPrizePool
+    );
+    // No row for the weekly race: it is off, and carries no payout to show.
+    assert.strictEqual(weekly.configured, false);
+  });
+
+  await t.test('an INR reward currency converts the pool at the USD rate', async () => {
+    // 1 INR = 0.0125 USD → $100 = ₹8,000.
+    const service = make({
+      fromUsd: async () => ({ currency: 'INR', amount: '80', usd: '1' }),
+      toUsd: async () => '0.0125',
+    });
+    const [daily] = await service.listConfigs();
+    assert.strictEqual(daily.payout.currency, 'INR');
+    assert.strictEqual(daily.payout.prizePool, '8000.00000000');
+    assert.strictEqual(daily.prizePool, '100.00000000', 'the stored USD pool is unchanged');
+  });
+});
 
 test('race rewards', async (t) => {
   const logger = createLogger({ name: 'race-test', level: 'silent' });
@@ -311,6 +386,121 @@ test('race rewards', async (t) => {
     );
   });
 
+  await t.test('the admin rewards list sums claimed and unclaimed for its filters, ranks in order', async () => {
+    const other = await models.Race.create({
+      type: 'daily', starts_at: new Date('2026-01-03T00:00:00Z'), ends_at: new Date('2026-01-04T00:00:00Z'),
+      status: 'settled', settled_at: new Date(),
+    });
+    created.races.push(other.id);
+    for (const id of [userId + 2, userId + 3]) {
+      await models.Users.findOrCreate({ where: { id }, defaults: { id, name: `race-test-${id}`, password: 'x', status: 'active' } });
+    }
+    await models.RaceReward.bulkCreate([
+      { race_id: other.id, user_id: userId + 3, type: 'daily', rank: 3, points: '10', currency: 'USDT', amount: '1.5' },
+      { race_id: other.id, user_id: userId, type: 'daily', rank: 1, points: '30', currency: 'USDT', amount: '4', claimed: true, claimed_at: new Date() },
+      { race_id: other.id, user_id: userId + 2, type: 'daily', rank: 2, points: '20', currency: 'USDT', amount: '2.25' },
+    ]);
+
+    const { rows, total, summary } = await service.listRewards({ raceId: other.id, limit: 2, offset: 0 });
+    assert.strictEqual(total, 3);
+    assert.deepStrictEqual(rows.map((r) => r.rank), [1, 2]);
+    assert.ok(rows[0].claimedAt);
+    assert.strictEqual(rows[1].claimedAt, null);
+    // Every page's totals, not just the two rows on this one.
+    assert.deepStrictEqual(summary, {
+      winners: 3,
+      claimed: { count: 1, amount: '4.00000000' },
+      unclaimed: { count: 2, amount: '3.75000000' },
+      total: { count: 3, amount: '7.75000000' },
+      currency: 'USDT',
+    });
+
+    const pending = await service.listRewards({ raceId: other.id, claimed: 'false' });
+    assert.strictEqual(pending.summary.claimed.count, 0);
+    assert.strictEqual(pending.summary.claimed.amount, '0.00000000');
+    assert.strictEqual(pending.summary.unclaimed.amount, '3.75000000');
+
+    const none = await service.listRewards({ raceId: other.id + 1_000_000 });
+    assert.strictEqual(none.summary.total.amount, '0.00000000');
+
+    await models.RaceReward.destroy({ where: { race_id: other.id } });
+    await models.Users.destroy({ where: { id: [userId + 2, userId + 3] } });
+  });
+
+  await t.test('finished races list their podium and the caller\'s own placing', async () => {
+    await models.Race.update({ prize_pool: '50', winner_count: 10, total_awarded: '5' }, { where: { id: race.id } });
+    const rows = await service.history({ type: 'daily', limit: 30, userId });
+    const mine = rows.find((r) => String(r.raceId) === String(race.id));
+    assert.ok(mine, 'the settled race is listed');
+    assert.strictEqual(mine.prizePool, '50.00000000');
+    assert.strictEqual(mine.winners[0].rank, 1);
+    assert.strictEqual(mine.winners[0].name, `race-test-${userId}`);
+    assert.strictEqual(mine.winners[0].amount, '5.00000000');
+    assert.strictEqual(mine.me.rank, 1);
+
+    const guest = await service.history({ type: 'daily', limit: 30 });
+    assert.strictEqual(guest.find((r) => String(r.raceId) === String(race.id)).me, null);
+
+    // Only settled races: an open window is the live board, not history.
+    const weekly = await service.history({ type: 'weekly', limit: 30 });
+    assert.ok(weekly.every((r) => r.type === 'weekly'));
+  });
+
+  await t.test("End & pay on today's window: the board shows it ended with its prizes, and it is the Last Champion", async () => {
+    const today = windowFor('daily', new Date(), IST);
+    if (await models.Race.findOne({ where: { type: 'daily', starts_at: today.startsAt } })) return;
+    const ended = await models.Race.create({
+      type: 'daily', starts_at: today.startsAt, ends_at: today.endsAt,
+      status: 'settled', settled_at: new Date(), prize_pool: '10', winner_count: 3, total_awarded: '7',
+    });
+    created.races.push(ended.id);
+    await models.RaceReward.create({
+      race_id: ended.id, user_id: userId, type: 'daily', rank: 1, points: '10.4216', currency: 'USDT', amount: '7',
+    });
+
+    const board = await service.leaderboard({ type: 'daily', userId });
+    assert.strictEqual(board.settled, true);
+    assert.strictEqual(String(board.raceId), String(ended.id));
+    assert.strictEqual(board.leaderboard[0].name, `race-test-${userId}`);
+    assert.strictEqual(Number(board.leaderboard[0].payout), 7);
+    assert.strictEqual(board.me.rank, 1);
+
+    const last = await service.lastLeaderboard({ type: 'daily' });
+    assert.strictEqual(String(last.raceId), String(ended.id));
+    assert.strictEqual(last.leaderboard[0].usdWagered, '10.42160000');
+
+    // The winner sees it unclaimed, and can claim it.
+    const mine = await service.myRewards({ userId, claimed: 'false' });
+    assert.ok(mine.rows.some((r) => String(r.raceId) === String(ended.id)));
+  });
+
+  await t.test("staff can set their own ladder, it survives a pool change, and resets to the curve", async () => {
+    const before = await models.RaceConfig.findOne({ where: { type: 'weekly' }, raw: true });
+    if (!before) return;
+    try {
+
+    let c = await service.updateConfig({ type: 'weekly', prizePool: '100', platformFeePercent: '0', rankShares: [60, 25, 15] });
+    assert.strictEqual(c.ladder, 'custom');
+    assert.strictEqual(c.winnerCount, 3);
+    assert.deepStrictEqual(c.rankPrizes.map((r) => r.amount), ['60.00000000', '25.00000000', '15.00000000']);
+
+    c = await service.updateConfig({ type: 'weekly', prizePool: '200' });
+    assert.strictEqual(c.ladder, 'custom', 'a pool change re-prices the same ladder');
+    assert.strictEqual(c.rankPrizes[0].amount, '120.00000000');
+
+    await assert.rejects(
+      () => service.updateConfig({ type: 'weekly', rankShares: [50, 40] }),
+      (error) => error.code === 'RACE_INVALID_CONFIG'
+    );
+
+    c = await service.updateConfig({ type: 'weekly', resetLadder: true, winnerCount: 5 });
+    assert.strictEqual(c.ladder, 'curve');
+    assert.strictEqual(c.rankPrizes.length, 5);
+    } finally {
+      await models.RaceConfig.update(before, { where: { type: 'weekly' } });
+    }
+  });
+
   await t.test('one open race per type is enforced by the database', async () => {
     const open = await models.Race.create({
       type: 'weekly', starts_at: new Date('2026-01-05T00:00:00Z'),
@@ -326,4 +516,382 @@ test('race rewards', async (t) => {
       (error) => error.name === 'SequelizeUniqueConstraintError'
     );
   });
+
+  await t.test('cancelling closes an open race with no prizes, once, and it can never be settled', async () => {
+    const open = await models.Race.findOne({ where: { type: 'weekly', status: 'open' }, raw: true });
+    assert.ok(open, 'the previous case left an open weekly race');
+
+    const result = await service.cancel({ raceId: open.id, reason: 'opened by mistake' });
+    assert.strictEqual(result.status, 'cancelled');
+    const row = await models.Race.findByPk(open.id, { raw: true });
+    assert.strictEqual(row.snapshot.reason, 'opened by mistake');
+    assert.strictEqual(await models.RaceReward.count({ where: { race_id: open.id } }), 0);
+
+    await assert.rejects(() => service.cancel({ raceId: open.id }), (error) => error.code === 'RACE_NOT_OPEN');
+    await assert.rejects(() => service.settle({ raceId: open.id }), (error) => error.code === 'RACE_NOT_OPEN');
+
+    // Not in the public results: those are settled races only.
+    const rows = await service.history({ type: 'weekly', limit: 30 });
+    assert.ok(!rows.some((r) => String(r.raceId) === String(open.id)));
+  });
+
+  await t.test('two settlements racing (worker + End & pay) close the race once; a settled race never re-settles', async () => {
+    const open = await models.Race.create({
+      type: 'weekly', starts_at: new Date('2026-01-19T00:00:00Z'),
+      ends_at: new Date('2026-01-26T00:00:00Z'), status: 'open',
+    });
+    created.races.push(open.id);
+    const settler = new RaceService({
+      models, db: connection, logger,
+      config: { SERVICE_NAME: 'user-service', RACE_TIMEZONE: IST },
+      clients: {
+        casino: { get: async () => ({ rows: [{ userId: String(userId), bucket: 'slot', currency: 'USDT', amount: '50', bets: 1 }] }) },
+        sports: { get: async () => ({ rows: [] }) },
+      },
+    });
+
+    const outcomes = await Promise.allSettled([settler.settle({ raceId: open.id }), settler.settle({ raceId: open.id })]);
+    assert.strictEqual(outcomes.filter((o) => o.status === 'fulfilled').length, 1);
+    assert.ok(outcomes.find((o) => o.status === 'rejected').reason.code === 'RACE_NOT_OPEN');
+    assert.ok(await models.RaceReward.count({ where: { race_id: open.id } }) <= 1);
+
+    await assert.rejects(() => settler.settle({ raceId: open.id }), (error) => error.code === 'RACE_NOT_OPEN');
+  });
+
+  await t.test("a booked seat holds its rank: the player under it is paid the rank they see, the seat's prize is the house's", async () => {
+    const open = await models.Race.create({
+      type: 'weekly', starts_at: new Date('2026-02-02T00:00:00Z'),
+      ends_at: new Date('2026-02-09T00:00:00Z'), status: 'open',
+    });
+    created.races.push(open.id);
+    // The boat's stored points (40) are stale: the player (50) overtook it after the last boat tick.
+    const boat = await models.RaceBoat.create({ name: `qa-boat-${userId}`, is_active: true, weekly_points: '40', weekly_rank: 1 });
+    try {
+      const settler = new RaceService({
+        models, db: connection, logger,
+        config: { SERVICE_NAME: 'user-service', RACE_TIMEZONE: IST },
+        clients: {
+          casino: { get: async () => ({ rows: [{ userId: String(userId), bucket: 'slot', currency: 'USDT', amount: '50', bets: 1 }] }) },
+          sports: { get: async () => ({ rows: [] }) },
+        },
+      });
+      const base = (await settler.getConfig({ type: 'weekly' })) ?? {};
+      settler.getConfig = async () => ({
+        ...base, type: 'weekly', enabled: true, currency: 'USDT', minPoints: '0', winnerCount: 3,
+        multipliers: { sports: '1', casino: '1', slot: '1', crash: '1', other: '1' },
+        bookedSeatsEnabled: true, bookedSeats: [{ rank: 1, boatId: boat.id }],
+        rankPrizes: [{ rank: 1, amount: '5', percentage: 50 }, { rank: 2, amount: '3', percentage: 30 }, { rank: 3, amount: '2', percentage: 20 }],
+      });
+
+      await settler.settle({ raceId: open.id });
+      const rows = await models.RaceReward.findAll({ where: { race_id: open.id }, raw: true });
+      // Nothing for the seat's rank 1; the real player (50 points, under the 100-point seat) gets rank 2's 3 —
+      // unless this database's site is B2B (no promotions), which writes no prizes at all.
+      assert.ok(!rows.some((r) => r.rank === 1));
+      if (rows.length) {
+        assert.deepStrictEqual(rows.map((r) => [String(r.user_id), r.rank, Number(r.amount)]), [[String(userId), 2, 3]]);
+        // The finished board (Last Champion / history) still shows the seat where it stood.
+        const last = await settler.lastLeaderboard({ type: 'weekly' });
+        assert.deepStrictEqual(last.leaderboard.slice(0, 2).map((r) => [r.rank, r.isBoat, r.isBoat ? r.name : String(r.userId)]), [[1, true, `qa-boat-${userId}`], [2, false, String(userId)]]);
+      }
+    } finally {
+      await models.RaceBoat.destroy({ where: { id: boat.id } });
+    }
+  });
+
+  await t.test('a staff test race opens its own 10-minute window, refuses a second, and settleDue settles it after its end', async () => {
+    const tester = new RaceService({
+      models, db: connection, logger,
+      config: { SERVICE_NAME: 'user-service', RACE_TIMEZONE: IST },
+      clients: { casino: { get: async () => ({ rows: [] }) }, sports: { get: async () => ({ rows: [] }) } },
+    });
+    const base = (await tester.getConfig({ type: 'daily' })) ?? {};
+    tester.getConfig = async () => ({ ...base, type: 'daily', enabled: true, currency: 'USDT', minPoints: '0', winnerCount: 3, bookedSeatsEnabled: false, rankPrizes: [] });
+
+    const startsAt = new Date();
+    const endsAt = new Date(startsAt.getTime() + 10 * 60_000);
+    const opened = await tester.startTestRace({ type: 'daily', startsAt, endsAt });
+    created.races.push(opened.id);
+    assert.strictEqual(opened.status, 'open');
+    assert.strictEqual(opened.snapshot.test, true);
+
+    await assert.rejects(() => tester.startTestRace({ type: 'daily', startsAt, endsAt }), (e) => e.code === 'RACE_ALREADY_OPEN');
+    await assert.rejects(
+      () => tester.startTestRace({ type: 'daily', startsAt, endsAt: new Date(startsAt.getTime() + 2 * 86_400_000) }),
+      (e) => e.code === 'RACE_INVALID_WINDOW'
+    );
+    // The roll job while it runs must not throw: the normal window either already exists (an earlier
+    // case may have used today's) or hits uq_races_open and gets the test race back.
+    const today = windowFor('daily', new Date(), IST);
+    const during = await tester.openWindow({ type: 'daily' });
+    assert.ok(String(during.id) === String(opened.id) || new Date(during.starts_at).getTime() === today.startsAt.getTime());
+
+    const { settled, opened: next } = await tester.settleDue({ type: 'daily', at: new Date(endsAt.getTime() + 1000) });
+    if (next?.status === 'open') created.races.push(next.id);
+    assert.strictEqual(String(settled.raceId), String(opened.id));
+    const row = await models.Race.findByPk(opened.id, { raw: true });
+    assert.strictEqual(row.status, 'settled');
+    assert.strictEqual(row.snapshot.test, true);
+    // After it the normal window is back (opened now, or the one that already held today's slot).
+    assert.ok(next && String(next.id) !== String(opened.id), 'the normal window opens again');
+    assert.strictEqual(new Date(next.starts_at).getTime(), windowFor('daily', new Date(endsAt.getTime() + 1000), IST).startsAt.getTime());
+  });
+});
+
+test('a switched-off race still ranks today with no prizes', async () => {
+  const row = {
+    type: 'daily', enabled: false, prize_pool: '100', platform_fee_percent: '0', winner_count: 3,
+    top3_percentage: '60', min_points: '0', currency: 'USDT', rank_percentage: [],
+    sports_points: '1', casino_points: '1', slot_points: '1', crash_points: '1', other_points: '1',
+  };
+  const seen = [];
+  const service = new RaceService({
+    models: {
+      RaceConfig: { findOne: async () => row },
+      Race: { findOne: async () => null },
+      Exchangerate: { findAll: async () => [{ currency: 'INR', usd_rate: '0.012' }] },
+      Users: { findAll: async () => [{ id: 7, name: 'p7' }, { id: 8, name: 'p8' }] },
+      Userconfig: { findAll: async () => [] },
+    },
+    logger: createLogger({ name: 'race-test', level: 'silent' }),
+    config: { RACE_TIMEZONE: IST },
+    clients: {
+      casino: {
+        get: async (_path, { query }) => {
+          seen.push(query);
+          return {
+            rows: [
+              { userId: '7', bucket: 'other', currency: 'INR', amount: '2900', bets: 12 },
+              { userId: '8', bucket: 'other', currency: 'USDT', amount: '50', bets: 1 },
+            ],
+          };
+        },
+      },
+      sports: { get: async () => ({ rows: [] }) },
+    },
+    wallet: {},
+    rewardMoney: { fromUsd: async (usd) => ({ currency: 'USDT', amount: usd, usd }), toUsd: async (a) => a },
+  });
+
+  const board = await service.leaderboard({ type: 'daily', userId: '7' });
+  const today = windowFor('daily', new Date(), IST);
+  assert.strictEqual(board.official, false);
+  assert.strictEqual(board.prizePool, '0');
+  assert.strictEqual(new Date(board.endsAt).getTime(), today.endsAt.getTime());
+  assert.strictEqual(seen[0].from, today.startsAt.toISOString());
+  assert.deepStrictEqual(board.leaderboard.map((r) => [r.rank, r.userId, r.reward]), [[1, '8', '0'], [2, '7', '0']]);
+  assert.strictEqual(board.me.rank, 2);
+  assert.strictEqual(board.me.usdWagered, '34.80000000');
+});
+
+test('"Hide my username from public lists": players see ****, staff see the name', async () => {
+  const row = {
+    type: 'daily', enabled: false, prize_pool: '100', platform_fee_percent: '0', winner_count: 3,
+    top3_percentage: '60', min_points: '0', currency: 'USDT', rank_percentage: [],
+    sports_points: '1', casino_points: '1', slot_points: '1', crash_points: '1', other_points: '1',
+  };
+  const service = new RaceService({
+    models: {
+      RaceConfig: { findOne: async () => row },
+      Race: { findOne: async () => null },
+      Exchangerate: { findAll: async () => [] },
+      Users: { findAll: async () => [{ id: 7, name: 'p7' }, { id: 8, name: 'p8' }] },
+      Userconfig: { findAll: async ({ where }) => (where.hide_username ? [{ uid: 8 }] : []) },
+    },
+    logger: createLogger({ name: 'race-test', level: 'silent' }),
+    config: { RACE_TIMEZONE: IST },
+    clients: {
+      casino: { get: async () => ({ rows: [{ userId: '7', bucket: 'other', currency: 'USDT', amount: '5', bets: 1 }, { userId: '8', bucket: 'other', currency: 'USDT', amount: '9', bets: 1 }] }) },
+      sports: { get: async () => ({ rows: [] }) },
+    },
+    wallet: {},
+    rewardMoney: { fromUsd: async (usd) => ({ currency: 'USDT', amount: usd, usd }), toUsd: async (a) => a },
+  });
+
+  const players = await service.leaderboard({ type: 'daily' });
+  assert.deepStrictEqual(players.leaderboard.map((r) => [r.userId, r.name]), [['8', '****'], ['7', 'p7']]);
+  const staff = await service.leaderboard({ type: 'daily', staff: true });
+  assert.deepStrictEqual(staff.leaderboard.map((r) => [r.userId, r.name]), [['8', 'p8'], ['7', 'p7']]);
+});
+
+test('an agent-tree player is not on the board at all, only direct users are', async () => {
+  const row = {
+    type: 'daily', enabled: false, prize_pool: '0', platform_fee_percent: '0', winner_count: 3,
+    top3_percentage: '60', min_points: '0', currency: 'USDT', rank_percentage: [],
+    sports_points: '1', casino_points: '1', slot_points: '1', crash_points: '1', other_points: '1',
+  };
+  const users = [{ id: 7, name: 'direct', parent_staff_id: null }, { id: 9, name: 'agent player', parent_staff_id: 42 }];
+  const service = new RaceService({
+    models: {
+      RaceConfig: { findOne: async () => row },
+      Race: { findOne: async () => null },
+      Exchangerate: { findAll: async () => [] },
+      Users: { findAll: async ({ where }) => users.filter((u) => !('parent_staff_id' in where) || u.parent_staff_id === where.parent_staff_id) },
+      Userconfig: { findAll: async () => [] },
+    },
+    logger: createLogger({ name: 'race-test', level: 'silent' }),
+    config: { RACE_TIMEZONE: IST },
+    clients: {
+      casino: { get: async () => ({ rows: [{ userId: '7', bucket: 'slot', currency: 'USDT', amount: '5', bets: 1 }, { userId: '9', bucket: 'slot', currency: 'USDT', amount: '900', bets: 3 }] }) },
+      sports: { get: async () => ({ rows: [{ userId: '9', usd: '50', bets: 1 }] }) },
+    },
+    wallet: {},
+    rewardMoney: { fromUsd: async (usd) => ({ currency: 'USDT', amount: usd, usd }), toUsd: async (a) => a },
+  });
+
+  const board = await service.leaderboard({ type: 'daily', userId: '9' });
+  assert.deepStrictEqual(board.leaderboard.map((r) => [r.rank, r.userId]), [[1, '7']]);
+  assert.strictEqual(board.me?.rank ?? null, null);
+});
+
+test("the board prints each rank's share on a 0 pool; Last Champion is the last settled race", async () => {
+  const row = {
+    type: 'daily', enabled: false, prize_pool: '0', platform_fee_percent: '0', winner_count: 10,
+    top3_percentage: '60', min_points: '0', currency: 'USDT', rank_percentage: [],
+    sports_points: '1', casino_points: '1', slot_points: '1', crash_points: '1', other_points: '1',
+  };
+  const seen = [];
+  let settledRace = null;
+  const service = new RaceService({
+    models: {
+      RaceConfig: { findOne: async () => row },
+      Race: { findOne: async () => settledRace },
+      RaceReward: { findAll: async () => (settledRace ? [{ user_id: '8', rank: 1, points: '9', amount: '5', currency: 'USDT' }] : []) },
+      Exchangerate: { findAll: async () => [] },
+      Users: { findAll: async () => [{ id: 7, name: 'p7' }, { id: 8, name: 'p8' }] },
+      Userconfig: { findAll: async () => [] },
+    },
+    logger: createLogger({ name: 'race-test', level: 'silent' }),
+    config: { RACE_TIMEZONE: IST },
+    clients: {
+      casino: {
+        get: async (_path, { query }) => {
+          seen.push(query);
+          return {
+            rows: [
+              { userId: '7', bucket: 'slot', currency: 'USDT', amount: '3', bets: 1 },
+              { userId: '8', bucket: 'slot', currency: 'USDT', amount: '9', bets: 2 },
+            ],
+          };
+        },
+      },
+      sports: { get: async () => ({ rows: [] }) },
+    },
+    wallet: {},
+    rewardMoney: { fromUsd: async (usd) => ({ currency: 'USDT', amount: usd, usd }), toUsd: async (a) => a },
+  });
+
+  const curve = buildRankPrizes({ prizePool: '100', winnerCount: 10, platformFeePercent: 0, top3Percentage: 60 }).ranks;
+  const board = await service.leaderboard({ type: 'daily' });
+  assert.deepStrictEqual(board.leaderboard.map((r) => [r.rank, r.payout, r.percentage]), [
+    [1, '0.00000000', curve[0].percentage],
+    [2, '0.00000000', curve[1].percentage],
+  ]);
+  assert.ok(curve[0].percentage > curve[1].percentage && curve[1].percentage > 0);
+
+  // No race has ever settled: an empty board (the page's empty state), not a live recount of
+  // yesterday priced on today's ladder ("Profit(57.1429%) 0 USDT").
+  const none = await service.lastLeaderboard({ type: 'daily' });
+  assert.strictEqual(none.raceId, null);
+  assert.deepStrictEqual(none.leaderboard, []);
+
+  // Settled: the race's own paid rows, whatever window it was, with what each was paid.
+  settledRace = {
+    id: 1, type: 'daily', status: 'settled', prize_pool: '10', winner_count: 3, snapshot: {},
+    starts_at: new Date('2026-10-20T18:30:00Z'), ends_at: new Date('2026-10-21T18:30:00Z'), settled_at: new Date(),
+  };
+  const paid = await service.lastLeaderboard({ type: 'daily' });
+  assert.strictEqual(paid.official, true);
+  assert.strictEqual(paid.raceId, 1);
+  assert.deepStrictEqual(paid.leaderboard.map((r) => [r.rank, r.name, Number(r.payout)]), [[1, 'p8', 5]]);
+  assert.strictEqual(paid.payoutPrizePool, '10.00000000');
+
+  // End & pay closed today's window: the board says so (settled, its prizes) until the next opens.
+  const ended = await service.leaderboard({ type: 'daily', userId: '8' });
+  assert.strictEqual(ended.settled, true);
+  assert.strictEqual(ended.payoutPrizePool, '10.00000000');
+  assert.deepStrictEqual(ended.leaderboard.map((r) => [r.rank, r.name, Number(r.payout)]), [[1, 'p8', 5]]);
+  assert.strictEqual(ended.me.rank, 1);
+  // The daily quests still count today's own wagers after End & pay.
+  const live = await service.leaderboard({ type: 'daily', userId: '8', live: true });
+  assert.strictEqual(live.settled, undefined);
+  assert.strictEqual(live.me.usdWagered, '9.00000000');
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  Booked seats: a boat pinned to a rank
+// ══════════════════════════════════════════════════════════════════════
+
+test('booked seats: a pinned boat takes its rank, an inactive pinned boat falls back, plain ranks still work', async () => {
+  const placeWith = async (bookedSeats, activeBoats) => {
+    const row = {
+      type: 'daily', enabled: true, prize_pool: '0', platform_fee_percent: '0', winner_count: 5,
+      top3_percentage: '60', min_points: '0', currency: 'USDT', rank_percentage: [],
+      sports_points: '1', casino_points: '1', slot_points: '1', crash_points: '1', other_points: '1',
+      booked_seats_enabled: true, booked_seats: bookedSeats,
+    };
+    const writes = [];
+    const service = new RaceService({
+      models: {
+        RaceConfig: { findOne: async () => row },
+        Race: { findOne: async () => ({ id: 1, type: 'daily', status: 'open', starts_at: new Date(), ends_at: new Date(Date.now() + 60_000) }) },
+        // `is_active: true` is in the real query, so an inactive boat is simply not returned.
+        RaceBoat: {
+          findAll: async () => activeBoats.map((id) => ({ id, name: `boat ${id}` })),
+          update: async (values, { where }) => { if (!Array.isArray(where.id)) writes.push([where.id, values.daily_rank]); },
+        },
+        Exchangerate: { findAll: async () => [] },
+        Users: { findAll: async () => [{ id: 7, name: 'p7' }, { id: 8, name: 'p8' }, { id: 9, name: 'p9' }] },
+        Userconfig: { findAll: async () => [] },
+      },
+      logger: createLogger({ name: 'race-test', level: 'silent' }),
+      config: { RACE_TIMEZONE: IST },
+      clients: {
+        casino: { get: async () => ({ rows: [
+          { userId: '7', bucket: 'slot', currency: 'USDT', amount: '300', bets: 1 },
+          { userId: '8', bucket: 'slot', currency: 'USDT', amount: '200', bets: 1 },
+          { userId: '9', bucket: 'slot', currency: 'USDT', amount: '100', bets: 1 },
+        ] }) },
+        sports: { get: async () => ({ rows: [] }) },
+      },
+      wallet: {},
+      rewardMoney: { fromUsd: async (usd) => ({ currency: 'USDT', amount: usd, usd }), toUsd: async (a) => a },
+    });
+    await service.syncBoats({ type: 'daily' });
+    return writes;
+  };
+
+  // Pinned boat 11 on rank 3; the plain rank 1 above it takes a free boat, not 11.
+  assert.deepStrictEqual(await placeWith([1, { rank: 3, boatId: 11 }], [10, 11]), [[10, 1], [11, 3]]);
+  // Boat 11 switched off: its seat still fills, with any free boat.
+  assert.deepStrictEqual(await placeWith([{ rank: 2, boatId: 11 }], [10]), [[10, 2]]);
+  // The stored plain-number form: boats in id order.
+  assert.deepStrictEqual(await placeWith([1, 3], [10, 11]), [[10, 1], [11, 3]]);
+});
+
+test('booked seats on save: one boat per rank and a rank per boat, out-of-range ranks dropped', async () => {
+  let saved = null;
+  const row = { type: 'daily', enabled: false, prize_pool: '0', platform_fee_percent: '0', winner_count: 5, top3_percentage: '60', rank_percentage: [] };
+  const service = new RaceService({
+    models: {
+      RaceConfig: {
+        findOne: async ({ raw }) => (raw ? { ...row, booked_seats: saved ?? [] } : { get: () => row }),
+        update: async (patch) => { saved = patch.booked_seats; },
+      },
+    },
+    logger: createLogger({ name: 'race-test', level: 'silent' }),
+    config: { RACE_TIMEZONE: IST },
+    clients: {},
+    wallet: {},
+    rewardMoney: {},
+  });
+
+  await service.updateConfig({ type: 'daily', bookedSeats: [3, { rank: 3, boatId: 4 }, 1, 9, { rank: 2, boatId: 5 }] });
+  assert.deepStrictEqual(saved, [1, { rank: 2, boatId: 5 }, { rank: 3, boatId: 4 }]);
+
+  await assert.rejects(() => service.updateConfig({ type: 'daily', bookedSeats: [{ rank: 1, boatId: 4 }, { rank: 2, boatId: 4 }] }), (e) => e.code === 'RACE_INVALID_CONFIG');
+  await assert.rejects(() => service.updateConfig({ type: 'daily', bookedSeats: [{ rank: 1, boatId: 4 }, { rank: 1, boatId: 5 }] }), (e) => e.code === 'RACE_INVALID_CONFIG');
+  // Seats are the top ranks with no gap, so no real player is paid more than a seat.
+  await assert.rejects(() => service.updateConfig({ type: 'daily', bookedSeats: [{ rank: 1, boatId: 4 }, { rank: 3, boatId: 5 }] }), (e) => e.code === 'RACE_INVALID_CONFIG');
+  await assert.rejects(() => service.updateConfig({ type: 'daily', bookedSeats: [2] }), (e) => e.code === 'RACE_INVALID_CONFIG');
 });

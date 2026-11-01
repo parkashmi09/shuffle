@@ -1,8 +1,15 @@
 'use strict';
 
-const { defineErrors } = require('@ibitplay/common');
+const { defineErrors, entitlements } = require('@ibitplay/common');
 
-module.exports = defineErrors('FEATURES', {
+module.exports = Object.freeze({
+  /**
+   * The owner has not put this feature in the site's plan (docs/OWNER-PANEL.md
+   * §4). Shared with site-config and the player guards, so the wire code is the
+   * one `NOT_ENTITLED` everywhere; details `{ kind: 'feature', key }`.
+   */
+  NOT_ENTITLED: entitlements.entitlementErrors.ENTITLED,
+  ...defineErrors('FEATURES', {
   UNKNOWN_FEATURE: { status: 404, message: 'There is no such feature in the catalogue' },
   UNKNOWN_VARIANT: { status: 422, message: 'That feature has no such variant' },
   UNKNOWN_TEMPLATE: { status: 422, message: 'There is no such site template' },
@@ -17,4 +24,5 @@ module.exports = defineErrors('FEATURES', {
   NOT_ENABLED: { status: 409, message: 'The feature is not switched on for this site' },
   NOT_TESTABLE: { status: 422, message: 'This feature has no connection test' },
   PROVIDER_FAILED: { status: 502, message: 'The provider refused the request' },
+}),
 });

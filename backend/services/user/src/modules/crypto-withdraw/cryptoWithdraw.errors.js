@@ -4,6 +4,9 @@ const { defineErrors } = require('@ibitplay/common');
 
 module.exports = defineErrors('CRYPTO_WITHDRAW', {
   NOT_FOUND: { status: 404, message: 'Withdrawal not found' },
+  // CCPayment pays to a network; a request without one is paid by hand.
+  NEEDS_NETWORK: { status: 422, message: 'This withdrawal has no network, so it cannot be sent through CCPayment — pay it by hand' },
+  NOT_SENDING: { status: 409, message: 'This withdrawal is not waiting on CCPayment' },
 
   INVALID_TRANSITION: {
     status: 409,
@@ -28,6 +31,9 @@ module.exports = defineErrors('CRYPTO_WITHDRAW', {
   },
 
   INVALID_AMOUNT: { status: 422, message: 'That amount is not valid' },
+
+  /** The named network is not one this coin is offered on now (coin registry, migration 061). */
+  NETWORK_UNAVAILABLE: { status: 422, message: 'That network is not available for this coin' },
 
   INVALID_ADDRESS: {
     status: 422,
@@ -65,6 +71,12 @@ module.exports = defineErrors('CRYPTO_WITHDRAW', {
     status: 403,
     message: 'Withdrawals are paused for 24 hours after a password change'
   },
+
+  /** The fiat rail's twin: the same `WITHDRAW_MINIMUM`, the same refusal. */
+  BELOW_MINIMUM: { status: 422, message: 'The amount is below the minimum withdrawal' },
+
+  /** The fiat rail's twin: the `withdrawal_requirements` policy (and WITHDRAW_REQUIRE_KYC) gate both rails, or neither. */
+  KYC_REQUIRED: { status: 403, message: 'Verify your identity before withdrawing' },
 
   INSUFFICIENT_BALANCE: {
     status: 422,

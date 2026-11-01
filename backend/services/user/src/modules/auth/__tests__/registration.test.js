@@ -21,6 +21,8 @@ const TEST_DB = process.env.TEST_DB_NAME || 'ibitplay_test';
 
 let connection;
 let sent = [];
+/** The reset token, read off the link in the mail (`/reset-password?token=...`). */
+const tokenOf = (message) => new URL(message.html.match(/href="([^"]+)"/)[1].replace(/&amp;/g, '&')).searchParams.get('token');
 
 test('registration and password reset', async (t) => {
   const logger = createLogger({ name: 'registration-test', level: 'silent' });
@@ -61,6 +63,8 @@ test('registration and password reset', async (t) => {
       JWT_ACCESS_SECRET: 'test-access-secret-that-is-long-enough-000000',
       JWT_REFRESH_SECRET: 'test-refresh-secret-that-is-long-enough-00000',
       JWT_ADMIN_SECRET: 'test-admin-secret-that-is-long-enough-000000',
+      // The reset link is absolute; the mail template drops a relative one.
+      PUBLIC_SITE_URL: 'http://localhost:3000',
     },
   });
 
@@ -121,6 +125,55 @@ test('registration and password reset', async (t) => {
     const team = await models.Team.findOne({ where: { membername: member.name }, raw: true });
     assert.ok(team, 'team row exists');
     assert.equal(team.referalCode, ownerRow.referalcode);
+  });
+
+  await t.test('AN UNKNOWN REFERRAL CODE REFUSES THE SIGNUP — 422, NOTHING WRITTEN', async () => {
+    /**
+     * It used to be stored verbatim in `refree` and the failed team link was
+     * logged and swallowed: the player believed they were referred, the
+     * referrer was never paid, and the free text was later matched against
+     * usernames by the team backfill.
+     */
+    const username = `${unique}bad`;
+    const err = await service
+      .register({
+        username,
+        password: 'correct-horse-battery',
+        email: `${username}@test.invalid`,
+        referredBy: `nobody-${unique}`,
+      })
+      .catch((e) => e);
+
+    assert.equal(err.code, 'AUTH_REFERRAL_CODE_INVALID');
+    assert.equal(err.status ?? err.statusCode, 422);
+    assert.match(err.message, /referral code/i);
+    assert.equal(await models.Users.count({ where: { name: username } }), 0, 'no account was created');
+  });
+
+  await t.test('refree stores the referrer\'s CANONICAL code, whatever was typed', async () => {
+    const owner = await signUp('own3');
+    const ownerRow = await models.Users.findOne({ where: { id: owner.id }, raw: true });
+
+    for (const [suffix, typed] of [
+      ['m3a', ownerRow.referalcode.toLowerCase()],
+      ['m3b', ownerRow.name.toUpperCase()],
+      ['m3c', `  ${ownerRow.referalcode}  `],
+    ]) {
+      const member = await signUp(suffix, { referredBy: typed });
+      const row = await models.Users.findOne({ where: { id: member.id }, raw: true });
+      assert.equal(row.refree, ownerRow.referalcode, `typed ${JSON.stringify(typed)}`);
+      const team = await models.Team.findOne({ where: { membername: member.name }, raw: true });
+      assert.equal(team?.ownername, ownerRow.name);
+    }
+  });
+
+  await t.test('an empty referral code is still fine — no referrer, no team', async () => {
+    for (const [suffix, referredBy] of [['e1', ''], ['e2', '   '], ['e3', undefined]]) {
+      const member = await signUp(suffix, { referredBy });
+      const row = await models.Users.findOne({ where: { id: member.id }, raw: true });
+      assert.equal(row.refree, null);
+      assert.equal(await models.Team.count({ where: { membername: member.name } }), 0);
+    }
   });
 
   await t.test('THE REPLY CONTAINS NO PASSWORD', async () => {
@@ -191,17 +244,17 @@ test('registration and password reset', async (t) => {
     await service.requestPasswordReset({ email: `${unique}f@test.invalid` });
 
     assert.equal(sent.length, 1);
-    assert.equal(sent[0].template, 'password-reset');
-    assert.ok(sent[0].data.token, 'a token was sent');
-    assert.equal('password' in sent[0].data, false, 'and the password was not');
+    assert.equal(sent[0].subject, 'Reset your password');
+    assert.match(sent[0].html, /\/reset-password\?token=/, 'a reset link was sent');
+    assert.ok(tokenOf(sent[0]), 'carrying a token');
 
     // The token is stored HASHED — a database read is not a working link.
     const stored = await models.AuthVerificationToken.findOne({
       where: { user_id: account.id, purpose: 'password_reset' },
       raw: true,
     });
-    assert.equal(stored.token_hash, hashToken(sent[0].data.token));
-    assert.notEqual(stored.token_hash, sent[0].data.token);
+    assert.equal(stored.token_hash, hashToken(tokenOf(sent[0])));
+    assert.notEqual(stored.token_hash, tokenOf(sent[0]));
   });
 
   await t.test('AN UNKNOWN ADDRESS ANSWERS IDENTICALLY', async () => {
@@ -224,7 +277,7 @@ test('registration and password reset', async (t) => {
 
     sent = [];
     await service.requestPasswordReset({ email: `${unique}g@test.invalid` });
-    const { token } = sent[0].data;
+    const token = tokenOf(sent[0]);
 
     await service.completePasswordReset({ token, newPassword: 'a-completely-different-one' });
 
@@ -237,7 +290,7 @@ test('registration and password reset', async (t) => {
     const account = await signUp('h');
     sent = [];
     await service.requestPasswordReset({ email: `${unique}h@test.invalid` });
-    const { token } = sent[0].data;
+    const token = tokenOf(sent[0]);
 
     await service.completePasswordReset({ token, newPassword: 'first-new-password' });
 
@@ -259,10 +312,10 @@ test('registration and password reset', async (t) => {
     sent = [];
 
     await service.requestPasswordReset({ email: `${unique}i@test.invalid` });
-    const firstToken = sent[0].data.token;
+    const firstToken = tokenOf(sent[0]);
 
     await service.requestPasswordReset({ email: `${unique}i@test.invalid` });
-    const secondToken = sent[1].data.token;
+    const secondToken = tokenOf(sent[1]);
 
     await assert.rejects(
       () => service.completePasswordReset({ token: firstToken, newPassword: 'x-new-password' }),
@@ -278,7 +331,7 @@ test('registration and password reset', async (t) => {
     const account = await signUp('j');
     sent = [];
     await service.requestPasswordReset({ email: `${unique}j@test.invalid` });
-    const { token } = sent[0].data;
+    const token = tokenOf(sent[0]);
 
     await models.AuthVerificationToken.update(
       { expires_at: new Date(Date.now() - 1000) },
@@ -315,7 +368,7 @@ test('registration and password reset', async (t) => {
 
     sent = [];
     await service.requestPasswordReset({ email: `${unique}k@test.invalid` });
-    await service.completePasswordReset({ token: sent[0].data.token, newPassword: 'brand-new-password' });
+    await service.completePasswordReset({ token: tokenOf(sent[0]), newPassword: 'brand-new-password' });
 
     assert.equal(
       await models.AuthSession.count({ where: { user_id: account.id, revoked_at: null } }),
@@ -330,7 +383,7 @@ test('registration and password reset', async (t) => {
     await service.requestPasswordReset({ email: `${unique}l@test.invalid` });
 
     await assert.rejects(
-      () => service.completePasswordReset({ token: sent[0].data.token, newPassword: 'correct-horse-battery' }),
+      () => service.completePasswordReset({ token: tokenOf(sent[0]), newPassword: 'correct-horse-battery' }),
       (err) => err.code === 'AUTH_PASSWORD_REUSED'
     );
   });

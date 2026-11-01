@@ -12,7 +12,7 @@ import DataTable, { type Column } from '@/components/shared/DataTable'
 import DateTime from '@/components/shared/DateTime'
 import ErrorState from '@/components/shared/ErrorState'
 import FormDialog from '@/components/shared/FormDialog'
-import { SwitchField, TextAreaField, TextField } from '@/components/shared/FormField'
+import { DateField, SwitchField, TextAreaField, TextField } from '@/components/shared/FormField'
 import Money from '@/components/shared/Money'
 import PageHeader from '@/components/shared/PageHeader'
 import StatCard from '@/components/shared/StatCard'
@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useApi, useApiMutation, useListState, usePagedApi } from '@/hooks/use-api'
 import { api } from '@/lib/api/client'
 import { formatNumber } from '@/lib/format'
+import { check } from '@/lib/validate'
 import type { GiftCard, GiftCardAnalytics, GiftCardRecord } from './types'
 import { useLocalList } from './useLocalList'
 
@@ -83,32 +84,41 @@ const CreateCard = () => {
         </Button>
       }
       title='Create a gift card'
-      description='A promise to pay every eligible player a fixed amount once they meet the conditions. Amounts are USDT.'
+      description='A promise to pay every eligible user a fixed amount once they meet the conditions. Amounts are USDT.'
       submitLabel='Create'
       onSubmit={() => create.mutateAsync()}
+      validate={() => ({
+        'gc-key': check.required(f.uniqueKey, 'Code') || check.length(f.uniqueKey, 'Code', { max: 80 }),
+        'gc-amount': check.amount(f.amount),
+        'gc-desc': check.length(f.description, 'Description', { max: 500 }),
+        'gc-period': check.number(f.periodDays, 'Window', { integer: true, min: 1, max: 3650, optional: true }),
+        'gc-end': f.endDate && new Date(f.endDate).getTime() < new Date(new Date().toDateString()).getTime() ? 'End date cannot be in the past' : undefined,
+        'gc-dep-amt': f.depositRequired ? check.amount(f.depositAmount, 'Deposit amount') : undefined,
+        'gc-wag-x': f.wagerRequired ? check.number(f.wagerTimes, 'Wager multiple', { integer: true, min: 0, max: 10000 }) : undefined
+      })}
       wide
     >
       <div className='grid grid-cols-2 gap-4'>
-        <TextField id='gc-key' label='Code' required maxLength={80} placeholder='WELCOME50' value={f.uniqueKey} onChange={e => setF({ ...f, uniqueKey: e.target.value })} />
-        <TextField id='gc-amount' label='Amount' required placeholder='50.00' value={f.amount} onChange={e => setF({ ...f, amount: e.target.value })} />
+        <TextField id='gc-key' name='uniqueKey' label='Code' required maxLength={80} placeholder='WELCOME50' value={f.uniqueKey} onChange={e => setF({ ...f, uniqueKey: e.target.value })} />
+        <TextField id='gc-amount' name='amount' label='Amount' required placeholder='50.00' value={f.amount} onChange={e => setF({ ...f, amount: e.target.value })} />
       </div>
       <TextAreaField id='gc-desc' label='Description' maxLength={500} rows={2} value={f.description} onChange={e => setF({ ...f, description: e.target.value })} />
       <div className='grid grid-cols-2 gap-4'>
-        <TextField id='gc-period' label='Window (days)' type='number' min={1} max={3650} hint='How long after activation the conditions stay open.' value={f.periodDays} onChange={e => setF({ ...f, periodDays: e.target.value })} />
-        <TextField id='gc-end' label='End date' type='date' hint='Last day the card can be activated.' value={f.endDate} onChange={e => setF({ ...f, endDate: e.target.value })} />
+        <TextField id='gc-period' name='periodDays' label='Window (days)' type='number' min={1} max={3650} hint='How long after activation the conditions stay open.' value={f.periodDays} onChange={e => setF({ ...f, periodDays: e.target.value })} />
+        <DateField id='gc-end' label='End date' hint='Last day the card can be activated.' value={f.endDate} onChange={endDate => setF({ ...f, endDate })} />
       </div>
       <div className='grid gap-3 sm:grid-cols-2'>
         <div className='grid gap-3'>
           <SwitchField id='gc-dep' label='Deposit required' checked={f.depositRequired} onChange={depositRequired => setF({ ...f, depositRequired })} />
-          {f.depositRequired && <TextField id='gc-dep-amt' label='Deposit amount' required placeholder='100.00' value={f.depositAmount} onChange={e => setF({ ...f, depositAmount: e.target.value })} />}
+          {f.depositRequired && <TextField id='gc-dep-amt' name='depositAmount' label='Deposit amount' required placeholder='100.00' value={f.depositAmount} onChange={e => setF({ ...f, depositAmount: e.target.value })} />}
         </div>
         <div className='grid gap-3'>
           <SwitchField id='gc-wag' label='Wager required' checked={f.wagerRequired} onChange={wagerRequired => setF({ ...f, wagerRequired })} />
-          {f.wagerRequired && <TextField id='gc-wag-x' label='Wager × amount' type='number' min={0} max={10000} required value={f.wagerTimes} onChange={e => setF({ ...f, wagerTimes: e.target.value })} />}
+          {f.wagerRequired && <TextField id='gc-wag-x' name='wagerTimes' label='Wager × amount' type='number' min={0} max={10000} required value={f.wagerTimes} onChange={e => setF({ ...f, wagerTimes: e.target.value })} />}
         </div>
       </div>
       <div className='grid gap-3 sm:grid-cols-2'>
-        <SwitchField id='gc-all' label='Visible to all players' hint='Off: only players the platform targets explicitly.' checked={f.allUsers} onChange={allUsers => setF({ ...f, allUsers })} />
+        <SwitchField id='gc-all' label='Visible to all users' hint='Off: only users the platform targets explicitly.' checked={f.allUsers} onChange={allUsers => setF({ ...f, allUsers })} />
         <SwitchField id='gc-active' label='Active' checked={f.isActive} onChange={isActive => setF({ ...f, isActive })} />
       </div>
     </FormDialog>
@@ -117,6 +127,7 @@ const CreateCard = () => {
 
 const Cards = () => {
   const { state, set, query } = useListState(['activeOnly'])
+
   const list = usePagedApi<GiftCard>('admin/user/gift-cards', {
     limit: query.limit,
     page: query.page,
@@ -146,7 +157,7 @@ const Cards = () => {
     { key: 'end', header: 'Ends', cell: r => <DateTime value={r.endDate} /> },
     { key: 'dep', header: 'Deposit cond.', cell: r => (r.depositRequired ? <Money value={r.depositAmount} /> : <span className='text-muted-foreground'>none</span>) },
     { key: 'wag', header: 'Wager cond.', cell: r => (r.wagerRequired ? `${r.wagerTimes ?? 0}×` : <span className='text-muted-foreground'>none</span>) },
-    { key: 'users', header: 'Audience', cell: r => <Badge variant='outline'>{r.allUsers ? 'All players' : 'Targeted'}</Badge> },
+    { key: 'users', header: 'Audience', cell: r => <Badge variant='outline'>{r.allUsers ? 'All users' : 'Targeted'}</Badge> },
     { key: 'status', header: 'Status', cell: r => <StatusBadge value={r.isActive ? 'active' : 'inactive'} /> },
     {
       key: 'actions',
@@ -157,7 +168,7 @@ const Cards = () => {
           <ConfirmDialog
             trigger={<Button variant='ghost' size='icon-sm' aria-label='Delete'><Trash2Icon /></Button>}
             title={`Delete ${r.uniqueKey}?`}
-            description='Refused by the platform once any player has activated it.'
+            description='Refused by the platform once any user has activated it.'
             confirmLabel='Delete'
             destructive
             onConfirm={() => remove.mutateAsync(r.id)}
@@ -201,7 +212,10 @@ const Records = () => {
   const { page, limit, set } = useLocalList()
   const [status, setStatus] = useState('all')
   const [userId, setUserId] = useState('')
+
   const list = usePagedApi<GiftCardRecord>('admin/user/gift-cards/records', {
+    // Agent ke users ye use nahi kar sakte — sirf direct users.
+    channel: 'direct',
     limit,
     page,
     status: status === 'all' ? undefined : status,
@@ -212,9 +226,9 @@ const Records = () => {
     { key: 'id', header: '#', cell: r => <span className='font-mono text-xs'>{r.id}</span> },
     {
       key: 'user',
-      header: 'Player',
+      header: 'User',
       cell: r => (
-        <Link href={`/players/${r.userId}`} className='font-mono text-xs hover:underline'>
+        <Link href={`/users/${r.userId}`} className='font-mono text-xs hover:underline'>
           #{String(r.userId)}
         </Link>
       )
@@ -237,7 +251,7 @@ const Records = () => {
       pagination={list.data?.pagination}
       onPageChange={p => set({ page: p })}
       onLimitChange={l => set({ limit: l })}
-      emptyMessage='No player has activated a gift card.'
+      emptyMessage='No user has activated a gift card.'
       toolbar={
         <>
           <Input className='w-40' placeholder='User id' inputMode='numeric' value={userId} onChange={e => { setUserId(e.target.value.replace(/\D/g, '')); set({ page: 1 }) }} />
@@ -279,7 +293,7 @@ const GiftCards = () => {
     <div>
       <PageHeader
         title='Gift cards'
-        description='Promotional cards players activate and claim once they meet a deposit or wagering condition.'
+        description='Promotional cards users activate and claim once they meet a deposit or wagering condition.'
         actions={
           <Can permission='config:write'>
             <CreateCard />

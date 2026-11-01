@@ -35,8 +35,9 @@ module.exports = (sequelize) => {
        * The provider's ROUND id — half of the idempotency key.
        *
        * Unique with `transaction_type`, not on its own: one round settles a
-       * stake and then a payout, and both carry this same value. See
-       * migration 041.
+       * stake and then a payout, and both carry this same value. And per
+       * player: the key is `(user_id, external_transaction_id,
+       * transaction_type)` — see migrations 045 and 095.
        */
       external_transaction_id: {
         type: DataTypes.STRING(190),

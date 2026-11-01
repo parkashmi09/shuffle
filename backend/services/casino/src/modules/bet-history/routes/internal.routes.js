@@ -8,6 +8,7 @@ const { money } = require('@ibitplay/common');
 /* Only `/player/:userId/stats` uses it — the rest of this file queries the
    models directly, which is how it was written. */
 const { BetHistoryService } = require('../betHistory.service');
+const { casinoProfileStats } = require('../profileStats');
 
 /**
  * A round with a public outcome.
@@ -186,6 +187,19 @@ module.exports = function internalRoutes(deps) {
     validate({ params: z.object({ userId: z.coerce.number().int().positive() }) }),
     asyncHandler(async (req, res) =>
       response.ok(res, await service.playerStats({ userId: req.params.userId }))
+    )
+  );
+
+  /**
+   * The casino half of user-service's `GET /user/profile/stats`: stakes, wins,
+   * biggest payout and top games per currency, for one player. user-service
+   * converts to USD and adds sports. See `profileStats.js`.
+   */
+  router.get(
+    '/player/:userId/profile-stats',
+    validate({ params: z.object({ userId: z.coerce.number().int().positive() }) }),
+    asyncHandler(async (req, res) =>
+      response.ok(res, await casinoProfileStats(deps.db, req.params.userId))
     )
   );
 

@@ -4,6 +4,7 @@ const { Router } = require('express');
 const { validate, createRateLimiter } = require('@ibitplay/common');
 
 const v = require('../auth.validators');
+const refreshCookie = require('../refreshCookie');
 const { AuthService } = require('../auth.service');
 const { createPublicController } = require('../controllers/public.controller');
 
@@ -64,7 +65,15 @@ module.exports = function publicRoutes(deps) {
   });
 
   router.post('/login', loginLimiter, validate(v.login), ctrl.login);
-  router.post('/refresh', validate(v.refresh), ctrl.refresh);
+  // Each press makes an account, so it is metered like registration.
+  router.post('/demo-login', registerLimiter, ctrl.demoLogin);
+  router.post('/refresh', refreshCookie.fromCookie, validate(v.refresh), ctrl.refresh);
+
+  // Google sign-in (../google.js). Metered with login: every path ends in a session.
+  router.get('/google/status', ctrl.googleStatus);
+  router.get('/google/start', loginLimiter, ctrl.googleStart);
+  router.get('/google/callback', loginLimiter, ctrl.googleCallback);
+  router.post('/google/exchange', loginLimiter, validate(v.googleExchange), ctrl.googleExchange);
 
   /**
    * @legacy SOCKET `C.REGISTER_USER` / `C.RESET_PASSWORD`

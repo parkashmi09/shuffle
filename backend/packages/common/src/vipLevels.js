@@ -4,35 +4,21 @@
  * The VIP ladder, keyed on lifetime wager.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * THIS LADDER REPLACED THE LEGACY ONE, AND IT MOVED EVERY PLAYER
+ * THE HASH.GAME LADDER (19 Oct 2026)
  *
- * Until now this file held 75 numbered bands lifted verbatim from
- * `legacy/bonus/calculateVip.js`, running from 1 XP to 15,058,625,000 across
- * five cards (`brownz`, `silver`, `gold`, `platinum`, `diamond`).
+ * 33 levels after Beginner, exactly as hash.game publishes them
+ * (`GET /api/game/support/vip-v2/config/`, 1 XP = $1 wagered): Bronze I–IV,
+ * Silver I–IV, Gold I–IV, Platinum I–IV, Diamond I–VII, Eternal I–X. The
+ * referral unlock table (`siteconfig.referral_unlock_tiers`) names these levels,
+ * so the two now agree. Names are editable in the site admin (VIP Club → Ladder,
+ * `vip_level_names`), and so are the thresholds (`vip_level_names.min_xp`,
+ * migration 133) — `resolveVipLadder` lays both over these defaults.
  *
- * It now holds the ladder the reference platform publishes: **41 levels in
- * nine tiers**, read off the live signed-in VIP page rather than guessed —
- * Wood, then Bronze, Silver, Gold, Platinum, Jade, Sapphire, Ruby and Diamond
- * at five sub-levels each. The VIP page renders one accordion per tier, which
- * is why the tier is part of the data and not something the UI infers.
- *
- * ── WHAT THIS CHANGED, IN PLAIN TERMS ────────────────────────────────────
- *
- * A player's level is a function of their lifetime wager, and the function
- * changed, so **every existing player's VIP level changed with it** — nothing
- * was migrated because there is nothing stored to migrate. Two consequences
- * worth stating out loud:
- *
- *   THE ENTRY POINT MOVED UP. The old ladder started at 1 XP; this one starts
- *   at 500. A player between 1 and 499 was VIP 1 and is now VIP 0.
- *
- *   THE TOP MOVED DOWN, A LOT. The old top band began at 15,058,625,000; this
- *   one begins at 37,000,000 — about 400× lower. Players who were mid-ladder
- *   are now at or near the top.
- *
- * `bonus.constants.js` was re-gated to match (see the note there). If this
- * ladder is ever reverted, those thresholds have to move back with it: they
- * are level numbers, and level numbers mean something different here.
+ * It replaced a 41-level Wood…Diamond ladder (500 XP to 37,000,000), so every
+ * existing player's level moved with it: a level is a function of lifetime
+ * wager and nothing stored had to change. Level-up credits are keyed per level
+ * (`vip:level_up:<user>:<level>`), so a player who passes a level number they
+ * were already paid for is not paid again.
  *
  * ── LEVELS STAY NUMBERS ──────────────────────────────────────────────────
  *
@@ -64,55 +50,44 @@
  * band is ignored — see the open-ended branch in `vipLevelFor`.
  */
 const VIP_LEVELS = Object.freeze([
-  { level:  1, name: 'Wood',        card: 'wood',     minXp:      500, maxXp:      999 },
+  { level:  1, name: 'Bronze I',     card: 'bronze',   minXp:        1000, maxXp:           2999 },
+  { level:  2, name: 'Bronze II',    card: 'bronze',   minXp:        3000, maxXp:           6999 },
+  { level:  3, name: 'Bronze III',   card: 'bronze',   minXp:        7000, maxXp:          14999 },
+  { level:  4, name: 'Bronze IV',    card: 'bronze',   minXp:       15000, maxXp:          29999 },
 
-  { level:  2, name: 'Bronze 1',    card: 'bronze',   minXp:     1000, maxXp:     1999 },
-  { level:  3, name: 'Bronze 2',    card: 'bronze',   minXp:     2000, maxXp:     2999 },
-  { level:  4, name: 'Bronze 3',    card: 'bronze',   minXp:     3000, maxXp:     3999 },
-  { level:  5, name: 'Bronze 4',    card: 'bronze',   minXp:     4000, maxXp:     4999 },
-  { level:  6, name: 'Bronze 5',    card: 'bronze',   minXp:     5000, maxXp:     9999 },
+  { level:  5, name: 'Silver I',     card: 'silver',   minXp:       30000, maxXp:          59999 },
+  { level:  6, name: 'Silver II',    card: 'silver',   minXp:       60000, maxXp:         119999 },
+  { level:  7, name: 'Silver III',   card: 'silver',   minXp:      120000, maxXp:         239999 },
+  { level:  8, name: 'Silver IV',    card: 'silver',   minXp:      240000, maxXp:         499999 },
 
-  { level:  7, name: 'Silver 1',    card: 'silver',   minXp:    10000, maxXp:    19999 },
-  { level:  8, name: 'Silver 2',    card: 'silver',   minXp:    20000, maxXp:    29999 },
-  { level:  9, name: 'Silver 3',    card: 'silver',   minXp:    30000, maxXp:    39999 },
-  { level: 10, name: 'Silver 4',    card: 'silver',   minXp:    40000, maxXp:    49999 },
-  { level: 11, name: 'Silver 5',    card: 'silver',   minXp:    50000, maxXp:    99999 },
+  { level:  9, name: 'Gold I',       card: 'gold',     minXp:      500000, maxXp:         999999 },
+  { level: 10, name: 'Gold II',      card: 'gold',     minXp:     1000000, maxXp:        1999999 },
+  { level: 11, name: 'Gold III',     card: 'gold',     minXp:     2000000, maxXp:        3499999 },
+  { level: 12, name: 'Gold IV',      card: 'gold',     minXp:     3500000, maxXp:        5999999 },
 
-  { level: 12, name: 'Gold 1',      card: 'gold',     minXp:   100000, maxXp:   149999 },
-  { level: 13, name: 'Gold 2',      card: 'gold',     minXp:   150000, maxXp:   199999 },
-  { level: 14, name: 'Gold 3',      card: 'gold',     minXp:   200000, maxXp:   249999 },
-  { level: 15, name: 'Gold 4',      card: 'gold',     minXp:   250000, maxXp:   299999 },
-  { level: 16, name: 'Gold 5',      card: 'gold',     minXp:   300000, maxXp:   449999 },
+  { level: 13, name: 'Platinum I',   card: 'platinum', minXp:     6000000, maxXp:        8499999 },
+  { level: 14, name: 'Platinum II',  card: 'platinum', minXp:     8500000, maxXp:       10999999 },
+  { level: 15, name: 'Platinum III', card: 'platinum', minXp:    11000000, maxXp:       14999999 },
+  { level: 16, name: 'Platinum IV',  card: 'platinum', minXp:    15000000, maxXp:       24999999 },
 
-  { level: 17, name: 'Platinum 1',  card: 'platinum', minXp:   450000, maxXp:   599999 },
-  { level: 18, name: 'Platinum 2',  card: 'platinum', minXp:   600000, maxXp:   749999 },
-  { level: 19, name: 'Platinum 3',  card: 'platinum', minXp:   750000, maxXp:   899999 },
-  { level: 20, name: 'Platinum 4',  card: 'platinum', minXp:   900000, maxXp:  1049999 },
-  { level: 21, name: 'Platinum 5',  card: 'platinum', minXp:  1050000, maxXp:  1199999 },
+  { level: 17, name: 'Diamond I',    card: 'diamond',  minXp:    25000000, maxXp:       39999999 },
+  { level: 18, name: 'Diamond II',   card: 'diamond',  minXp:    40000000, maxXp:       64999999 },
+  { level: 19, name: 'Diamond III',  card: 'diamond',  minXp:    65000000, maxXp:      109999999 },
+  { level: 20, name: 'Diamond IV',   card: 'diamond',  minXp:   110000000, maxXp:      199999999 },
+  { level: 21, name: 'Diamond V',    card: 'diamond',  minXp:   200000000, maxXp:      399999999 },
+  { level: 22, name: 'Diamond VI',   card: 'diamond',  minXp:   400000000, maxXp:      999999999 },
+  { level: 23, name: 'Diamond VII',  card: 'diamond',  minXp:  1000000000, maxXp:     1499999999 },
 
-  { level: 22, name: 'Jade 1',      card: 'jade',     minXp:  1200000, maxXp:  1349999 },
-  { level: 23, name: 'Jade 2',      card: 'jade',     minXp:  1350000, maxXp:  1499999 },
-  { level: 24, name: 'Jade 3',      card: 'jade',     minXp:  1500000, maxXp:  1649999 },
-  { level: 25, name: 'Jade 4',      card: 'jade',     minXp:  1650000, maxXp:  1799999 },
-  { level: 26, name: 'Jade 5',      card: 'jade',     minXp:  1800000, maxXp:  2299999 },
-
-  { level: 27, name: 'Sapphire 1',  card: 'sapphire', minXp:  2300000, maxXp:  2799999 },
-  { level: 28, name: 'Sapphire 2',  card: 'sapphire', minXp:  2800000, maxXp:  3299999 },
-  { level: 29, name: 'Sapphire 3',  card: 'sapphire', minXp:  3300000, maxXp:  3799999 },
-  { level: 30, name: 'Sapphire 4',  card: 'sapphire', minXp:  3800000, maxXp:  4299999 },
-  { level: 31, name: 'Sapphire 5',  card: 'sapphire', minXp:  4300000, maxXp:  5799999 },
-
-  { level: 32, name: 'Ruby 1',      card: 'ruby',     minXp:  5800000, maxXp:  7299999 },
-  { level: 33, name: 'Ruby 2',      card: 'ruby',     minXp:  7300000, maxXp:  8799999 },
-  { level: 34, name: 'Ruby 3',      card: 'ruby',     minXp:  8800000, maxXp: 10299999 },
-  { level: 35, name: 'Ruby 4',      card: 'ruby',     minXp: 10300000, maxXp: 11799999 },
-  { level: 36, name: 'Ruby 5',      card: 'ruby',     minXp: 11800000, maxXp: 16999999 },
-
-  { level: 37, name: 'Diamond 1',   card: 'diamond',  minXp: 17000000, maxXp: 21999999 },
-  { level: 38, name: 'Diamond 2',   card: 'diamond',  minXp: 22000000, maxXp: 26999999 },
-  { level: 39, name: 'Diamond 3',   card: 'diamond',  minXp: 27000000, maxXp: 31999999 },
-  { level: 40, name: 'Diamond 4',   card: 'diamond',  minXp: 32000000, maxXp: 36999999 },
-  { level: 41, name: 'Diamond 5',   card: 'diamond',  minXp: 37000000, maxXp: 99999999999 },
+  { level: 24, name: 'Eternal I',    card: 'eternal',  minXp:  1500000000, maxXp:     2199999999 },
+  { level: 25, name: 'Eternal II',   card: 'eternal',  minXp:  2200000000, maxXp:     3199999999 },
+  { level: 26, name: 'Eternal III',  card: 'eternal',  minXp:  3200000000, maxXp:     4499999999 },
+  { level: 27, name: 'Eternal IV',   card: 'eternal',  minXp:  4500000000, maxXp:     5999999999 },
+  { level: 28, name: 'Eternal V',    card: 'eternal',  minXp:  6000000000, maxXp:     7199999999 },
+  { level: 29, name: 'Eternal VI',   card: 'eternal',  minXp:  7200000000, maxXp:     8299999999 },
+  { level: 30, name: 'Eternal VII',  card: 'eternal',  minXp:  8300000000, maxXp:     8999999999 },
+  { level: 31, name: 'Eternal VIII', card: 'eternal',  minXp:  9000000000, maxXp:     9499999999 },
+  { level: 32, name: 'Eternal IX',   card: 'eternal',  minXp:  9500000000, maxXp:     9999999999 },
+  { level: 33, name: 'Eternal X',    card: 'eternal',  minXp: 10000000000, maxXp: 99999999999999 },
 ]);
 
 const { makeLadder } = require('./vipLadder');
@@ -130,10 +105,11 @@ const { makeLadder } = require('./vipLadder');
  */
 const PLATFORM_LADDER = makeLadder({
   key: 'platform',
-  label: 'Platform ladder — 41 levels, Wood to Diamond',
+  label: 'Standard ladder — 33 levels, Bronze I to Eternal X',
   bands: VIP_LEVELS,
-  unranked: { level: 0, name: 'Unranked', card: 'unranked' },
-  bonusGates: { daily: 2, weekly: 2, monthly: 7 },
+  unranked: { level: 0, name: 'Beginner', card: 'unranked' },
+  // hash.game: "Users must have a VIP Level of 1 or higher to receive bonus" (Bronze I).
+  bonusGates: { daily: 1, weekly: 1, monthly: 1 },
 });
 
 /** Level 0 — signed up, has not wagered enough to reach the first band. */

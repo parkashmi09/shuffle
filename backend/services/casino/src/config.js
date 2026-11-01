@@ -8,6 +8,7 @@ const {
   dbEnvShape,
   jwtEnvShape,
   adminJwtEnvShape,
+  secretEncryptionEnvShape,
   internalKeysEnvShape,
   serviceDiscoveryEnvShape,
 } = require('@ibitplay/common');
@@ -19,6 +20,9 @@ const config = loadEnv(
     ...dbEnvShape,
     ...jwtEnvShape,
     ...adminJwtEnvShape,
+    // The site's secret box key: the whitelabel hub link's secrets are sealed with it (wl-hub).
+    // Undeclared, `loadEnv` drops it and the box falls back to another key — every hub call 401s.
+    ...secretEncryptionEnvShape,
     // Identify this service to the others — see `internalAcl.js`.
     ...internalKeysEnvShape,
     ...serviceDiscoveryEnvShape,
@@ -47,6 +51,13 @@ const config = loadEnv(
      */
     INHOUSE_SERVER_AUTHORITY: coercers.bool(false),
 
+    /**
+     * Extra sportsbook / esports book game uids, comma-separated, beyond the
+     * ones `modules/games/gameEntitlement.js` knows. A launch of one needs the
+     * owner's `sports` flag instead of `casino` — docs/OWNER-PANEL.md §4.
+     */
+    SPORTS_BOOK_GAME_UIDS: coercers.optionalStr(),
+
     // ── Seamless wallet (the casino provider's bet/win callbacks) ─────
     // The key was hard-coded in legacy/index.js:2376 and is in the repository
     // history — rotate it with the provider before this goes live.
@@ -71,6 +82,13 @@ const config = loadEnv(
     SEAMLESS_SIGN_MODE: coercers.str('legacy'),
 
     /**
+     * The provider's callback source IPs. The legacy signature covers neither the member nor the
+     * amount, so this is what stops a captured one being replayed: set it on any live server.
+     * Empty = any source (local development).
+     */
+    SEAMLESS_ALLOWED_IPS: coercers.list([]),
+
+    /**
      * The operator API — the outbound half of the same integration.
      *
      * Legacy hard-coded `https://staging.gsimw.com/api/operators`. A STAGING
@@ -89,6 +107,20 @@ const config = loadEnv(
      * pointed at their own machine.
      */
     SEAMLESS_LOBBY_URL: coercers.optionalStr(),
+
+    // ── Original Games Aggregator (BC Originals) — modules/original-games ──
+    // All three secrets come from onboarding. `OG_ENV` follows the CREDENTIAL:
+    // a sandbox key opens `demo` sessions only, production opens `real`.
+    OG_BASE_URL: coercers.optionalStr(),
+    OG_API_KEY: coercers.optionalStr(),
+    OG_API_SECRET: coercers.optionalStr(),
+    OG_WEBHOOK_SECRET: coercers.optionalStr(),
+    OG_ENV: coercers.str('sandbox'),
+    OG_TIMEOUT_MS: coercers.int(10_000),
+    OG_RETURN_URL: coercers.optionalStr(),
+    OG_DEPOSIT_URL: coercers.optionalStr(),
+    // Our test user that answers for `__aggregator_validation__` in their validation run.
+    OG_VALIDATION_USER_ID: coercers.optionalStr(),
 
     // ── Slotegrator / GIS ─────────────────────────────────────────────
     // The merchant id and key were hard-coded at the top of

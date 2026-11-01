@@ -6,8 +6,9 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs'
 import { toast } from 'sonner'
 
-import { api, errorMessage } from '@/lib/api/client'
+import { api } from '@/lib/api/client'
 import type { Paged, Query } from '@/lib/api/types'
+import { notifyError } from '@/lib/notify'
 
 /** GET a single resource. `path` is a gateway path (`admin/dashboard`). */
 export function useApi<T>(path: string | null, query?: Query, options?: Partial<UseQueryOptions<T>>) {
@@ -36,20 +37,25 @@ export function usePagedApi<T>(path: string | null, query?: Query, options?: Par
  * declared by the caller.
  */
 export function useListState(extraKeys: string[] = [], defaults: Record<string, string> = {}) {
+  // Callers pass fresh array/object literals every render: memoise on their content.
+  const keyList = extraKeys.join('|')
+  const defaultsKey = JSON.stringify(defaults)
+
   const parsers = useMemo(() => {
+    const dflt = JSON.parse(defaultsKey) as Record<string, string>
+
     const p: Record<string, ReturnType<typeof parseAsString.withDefault> | ReturnType<typeof parseAsInteger.withDefault>> = {
       page: parseAsInteger.withDefault(1),
       limit: parseAsInteger.withDefault(20),
       search: parseAsString.withDefault(''),
-      sort: parseAsString.withDefault(defaults.sort ?? ''),
-      order: parseAsString.withDefault(defaults.order ?? '')
+      sort: parseAsString.withDefault(dflt.sort ?? ''),
+      order: parseAsString.withDefault(dflt.order ?? '')
     }
 
-    for (const key of extraKeys) p[key] = parseAsString.withDefault(defaults[key] ?? '')
+    for (const key of keyList ? keyList.split('|') : []) p[key] = parseAsString.withDefault(dflt[key] ?? '')
 
     return p
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraKeys.join('|')])
+  }, [keyList, defaultsKey])
 
   const [state, setState] = useQueryStates(parsers, { history: 'replace' })
 
@@ -77,7 +83,8 @@ export function useListState(extraKeys: string[] = [], defaults: Record<string, 
 
 type MutationSpec<TVars, TResult> = {
   fn: (vars: TVars) => Promise<TResult>
-  /** Query-key prefixes to refetch on success (`['paged', 'admin/staff']`). */
+
+  /** Query-key prefixes to refetch on success (`['paged', 'admin/reports/players']`). */
   invalidate?: (string | null)[][]
   success?: string | ((result: TResult, vars: TVars) => string)
   onSuccess?: (result: TResult, vars: TVars) => void
@@ -94,7 +101,7 @@ export function useApiMutation<TVars = void, TResult = unknown>(spec: MutationSp
       if (spec.success) toast.success(typeof spec.success === 'function' ? spec.success(result, vars) : spec.success)
       spec.onSuccess?.(result, vars)
     },
-    onError: error => toast.error(errorMessage(error))
+    onError: error => notifyError(error)
   })
 }
 

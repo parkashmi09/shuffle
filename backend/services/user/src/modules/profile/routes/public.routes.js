@@ -1,11 +1,15 @@
 'use strict';
 
 const { Router } = require('express');
-const { validate, createRateLimiter } = require('@ibitplay/common');
+const { validate, createRateLimiter, response, asyncHandler } = require('@ibitplay/common');
 
 const v = require('../profile.validators');
 const { ProfileService } = require('../profile.service');
 const { createControllers } = require('../controllers');
+/* The medals module's service, imported directly as `user.routes.js` imports the
+   email module's: same service, and the path belongs beside `/:userId/public`. */
+const { MedalsService } = require('../../medals/medals.service');
+const medalsV = require('../../medals/medals.validators');
 
 /**
  * Referral-code checking, for the signup form before an account exists.
@@ -46,6 +50,27 @@ module.exports = function publicRoutes(deps) {
   });
 
   router.get('/:userId/public', profileLimiter, validate(v.userIdParam), ctrl.publicProfile);
+
+  /**
+   * Another player's UNLOCKED medals — gap 9. Public for the reason the profile
+   * above is, and on a budget of the same size but its own (the dialog reads
+   * both, so a shared one would halve the profiles a visitor can open). Runs
+   * only the medals' own-database rules, so a visitor cannot drive casino- and
+   * sports-service reads; see `MedalsService.forPublic`.
+   */
+  const medalsLimiter = createRateLimiter({
+    name: 'profile:public-medals',
+    windowMs: 15 * 60_000,
+    max: 60,
+    enabled: deps.config.RATE_LIMIT_ENABLED !== false,
+  });
+  const medals = new MedalsService(deps);
+  router.get(
+    '/:userId/medals',
+    medalsLimiter,
+    validate(medalsV.publicMedals),
+    asyncHandler(async (req, res) => response.ok(res, await medals.forPublic(req.params.userId)))
+  );
 
   return router;
 };

@@ -8,6 +8,9 @@ function createControllers({ service, emails }) {
   return {
     get: asyncHandler(async (req, res) => response.ok(res, await service.get(req.user.id))),
 
+    /** Pick one of the operator's avatars (VIP-level gated). */
+    setAvatar: asyncHandler(async (req, res) => response.ok(res, await service.setAvatar(req.user.id, req.body.avatarId))),
+
     /** @legacy PUT /editProfile */
     update: asyncHandler(async (req, res) => response.ok(res, await service.update(req.user.id, req.body))),
 

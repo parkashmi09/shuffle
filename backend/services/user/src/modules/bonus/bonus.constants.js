@@ -70,7 +70,9 @@ const BONUS_TYPE_NAMES = Object.freeze(Object.keys(BONUS_TYPES));
  *     target in `../wager` and by nothing else, so a bonus is withdrawable as
  *     soon as that target is met.
  *   - Existing BJB balances are untouched by this. Nothing migrates them; they
- *     stay where they are and remain swappable at 0% (`swap.constants.js`).
+ *     stay where they are and remain swappable OUT at 0% (`swap.constants.js`).
+ *     BJB is now retired (`RETIRED_CURRENCIES` in @ibitplay/common): the
+ *     wallet refuses to credit it, so it can never be the bonus currency again.
  *
  * Legacy credited the bonus column directly with
  * `UPDATE credits SET bjb = COALESCE(bjb,0) + $1` and wrote no ledger row, so a

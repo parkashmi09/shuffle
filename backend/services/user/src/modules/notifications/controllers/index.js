@@ -27,10 +27,8 @@ function createControllers({ service }) {
       });
     }),
 
-    unreadCount: asyncHandler(async (req, res) => {
-      const result = await service.unreadCount({ userId: req.user.id });
-      return response.ok(res, result?.data ?? result);
-    }),
+    /** `{ unread, byCategory: { system, transactions, promotions } }`. */
+    unreadCount: asyncHandler(async (req, res) => response.ok(res, await service.unreadCount({ userId: req.user.id }))),
 
     /** One row. The id is the caller's to name; ownership is enforced by the
         `user_id` in the update's WHERE, so naming somebody else's marks nothing. */

@@ -9,7 +9,23 @@
  * `verify-tier2.js`, which drives the game engine instead. Nothing in src/
  * imports any of the three.
  */
+import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+
+// Demo passwords are random per account and live only in the gitignored
+// .demo-credentials.local.md (written by `node scripts/seed-data.js --demo`).
+// Read them through the seed's helper — and never print them.
+const { lookupPassword } = createRequire(import.meta.url)('./scripts/lib/demo-credentials.js');
+const demoPassword = (login) => {
+  try {
+    return lookupPassword(login);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+};
+// Fail before touching anything if the file or an account this run signs in as is missing.
+for (const login of ['demo_player01', 'demo_player03']) demoPassword(login);
 
 const { default: pg } = await import(pathToFileURL('./node_modules/pg/lib/index.js').href);
 
@@ -25,7 +41,7 @@ const login = async (u) => {
   const r = await fetch(B + '/user/auth/login', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: u, password: 'Demo@12345' }),
+    body: JSON.stringify({ identifier: u, password: demoPassword(u) }),
   });
   return (await r.json())?.data;
 };

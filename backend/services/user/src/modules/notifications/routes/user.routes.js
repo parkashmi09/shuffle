@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { validate } = require('@ibitplay/common');
+const { validate, noBody, noQuery } = require('@ibitplay/common');
 
 const v = require('../notifications.validators');
 const { NotificationsService } = require('../notifications.service');
@@ -20,11 +20,11 @@ module.exports = function userRoutes(deps) {
   const router = Router();
 
   router.get('/', validate(v.list), ctrl.list);
-  router.get('/unread-count', ctrl.unreadCount);
-  router.post('/read-all', ctrl.readAll);
+  router.get('/unread-count', noQuery(), ctrl.unreadCount);
+  router.post('/read-all', noBody(), ctrl.readAll);
   /* AFTER `/read-all`, or Express matches that literal against `:id` and a
      read-all arrives as a request to mark a notification called "read-all". */
-  router.post('/:id/read', validate(v.readOne), ctrl.readOne);
+  router.post('/:id/read', noBody(), validate(v.readOne), ctrl.readOne);
 
   return router;
 };

@@ -11,12 +11,12 @@ const { username } = require('../profile/profile.validators');
  *
  * The password rule is length-first. Composition rules ("one uppercase, one
  * symbol") push people toward `Password1!` — predictable to an attacker and
- * hard for the person to remember — so the floor is 10 characters with no
+ * hard for the person to remember — so the floor is 8 characters with no
  * character-class requirement, which is both stronger and kinder.
  */
 const password = z
   .string({ required_error: 'password is required' })
-  .min(10, 'password must be at least 10 characters')
+  .min(8, 'password must be at least 8 characters')
   .max(200, 'password must be at most 200 characters');
 
 /** Login accepts a username, an email or a phone number in one field. */
@@ -124,7 +124,13 @@ const revokeSession = {
   params: z.object({ sessionId: z.string().trim().regex(/^\d+$/, 'sessionId must be numeric') }),
 };
 
+/** The one-time code the Google callback handed the player site. */
+const googleExchange = {
+  body: z.object({ code: z.string().trim().min(16).max(128), nonce: z.string().regex(/^[A-Za-z0-9_-]{22,128}$/) }).strict(),
+};
+
 module.exports = {
+  googleExchange,
   login,
   refresh,
   logout,

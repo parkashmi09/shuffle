@@ -5,7 +5,7 @@
  *
  * ── WHY THESE SLUGS ──────────────────────────────────────────────────────
  *
- * The first five mirror the aggregator collections in `games.constants.js`,
+ * All but `trending` mirror the aggregator collections in `games.constants.js`,
  * so the admin screens keep the vocabulary operators already use. `trending`
  * is new and is the home page's own row — the one the site rendered from a
  * hard-coded file (`src/Pages/homePage/trendingGamesData.js`, twenty games
@@ -21,7 +21,6 @@ const COLLECTIONS = Object.freeze({
   'live-casino': { label: 'Live casino' },
   'popular-slots': { label: 'Popular slots' },
   crash: { label: 'Crash games' },
-  indian: { label: 'Indian games' },
 });
 
 const COLLECTION_SLUGS = Object.freeze(Object.keys(COLLECTIONS));

@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
 import { serverConfig } from '@/configs/site'
 
@@ -15,6 +15,9 @@ export type StaffTokenPayload = {
   executiveId?: number | null
   iat: number
   exp: number
+
+  /** Whitelabel preview: a read-only session (backend refuses every write). */
+  ro?: boolean
 }
 
 export function decodeToken(token: string): StaffTokenPayload | null {
@@ -30,9 +33,9 @@ export function decodeToken(token: string): StaffTokenPayload | null {
   }
 }
 
-export async function readSessionToken(): Promise<string | null> {
+export async function readSessionToken(name = serverConfig.cookieName): Promise<string | null> {
   const jar = await cookies()
-  const token = jar.get(serverConfig.cookieName)?.value
+  const token = jar.get(name)?.value
 
   if (!token) return null
   const payload = decodeToken(token)
@@ -42,20 +45,23 @@ export async function readSessionToken(): Promise<string | null> {
   return token
 }
 
-export async function writeSessionToken(token: string) {
+export async function writeSessionToken(token: string, name = serverConfig.cookieName) {
   const jar = await cookies()
 
-  jar.set(serverConfig.cookieName, token, {
+  // Secure over https only (Apache sends X-Forwarded-Proto), so a plain-http local run can sign in.
+  const secure = (await headers()).get('x-forwarded-proto') === 'https'
+
+  jar.set(name, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure,
     path: '/',
     maxAge: serverConfig.cookieMaxAgeSeconds
   })
 }
 
-export async function clearSessionToken() {
+export async function clearSessionToken(name = serverConfig.cookieName) {
   const jar = await cookies()
 
-  jar.set(serverConfig.cookieName, '', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 0 })
+  jar.set(name, '', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 0 })
 }

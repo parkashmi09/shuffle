@@ -1,11 +1,12 @@
 'use strict';
 
 const { Router } = require('express');
-const { validate } = require('@ibitplay/common');
+const { validate, refuseCustomCurrencies, noQuery } = require('@ibitplay/common');
 
 const v = require('../gis.validators');
 const { buildGisService } = require('../gis.factory');
 const { createControllers } = require('../controllers');
+const { requireGameEntitled } = require('../../games/gameEntitlement');
 
 /**
  * Opening a game, and the upstream reads a lobby needs to render one.
@@ -18,22 +19,28 @@ const { createControllers } = require('../controllers');
 module.exports = function userRoutes(deps) {
   const ctrl = createControllers({ service: buildGisService(deps) });
   const router = Router();
+  // Custom coins (owner-created, no provider behind them) never reach this module: CURRENCY_NOT_SUPPORTED_FOR_GAMES.
+  router.use(refuseCustomCurrencies('GAMES'));
+
+  // The owner's plan — see `games/gameEntitlement.js`. Demo too: a provider
+  // outside the plan is not offered at all.
+  const entitled = requireGameEntitled(deps, (req) => ({ uid: req.body.gameUuid }), { mustExist: true });
 
   /** @legacy POST /api/gis/games/init */
-  router.post('/launch', validate(v.launch), ctrl.launch);
+  router.post('/launch', validate(v.launch), entitled, ctrl.launch);
   /** @legacy POST /api/gis/games/init-demo */
-  router.post('/launch-demo', validate(v.launchDemo), ctrl.launchDemo);
+  router.post('/launch-demo', validate(v.launchDemo), entitled, ctrl.launchDemo);
   /** @legacy GET /api/gis/games/lobby */
   router.get('/lobby', validate(v.lobby), ctrl.lobby);
 
   /** @legacy GET /api/gis/game-tags */
   router.get('/game-tags', validate(v.gameTags), ctrl.gameTags);
   /** @legacy GET /api/gis/limits */
-  router.get('/limits', ctrl.limits);
+  router.get('/limits', noQuery(), ctrl.limits);
   /** @legacy GET /api/gis/limits/freespin */
-  router.get('/limits/freespin', ctrl.freespinLimits);
+  router.get('/limits/freespin', noQuery(), ctrl.freespinLimits);
   /** @legacy GET /api/gis/jackpots */
-  router.get('/jackpots', ctrl.jackpots);
+  router.get('/jackpots', noQuery(), ctrl.jackpots);
   /** @legacy GET /api/gis/freespins/bets */
   router.get('/freespins/bets', validate(v.freespinBets), ctrl.freespinBets);
 
@@ -47,7 +54,7 @@ module.exports = function userRoutes(deps) {
    * is that `mine` is a literal and there is no `/freespins/:id` on this
    * router for it to be swallowed by. If one is ever added, it goes below.
    */
-  router.get('/freespins/mine', ctrl.listMyFreespins);
+  router.get('/freespins/mine', noQuery(), ctrl.listMyFreespins);
 
   return router;
 };

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { notifyError } from '@/lib/notify'
 
 type Variant = { key: string; label: string; description: string }
 
@@ -42,9 +43,13 @@ const PolicySelect = ({
   const confirm = async () => {
     if (!pending) return
     setBusy(true)
+
     try {
       await onChange(pending)
       setPending(null)
+    } catch (error) {
+      // Stay open; a mutation has already toasted, anything else is toasted here.
+      notifyError(error)
     } finally {
       setBusy(false)
     }

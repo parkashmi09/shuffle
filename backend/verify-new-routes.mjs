@@ -15,7 +15,23 @@
  * Gaps 2 and 19 are `verify-tier2.js`, which drives the game engine instead.
  */
 import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+
+// Demo passwords are random per account and live only in the gitignored
+// .demo-credentials.local.md (written by `node scripts/seed-data.js --demo`).
+// Read them through the seed's helper — and never print them.
+const { lookupPassword } = createRequire(import.meta.url)('./scripts/lib/demo-credentials.js');
+const demoPassword = (login) => {
+  try {
+    return lookupPassword(login);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+};
+// Fail before touching anything if the file or an account this run signs in as is missing.
+for (const login of ['demo_player01', 'demo_player03']) demoPassword(login);
 
 const { default: pg } = await import(pathToFileURL('./node_modules/pg/lib/index.js').href);
 
@@ -130,7 +146,7 @@ try {
 
   // ══════════════════════════════════════════════════════════════════════
   section('gap 20 — joinedAt is a date, not a boolean');
-  const [, demo] = await post('/user/auth/login', { identifier: 'demo_player03', password: 'Demo@12345' });
+  const [, demo] = await post('/user/auth/login', { identifier: 'demo_player03', password: demoPassword('demo_player03') });
   const DH = { authorization: 'Bearer ' + demo.data.accessToken };
   [s, j] = await get('/user/profile', DH);
   const joined = j?.data?.joinedAt;
@@ -179,7 +195,7 @@ try {
 
   [, j] = await post('/user/notifications/999999999/read', {}, DH);
   check('a foreign notification id marks nothing', j?.data?.marked === 0, JSON.stringify(j?.data));
-  const [, other] = await post('/user/auth/login', { identifier: 'demo_player01', password: 'Demo@12345' });
+  const [, other] = await post('/user/auth/login', { identifier: 'demo_player01', password: demoPassword('demo_player01') });
   [, j] = await get('/user/notifications', { authorization: 'Bearer ' + other.data.accessToken });
   check('another player sees NONE of them', (j?.data?.length ?? 0) === 0, `${j?.data?.length} rows`);
   [s] = await get('/user/notifications?limit=0', DH);
@@ -188,7 +204,7 @@ try {
   // ══════════════════════════════════════════════════════════════════════
   section('gap 25 — sign one device out');
   const [, second] = await post('/user/auth/login',
-    { identifier: 'demo_player03', password: 'Demo@12345', deviceLabel: 'probe-device' });
+    { identifier: 'demo_player03', password: demoPassword('demo_player03'), deviceLabel: 'probe-device' });
   [, j] = await get('/user/auth/sessions', DH);
   const target = (j?.data ?? []).find((x) => x.device_label === 'probe-device');
   check('the second device is listed', !!target, `id=${target?.id}`);

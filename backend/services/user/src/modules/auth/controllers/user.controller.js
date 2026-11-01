@@ -1,6 +1,7 @@
 'use strict';
 
 const { response, asyncHandler } = require('@ibitplay/common');
+const refreshCookie = require('../refreshCookie');
 
 /** Endpoints that act on the caller's own session. */
 function createUserController({ service }) {
@@ -11,6 +12,7 @@ function createUserController({ service }) {
 
     logout: asyncHandler(async (req, res) => {
       const result = await service.logout(req.body, req.user);
+      refreshCookie.clear(req, res);
       return response.ok(res, result);
     }),
 
@@ -20,6 +22,14 @@ function createUserController({ service }) {
         ...result,
         message: 'Password changed. All other sessions have been signed out.',
       });
+    }),
+
+    activity: asyncHandler(async (req, res) => {
+      return response.ok(res, await service.recordActivity(req.user));
+    }),
+
+    idleCheck: asyncHandler(async (req, res) => {
+      return response.ok(res, await service.idleCheck(req.user));
     }),
 
     sessions: asyncHandler(async (req, res) => {

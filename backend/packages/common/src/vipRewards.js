@@ -8,7 +8,9 @@
  * gives both halves of the programme, and so bonus / VIP / casino accrual
  * cannot drift onto different rate tables.
  *
- * Amounts are BJB face values (decimal strings). Rates are fractions of USD
+ * Amounts are face values (decimal strings) in the currency they are paid in:
+ * level-ups and rank-ups in `REWARD_CURRENCY` (USDT, see `currencies.js`), the
+ * daily / weekly / monthly awards in the site's configurable bonus currency. Rates are fractions of USD
  * stake (so `0.002` is 0.2%), matching the figure casino-service used to
  * hard-code as `RAKEBACK_RATE`.
  */
@@ -32,9 +34,10 @@ const CLAIM_WINDOW_MS = PERIOD_MS;
  * Per-card schedule.
  *
  * `rakebackRate` — fraction of USD stake accrued into Instant Rakeback.
- * `daily` / `weekly` / `monthly` — BJB awarded into `bonus_history` when due.
- * `rankUp` — BJB auto-credited the first time the player enters this card.
- * `levelUp` — BJB auto-credited for each level gained inside (or into) the card.
+ * `daily` / `weekly` / `monthly` — awarded into `bonus_history` when due, paid
+ *   in the site's bonus currency on claim.
+ * `rankUp` — USDT auto-credited the first time the player enters this card.
+ * `levelUp` — USDT auto-credited for each level gained inside (or into) the card.
  */
 const CARD_REWARDS = Object.freeze({
   [UNRANKED.card]: {
@@ -117,13 +120,27 @@ const CARD_REWARDS = Object.freeze({
     rankUp: '1000',
     levelUp: '60',
   },
+  /* hash.game's top tier (Eternal I–X). Its amounts are not public ("Maximum Level Up, Weekly &
+     Monthly Bonus"), so it starts one step above Diamond. */
+  eternal: {
+    rakebackRate: '0.007',
+    daily: '100',
+    weekly: '400',
+    monthly: '1500',
+    rankUp: '1500',
+    levelUp: '100',
+  },
 });
+
+/* Loyalty Club ladder (vipLadders.js, bitcasino + smartbet only): each level pays the matching
+   platform tier's schedule, Beginner as unranked, Fan as bronze … Hero as eternal. */
+const LOYALTY_CARDS = { beginner: UNRANKED.card, fan: 'bronze', expert: 'silver', master: 'gold', guru: 'platinum', legend: 'diamond', hero: 'eternal' };
 
 /** Fallback when a player's rate has not been synced yet. Matches bronze. */
 const DEFAULT_RAKEBACK_RATE = CARD_REWARDS.bronze.rakebackRate;
 
 function rewardsForCard(card) {
-  return CARD_REWARDS[card] ?? CARD_REWARDS[UNRANKED.card];
+  return CARD_REWARDS[card] ?? CARD_REWARDS[LOYALTY_CARDS[card]] ?? CARD_REWARDS[UNRANKED.card];
 }
 
 function rewardsForLevel(level) {
@@ -148,8 +165,10 @@ function periodicAmount(card, type) {
   return '0';
 }
 
-function levelUpAmount(level) {
-  return rewardsForLevel(level).levelUp;
+/** `card` decides on the Loyalty Club ladder, whose level numbers are not the platform's, and for a level the admin added. */
+function levelUpAmount(level, card) {
+  const byCard = LOYALTY_CARDS[card] || !VIP_LEVELS.some((b) => b.level === level);
+  return (byCard ? rewardsForCard(card) : rewardsForLevel(level)).levelUp;
 }
 
 function rankUpAmount(card) {

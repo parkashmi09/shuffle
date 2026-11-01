@@ -1,11 +1,13 @@
 'use strict';
 
-const { createLogger, ServiceClient, resolveInternalKey } = require('@ibitplay/common');
+const { createLogger, ServiceClient, resolveInternalKey, configureEntitlements, configureCurrencyRegistry } = require('@ibitplay/common');
 const { createAuthMiddleware } = require('@ibitplay/auth');
 const db = require('@ibitplay/db');
 
 const config = require('./config');
 const { resolveStaff } = require('./modules/staff-directory/staffDirectory.service');
+const { createEntitlementsStore } = require('./modules/entitlements/entitlements.store');
+const { CurrenciesService } = require('./modules/currencies/currencies.service');
 
 /**
  * The admin-service container.
@@ -100,6 +102,7 @@ async function createContainer({ logger: injectedLogger } = {}) {
 
   const auth = createAuthMiddleware({
     config,
+    loadSession: (id) => connection.models.AuthSession.findByPk(id, { attributes: ['revoked_at'], raw: true }),
     loadUser: async (userId) => {
       const user = await connection.models.Users.findByPk(userId, {
         attributes: ['id', 'status', 'is_locked', 'system_locked', 'bet_status'],
@@ -110,9 +113,24 @@ async function createContainer({ logger: injectedLogger } = {}) {
     loadStaff: async (staffId, executiveId) => resolveStaff(connection.models, staffId, executiveId),
   });
 
+  /**
+   * The owner's entitlements, from `owner_entitlements` (docs/OWNER-PANEL.md).
+   * Registered as this process's source, so `entitlements.isFeatureEntitled()`
+   * here reads memory rather than calling ourselves. `index.js` starts it.
+   */
+  const entitlementsStore = createEntitlementsStore({ config, logger, db: connection });
+  configureEntitlements({ read: () => entitlementsStore.current() });
+  // The coin registry is this service's own table: read it directly.
+  configureCurrencyRegistry({
+    read: () => new CurrenciesService({ models: connection.models, logger, config, clients }).list(),
+    logger,
+    config,
+  });
+
   return {
     config,
     logger,
+    entitlementsStore,
     db: connection,
     models: connection.models,
     clients,

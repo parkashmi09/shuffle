@@ -1,15 +1,20 @@
 import * as React from 'react'
 
+import MuiCard from '@mui/material/Card'
+
 import { cn } from '@/lib/utils'
+
+// Views flatten or re-round cards for their old look (72 pass `shadow-none`); every ccpayment card has the soft shadow and 16px corners.
+const DROP = /(?:^|\s)(?:shadow-none|rounded(?:-[a-z0-9]+)*(?:-\[[^\]\s]+\])?|border-dashed)(?=\s|$)/g
 
 function Card({ className, size = 'default', ...props }: React.ComponentProps<'div'> & { size?: 'default' | 'sm' }) {
   return (
-    <div
+    <MuiCard
       data-slot='card'
       data-size={size}
       className={cn(
-        'group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm shadow-xs ring-1 [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
-        className
+        'group/card bg-card text-card-foreground flex flex-col gap-(--card-spacing) overflow-hidden rounded-2xl py-(--card-spacing) text-sm [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] *:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl',
+        className?.replace(DROP, ' ')
       )}
       {...props}
     />
@@ -33,7 +38,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='card-title'
-      className={cn('font-heading text-base leading-normal font-medium group-data-[size=sm]/card:text-sm', className)}
+      className={cn('font-heading text-heading text-base leading-normal font-semibold group-data-[size=sm]/card:text-sm', className)}
       {...props}
     />
   )

@@ -3,6 +3,7 @@
 const { EVENTS, AUDIENCE, PLATFORM_EVENTS, encode } = require('@ibitplay/socket');
 
 const { GameEngine } = require('./engine/gameEngine');
+const { ChallengeService } = require('../challenges/challenges.service');
 const { CrashLoop } = require('./engine/crashLoop');
 const { KenoLoop } = require('./engine/kenoLoop');
 
@@ -126,7 +127,9 @@ const refuse = (error) => ({
  * round being taken back. So it never throws.
  * ═════════════════════════════════════════════════════════════════════════
  */
-function announceSettled({ context, game, coin, amount, settled, logger }) {
+function announceSettled({ context, game, coin, amount, settled, logger, challenges }) {
+  // rainbet: the round against the open challenges on its game; never awaited, never throws.
+  void challenges?.onSettled({ userId: context.userId, game, coin, amount, profit: settled?.profit, betId: settled?.betId });
   try {
     context.socket.nsp.emit(
       PLATFORM_EVENTS.BET_SETTLED,
@@ -147,6 +150,7 @@ function announceSettled({ context, game, coin, amount, settled, logger }) {
 
 function register({ on, deps }) {
   const engine = new GameEngine(deps);
+  const challenges = new ChallengeService(deps);
   const { logger, config } = deps;
 
   /**
@@ -186,6 +190,27 @@ function register({ on, deps }) {
          */
         const canProfit = await engine.canProfit(context.userId);
 
+        /**
+         * VALIDATE FIRST, THEN TAKE THE STAKE.
+         *
+         * `game.play` is pure — it draws and prices the round and moves no
+         * money — so it runs before the debit. A game returning `null` is
+         * legacy's silent `return` on a bad parameter (Limbo's
+         * `if (payout < 1.01) return;`); it used to arrive AFTER the stake was
+         * taken and needed a refund, a reversed wager and a bet row marked
+         * `refunded`. Now an invalid round never opens a bet at all.
+         */
+        let outcome;
+        try {
+          outcome = game.play({ ...payload, canProfit, serverAuthority, logger });
+        } catch (error) {
+          logger?.warn({ err: error, game: game.key }, 'In-house round refused before the stake');
+          outcome = null;
+        }
+        if (!outcome) {
+          return { command: 'error', message: 'Invalid bet parameters', code: 'INHOUSE_INVALID_STAKE' };
+        }
+
         let bet;
         try {
           bet = await engine.placeBet({
@@ -195,28 +220,11 @@ function register({ on, deps }) {
             amount,
           });
         } catch (error) {
-          if (error.code?.startsWith('INHOUSE_')) return refuse(error);
+          if (error.code?.startsWith('INHOUSE_') || error.code === 'NOT_ENTITLED') return refuse(error);
           throw error;
         }
 
         try {
-          const outcome = game.play({ ...payload, canProfit, serverAuthority, logger });
-
-          /**
-           * A game returning `null` is legacy's silent `return` on a bad
-           * parameter — several do it, e.g. Limbo's `if (payout < 1.01) return;`.
-           * The stake has already been taken by then, so it is given back.
-           */
-          if (!outcome) {
-            await engine.refund({
-              userId: context.userId,
-              betId: bet.betId,
-              coin: bet.currency,
-              amount: bet.stake,
-            });
-            return { command: 'error', message: 'Invalid bet parameters', code: 'INHOUSE_INVALID_STAKE' };
-          }
-
           const settled = await engine.settle({
             userId: context.userId,
             betId: bet.betId,
@@ -235,6 +243,7 @@ function register({ on, deps }) {
             amount: bet.stake,
             settled,
             logger,
+            challenges,
           });
 
           /**
@@ -264,7 +273,7 @@ function register({ on, deps }) {
               logger?.error({ err: refundError, betId: bet.betId }, 'Refund after a failed round ALSO failed')
             );
 
-          if (error.code?.startsWith('INHOUSE_')) return refuse(error);
+          if (error.code?.startsWith('INHOUSE_') || error.code === 'NOT_ENTITLED') return refuse(error);
           throw error;
         }
       },
@@ -348,7 +357,7 @@ function register({ on, deps }) {
             });
 
             announceSettled({
-              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger,
+              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger, challenges,
             });
             return { command: 'busted', ...settled, win: settled.isWinner };
           }
@@ -361,7 +370,7 @@ function register({ on, deps }) {
               round, profit: outcome.profit, result: outcome.result, isWinner: outcome.isWinner,
             });
             announceSettled({
-              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger,
+              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger, challenges,
             });
             /**
              * `slot` and `path` are Plinko's, and they only exist once the ball
@@ -403,7 +412,7 @@ function register({ on, deps }) {
               status: 'lost',
             });
             announceSettled({
-              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger,
+              context, game: game.key, coin: round.coin, amount: round.amount, settled, logger, challenges,
             });
             return { command: 'busted', ...settled, win: false };
           }
@@ -418,7 +427,7 @@ function register({ on, deps }) {
 
           return { command: 'clicked', profit: stepped.profit, id: payload?.land ?? payload?.id, card: stepped.card };
         } catch (error) {
-          if (error.code?.startsWith('INHOUSE_')) return refuse(error);
+          if (error.code?.startsWith('INHOUSE_') || error.code === 'NOT_ENTITLED') return refuse(error);
           throw error;
         }
       },
@@ -458,7 +467,7 @@ function register({ on, deps }) {
         }
         return await crashLoop.join({ userId: context.userId, amount: payload?.amount, coin: payload?.coin });
       } catch (error) {
-        if (error.code?.startsWith('INHOUSE_')) return refuse(error);
+        if (error.code?.startsWith('INHOUSE_') || error.code === 'NOT_ENTITLED') return refuse(error);
         throw error;
       }
     },
@@ -507,7 +516,7 @@ function register({ on, deps }) {
           numbers: payload?.numbers,
         });
       } catch (error) {
-        if (error.code?.startsWith('INHOUSE_')) return refuse(error);
+        if (error.code?.startsWith('INHOUSE_') || error.code === 'NOT_ENTITLED') return refuse(error);
         throw error;
       }
     },

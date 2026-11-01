@@ -15,6 +15,10 @@ function createControllers({ service }) {
       return response.paginated(res, result, { page: Math.floor(offset / limit) + 1, limit });
     }),
 
+    cancel: asyncHandler(async (req, res) =>
+      response.ok(res, await service.cancel({ userId: req.user.id, withdrawalId: req.params.withdrawalId }))
+    ),
+
     /** @legacy GET /getFiatWithdrawData */
     listAll: asyncHandler(async (req, res) => {
       const { limit, offset } = req.query;
@@ -23,9 +27,14 @@ function createControllers({ service }) {
     }),
 
     /** @legacy POST /updateFiatWithdrawStatus */
-    updateStatus: asyncHandler(async (req, res) =>
-      response.ok(res, await service.updateStatus(req.body, req.staff))
-    ),
+    updateStatus: asyncHandler(async (req, res) => {
+      const { transactionPassword, ...body } = req.body;
+      await service.wallet.checkTransactionPassword(req.staff.id, transactionPassword, {
+        required: true,
+        executiveId: req.staff.executiveId ?? null,
+      });
+      return response.ok(res, await service.updateStatus(body, req.staff));
+    }),
   };
 }
 

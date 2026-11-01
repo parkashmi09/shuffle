@@ -37,12 +37,31 @@ const EXTENSIONS = {
     fair_client_seed: { type: DataTypes.STRING(128), allowNull: true, field: 'fair_client_seed' },
     fair_nonce: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0, field: 'fair_nonce' },
     fair_rotated_at: { type: DataTypes.DATE, allowNull: true, field: 'fair_rotated_at' },
+    // ── migration 077-tips ─────────────────────────────────────────────
+    // The player's own switch for receiving tips. No row = the default (on).
+    tips_enabled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'tips_enabled' },
+    // ── migration 169-privacy-preferences (rainbet) ────────────────────
+    show_bets_publicly: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'show_bets_publicly' },
+    show_statistics: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'show_statistics' },
+    tip_notifications: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'tip_notifications' },
+    // ── migration 177-userconfig-privacy-email (hash 167)───────────────────────
+    hide_gaming_data: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'hide_gaming_data' },
+    hide_username: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'hide_username' },
+    max_profit_alert: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'max_profit_alert' },
+    deposit_email: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'deposit_email' },
+    withdraw_email: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'withdraw_email' },
   },
 
   // ── migration 008-wager-columns ──────────────────────────────────────
   // Legacy created these with an ALTER TABLE run on every request that touched
   // the targetX endpoints, so they never reached the baseline schema.
   Users: {
+    // ── migration 180-user-email-verified: when the player proved `email` (deposit_email_verification).
+    email_verified_at: { type: DataTypes.DATE, allowNull: true, field: 'email_verified_at' },
+    // ── migration 178-player-must-change-password: a password an upline chose.
+    must_change_password: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'must_change_password' },
+    // ── migration 119-google-login: the Google account (`sub`) this player signs in with.
+    google_sub: { type: DataTypes.STRING(64), allowNull: true, field: 'google_sub' },
     wager_multiplier: { type: DataTypes.DECIMAL(10, 4), allowNull: true, defaultValue: 3, field: 'wager_multiplier' },
     lock_targetx: { type: DataTypes.BOOLEAN, allowNull: true, defaultValue: false, field: 'lock_targetx' },
     // ── migration 043-user-withdrawal-whitelist ────────────────────────
@@ -66,6 +85,74 @@ const EXTENSIONS = {
       allowNull: true,
       field: 'withdraw_locked_until',
     },
+    // ── migration 058-login-geo ────────────────────────────────────────
+    // Where the player last signed in from, and where they signed up.
+    last_country_code: { type: DataTypes.STRING(2), allowNull: true, field: 'last_country_code' },
+    last_country: { type: DataTypes.STRING(80), allowNull: true, field: 'last_country' },
+    last_city: { type: DataTypes.STRING(120), allowNull: true, field: 'last_city' },
+    last_isp: { type: DataTypes.STRING(160), allowNull: true, field: 'last_isp' },
+    signup_ip: { type: DataTypes.TEXT, allowNull: true, field: 'signup_ip' },
+    signup_country_code: { type: DataTypes.STRING(2), allowNull: true, field: 'signup_country_code' },
+    signup_country: { type: DataTypes.STRING(80), allowNull: true, field: 'signup_country' },
+    signup_city: { type: DataTypes.STRING(120), allowNull: true, field: 'signup_city' },
+    signup_isp: { type: DataTypes.STRING(160), allowNull: true, field: 'signup_isp' },
+    // migration 084-signup-region-ip-normalise
+    signup_region: { type: DataTypes.STRING(120), allowNull: true, field: 'signup_region' },
+    // ── migration 062-agent-money ──────────────────────────────────────
+    // Why each lock column is set: `{ <column>: { own, by: [staffId…] } }`.
+    // See `services/admin/src/modules/locks/lockSources.js`.
+    lock_sources: { type: DataTypes.JSONB, allowNull: false, defaultValue: {}, field: 'lock_sources' },
+    // ── migration 091-withdraw-lock ────────────────────────────────────
+    // The operator's withdrawal block — a lock column like `system_locked`,
+    // set through `POST /admin/locks` and cascaded by `lock_sources`. Not the
+    // timed `withdraw_locked_until` cooldown above.
+    withdraw_locked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'withdraw_locked' },
+    // ── migration 141-originals-lock ───────────────────────────────────
+    // Blocks Original Games only; `casino_locked` covers provider casino.
+    originals_locked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'originals_locked' },
+  },
+
+  // ── migration 062-agent-money ────────────────────────────────────────
+  // `lords.setCreditLimit` wrote this column before it existed — Sequelize
+  // dropped the attribute and the route reported success storing nothing.
+  Credits: {
+    credit_limit: { type: DataTypes.DECIMAL, allowNull: true, defaultValue: '0', field: 'credit_limit' },
+    // ── migration 151-idr-currency: the IDR balance (F2Pay's Indonesian deposits).
+    idr: { type: DataTypes.DECIMAL, allowNull: true, defaultValue: '0', field: 'idr' },
+    // ── migration 095-credits-sports-wallet: the wallet's own id (BIGSERIAL;
+    // `point_ledger.wallet_id` stores it). Postgres fills it — never written here.
+    id: { type: DataTypes.BIGINT, allowNull: true, field: 'id' },
+    // the zip's points columns.
+    // `credit` = jitna parent ne diya (deposit − withdraw), `all_point` = point ledger ka jod.
+    credit: { type: DataTypes.DECIMAL(18, 2), allowNull: false, defaultValue: '0', field: 'credit' },
+    all_point: { type: DataTypes.DECIMAL(18, 2), allowNull: false, defaultValue: '0', field: 'all_point' },
+    // ── migration 099-credits-for-everyone: player row = 'USER' (uid set).
+    // Staff/owner rows are read through the `StaffCredits` model (extended/).
+    user_type: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'USER', field: 'user_type' },
+  },
+
+  // ── migration 065-custom-coins ───────────────────────────────────────
+  // 'owner' on a custom coin's rate, which the owner panel sets; the site
+  // admin's rate editor refuses those rows (EXCHANGE_RATE_OWNER_MANAGED).
+  Exchangerate: {
+    managed_by: { type: DataTypes.STRING(20), allowNull: true, field: 'managed_by' },
+  },
+
+  // ── migration 058-login-geo ──────────────────────────────────────────
+  // The IP's location at each login / registration (see services/user geo).
+  UserLoginHistory: {
+    country_code: { type: DataTypes.STRING(2), allowNull: true, field: 'country_code' },
+    country: { type: DataTypes.STRING(80), allowNull: true, field: 'country' },
+    region: { type: DataTypes.STRING(120), allowNull: true, field: 'region' },
+    city: { type: DataTypes.STRING(120), allowNull: true, field: 'city' },
+    isp: { type: DataTypes.STRING(160), allowNull: true, field: 'isp' },
+    org: { type: DataTypes.STRING(160), allowNull: true, field: 'org' },
+    asn: { type: DataTypes.STRING(160), allowNull: true, field: 'asn' },
+    is_proxy: { type: DataTypes.BOOLEAN, allowNull: true, field: 'is_proxy' },
+    is_hosting: { type: DataTypes.BOOLEAN, allowNull: true, field: 'is_hosting' },
+    source: { type: DataTypes.STRING(16), allowNull: true, field: 'source' },
+    // migration 064-ip-locations: the ip_locations row that located this login.
+    ip_location_id: { type: DataTypes.BIGINT, allowNull: true, field: 'ip_location_id' },
   },
 
   // ── migration 010-vault-schema ───────────────────────────────────────
@@ -88,6 +175,19 @@ const EXTENSIONS = {
   // expired or marked used.
   Redeembonus: {
     id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false, field: 'id' },
+    // ── migration 075-spin-wheel-deposit-bonus: the deposit a spin code was applied to.
+    applied_ref: { type: DataTypes.STRING(80), allowNull: true, field: 'applied_ref' },
+    applied_at: { type: DataTypes.DATE, allowNull: true, field: 'applied_at' }, // timestamptz (migration 083)
+  },
+
+  // ── migration 075-spin-wheel-deposit-bonus ───────────────────────────
+  // The most one spin code pays on one deposit, in the reward currency.
+  SpinWheelConfig: {
+    max_bonus: { type: DataTypes.DECIMAL(30, 8), allowNull: false, defaultValue: '100', field: 'max_bonus' },
+    // ── migration 076-player-bonuses: the spin bonus's own rollover (null = the first-deposit
+    // multiplier) and how many days an unwagered spin bonus lives.
+    wager_multiplier: { type: DataTypes.DECIMAL(10, 2), allowNull: true, field: 'wager_multiplier' },
+    bonus_expiry_days: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 30, field: 'bonus_expiry_days' },
   },
 
   // ── migration 007-wallet-integrity ───────────────────────────────────
@@ -149,12 +249,34 @@ const EXTENSIONS = {
   // A crypto withdrawal is settled by broadcasting a transaction, and the
   // table had nowhere to record its hash — see the migration for the variable
   // named `txid` that holds the string "In Queue".
+  // ── migration 114-fiat-deposit-claimed-amount ─────────────────────────
+  // `amount` is what was credited once approved; this is what the player entered.
+  FiatDeposits: {
+    claimed_amount: { type: DataTypes.DECIMAL, allowNull: true, field: 'claimed_amount' },
+    // ── migration 118-manual-crypto-deposit: the network and house address of a manual crypto deposit.
+    network: { type: DataTypes.STRING(32), allowNull: true, field: 'network' },
+    wallet_address: { type: DataTypes.STRING(128), allowNull: true, field: 'wallet_address' },
+  },
+
+  // ── migration 118-manual-crypto-deposit: a house receiving address for a crypto coin.
+  CurrencyPaymentDetails: {
+    network: { type: DataTypes.STRING(32), allowNull: true, field: 'network' },
+    wallet_address: { type: DataTypes.STRING(128), allowNull: true, field: 'wallet_address' },
+    // migration 147: the deposit amounts this destination is shown for (NULL = no bound).
+    min_amount: { type: DataTypes.DECIMAL(20, 2), allowNull: true, field: 'min_amount' },
+    max_amount: { type: DataTypes.DECIMAL(20, 2), allowNull: true, field: 'max_amount' },
+  },
+
   Withdrawals: {
     txid: { type: DataTypes.STRING(120), allowNull: true, field: 'txid' },
     /** The staff member who authorised it, from a verified token. */
     decided_by: { type: DataTypes.BIGINT, allowNull: true, field: 'decided_by' },
     decided_at: { type: DataTypes.DATE, allowNull: true, field: 'decided_at' },
     note: { type: DataTypes.TEXT, allowNull: true, field: 'note' },
+    // migration 171: sent through CCPayment instead of by hand.
+    gateway: { type: DataTypes.STRING(20), allowNull: true, field: 'gateway' },
+    gateway_order_id: { type: DataTypes.STRING(64), allowNull: true, field: 'gateway_order_id' },
+    gateway_record_id: { type: DataTypes.STRING(64), allowNull: true, field: 'gateway_record_id' },
   },
 
   // ── migration 018-otp-integrity ──────────────────────────────────────
@@ -262,6 +384,10 @@ const EXTENSIONS = {
   // the internal route in front of every feed endpoint, so an undeclared column
   // there is a kill switch that cannot be thrown.
   Siteconfig: {
+    // ── migration 072-affiliate-bonus-requires-deposit ────────────────
+    affiliate_bonus_requires_deposit: {
+      type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'affiliate_bonus_requires_deposit',
+    },
     sports: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'sports' },
     home_livesports: {
       type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'home_livesports',
@@ -279,26 +405,71 @@ const EXTENSIONS = {
     // Found by `node tools/verify-models.js`, which is what this file's header
     // says to use and which reported it as the only column missing platform-wide.
     eur: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true, field: 'eur' },
+    // ── migration 049-siteconfig-operator-settings ─────────────────────
+    //
+    // The business values an operator sets for themselves — limits, policy,
+    // schedule. Undeclared here the column exists and every write to it is
+    // silently dropped, which is the defect the `eur` note above describes.
+    settings: { type: DataTypes.JSONB, allowNull: false, defaultValue: {}, field: 'settings' },
     // ── migration 043-siteconfig-reward-currencies ─────────────────────
     //
     // Wallet codes VIP bonuses and Instant Rakeback credit into. Written from
     // the Site Config admin screen; read by user-service over the internal
-    // site-config/rewards route. Defaults match the former compile-time
-    // constants so an unmigrated deploy and a migrated one with no operator
-    // change behave the same.
+    // site-config/rewards route. Default USDT since migration 060 retired
+    // BJB (it was BJB before).
     bonus_currency: {
-      type: DataTypes.TEXT, allowNull: false, defaultValue: 'BJB', field: 'bonus_currency',
+      type: DataTypes.TEXT, allowNull: false, defaultValue: 'USDT', field: 'bonus_currency',
     },
     rakeback_currency: {
       type: DataTypes.TEXT, allowNull: false, defaultValue: 'USDT', field: 'rakeback_currency',
     },
-    // ── migration 044-siteconfig-affiliate-bonus-currencies ────────────
+    // ── migration 051-siteconfig-affiliate-bonus-currencies ────────────
+    // Informational since migration 060: these bonuses are always paid in
+    // USDT (`REWARD_CURRENCY` in @ibitplay/common), whatever is stored here.
     register_bonus_currency: {
-      type: DataTypes.TEXT, allowNull: false, defaultValue: 'BJB', field: 'register_bonus_currency',
+      type: DataTypes.TEXT, allowNull: false, defaultValue: 'USDT', field: 'register_bonus_currency',
     },
     affiliate_bonus_currency: {
-      type: DataTypes.TEXT, allowNull: false, defaultValue: 'BJB', field: 'affiliate_bonus_currency',
+      type: DataTypes.TEXT, allowNull: false, defaultValue: 'USDT', field: 'affiliate_bonus_currency',
     },
+    // ── migration 070-welcome-bonuses ──────────────────────────────────
+    //
+    // The registration bonus switch and the first-deposit bonus. Written from
+    // the Site config "Welcome bonuses" screen; read by user-service over the
+    // internal site-config/welcome-bonuses route.
+    register_bonus_enabled: {
+      type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'register_bonus_enabled',
+    },
+    first_deposit_bonus_enabled: {
+      type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'first_deposit_bonus_enabled',
+    },
+    // [{ minDeposit, percent, maxBonus }] in USD — see the migration.
+    first_deposit_bonus_tiers: {
+      type: DataTypes.JSONB, allowNull: false, defaultValue: [], field: 'first_deposit_bonus_tiers',
+    },
+    first_deposit_bonus_wager_multiplier: {
+      type: DataTypes.DECIMAL(10, 2), allowNull: true, field: 'first_deposit_bonus_wager_multiplier',
+    },
+    // ── migration 076-player-bonuses: days an unwagered first-deposit bonus lives.
+    first_deposit_bonus_expiry_days: {
+      type: DataTypes.INTEGER, allowNull: false, defaultValue: 30, field: 'first_deposit_bonus_expiry_days',
+    },
+  },
+
+  // ── migration 071-wager-activity-and-commission-claims ───────────────
+  // Affiliate commission rows became a claimable payable: who owns it, whether
+  // it has been paid (and by which ledger row), and whether it is void.
+  Rewards: {
+    owner_id: { type: DataTypes.BIGINT, allowNull: true, field: 'owner_id' },
+    claimed: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'claimed' },
+    claimed_at: { type: DataTypes.DATE, allowNull: true, field: 'claimed_at' },
+    ledger_id: { type: DataTypes.BIGINT, allowNull: true, field: 'ledger_id' },
+    voided: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'voided' },
+    // ── migration 090-wager-reversal-links: the stake a commission row was paid on, so a
+    // refund / rollback / void can void (or pro-rate) it while it is unclaimed.
+    source: { type: DataTypes.TEXT, allowNull: true, field: 'source' },
+    ref: { type: DataTypes.TEXT, allowNull: true, field: 'ref' },
+    reversed_amount: { type: DataTypes.DECIMAL(30, 8), allowNull: false, defaultValue: '0', field: 'reversed_amount' },
   },
 
   // ── migration 045-team-campaign ──────────────────────────────────────
@@ -335,6 +506,27 @@ const EXTENSIONS = {
     },
     two_fa_last_step: { type: DataTypes.BIGINT, allowNull: true, field: 'two_fa_last_step' },
     two_fa_enrolled_at: { type: DataTypes.DATE, allowNull: true, field: 'two_fa_enrolled_at' },
+    // ── migration 063-staff-must-change-password ───────────────────────
+    // A password somebody else chose; the auth guard blocks the session
+    // until its owner replaces it.
+    must_change_password: {
+      type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'must_change_password',
+    },
+    // ── migration 156-staff-token-version ──────────────────────────────
+    // Signed into staff tokens; bumping it ends every session (see the auth guard).
+    token_version: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, field: 'token_version' },
+    // ── migration 062-agent-money ──────────────────────────────────────
+    lock_sources: { type: DataTypes.JSONB, allowNull: false, defaultValue: {}, field: 'lock_sources' },
+    // ── migration 091-withdraw-lock ────────────────────────────────────
+    withdraw_locked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'withdraw_locked' },
+    // ── migration 141-originals-lock ───────────────────────────────────
+    originals_locked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'originals_locked' },
+  },
+
+  // ── migration 157-executive-token-version ────────────────────────────
+  // Signed into executive tokens (`etv`); an executive's logout bumps it.
+  Executives: {
+    token_version: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, field: 'token_version' },
   },
 };
 
@@ -356,6 +548,11 @@ const EXTENSIONS = {
  * disagree, and the durable fix is to refresh the baseline.
  */
 const OVERRIDES = {
+  // ── migration 177-redeem-amount-decimal
+  Redeembonus: {
+    amount: { type: DataTypes.DECIMAL(20, 8), allowNull: false, field: 'amount' },
+  },
+
   // ── migration 016-casino-provider-schema ─────────────────────────────
   JsGameTransactions: {
     /**
@@ -404,6 +601,19 @@ const OVERRIDES = {
 };
 
 /**
+ * Tables a migration MOVED to another schema, and the baseline columns the moved table does not have.
+ *
+ * ── migration 094-mssports-schema ────────────────────────────────────
+ * The Sports Exchange (TENEXCH "mssports") writes its bets to `mssports."SportsBet"`; the baseline
+ * `public."SportsBet"` is dead and empty. Every platform reader of this model (Risk, Statements,
+ * the sports wager report / bet admin) read the empty table, so a player with settled bets showed
+ * "no activity". The mssports table has no `lay_size` / `back_size`.
+ */
+const RELOCATED = {
+  SportsBet: { schema: 'mssports', drop: ['lay_size', 'back_size'] },
+};
+
+/**
  * Apply the declared extensions to already-registered models.
  *
  * Uses `Model.rawAttributes` + `refreshAttributes()` rather than re-`init`,
@@ -412,6 +622,20 @@ const OVERRIDES = {
 function applyExtensions(models, logger) {
   const applied = [];
   const skipped = [];
+
+  for (const [modelName, { schema, drop = [] }] of Object.entries(RELOCATED)) {
+    const model = models[modelName];
+    if (!model) {
+      skipped.push({ model: modelName, reason: 'model not loaded in this service' });
+      continue;
+    }
+    // In place (not `Model.schema()`, which returns a clone) so associations keep pointing here.
+    model.options.schema = schema;
+    model._schema = schema;
+    for (const name of drop) delete model.rawAttributes[name];
+    model.refreshAttributes();
+    applied.push(`${modelName} -> ${schema}`);
+  }
 
   for (const [modelName, columns] of Object.entries(OVERRIDES)) {
     const model = models[modelName];
@@ -453,4 +677,4 @@ function applyExtensions(models, logger) {
   return { applied, skipped };
 }
 
-module.exports = { applyExtensions, EXTENSIONS, OVERRIDES };
+module.exports = { applyExtensions, EXTENSIONS, OVERRIDES, RELOCATED };

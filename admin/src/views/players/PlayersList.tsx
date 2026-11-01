@@ -5,131 +5,77 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-import { DownloadIcon, PlusIcon } from 'lucide-react'
-import { toast } from 'sonner'
+import { parseAsString, useQueryStates } from 'nuqs'
 
-import Can from '@/components/shared/Can'
+import { ChartColumnIcon, LandmarkIcon, NetworkIcon, UserIcon, UsersIcon } from 'lucide-react'
+
 import DataTable, { type Column } from '@/components/shared/DataTable'
-import FormDialog from '@/components/shared/FormDialog'
-import { TextField } from '@/components/shared/FormField'
-import Money from '@/components/shared/Money'
+import DateTime from '@/components/shared/DateTime'
 import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useApiMutation, useListState, usePagedApi } from '@/hooks/use-api'
-import { api } from '@/lib/api/client'
-import { formatNumber } from '@/lib/format'
-import type { PlayerRow } from './types'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useSession } from '@/contexts/SessionContext'
+import { useListState, usePagedApi } from '@/hooks/use-api'
+import { cn } from '@/lib/utils'
+import { RiskManagementDialog } from './RiskManagement'
+import BalanceSheetDialog from './users/BalanceSheetDialog'
+import FinancialTab from './users/FinancialTab'
+import type { UserRow } from './users/shared'
+import UsersTable from './users/UsersTable'
+import UserStatusOverview from './UserStatusOverview'
 
-const columns: Column<PlayerRow>[] = [
+/** `GET admin/user/directory` — the allow-listed player columns, tree-scoped, guarded by users:read. */
+type DirectoryRow = {
+  id: number | string
+  name: string
+  email: string | null
+  phone: string | null
+  status: string
+  is_locked: boolean | null
+  system_locked: boolean | null
+  parent_staff_id: number | null
+  created: string | null
+}
+
+const directoryColumns: Column<DirectoryRow>[] = [
   {
     key: 'name',
-    header: 'Player',
+    header: 'User',
     cell: r => (
       <div className='flex flex-col'>
-        <Link href={`/players/${r.id}`} className='font-medium hover:underline'>
+        <Link href={`/users/${r.id}`} className='font-medium hover:underline'>
           {r.name}
         </Link>
         <span className='text-muted-foreground font-mono text-xs'>{r.id}</span>
       </div>
     )
   },
-  { key: 'status', header: 'Status', cell: r => <StatusBadge value={r.status} /> },
-  { key: 'channel', header: 'Channel', cell: r => <Badge variant='outline'>{r.channel}{r.agentId ? ` · #${r.agentId}` : ''}</Badge> },
-  { key: 'balance', header: 'Balance', align: 'right', cell: r => <Money value={r.balance} /> },
-  { key: 'dep', header: 'Deposited', align: 'right', cell: r => <Money value={r.totalDeposited} /> },
-  { key: 'wd', header: 'Withdrawn', align: 'right', cell: r => <Money value={r.totalWithdrawn} /> },
-  { key: 'wager', header: 'Wagered', align: 'right', cell: r => <Money value={r.wager} /> },
-  { key: 'vip', header: 'VIP', cell: r => <span className='text-sm'>L{r.vip?.level ?? 0} <span className='text-muted-foreground'>{r.vip?.card}</span></span> },
-  { key: 'games', header: 'Games', align: 'right', cell: r => formatNumber(r.gamesPlayed) },
-  { key: 'ref', header: 'Referral', cell: r => <span className='font-mono text-xs'>{r.referralCode}</span> }
+  { key: 'status', header: 'Status', cell: r => <StatusBadge value={r.system_locked ? 'Locked' : r.status} /> },
+  { key: 'email', header: 'Email', cell: r => <span className='text-sm'>{r.email ?? '—'}</span> },
+  { key: 'phone', header: 'Phone', cell: r => <span className='text-sm'>{r.phone ?? '—'}</span> },
+  { key: 'created', header: 'Joined', cell: r => (r.created ? <DateTime value={r.created} relative /> : '—') }
 ]
 
-const CreatePlayer = () => {
-  const [form, setForm] = useState({ username: '', email: '', phone: '', country: '', password: '', initialBalance: '0' })
+/**
+ * The Users list for a login holding users:read without reports:read (e.g. an executive granted
+ * only users:read). `admin/reports/players` would refuse it, so it reads the player directory,
+ * which carries no balances or lifetime totals.
+ */
+const DirectoryList = () => {
+  const { state, set, query } = useListState()
+  const list = usePagedApi<DirectoryRow>('admin/user/directory', { limit: query.limit, page: query.page, search: query.search || undefined })
   const router = useRouter()
-
-  const create = useApiMutation({
-    fn: () => {
-      const body: Record<string, string> = { username: form.username, password: form.password, initialBalance: form.initialBalance || '0' }
-
-      if (form.email) body.email = form.email
-      if (form.phone) body.phone = form.phone
-      if (form.country) body.country = form.country
-
-      return api.post<{ id: string | number }>('admin/players', body)
-    },
-    invalidate: [['paged', 'admin/reports/players']],
-    success: 'Player created',
-    onSuccess: r => r?.id && router.push(`/players/${r.id}`)
-  })
-
-  return (
-    <FormDialog
-      trigger={
-        <Button>
-          <PlusIcon /> New player
-        </Button>
-      }
-      title='Create a player'
-      description='An operator-created account. The player can change the password after first sign-in.'
-      submitLabel='Create'
-      onSubmit={() => create.mutateAsync()}
-    >
-      <TextField id='username' label='Username' required minLength={3} value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
-      <TextField id='email' label='Email' type='email' value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-      <div className='grid grid-cols-2 gap-4'>
-        <TextField id='phone' label='Phone' value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-        <TextField id='country' label='Country' value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} />
-      </div>
-      <TextField id='password' label='Password' type='password' required minLength={8} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-      <TextField id='initialBalance' label='Initial balance' hint='Decimal string, e.g. 100.00' value={form.initialBalance} onChange={e => setForm({ ...form, initialBalance: e.target.value })} />
-    </FormDialog>
-  )
-}
-
-const PlayersList = () => {
-  const { state, set, query } = useListState(['channel'], { channel: 'all' })
-  const list = usePagedApi<PlayerRow>('admin/reports/players', { ...query, sort: undefined, order: undefined })
-  const router = useRouter()
-
-  const exportCsv = async () => {
-    try {
-      const blob = await api.blob('admin/reports/players/export', { channel: state.channel || 'all', search: state.search || undefined })
-      const url = URL.createObjectURL(blob)
-      const a = Object.assign(document.createElement('a'), { href: url, download: 'players.csv' })
-
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      toast.error(String(e))
-    }
-  }
 
   return (
     <div>
       <PageHeader
-        title='Players'
-        description='Every player account, with balance, lifetime deposits and withdrawals, and VIP position.'
-        actions={
-          <>
-            <Can permission='reports:read'>
-              <Button variant='outline' onClick={exportCsv}>
-                <DownloadIcon /> Export CSV
-              </Button>
-            </Can>
-            <Can permission='users:write'>
-              <CreatePlayer />
-            </Can>
-          </>
-        }
+        title='Users'
+        description='Every user account in your tree.'
       />
       <DataTable
-        columns={columns}
+        columns={directoryColumns}
         rows={list.data?.rows}
-        rowKey={r => r.id}
+        rowKey={r => String(r.id)}
         loading={list.isLoading}
         fetching={list.isFetching}
         error={list.error}
@@ -138,21 +84,120 @@ const PlayersList = () => {
         onLimitChange={limit => set({ limit })}
         search={String(state.search ?? '')}
         onSearchChange={search => set({ search })}
-        searchPlaceholder='Username, email, id…'
-        onRowClick={r => router.push(`/players/${r.id}`)}
-        toolbar={
-          <Select value={String(state.channel || 'all')} onValueChange={v => v && set({ channel: v })}>
-            <SelectTrigger className='w-40'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All channels</SelectItem>
-              <SelectItem value='direct'>Direct</SelectItem>
-              <SelectItem value='agent'>Via agent</SelectItem>
-            </SelectContent>
-          </Select>
-        }
+        searchPlaceholder='Username, email, phone…'
+        onRowClick={r => router.push(`/users/${r.id}`)}
       />
+    </div>
+  )
+}
+
+const PlayersList = () => {
+  const { can } = useSession()
+
+  // The full page is `admin/reports/*` (reports:read); users:read alone gets the directory.
+  return can('reports:read') ? <UsersPage /> : <DirectoryList />
+}
+
+type Section = 'direct' | 'agent' | 'financial'
+
+/**
+ * Users page — reference admin (`admin-structure.zip` → components/Users.tsx) jaisa, teen tab:
+ *
+ *   Direct Users  — parent nahi (site pe signup)          → UsersTable channel=direct
+ *   Agent System  — parent hai (agent / staff ne banaya)   → UsersTable channel=agent + Parent Staff
+ *   Financial     — withdrawal rules + per-user withdrawal lock
+ *
+ * Direct Users aur Financial sirf house staff ko (reference: SuperAdmin / MotherAdmin); agent tree
+ * ko sirf Agent System. Har row ke Risk column se Risk Management aur Balance Sheet dialog.
+ * Tab URL me `?tab=agent|financial`.
+ */
+const UsersPage = () => {
+  // The tab lives in the URL through nuqs, like the table's search/page, so the two never overwrite each other.
+  const [url, setUrl] = useQueryStates({ tab: parseAsString, search: parseAsString, page: parseAsString }, { history: 'replace', scroll: false })
+  const { actor } = useSession()
+  const house = actor?.direct === true
+  const promotions = actor?.promotions === true
+
+  const sections: { value: Section; label: string; icon: React.ReactNode }[] = [
+    ...(house ? [{ value: 'direct' as const, label: 'Direct Users', icon: <UserIcon /> }] : []),
+    { value: 'agent', label: 'Agent System', icon: <NetworkIcon /> },
+    ...(house ? [{ value: 'financial' as const, label: 'Financial', icon: <LandmarkIcon /> }] : [])
+  ]
+
+  const section: Section = sections.find(s => s.value === url.tab)?.value ?? sections[0].value
+  // A new tab starts unfiltered on page 1.
+  const select = (value: Section) => void setUrl({ tab: value === sections[0].value ? null : value, search: null, page: null })
+
+  // Users / Overview (graphs) — Direct aur Agent tab me.
+  const [view, setView] = useState<'users' | 'overview'>('users')
+  const [risk, setRisk] = useState<UserRow | null>(null)
+  const [sheet, setSheet] = useState<UserRow | null>(null)
+
+  // Tabs ki line me hi, right side (Financial pe nahi).
+  const viewToggle = (
+    <div className='ml-auto flex rounded-md border p-0.5'>
+        {(
+          [
+            { v: 'users', label: 'Users', icon: <UsersIcon /> },
+            { v: 'overview', label: 'Overview', icon: <ChartColumnIcon /> }
+          ] as const
+        ).map(o => (
+          <button
+            key={o.v}
+            type='button'
+            onClick={() => setView(o.v)}
+            className={cn(
+              'flex items-center gap-1.5 rounded px-3 py-1 text-sm font-semibold [&_svg]:size-4',
+              view === o.v ? 'bg-accent text-foreground shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {o.icon}
+            {o.label}
+          </button>
+        ))}
+    </div>
+  )
+
+  const userSection = (channel: 'direct' | 'agent') => (
+    <>
+      {view === 'users' ? (
+        <UsersTable
+          channel={channel}
+          title={channel === 'direct' ? 'Direct Users' : 'Agent System — Users'}
+          showStaffColumn={channel === 'agent'}
+          onOpenRisk={setRisk}
+          onOpenBalanceSheet={setSheet}
+        />
+      ) : (
+        <UserStatusOverview showVip={promotions} channel={channel} />
+      )}
+    </>
+  )
+
+  return (
+    <div>
+      <PageHeader title='Users' description={house ? 'Manage direct users and agent-system accounts with per-user risk controls' : 'Manage your users with per-user risk controls'} />
+      <Tabs value={section} onValueChange={v => select(v as Section)}>
+        <div className='mb-4 flex flex-wrap items-center gap-3'>
+          {sections.length > 1 && (
+            <TabsList variant='line'>
+              {sections.map(s => (
+                <TabsTrigger key={s.value} value={s.value}>
+                  {s.icon}
+                  {s.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          )}
+          {section !== 'financial' && viewToggle}
+        </div>
+        {house && <TabsContent value='direct'>{section === 'direct' && userSection('direct')}</TabsContent>}
+        <TabsContent value='agent'>{section === 'agent' && userSection('agent')}</TabsContent>
+        {house && <TabsContent value='financial'>{section === 'financial' && <FinancialTab />}</TabsContent>}
+      </Tabs>
+
+      <RiskManagementDialog userId={risk?.id ?? null} name={risk?.name} open={risk !== null} onOpenChange={o => !o && setRisk(null)} />
+      <BalanceSheetDialog userId={sheet?.id ?? null} name={sheet?.name} client={sheet?.parentStaff != null} open={sheet !== null} onOpenChange={o => !o && setSheet(null)} />
     </div>
   )
 }

@@ -1,25 +1,44 @@
 'use strict';
 
-const { BONUS_CURRENCY } = require('./bonus.constants');
-const { RAKEBACK_CURRENCY } = require('../rakeback/rakeback.constants');
+const { creditableCurrency, REWARD_CURRENCY } = require('@ibitplay/common');
 
 /**
- * Resolve the wallet currencies VIP bonuses and Instant Rakeback credit into.
+ * THE site's reward currency — one currency every reward is calculated and
+ * paid in (VIP level-ups/rank-ups, the periodic bonuses, rakeback, affiliate
+ * commission and tier rewards, registration/joining/first-deposit bonuses,
+ * redeem codes).
  *
- * Those values live on `siteconfig` (admin-owned). user-service does not load
- * the admin model domain, so it asks over the internal API — same shape as
- * sports-service's sports-enabled flag. A short TTL cache keeps overview /
- * claim bursts from hammering admin-service; on failure the historical
- * constants are used so a claim is never blocked by an unrelated outage.
+ * `rewardCurrency()` is the contract. WHERE it comes from (the owner panel's
+ * entitlement → site setting) is plumbed separately; today it reads
+ * `rewardCurrency` from admin-service's `/internal/admin/site-config/rewards`
+ * when that answers with one, and otherwise `REWARD_CURRENCY` (USDT).
+ *
+ * `bonusCurrency()` and `rakebackCurrency()` are kept for their callers and
+ * DELEGATE to it. They used to resolve `siteconfig.bonus_currency` /
+ * `rakeback_currency` independently — which on an INR site paid the
+ * USD-sized daily/weekly/monthly amounts as rupees. Those columns no longer
+ * choose a payout wallet.
+ *
+ * A value naming a retired coin (BJB) or nothing reads as USDT — the wallet
+ * refuses to credit a retired coin, so honouring it would fail every claim.
+ * A short TTL cache keeps claim bursts off admin-service; on failure the
+ * default is used so a claim is never blocked by an unrelated outage.
  */
 
 const DEFAULT_TTL_MS = 5_000;
 const INTERNAL_PATH = '/internal/admin/site-config/rewards';
 
 const DEFAULTS = Object.freeze({
-  bonusCurrency: BONUS_CURRENCY,
-  rakebackCurrency: RAKEBACK_CURRENCY,
+  rewardCurrency: REWARD_CURRENCY,
+  bonusCurrency: REWARD_CURRENCY,
+  rakebackCurrency: REWARD_CURRENCY,
 });
+
+/** One currency for everything: the three keys always agree. */
+function settle(code) {
+  const rewardCurrency = creditableCurrency(code, REWARD_CURRENCY);
+  return { rewardCurrency, bonusCurrency: rewardCurrency, rakebackCurrency: rewardCurrency };
+}
 
 function createRewardCurrencyResolver({ clients, logger, ttlMs = DEFAULT_TTL_MS } = {}) {
   let cached = { value: { ...DEFAULTS }, expires: 0 };
@@ -33,10 +52,7 @@ function createRewardCurrencyResolver({ clients, logger, ttlMs = DEFAULT_TTL_MS 
     inFlight = clients.admin
       .get(INTERNAL_PATH)
       .then((body) => {
-        const value = {
-          bonusCurrency: String(body?.bonusCurrency || DEFAULTS.bonusCurrency).toUpperCase(),
-          rakebackCurrency: String(body?.rakebackCurrency || DEFAULTS.rakebackCurrency).toUpperCase(),
-        };
+        const value = settle(body?.rewardCurrency);
         cached = { value, expires: Date.now() + ttlMs };
         return value;
       })
@@ -53,6 +69,7 @@ function createRewardCurrencyResolver({ clients, logger, ttlMs = DEFAULT_TTL_MS 
   }
 
   return {
+    rewardCurrency: async () => (await read()).rewardCurrency,
     bonusCurrency: async () => (await read()).bonusCurrency,
     rakebackCurrency: async () => (await read()).rakebackCurrency,
     all: read,

@@ -1,7 +1,6 @@
-import AffiliateSettings from '@/views/site-config/AffiliateSettings'
+import { redirect } from 'next/navigation'
 
-export const metadata = { title: 'Affiliate rates' }
-
+// Affiliate rates now live on the Affiliate page's Rates tab; old links land there.
 export default function Page() {
-  return <AffiliateSettings />
+  redirect('/affiliate')
 }

@@ -3,11 +3,14 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
+const express = require('express');
+
 const db = require('@ibitplay/db');
-const { createLogger, featureCatalogue } = require('@ibitplay/common');
+const { createLogger, featureCatalogue, errorHandler, requestContext } = require('@ibitplay/common');
 
 const v = require('../features.validators');
 const { FeaturesService } = require('../features.service');
+const adminRoutes = require('../routes/admin.routes');
 const { OneSignalProvider } = require('../../notifications/providers/onesignal');
 const { NotificationsService } = require('../../notifications/notifications.service');
 
@@ -35,6 +38,150 @@ test('features', async (t) => {
       for (const [feature, variant] of Object.entries(template.variants)) {
         assert.ok(featureCatalogue.variantOf(feature, variant), `${name}: ${feature}=${variant}`);
       }
+    }
+  });
+
+  await t.test('an old (clone) template name resolves to its theme key; anything else passes through', () => {
+    const { resolveTemplateKey, LEGACY_TEMPLATES, TEMPLATES } = featureCatalogue;
+    assert.equal(resolveTemplateKey('stake'), 'carbon_gold');
+    assert.equal(resolveTemplateKey('shuffle'), 'violet_night');
+    assert.equal(resolveTemplateKey('bcgame'), 'emerald_dark');
+    assert.equal(resolveTemplateKey('addaplay'), 'neon_navy');
+    assert.equal(resolveTemplateKey('carbon_gold'), 'carbon_gold');
+    assert.equal(resolveTemplateKey('nope'), 'nope');
+    assert.equal(resolveTemplateKey(null), null);
+    assert.equal(resolveTemplateKey('toString'), 'toString', 'not read off the prototype');
+    for (const to of Object.values(LEGACY_TEMPLATES)) assert.ok(TEMPLATES[to], `${to} is a template`);
+  });
+
+  // ── The staff routes — no database needed ──────────────────────────
+
+  /** The admin router behind a stub auth that lets staff #1 through. */
+  async function staffServer(overrides = {}) {
+    const auth = { requirePermission: () => (req, _res, next) => { req.staff = { id: 1 }; next(); } };
+    const deps = { auth, clients: { admin: { post: async () => ({}) } }, logger, config: { SERVICE_NAME: 'admin-service' }, models: {}, ...overrides };
+    const app = express();
+    app.use(express.json());
+    app.use(requestContext());
+    app.use('/features', adminRoutes(deps));
+    app.use(errorHandler({ logger }));
+    const server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
+    return { base: `http://127.0.0.1:${server.address().port}/features`, close: () => new Promise((r) => server.close(r)) };
+  }
+
+  await t.test('the catalogue route names no other site — templates, variants, anything', async () => {
+    const { base, close } = await staffServer();
+    try {
+      const res = await fetch(`${base}/catalogue`);
+      assert.equal(res.status, 200);
+      const text = JSON.stringify(await res.json()).toLowerCase();
+      for (const banned of ['stake', 'shuffle', 'bc.game', 'bcgame', 'hash-games', 'addaplay', 'stake.com', 'shuffle.com', 'builtfor']) {
+        assert.equal(text.includes(banned), false, `"${banned}" is in the catalogue response`);
+      }
+      const { data } = JSON.parse(text);
+      // The five site templates, the twelve colour-only palettes (bitcasino + smartbet) and stake's nine.
+      assert.deepEqual(data.templates.map((x) => x.key).sort(), [
+        'carbon_gold', 'cobalt_citrine', 'copper_harbour', 'crimson_rush', 'ember_night', 'emerald_dark', 'emerald_vault', 'graphite',
+        'hash_game', 'high_roller_gold', 'indigo_mint', 'jade_night', 'lagoon_teal', 'lapis_ledger', 'magma', 'midnight_indigo',
+        'navy_coral', 'neon_navy', 'ocean_ruby', 'rose_noir', 'royal_dusk', 'seashell_teal', 'tangerine_field', 'ultraviolet',
+        'violet_night', 'wisteria',
+      ]);
+      const carbon = data.templates.find((x) => x.key === 'carbon_gold');
+      assert.equal(carbon.label, 'carbon gold');
+      assert.ok(carbon.description);
+    } finally {
+      await close();
+    }
+  });
+
+  await t.test('staff cannot apply a template — 403 TEMPLATE_OWNER_ONLY', async () => {
+    const { base, close } = await staffServer();
+    try {
+      for (const template of ['carbon_gold', 'stake']) {
+        const res = await fetch(`${base}/template`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ template, enable: true }) });
+        assert.equal(res.status, 403);
+        assert.equal((await res.json()).error?.code, 'TEMPLATE_OWNER_ONLY');
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  await t.test('a Super Admin switch stands until the owner changes that feature', async () => {
+    const rows = new Map([['vip', { feature: 'vip', variant: 'program_page', enabled: false, owner_enabled: true, updated_by: 'staff:1', config: {}, secrets: {} }]]);
+    const models = {
+      SiteFeature: {
+        findByPk: async (key) => (rows.has(key) ? { ...rows.get(key) } : null),
+        findAll: async () => [...rows.values()].map((r) => ({ ...r })),
+        upsert: async (row) => rows.set(row.feature, { ...rows.get(row.feature), ...row }),
+      },
+      Siteconfig: { findOne: async () => ({ id: 1 }), update: async () => {} },
+    };
+    const service = new FeaturesService({ models, logger, config: { SERVICE_NAME: 'admin-service' }, clients: { user: { post: async () => ({}) } } });
+    const doc = (vip) => ({ variants: { vip: 'program_page' }, features: { vip } });
+
+    await service.applyOwnerDocument(doc(true));
+    assert.equal(rows.get('vip').enabled, false, 'an unrelated owner save keeps the Super Admin off');
+    await service.applyOwnerDocument(doc(false));
+    assert.equal(rows.get('vip').enabled, false);
+    await service.applyOwnerDocument(doc(true));
+    assert.equal(rows.get('vip').enabled, true, 'the owner switched it on again: the owner is the latest');
+    assert.equal(rows.get('vip').updated_by, 'owner');
+  });
+
+  await t.test('owner-managed: staff PUT changing a variant is 403 OWNER_MANAGED; on/off and a keys-only save are allowed', async () => {
+    const rows = new Map([
+      ['vip', { feature: 'vip', variant: 'program_page', enabled: true, config: {}, secrets: {} }],
+      ['business_model', { feature: 'business_model', variant: 'hybrid', enabled: true, config: {}, secrets: {} }],
+      ['push_notifications', { feature: 'push_notifications', variant: 'onesignal', enabled: false, config: {}, secrets: {} }],
+    ]);
+    const models = {
+      SiteFeature: {
+        findByPk: async (key) => (rows.has(key) ? { ...rows.get(key) } : null),
+        findAll: async () => [...rows.values()].map((r) => ({ ...r })),
+        upsert: async (row) => rows.set(row.feature, { ...row }),
+      },
+      Siteconfig: { findOne: async () => ({ id: 1 }), update: async () => {} },
+    };
+    const config = { SERVICE_NAME: 'admin-service', OWNER_SHARED_SECRET: 'owner-test-key', TOTP_ENCRYPTION_KEY: 'a'.repeat(64) };
+    const { base, close } = await staffServer({ models, config, clients: { admin: { post: async () => ({}) }, user: { post: async () => ({}) } } });
+    const put = (feature, body) => fetch(`${base}/${feature}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    try {
+      // The Super Admin's on/off, inside the owner's plan (the latest change stands).
+      const off = await put('vip', { enabled: false });
+      assert.equal(off.status, 200);
+      assert.equal(rows.get('vip').enabled, false);
+      assert.equal((await put('vip', { enabled: true })).status, 200);
+
+      for (const [feature, body] of [
+        ['vip', { variant: 'none' }],
+        ['business_model', { variant: 'b2b' }],
+      ]) {
+        const res = await put(feature, body);
+        assert.equal(res.status, 403, `${feature} ${JSON.stringify(body)}`);
+        const { error } = await res.json();
+        assert.equal(error.code, 'OWNER_MANAGED');
+        assert.equal(error.details.feature, feature);
+      }
+      assert.equal(rows.get('vip').variant, 'program_page');
+
+      // The keys of the variant the owner chose: the site's to key in.
+      const res = await put('push_notifications', { variant: 'onesignal', enabled: false, config: { appId: APP_ID }, secrets: { apiKey: API_KEY } });
+      assert.equal(res.status, 200);
+      assert.equal(rows.get('push_notifications').config.appId, APP_ID);
+      assert.ok(rows.get('push_notifications').secrets.apiKey.startsWith('v1.'), 'sealed');
+
+      const list = await (await fetch(base)).json();
+      assert.equal(list.data.managedBy, 'owner');
+      const vip = list.data.features.find((f) => f.feature === 'vip');
+      assert.equal(vip.on, true);
+      assert.equal(vip.variant, 'program_page');
+      const text = JSON.stringify(list).toLowerCase();
+      for (const banned of ['stake', 'shuffle', 'bc.game', 'bcgame', 'hash-games', 'addaplay', 'builtfor', API_KEY.toLowerCase()]) {
+        assert.equal(text.includes(banned), false, `"${banned}" is in the staff list`);
+      }
+    } finally {
+      await close();
     }
   });
 
@@ -154,18 +301,20 @@ test('features', async (t) => {
   });
 
   await t.test('applying a template sets every feature and remembers the template', async () => {
+    // An old clone name (as SITE_TEMPLATE or sites.json may still hold) is stored under the new key.
     const out = await service.applyTemplate({ template: 'stake', enable: true, staff });
-    assert.equal(out.applied.length, Object.keys(featureCatalogue.TEMPLATES.stake.variants).length);
+    assert.equal(out.template, 'carbon_gold');
+    assert.equal(out.applied.length, Object.keys(featureCatalogue.TEMPLATES.carbon_gold.variants).length);
     const { template, features } = await service.list();
-    assert.equal(template, 'stake');
+    assert.deepEqual(template, { key: 'carbon_gold', label: 'Carbon Gold', setBy: 'owner' });
     const byKey = Object.fromEntries(features.map((f) => [f.feature, f]));
     // The template's own value, read from the catalogue rather than typed here,
     // so renaming a variant cannot make this test lie.
-    assert.equal(byKey.vip.variant, featureCatalogue.TEMPLATES.stake.variants.vip);
+    assert.equal(byKey.vip.variant, featureCatalogue.TEMPLATES.carbon_gold.variants.vip);
     assert.equal(byKey.vip.enabled, true);
-    // Whatever the stake template leaves at `none` must read as off.
-    const offInStake = Object.entries(featureCatalogue.TEMPLATES.stake.variants).find(([, v]) => v === 'none')[0];
-    assert.equal(byKey[offInStake].enabled, false, `${offInStake} is none in the stake template and must be off`);
+    // Whatever the template leaves at `none` must read as off.
+    const offInTemplate = Object.entries(featureCatalogue.TEMPLATES.carbon_gold.variants).find(([, v]) => v === 'none')[0];
+    assert.equal(byKey[offInTemplate].enabled, false, `${offInTemplate} is none in the template and must be off`);
   });
 
   await t.test('a variant the feature does not have is refused', async () => {
@@ -216,13 +365,14 @@ test('features', async (t) => {
     const push = pub.find((f) => f.feature === 'push_notifications');
     assert.deepEqual(push, { feature: 'push_notifications', variant: 'onesignal', config: { appId: APP_ID } });
     assert.equal(JSON.stringify(pub).includes(API_KEY), false);
-    const off = (await service.list()).features.filter((f) => !f.enabled).map((f) => f.feature);
+    // Policies are always published (a closed one as `none`); this is about switched-off features.
+    const off = (await service.list()).features.filter((f) => !f.enabled && f.kind !== 'policy').map((f) => f.feature);
     assert.ok(off.length > 0);
     assert.equal(pub.some((f) => off.includes(f.feature)), false, 'switched-off features are not listed');
   });
 
   await t.test('a template does not overwrite an integration someone keyed in', async () => {
-    await service.applyTemplate({ template: 'shuffle', enable: true, staff });
+    await service.applyTemplate({ template: 'violet_night', enable: true, staff });
     const opened = await service.resolved('push_notifications');
     assert.equal(opened.variant, 'onesignal');
     assert.equal(opened.secrets.apiKey, API_KEY);
@@ -245,6 +395,16 @@ test('features', async (t) => {
   await t.test('switching push off stops OneSignal sends', async () => {
     await service.update({ feature: 'push_notifications', patch: { enabled: false }, staff });
     assert.equal(await service.pushProvider(), null);
+  });
+
+  await t.test('blank keys fall back to ONESIGNAL_APP_ID / ONESIGNAL_API_KEY from the env', async () => {
+    // As the owner panel leaves it: switched on, nothing keyed in.
+    await connection.models.SiteFeature.update({ variant: 'onesignal', enabled: true, config: {}, secrets: {} }, { where: { feature: 'push_notifications' } });
+    assert.equal(await service.pushProvider(), null);
+    const fromEnv = new FeaturesService({ models: connection.models, logger, config: { ...config, ONESIGNAL_APP_ID: APP_ID, ONESIGNAL_API_KEY: API_KEY }, fetchImpl });
+    assert.equal((await fromEnv.pushProvider())?.appId, APP_ID);
+    const pub = await fromEnv.publicList();
+    assert.equal(pub.find((f) => f.feature === 'push_notifications')?.config?.appId, APP_ID);
   });
 
   await t.test('switching to Off and wiping the keys is one call, and leaves nothing sealed', async () => {
@@ -300,7 +460,7 @@ test('features', async (t) => {
 
   await t.test('a template never reopens a cashier someone closed', async () => {
     await service.update({ feature: 'deposit_mode', patch: { variant: 'manual' }, staff });
-    await service.applyTemplate({ template: 'stake', enable: true, staff });
+    await service.applyTemplate({ template: 'carbon_gold', enable: true, staff });
     const row = await connection.models.SiteFeature.findByPk('deposit_mode', { raw: true });
     assert.equal(row.variant, 'manual');
   });

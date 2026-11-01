@@ -2,7 +2,8 @@
 
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-const { hashPassword, verifyPassword } = require('@ibitplay/auth');
+const { hashPassword, verifyPassword, isAgentTree } = require('@ibitplay/auth');
+const { visibleStaff } = require('../directory/playerScope');
 
 const E = require('./email.errors');
 const { renderOtp, renderGeneral } = require('./templates');
@@ -31,7 +32,7 @@ const {
  * not a second factor — it is a formality, and anything gated behind it was
  * open to whoever could call the endpoint. It was also unauthenticated, sent to
  * any address in the body, and built its SMTP transport inline with
- * `support@camelbit.games` / `camelbit@123` in the source.
+ * `<redacted, see backend/docs/ROTATION.md>` / `<redacted, see backend/docs/ROTATION.md>` in the source.
  *
  * A code is never in a response here. It goes to the address on the account and
  * nowhere else.
@@ -66,8 +67,9 @@ const {
  * age from `created_at` in the SELECT instead. One column, one deadline.
  */
 class EmailService {
-  constructor({ models, db, config, logger, mailer }) {
+  constructor({ models, db, config, logger, mailer, clients }) {
     this.models = models;
+    this.clients = clients;
     this.db = db;
     this.config = config;
     this.logger = logger;
@@ -153,7 +155,8 @@ class EmailService {
 
     const result = await this.mailer.send({ to: address, ...renderOtp({ code, purpose, ttlSeconds: OTP_TTL_SECONDS }) });
 
-    if (!result.sent) {
+    // MAIL_DRY_RUN (never production): the mailer logged the message, code included, instead of sending.
+    if (!result.sent && !result.dryRun) {
       // The code exists but nobody can read it. Reported, because "we sent it"
       // when we did not is what makes a player wait for an email that is not
       // coming.
@@ -244,6 +247,30 @@ class EmailService {
   }
 
   // ══════════════════════════════════════════════════════════════════════
+  //  Verifying the account's own address (`users.email_verified_at`)
+  // ══════════════════════════════════════════════════════════════════════
+
+  /** `POST /user/email/verify/request` — a `verify-email` code to the address on the account. */
+  async requestEmailVerification({ userId, ip }) {
+    const user = await this.models.Users.findByPk(userId, { attributes: ['email', 'email_verified_at'], raw: true });
+    if (user?.email_verified_at) return { requested: false, emailVerified: true };
+    if (!user?.email) throw E.NO_ADDRESS();
+    return this.requestOtp({ email: user.email, purpose: PURPOSE.VERIFY_EMAIL, ip });
+  }
+
+  /** `POST /user/email/verify/confirm` — the code, then the proof spent once, then the stamp. */
+  async confirmEmailVerification({ userId, code }) {
+    const user = await this.models.Users.findByPk(userId, { attributes: ['id', 'email', 'email_verified_at'] });
+    if (user?.email_verified_at) return { emailVerified: true };
+    if (!user?.email) throw E.NO_ADDRESS();
+    await this.verifyOtp({ email: user.email, code, purpose: PURPOSE.VERIFY_EMAIL });
+    if (!(await this.#consumeProof(this.#normaliseEmail(user.email), PURPOSE.VERIFY_EMAIL))) throw E.OTP_INVALID();
+    await user.update({ email_verified_at: new Date() });
+    this.logger?.info({ userId: String(userId) }, 'Player email verified');
+    return { emailVerified: true };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
   //  Two-factor reset
   // ══════════════════════════════════════════════════════════════════════
 
@@ -323,6 +350,7 @@ class EmailService {
   async sendToPlayer({ to, subject, title, content, ctaLink, ctaText, actor }) {
     const address = this.#normaliseEmail(to);
     await this.#assertPlayer([address]);
+    await this.#assertInTree(actor, address);
 
     const result = await this.mailer.send({
       to: address,
@@ -359,6 +387,31 @@ class EmailService {
     // Per-recipient results, so a partial failure is visible. Legacy returned
     // whatever the helper produced with no summary at all.
     return outcome;
+  }
+
+  /**
+   * An agent-tree sender (super master, master, agent, or an executive of one)
+   * may email only players in its own tree. `users:write` — the route's grant —
+   * reaches agents, and this route took any player's address. House staff see
+   * every player, so they are not narrowed. Fails closed when the tree cannot
+   * be resolved.
+   */
+  async #assertInTree(actor, address) {
+    if (!actor || !isAgentTree(actor)) return;
+
+    const scope = this.clients?.admin
+      ? await visibleStaff({ clients: this.clients, config: this.config }, actor.id)
+      : { all: false, staffIds: [] };
+    if (scope.all) return;
+
+    const player = scope.staffIds.length
+      ? await this.models.Users.findOne({
+          where: { email: address, parent_staff_id: scope.staffIds },
+          attributes: ['id'],
+          raw: true,
+        })
+      : null;
+    if (!player) throw E.RECIPIENT_NOT_ALLOWED({ reason: 'not a player in your tree' });
   }
 
   /** Every address must belong to a registered player. */

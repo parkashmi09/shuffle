@@ -2,7 +2,7 @@
 
 const { z, featureCatalogue } = require('@ibitplay/common');
 
-const { FEATURE_KEYS, TEMPLATE_KEYS } = featureCatalogue;
+const { FEATURE_KEYS } = featureCatalogue;
 
 const featureParam = z.object({ feature: z.enum(FEATURE_KEYS) }).strict();
 
@@ -24,16 +24,6 @@ const update = {
     .refine((v) => Object.keys(v).length > 0, { message: 'give at least one thing to change' }),
 };
 
-const applyTemplate = {
-  body: z
-    .object({
-      template: z.enum(TEMPLATE_KEYS),
-      // true → also switch on every feature the template does not set to none.
-      enable: z.boolean().default(true),
-    })
-    .strict(),
-};
-
 const test = {
   params: featureParam,
   body: z
@@ -46,4 +36,4 @@ const test = {
     .strict(),
 };
 
-module.exports = { featureParam: { params: featureParam }, update, applyTemplate, test };
+module.exports = { featureParam: { params: featureParam }, update, test };

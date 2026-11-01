@@ -2,18 +2,25 @@
 
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-const { money } = require('@ibitplay/common');
+const { money, sitePolicy } = require('@ibitplay/common');
+const { agentPlayerError } = require('@ibitplay/auth');
 
 const E = require('./gis.errors');
+const { addChildGamePoints } = require('../js-games/pointLedger');
 const { responseIdFor } = require('./responseId');
+const { chosenAggregator, LIVE, PARKED } = require('../games/catalogueSwitch');
 const {
   ERROR_CODE,
   ACTION,
   MONEY_ACTIONS,
   SETTLEMENT_CURRENCY,
   OUTBOUND_CURRENCY,
+  CALLBACK_CURRENCY,
   BALANCE_SCALE,
 } = require('./gis.constants');
+
+/** gis_sessions.currency for an INR-wallet session played at Slotegrator in PKR. */
+const INR_AS_PKR = 'INR>PKR';
 
 /**
  * Slotegrator (GIS) — the second seamless wallet on the platform, and the one
@@ -84,8 +91,16 @@ const {
  * ledger row with `source_service` set, so the figure is derivable. The admin
  * report that reads the column needs to derive it instead.
  */
+/** `duplicate` is for this service's own bookkeeping, not the provider. */
+function withoutInternal(outcome) {
+  if (!outcome || typeof outcome !== 'object' || !('duplicate' in outcome)) return outcome;
+  const { duplicate: _duplicate, ...rest } = outcome;
+  return rest;
+}
+
 class GisService {
-  constructor({ models, db, config, logger, wallet, provider, games }) {
+  constructor({ models, db, config, logger, wallet, provider, games, clients }) {
+    this.clients = clients;
     this.models = models;
     this.db = db;
     this.config = config;
@@ -104,9 +119,13 @@ class GisService {
    *
    * Always resolves. Always HTTP 200 at the route.
    */
-  async handleTransaction({ body, headers }) {
+  /**
+   * `trusted`: a whitelabel copy settling a callback its parent verified and passed on
+   * (casino modules/wl-hub — that route checks the parent's hub signature first).
+   */
+  async handleTransaction({ body, headers, trusted = false }) {
     try {
-      const refusal = this.#verify(body, headers);
+      const refusal = trusted && this.config.WHITELABEL_MODE ? null : this.#verify(body, headers);
       if (refusal) return refusal;
 
       const action = String(body.action ?? '');
@@ -117,39 +136,71 @@ class GisService {
         return this.#fail('action, player_id and currency are required');
       }
 
+      // A whitelabel copy's player (`wl<id>_<player>`, written by this site at launch): the copy settles it.
+      const wlPlayer = this.config.WHITELABEL_MODE ? null : whitelabelPlayer(playerId);
+      if (wlPlayer) return await forwardGis({ db: this.db, config: this.config, logger: this.logger }, { ...wlPlayer, body }, (d) => this.#fail(d));
+
       // A non-numeric player id is not a player. Legacy logged this case and
       // then went on to query `credits` with it anyway, one branch later.
       if (!/^\d+$/.test(playerId)) return this.#fail('Player not found');
 
-      const settlement = SETTLEMENT_CURRENCY[currency];
+      // A PKR callback for a session launched from the INR wallet (owner's slotegrator_inr_as_pkr):
+      // the money is INR, converted at `fx` PKR per INR both ways.
+      const fx = currency === 'PKR' ? await this.#inrAsPkrRate(body.session_id) : null;
+      const settlement = fx ? 'INR' : CALLBACK_CURRENCY[currency];
       if (!settlement) return this.#fail('Unsupported currency');
-
-      const userId = Number(playerId);
-      const balance = await this.#balanceOf(userId, settlement);
-      if (balance == null) return this.#fail('Player not found');
-
-      if (action === ACTION.BALANCE) return this.#probe({ body, balance });
-
-      const amount = money.toDecimalString(money.toMinor(String(body.amount ?? '0')));
-      if (MONEY_ACTIONS.has(action) && money.lt(amount, '0')) {
-        return this.#fail('amount must be non-negative');
-      }
-
-      switch (action) {
-        case ACTION.BET:
-          return await this.#bet({ body, userId, settlement, amount, balance });
-        case ACTION.WIN:
-          return await this.#win({ body, userId, settlement, amount, balance });
-        case ACTION.REFUND:
-          return await this.#refund({ body, userId, settlement, amount, balance });
-        case ACTION.ROLLBACK:
-          return await this.#rollback({ body, userId, settlement, balance });
-        default:
-          return this.#fail('Invalid action');
-      }
+      if (fx && body.amount != null) body = { ...body, amount: money.toDecimalString(money.divide(String(body.amount), fx)) };
+      const result = await this.#settle({ body, action, playerId, settlement });
+      if (fx && result?.balance != null) result.balance = this.#quote(money.toDecimalString(money.multiply(result.balance, fx)));
+      return result;
     } catch (error) {
       this.logger?.error({ err: error, action: body?.action }, 'GIS callback failed');
       return this.#fail('Unhandled internal error');
+    }
+  }
+
+  /** PKR per INR for a session opened from the INR wallet in PKR; null for any other session. */
+  async #inrAsPkrRate(sessionId) {
+    if (!sessionId) return null;
+    const session = await this.models.GisSessions.findOne({ where: { session_id: String(sessionId) }, attributes: ['currency'], raw: true });
+    if (session?.currency !== INR_AS_PKR) return null;
+    return this.#pkrPerInr();
+  }
+
+  /** PKR per INR at the site's exchange rates (usd_rate is USD per unit). */
+  async #pkrPerInr() {
+    const rows = await this.db.sequelize.query(
+      "SELECT UPPER(currency) AS currency, usd_rate FROM exchangerate WHERE UPPER(currency) IN ('INR', 'PKR')",
+      { type: this.db.sequelize.QueryTypes.SELECT }
+    );
+    const rate = Object.fromEntries(rows.map((r) => [r.currency, String(r.usd_rate)]));
+    if (!rate.INR || !rate.PKR || money.isZero(rate.PKR)) throw E.UNSUPPORTED_CURRENCY({ currency: 'PKR' });
+    return money.toDecimalString(money.divide(rate.INR, rate.PKR));
+  }
+
+  async #settle({ body, action, playerId, settlement }) {
+    const userId = Number(playerId);
+    const balance = await this.#balanceOf(userId, settlement);
+    if (balance == null) return this.#fail('Player not found');
+
+    if (action === ACTION.BALANCE) return this.#probe({ body, balance });
+
+    const amount = money.toDecimalString(money.toMinor(String(body.amount ?? '0')));
+    if (MONEY_ACTIONS.has(action) && money.lt(amount, '0')) {
+      return this.#fail('amount must be non-negative');
+    }
+
+    switch (action) {
+      case ACTION.BET:
+        return await this.#bet({ body, userId, settlement, amount, balance });
+      case ACTION.WIN:
+        return withoutInternal(await this.#win({ body, userId, settlement, amount, balance }));
+      case ACTION.REFUND:
+        return withoutInternal(await this.#refund({ body, userId, settlement, amount, balance }));
+      case ACTION.ROLLBACK:
+        return await this.#rollback({ body, userId, settlement, balance });
+      default:
+        return this.#fail('Invalid action');
     }
   }
 
@@ -180,21 +231,61 @@ class GisService {
       return { error_code: ERROR_CODE.INSUFFICIENT_FUNDS, error_description: 'Casino is locked for this account' };
     }
 
-    return this.#apply({
+    const storageId = String(body.transaction_id ?? '');
+    const outcome = await this.#apply({
       body,
       userId,
       settlement,
       amount,
       balance,
-      storageId: String(body.transaction_id ?? ''),
+      storageId,
       isCredit: false,
       reason: 'BET_STAKE',
       insufficientIsAnError: true,
     });
+
+    const { duplicate, ...response } = outcome;
+
+    /**
+     * The aggregator path never counted a stake: no `userwager`, no VIP XP, no
+     * rakeback, no affiliate commission for anyone who only played Slotegrator
+     * (or its sportsbook, which settles through this same callback). Counted
+     * AFTER the movement is committed, only for a fresh one, and keyed on the
+     * transaction id so a retry adds nothing on user-service's side either.
+     * `recordActivity` swallows its own failures: the bet already stands.
+     */
+    if (!duplicate && !response.error_code && !money.isZero(amount) && this.games?.recordActivity) {
+      await this.games.recordActivity({
+        userId,
+        gameRef: null,
+        catalogueRef: body.game_uuid ?? null,
+        wagered: amount,
+        currency: settlement,
+        source: 'gis',
+        ref: storageId,
+      });
+    }
+
+    return response;
   }
 
-  #win({ body, userId, settlement, amount, balance }) {
-    return this.#apply({
+  async #win({ body, userId, settlement, amount, balance }) {
+    // A plain win names its round: no stake from this player in that round, no payout.
+    // Free spins and jackpots have no stake, and the provider may leave round_id out.
+    const plainWin = !body.freespin_id && (body.type == null || body.type === 'win');
+    if (plainWin && body.round_id != null && !money.isZero(amount)) {
+      const bet = await this.models.GisTransactions.findOne({
+        where: { user_id: userId, round_id: String(body.round_id), action: ACTION.BET },
+        attributes: ['id'],
+        raw: true,
+      });
+      if (!bet) {
+        this.logger?.error({ playerId: userId, roundId: body.round_id, amount }, 'GIS win refused: no bet in this round');
+        return this.#fail('No bet for this round');
+      }
+    }
+
+    const response = await this.#apply({
       body,
       userId,
       settlement,
@@ -204,6 +295,31 @@ class GisService {
       isCredit: true,
       reason: 'BET_PAYOUT',
     });
+    if (body.freespin_id && !money.isZero(amount)) {
+      this.#notifyFreeSpins(userId, {
+        key: `gis:freespin-win:${body.transaction_id}`,
+        title: 'Free spins win',
+        template: '{amount} won with your free spins.',
+        meta: { amount: String(amount), currency: settlement },
+      });
+    }
+    return response;
+  }
+
+  /**
+   * A free-spins event → the player's bell, Promotions tab (user-service categories.js `free_spins`).
+   * Written straight to admin-service's inbox route, as user-service's notifyPlayer does; after the
+   * money moved, never awaited, never fails the callback.
+   */
+  #notifyFreeSpins(userId, { key, title, template, meta = null }) {
+    const text = meta ? template.replaceAll('{amount}', `${meta.amount} ${meta.currency}`) : template;
+    void Promise.resolve()
+      .then(() =>
+        this.clients?.admin?.request('PUT', '/internal/admin/notifications/player', {
+          body: { userId: Number(userId), kind: 'free_spins', title, body: text, key, data: { kind: 'free_spins', link: '/casino', ...(meta ? { meta, template } : {}) } },
+        })
+      )
+      .catch((error) => this.logger?.warn({ err: error?.message, userId: String(userId), key }, 'Free spins notification not sent'));
   }
 
   /**
@@ -220,7 +336,7 @@ class GisService {
     if (!betId) return this.#fail('bet_transaction_id is required for a refund');
 
     const bet = await this.models.GisTransactions.findOne({
-      where: { transaction_id: betId, action: ACTION.BET },
+      where: { transaction_id: betId, action: ACTION.BET, user_id: userId, currency: settlement },
       raw: true,
     });
 
@@ -234,16 +350,46 @@ class GisService {
       return { balance: this.#quote(balance), transaction_id: this.#responseId(body.transaction_id) };
     }
 
-    return this.#apply({
+    // Never more than the stake we took, whatever the request says.
+    const stake = money.toDecimalString(money.abs(String(bet.amount ?? '0')));
+    const refund = money.lt(stake, amount) ? stake : amount;
+
+    const outcome = await this.#apply({
       body,
       userId,
       settlement,
-      amount,
+      amount: refund,
       balance,
       storageId: `rf:${betId}`,
       isCredit: true,
       reason: 'BET_REFUND',
+      reversedBet: betId,
     });
+
+    /* The stake was counted under `gis:<bet id>` when it was taken; a refunded
+       bet is no turnover. Only for a fresh refund that moved money — and only the
+       refunded part: `amount` (settlement currency, the stake's currency) pro-rates the
+       reversal in user-service, keyed by the provider's refund transaction id. A refund of
+       the whole stake (or more) is a full reversal there. */
+    if (!outcome.duplicate && !outcome.error_code && !outcome.insufficient && !money.isZero(refund)) {
+      await this.#uncount(userId, betId, {
+        amount: money.toDecimalString(money.abs(String(refund))),
+        refundRef: body.transaction_id == null || body.transaction_id === '' ? `rf:${betId}` : String(body.transaction_id),
+      });
+    }
+    return outcome;
+  }
+
+  /**
+   * A refunded / rolled-back bet stops counting. Best-effort: never fails the callback.
+   * A failed call is queued in `wager_reverse_outbox` (`outbox: true`) and retried by the
+   * user-service worker — the reverse is idempotent per `(bet id, refund id)`.
+   */
+  async #uncount(userId, betId, { amount = null, refundRef = null } = {}) {
+    if (!this.games?.reverseActivity) return;
+    await this.games
+      .reverseActivity({ userId, source: 'gis', ref: betId, amount, refundRef, outbox: true })
+      .catch((error) => this.logger?.warn({ err: error, betId }, 'Wager reversal failed — the refund stands'));
   }
 
   /**
@@ -267,7 +413,7 @@ class GisService {
       if (!originalId) continue;
 
       const original = await this.models.GisTransactions.findOne({
-        where: { transaction_id: originalId },
+        where: { transaction_id: originalId, user_id: userId, currency: settlement },
         raw: true,
       });
 
@@ -293,6 +439,7 @@ class GisService {
         reason: 'BET_ROLLBACK',
         action: ACTION.ROLLBACK,
         reverses: originalId,
+        reversedBet: isCredit ? originalId : null,
       });
 
       /**
@@ -317,6 +464,9 @@ class GisService {
 
       if (outcome.error_code) return outcome;
       current = outcome.rawBalance ?? current;
+
+      // Rolling back a BET: it never happened, so its stake stops counting.
+      if (isCredit && !outcome.duplicate) await this.#uncount(userId, originalId);
     }
 
     return {
@@ -345,6 +495,7 @@ class GisService {
     reason,
     action = body.action,
     reverses = null,
+    reversedBet = null,
     insufficientIsAnError = false,
   }) {
     if (!storageId) return this.#fail('transaction_id is required');
@@ -354,6 +505,22 @@ class GisService {
 
     try {
       const result = await this.db.transaction(async (transaction) => {
+        /**
+         * A refund (`rf:`) and a rollback (`rb:`) of one bet have different ids, so the
+         * unique index alone would let both pay. The bet's row lock queues them, and the
+         * loser is treated as the duplicate it is.
+         */
+        if (reversedBet) {
+          await this.models.GisTransactions.findOne({ where: { transaction_id: reversedBet }, attributes: ['id'], raw: true, lock: true, transaction });
+          const done = await this.models.GisTransactions.findOne({
+            where: { transaction_id: [`rf:${reversedBet}`, `rb:${reversedBet}`] },
+            attributes: ['id'],
+            raw: true,
+            transaction,
+          });
+          if (done) throw Object.assign(new Error('Bet already reversed'), { name: 'SequelizeUniqueConstraintError' });
+        }
+
         await this.models.GisTransactions.create(
           {
             user_id: userId,
@@ -393,6 +560,7 @@ class GisService {
           reason,
           ref: { type: 'GIS', id: storageId },
           description: `${action} ${storageId}`,
+          gameType: body.game_uuid ?? undefined,
         });
 
         await this.models.GisTransactions.update(
@@ -402,6 +570,8 @@ class GisService {
 
         return movement.newBalance;
       });
+
+      await this.#writePoints({ userId, settlement, amount, isCredit, storageId, action, body, balanceAfter: result });
 
       return { balance: this.#quote(result), rawBalance: result, transaction_id: this.#responseId(body.transaction_id) };
     } catch (error) {
@@ -414,7 +584,12 @@ class GisService {
       if (error?.name === 'SequelizeUniqueConstraintError') {
         const now = await this.#balanceOf(userId, settlement);
         this.logger?.info({ storageId, action }, 'Duplicate GIS transaction ignored');
-        return { balance: this.#quote(now ?? balance), rawBalance: now ?? balance, transaction_id: this.#responseId(body.transaction_id) };
+        return {
+          balance: this.#quote(now ?? balance),
+          rawBalance: now ?? balance,
+          transaction_id: this.#responseId(body.transaction_id),
+          duplicate: true,
+        };
       }
 
       if (error?.code === 'WALLET_INSUFFICIENT_FUNDS' || error?.status === 402) {
@@ -524,6 +699,29 @@ class GisService {
    * unknown player look real with a zero balance, and the provider then retries
    * a member that does not exist.
    */
+  /**
+   * Point ledger — JS games jaisa: agent ka child user → `point_ledger` (poori chain, sirf INR).
+   * Direct user ki row wallet ka trigger likhta hai (migration 117). Paisa move ho chuka hota
+   * hai; yahan sirf points likhte hain, alag transaction me. Fail ho to callback fail nahi hota
+   * (provider ko 200 hi jaata hai) — sirf zor se log. `gis:<storageId>` se dobara nahi likhta.
+   */
+  async #writePoints({ userId, settlement, amount, isCredit, storageId, action, body, balanceAfter }) {
+    const sequelize = this.models.Users.sequelize;
+    const delta = isCredit ? amount : money.toDecimalString(money.negate(amount));
+    const entry = {
+      userId,
+      delta,
+      entryRef: `gis:${storageId}`,
+      gameType: body.game_uuid ?? null,
+      remark: `GIS ${action} ${storageId}`,
+    };
+    try {
+      if (settlement === 'INR') await addChildGamePoints(sequelize, entry);
+    } catch (error) {
+      this.logger?.error({ err: error, storageId, userId }, 'GIS point ledger write failed — all_point drift');
+    }
+  }
+
   async #balanceOf(userId, currency) {
     try {
       const result = await this.wallet.balance(userId, currency);
@@ -564,12 +762,14 @@ class GisService {
     if (await this.#casinoLocked(userId)) throw E.CASINO_LOCKED({ userId });
 
     const sessionId = crypto.randomUUID();
+    // Owner's switch: an INR game opens at Slotegrator in PKR; the session remembers it for the callbacks.
+    const inPkr = settlement === 'INR' && (await sitePolicy.readPolicy(this.models, 'slotegrator_inr_as_pkr')) === 'on';
 
     await this.models.GisSessions.create({
       user_id: userId,
       session_id: sessionId,
       game_uuid: gameUuid,
-      currency: settlement,
+      currency: inPkr ? INR_AS_PKR : settlement,
       device,
       return_url: returnUrl ?? null,
       language: language ?? null,
@@ -587,7 +787,7 @@ class GisService {
       game_uuid: gameUuid,
       player_id: userId,
       player_name: playerName,
-      currency: OUTBOUND_CURRENCY[settlement] ?? settlement,
+      currency: inPkr ? 'PKR' : OUTBOUND_CURRENCY[settlement] ?? settlement,
       session_id: sessionId,
       device,
       // Configuration, not a literal. Legacy hard-coded
@@ -699,8 +899,10 @@ class GisService {
 
     if (!((input.betId && input.denomination) || input.totalBetId)) throw E.FREESPIN_BET_REQUIRED();
 
-    const user = await this.models.Users.findByPk(input.playerId, { attributes: ['id'], raw: true });
+    const user = await this.models.Users.findByPk(input.playerId, { attributes: ['id', 'parent_staff_id'], raw: true });
     if (!user) throw E.USER_NOT_FOUND({ playerId: input.playerId });
+    // No free spins / vouchers for an agent's player (user, 2026-10-18).
+    if (user.parent_staff_id) throw agentPlayerError('promotions');
 
     /**
      * The provider is told FIRST, and only a confirmed campaign is stored.
@@ -744,6 +946,11 @@ class GisService {
     });
 
     if (!created) throw E.FREESPIN_EXISTS({ freespinId: input.freespinId });
+    this.#notifyFreeSpins(input.playerId, {
+      key: `gis:freespin:${input.freespinId}`,
+      title: 'Free spins added',
+      template: `You got ${input.quantity} free spins. Open the game to play them.`,
+    });
     return row.get({ plain: true });
   }
 
@@ -918,8 +1125,10 @@ class GisService {
   async setVoucher(input) {
     this.#requireProvider();
 
-    const user = await this.models.Users.findByPk(input.playerId, { attributes: ['id'], raw: true });
+    const user = await this.models.Users.findByPk(input.playerId, { attributes: ['id', 'parent_staff_id'], raw: true });
     if (!user) throw E.USER_NOT_FOUND({ playerId: input.playerId });
+    // No free spins / vouchers for an agent's player (user, 2026-10-18).
+    if (user.parent_staff_id) throw agentPlayerError('promotions');
 
     await this.#upstream(() =>
       this.provider.post('/freevouchers/set', {
@@ -1005,6 +1214,12 @@ class GisService {
       expand: 'tags,parameters,images,related_games',
     });
 
+    // Slotegrator rows go to the lobby's table when Slotegrator is the owner's aggregator,
+    // otherwise to the parked one — `games/catalogueSwitch.js`. A database before migration
+    // 097 has neither the column nor the parked table: the plain upsert, as before.
+    const switchReady = await this.#aggregatorSwitchReady();
+    const table = switchReady && (await chosenAggregator(this.models)) !== 'slotegrator' ? PARKED : LIVE;
+
     let written = 0;
     let skipped = 0;
 
@@ -1014,7 +1229,7 @@ class GisService {
         continue;
       }
 
-      await this.models.Gisgamesnew.upsert({
+      const row = {
         uuid: String(game.uuid),
         name: game.name ?? null,
         provider: game.provider ?? null,
@@ -1034,13 +1249,19 @@ class GisService {
         parameters: game.parameters ?? null,
         tags: game.tags ?? null,
         images: game.images ?? null,
-      });
+      };
+
+      if (switchReady) await this.#upsertSlotegratorGame(table, row);
+      else await this.models.Gisgamesnew.upsert(row);
 
       written += 1;
     }
 
-    this.logger?.info({ written, skipped }, 'Slotegrator game catalogue synced');
-    return { written, skipped, fetched: items.length };
+    // The same crawl names the providers, so the admin's provider list moves with the games.
+    const { providers } = await this.#saveProviders(items);
+
+    this.logger?.info({ written, skipped, table, providers }, 'Slotegrator game catalogue synced');
+    return { written, skipped, fetched: items.length, table, providers };
   }
 
   /**
@@ -1063,6 +1284,11 @@ class GisService {
       expand: 'tags,parameters,images,related_games',
     });
 
+    return this.#saveProviders(items);
+  }
+
+  /** Upsert each provider the crawl named into `gis_providers_new`; the `enabled` flags survive. */
+  async #saveProviders(items) {
     const names = [
       ...new Set(items.map((g) => String(g?.provider ?? g?.label ?? '').trim()).filter(Boolean)),
     ].sort();
@@ -1083,6 +1309,40 @@ class GisService {
   }
 
   // ══════════════════════════════════════════════════════════════════════
+
+  /** Is migration 097 (the aggregator column and the parked table) in this database? */
+  async #aggregatorSwitchReady() {
+    const [[row]] = await this.db.sequelize.query(`SELECT to_regclass('${PARKED}') IS NOT NULL AS ok`);
+    return Boolean(row?.ok);
+  }
+
+  /**
+   * One Slotegrator game into `table`, tagged `aggregator = 'slotegrator'`. Raw SQL because the
+   * generated model has no `aggregator` column. A uuid already in the OTHER table (a game that
+   * was parked or restored meanwhile) is updated there instead, so a game is never in both.
+   */
+  async #upsertSlotegratorGame(table, row) {
+    const other = table === LIVE ? PARKED : LIVE;
+    const json = (v) => (v == null ? null : JSON.stringify(v));
+    const replacements = { ...row, parameters: json(row.parameters), tags: json(row.tags), images: json(row.images) };
+    const set = `name = :name, provider = :provider, provider_id = :provider_id, type = :type, image = COALESCE(image, :image),
+      technology = :technology, has_lobby = :has_lobby, is_mobile = :is_mobile, has_freespins = :has_freespins,
+      freespin_valid_until_full_day = :freespin_valid_until_full_day, updated_at = :updated_at, label = :label,
+      parameters = :parameters::jsonb, tags = :tags::jsonb, images = :images::jsonb, aggregator = 'slotegrator'`;
+
+    const [, meta] = await this.db.sequelize.query(`UPDATE ${other} SET ${set} WHERE uuid = :uuid`, { replacements });
+    if ((typeof meta === 'number' ? meta : meta?.rowCount ?? 0) > 0) return;
+
+    await this.db.sequelize.query(
+      `INSERT INTO ${table} (uuid, name, provider, provider_id, type, image, technology, has_lobby, is_mobile,
+         has_freespins, freespin_valid_until_full_day, updated_at, label, parameters, tags, images, aggregator, created_at)
+       VALUES (:uuid, :name, :provider, :provider_id, :type, :image, :technology, :has_lobby, :is_mobile,
+         :has_freespins, :freespin_valid_until_full_day, :updated_at, :label, :parameters::jsonb, :tags::jsonb,
+         :images::jsonb, 'slotegrator', NOW())
+       ON CONFLICT (uuid) DO UPDATE SET ${set.replace(/COALESCE\(image, :image\)/, `COALESCE(${table}.image, :image)`)}`,
+      { replacements }
+    );
+  }
 
   #requireProvider() {
     if (!this.provider?.configured) throw E.NOT_CONFIGURED();
@@ -1108,3 +1368,6 @@ class GisService {
 }
 
 module.exports = { GisService };
+
+// Required last: wl-hub/forward requires hubCredentials only, but keep the cycle-free order explicit.
+const { whitelabelPlayer, forwardGis } = require('../wl-hub/forward');

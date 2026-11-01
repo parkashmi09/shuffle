@@ -12,6 +12,19 @@ const {
   viewAllHref,
 } = require('./promotions.schemas');
 
+/**
+ * A multipart boolean. `formBoolean` is `Boolean(value)`, so the string `"false"` a
+ * FormData body carries came out TRUE (the same bug blogs.validators.js had). Real booleans pass;
+ * the strings `true/false/1/0/on/off` are read as such.
+ */
+const formBoolean = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const v = value.trim().toLowerCase();
+  if (v === 'true' || v === '1' || v === 'on') return true;
+  if (v === 'false' || v === '0' || v === 'off' || v === '') return false;
+  return value;
+}, z.boolean());
+
 const id = z.coerce.number().int().positive();
 
 const segment = z.enum(SEGMENTS);
@@ -66,17 +79,17 @@ const create = {
       summary: summary.optional(),
       termsHtml: termsHtml.optional(),
       imageAlt: imageAlt.optional(),
-      featured: z.coerce.boolean().default(false),
+      featured: formBoolean.default(false),
       promoStatus: promoStatus.default('live'),
       endsAt: endsAt.optional(),
-      isPublished: z.coerce.boolean().default(false),
+      isPublished: formBoolean.default(false),
       viewAllHref: viewAllHref.optional(),
       qualifyingGames: qualifyingGames.optional(),
       sportEvents: sportEvents.optional(),
       tags: tags.optional(),
       leaderboard: leaderboardField.optional(),
       tournamentPanel: tournamentPanelField.optional(),
-      showInSidebar: z.coerce.boolean().default(false),
+      showInSidebar: formBoolean.default(false),
       sidebarLabel: sidebarLabel.optional(),
       sidebarIcon: sidebarIcon.optional(),
       sidebarCounter: sidebarCounter.optional(),
@@ -95,22 +108,22 @@ const update = {
       termsHtml: termsHtml.optional(),
       summary: summary.optional(),
       imageAlt: imageAlt.optional(),
-      featured: z.coerce.boolean().optional(),
+      featured: formBoolean.optional(),
       promoStatus: promoStatus.optional(),
       endsAt: endsAt.optional(),
-      isPublished: z.coerce.boolean().optional(),
+      isPublished: formBoolean.optional(),
       viewAllHref: viewAllHref.optional(),
       qualifyingGames: qualifyingGames.optional(),
       sportEvents: sportEvents.optional(),
       tags: tags.optional(),
       leaderboard: leaderboardField.optional(),
       tournamentPanel: tournamentPanelField.optional(),
-      showInSidebar: z.coerce.boolean().optional(),
+      showInSidebar: formBoolean.optional(),
       sidebarLabel: sidebarLabel.optional(),
       sidebarIcon: sidebarIcon.optional(),
       sidebarCounter: sidebarCounter.optional(),
       sidebarSort: sidebarSort.optional(),
-      regenerateSlug: z.coerce.boolean().default(false),
+      regenerateSlug: formBoolean.default(false),
     })
     .strict()
     .refine((body) => Object.keys(body).some((key) => key !== 'regenerateSlug'), {

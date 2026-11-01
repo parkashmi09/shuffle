@@ -50,9 +50,13 @@ Dynamic route pages take `params: Promise<{ id: string }>` and `await` it (Next 
 cd site-admin && npx tsc --noEmit                      # must be clean for YOUR files (ignore errors in files you did not touch)
 # dev server runs on http://localhost:3000 (start with: npx next dev -p 3000)
 curl -s -c /tmp/sa.cookies -X POST localhost:3000/api/auth/login -H 'content-type: application/json' \
-  -d '{"email":"admin@ibitplay.local","password":"ChangeMe!2026"}'
+  -d '{"email":"admin@ibitplay.local","password":"<super admin password>"}'   # see the gitignored credentials.md
 curl -s -b /tmp/sa.cookies -o /dev/null -w "%{http_code}\n" localhost:3000/<your-route>      # expect 200
 curl -s -b /tmp/sa.cookies "localhost:3000/api/gw/api/v1/<route>?limit=2"                    # the data your screen reads
 ```
 The backend runs at :4000 (`cd backend && node scripts/dev.js user admin casino sports gateway`). Demo staff:
-admin@ibitplay.local / ChangeMe!2026 (Super Admin). Demo players demo_player01..05 / Demo@12345.
+admin@ibitplay.local (Super Admin) — password: see the gitignored credentials.md (or sign in without seeing it:
+`node agents/qa-login.mjs <site> admin superadmin` from the hub). Demo players demo_player01..05 each have their own random password, kept only in the site backend's gitignored
+`backend/.demo-credentials.local.md` (written by `node scripts/seed-data.js --demo`). Scripts read it with
+`lookupPassword(login)` from `backend/scripts/lib/demo-credentials.js` (never print it); a missing file or account
+means: run `node scripts/seed-data.js --demo` first.

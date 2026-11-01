@@ -18,6 +18,9 @@ export type BonusRecord = {
   joining: string
   rake: string
   amounts: Record<BonusType, { pending: string; paid: string }>
+
+  /** The site's reward currency every amount on the row is in (USDT by default). */
+  currency?: string
 }
 
 export type BonusGameRow = {
@@ -50,12 +53,15 @@ export type BonusAward = Record<string, unknown> & {
 
 export type BonusDashboard = {
   total: number
+
+  /** The site's reward currency every paid figure is in. */
+  currency?: string
   users: { userId: number | string; name: string | null; vip: number; bonuses: Record<BonusType, string> }[]
   history: { id: number; userId: number | string; type: string; amount: string; claimed: boolean; claimedAt: string | null; createdAt: string | null; vip: number }[]
 }
 
 export type BonusUserInspect = {
-  vip: { level: number; card: string; wager: string; nextLevel: number; wagerToNextLevel: string; progressPct: string }
+  vip: { level: number; card: string; wager: string; nextLevel: number | null; wagerToNextLevel: string; progressPct: string }
   currency: string
   types: Record<BonusType, { amount: string; totalPaid: string; minVipLevel: number; eligible: boolean; claimable: boolean; award: unknown }>
 }
@@ -112,7 +118,22 @@ export type GiftCardAnalytics = {
 
 // ── Spin wheel (admin/user/spin-wheel/*) ──────────────────────────────
 
-export type SpinConfig = { id: number; minDeposit: string; claimCooldownDays: number; isActive: boolean; unlimitedSpin: boolean }
+export type SpinConfig = {
+  id: number
+  minDeposit: string
+  claimCooldownDays: number
+  isActive: boolean
+  unlimitedSpin: boolean
+
+  /** The most one won code adds to one deposit, in the reward currency. */
+  maxBonus: string
+
+  /** Wagering on a spin bonus (× the bonus) before it becomes cash; null = the first-deposit multiplier. */
+  wagerMultiplier?: number | null
+
+  /** Days an unwagered spin bonus stays in the bonus balance (0 = never expires). */
+  bonusExpiryDays?: number
+}
 
 export type SpinSlice = {
   id?: number
@@ -155,6 +176,9 @@ export type AffiliateTop = { owner: string; rewards: number; total: string; curr
 
 export type AffiliateReward = {
   id: number
+
+  /** `tier` = a joining / wager-step reward (unlocked_rewards), `commission` = wager commission (rewards). */
+  kind?: 'tier' | 'commission'
   owner: string
   member: string
   amount: string
@@ -165,7 +189,7 @@ export type AffiliateReward = {
 
 // ── Races (admin/user/race/*, user/race/*) ────────────────────────────
 
-export const RACE_TYPES = ['daily', 'weekly'] as const
+export const RACE_TYPES = ['daily', 'weekly', 'monthly'] as const
 export type RaceType = (typeof RACE_TYPES)[number]
 export const RACE_BUCKETS = ['sports', 'crash', 'slot', 'casino', 'other'] as const
 export type RaceBucket = (typeof RACE_BUCKETS)[number]
@@ -183,7 +207,9 @@ export type RaceConfig = {
   minPoints: string
   rankPrizes: { rank: number; amount: string; percentage: number }[]
   bookedSeatsEnabled: boolean
-  bookedSeats: number[]
+
+  /** A rank (any free entry) or a rank pinned to one entry. */
+  bookedSeats: (number | { rank: number; boatId: number })[]
 }
 
 export type RaceRow = {
@@ -240,7 +266,17 @@ export type RaceLeaderboard = {
 
 // ── VIP ladder (user/vip/levels) + clubs (admin/user/clubs/*) ─────────
 
-export type VipLevel = { level: number; minXp: string; maxXp: string; card: string }
+/** One band of the ladder. `maxXp` is null on the top band (open-ended). */
+export type VipLevel = { level: number; name?: string; card: string; minXp: string | number; maxXp: string | number | null }
+
+/** `GET user/vip/levels` — the ladder with its metadata, not a bare array. */
+export type VipLadder = {
+  ladder: string
+  label: string
+  unranked: { level: number; name?: string; card: string }
+  bonusGates: { daily?: number; weekly?: number; monthly?: number }
+  levels: VipLevel[]
+}
 
 export type Club = {
   id: number

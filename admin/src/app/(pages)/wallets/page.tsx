@@ -1,13 +1,13 @@
 import { Suspense } from 'react'
 
-import View from '@/views/finance/Wallets'
+import DirectUserWallet from '@/views/players/DirectUserWallet'
 
 export const metadata = { title: 'Wallets' }
 
 export default function Page() {
   return (
     <Suspense>
-      <View />
+      <DirectUserWallet />
     </Suspense>
   )
 }

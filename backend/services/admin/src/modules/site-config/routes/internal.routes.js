@@ -29,6 +29,30 @@ module.exports = function internalRoutes(deps) {
   );
 
   /**
+   * Welcome bonus terms, for user-service: the registration bonus switch and
+   * the first-deposit bonus it applies on a player's first credited deposit.
+   */
+  router.get(
+    '/welcome-bonuses',
+    asyncHandler(async (_req, res) => response.ok(res, await service.welcomeBonusSettings()))
+  );
+
+  /** hash.game's rakeback + recurring bonus formula (migration 137), for user-service. */
+  router.get(
+    '/reward-formula',
+    asyncHandler(async (_req, res) => response.ok(res, await service.rewardFormula()))
+  );
+
+  /**
+   * Tip limits (USD), for user-service's tip send. It caches them for a few
+   * seconds and falls back to the shipped defaults (limits ON) if this fails.
+   */
+  router.get(
+    '/tips',
+    asyncHandler(async (_req, res) => response.ok(res, await service.tipSettings()))
+  );
+
+  /**
    * The sports flag, for sports-service.
    *
    * It sits in front of every feed endpoint, so it is read constantly — the
@@ -37,6 +61,27 @@ module.exports = function internalRoutes(deps) {
   router.get(
     '/sports',
     asyncHandler(async (_req, res) => response.ok(res, await service.sportsEnabled()))
+  );
+
+  /**
+   * The operator's settings, for the services that act on them.
+   *
+   * Each entry carries the value to use — stored if the operator set one,
+   * the deployed environment variable if not — so a caller reads one number
+   * and never has to know which of the two it came from.
+   */
+  router.get(
+    '/settings',
+    asyncHandler(async (_req, res) => {
+      const rows = await service.operatorSettings();
+      // + the Super Admin's payment-gateway switch, for user-service's deposit / withdrawal guard.
+      // + the Super Admin's sports switch, for casino-service's sportsbook launch guard.
+      return response.ok(res, {
+        ...Object.fromEntries(rows.map((r) => [r.key, r.value])),
+        payment_gateways_off: await service.paymentGatewaysOff(),
+        sports_off: !(await service.sportsEnabled()).enabled,
+      });
+    })
   );
 
   /**
@@ -65,6 +110,12 @@ module.exports = function internalRoutes(deps) {
       const [flags, features] = await Promise.all([service.publicSettings(), featuresService.publicList()]);
       return response.ok(res, { flags, features });
     })
+  );
+
+  /** Site Config → Email's Gmail sender + app password, for user-service's mailer. Internal only. */
+  router.get(
+    '/mail-sender',
+    asyncHandler(async (_req, res) => response.ok(res, await service.mailSender()))
   );
 
   return router;

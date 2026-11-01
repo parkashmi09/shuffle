@@ -25,6 +25,13 @@ module.exports = function internalRoutes(deps) {
   const router = Router();
 
   const userId = z.coerce.number().int().positive();
+  /** A comma list of notification types (`promotion,bonus`), as a query string carries it. */
+  const typeList = z
+    .string()
+    .trim()
+    .regex(/^[a-z][a-z0-9_]{0,39}(,[a-z][a-z0-9_]{0,39}){0,49}$/, 'types must be a comma list of snake_case types')
+    .transform((v) => v.split(','))
+    .optional();
 
   router.post(
     '/devices',
@@ -58,6 +65,9 @@ module.exports = function internalRoutes(deps) {
           .enum(['true', 'false'])
           .default('false')
           .transform((v) => v === 'true'),
+        /** Additive: the player panel's tab (its types), and the agent-tree rule (no promotions). */
+        types: typeList,
+        excludeTypes: typeList,
       }),
     }),
     /**
@@ -92,9 +102,41 @@ module.exports = function internalRoutes(deps) {
     })
   );
 
+  /**
+   * A player event notification from user-service (deposit approved, VIP
+   * level-up, …). PUT, because it is idempotent by `key`: a retry lands on
+   * the row the first attempt wrote.
+   */
+  router.put(
+    '/player',
+    validate({
+      body: z
+        .object({
+          userId,
+          kind: z.string().trim().regex(/^[a-z][a-z0-9_]{0,39}$/, 'kind must be snake_case'),
+          title: z.string().trim().min(1).max(200),
+          body: z.string().max(2000).nullish(),
+          key: z.string().trim().min(1).max(160),
+          data: z.record(z.unknown()).nullish(),
+        })
+        .strict(),
+    }),
+    asyncHandler(async (req, res) => {
+      const { userId: uid, kind, title, body, key, data } = req.body;
+      const result = await service.notifyPlayer({ userId: uid, title, body, type: kind, data, dedupeKey: key });
+      return response.ok(res, result);
+    })
+  );
+
   router.get(
     '/unread',
-    validate({ query: z.object({ userId }) }),
+    validate({
+      query: z.object({
+        userId,
+        excludeTypes: typeList,
+        byType: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+      }),
+    }),
     asyncHandler(async (req, res) => response.ok(res, await service.unreadCount(req.query)))
   );
 

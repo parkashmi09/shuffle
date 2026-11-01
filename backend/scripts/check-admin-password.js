@@ -30,7 +30,8 @@ async function main() {
   const candidates = [
     process.env.SEED_ADMIN_PASSWORD || 'ChangeMe!2026',
     'ChangeMe!2026',
-    'Demo@12345',
+    // The demo player password is not hard-coded: set DEMO_PASSWORD to also test it.
+    ...(process.env.DEMO_PASSWORD ? [process.env.DEMO_PASSWORD] : []),
     'Test1234!Pass',
   ];
   const passwordMatches = {};

@@ -22,7 +22,7 @@ const gameCard = z
   .object({
     href: z.string().trim().min(1).max(512),
     name: z.string().trim().min(1).max(200),
-    img: z.string().trim().min(1).max(512),
+    img: z.string().trim().max(512).default(''), // empty: the player site draws its own art for the /game/<slug>
     color: z.string().trim().max(80).optional(),
     indicator: z.string().trim().max(40).optional(),
   })

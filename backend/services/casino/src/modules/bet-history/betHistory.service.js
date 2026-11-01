@@ -1,7 +1,9 @@
 'use strict';
 
-const { Op, fn, col, literal } = require('sequelize');
+const { Op, fn, col, literal, QueryTypes } = require('sequelize');
 const { money } = require('@ibitplay/common');
+
+const errors = require('./betHistory.errors');
 
 /**
  * The start of a contest window, in UTC.
@@ -27,17 +29,36 @@ const periodStart = (period) => {
   return null;
 };
 
+/**
+ * Simulated rounds are not public results.
+ *
+ * QA tooling writes fake rows straight into `bets` to exercise wager, VIP and
+ * rakeback without playing a game (game `qa40-sim`, five-figure INR stakes), and
+ * marks each one with `result = {"fake": true, ...}`. Those rows filled the public
+ * ticker and the big-wins board. The marker is the `fake` key, not the game name,
+ * so any future simulator that sets it is excluded too. `->>` on a scalar or array
+ * `result` (the `"refunded"` marker, a keno card) is NULL, so real rounds pass.
+ * The rows stay in the table: staff history and the player's own list still show them.
+ */
+const NOT_FAKE = `("result"->>'fake') IS DISTINCT FROM 'true'`;
+
 const {
   SOURCES,
   SOURCE_KEYS,
+  CASINO_SOURCE_KEYS,
   CATALOGS,
+  categoryOf,
   classify,
   kindOf,
   countExpressions,
   statExpressions,
   finishedOf,
   MAX_ROWS_PER_SOURCE,
+  KIND,
 } = require('./betHistory.constants');
+
+/** How long a provider round with only its stake is treated as still in flight. */
+const OPEN_ROUND_GRACE_MS = 60_000;
 
 /**
  * Casino transaction history — across all four places a bet can live.
@@ -107,15 +128,18 @@ class BetHistoryService {
    *
    * Every casino movement the caller is allowed to see, newest first.
    */
-  async list({ page, limit, search, userId, from, to, source, staffId }) {
-    const visible = await this.#visibleUserIds({ staffId, userId });
+  async list({ page, limit, search, userId, from, to, source, staffId, channel, category, currency, casinoOnly = false }) {
+    const visible = await this.#visibleUserIds({ staffId, userId, channel });
     if (visible.empty) return { rows: [], total: 0 };
 
-    const wanted = source ? [source] : SOURCE_KEYS;
-    const collected = [];
+    // An in-house round is always `original`, so a live / slots filter never reads `bets`.
+    const keys = casinoOnly ? CASINO_SOURCE_KEYS : SOURCE_KEYS;
+    const sources = source ? [source].filter((k) => keys.includes(k)) : keys;
+    const wanted = category === 'live' || category === 'slots' ? sources.filter((k) => k !== 'inhouse') : sources;
+    let collected = [];
 
     for (const key of wanted) {
-      collected.push(...(await this.#read(key, { visible, from, to, search })));
+      collected.push(...(await this.#read(key, { visible, from, to, search, currency })));
     }
 
     // Merged in memory because the four tables have no common key and no
@@ -123,16 +147,22 @@ class BetHistoryService {
     // capped, so the working set is bounded regardless of the date range.
     collected.sort((a, b) => new Date(b.transaction_timestamp) - new Date(a.transaction_timestamp));
 
+    // A category filter needs every row's catalogue entry BEFORE paging (it decides which rows
+    // exist); without one, only the page's rows are looked up — the rest are never rendered.
+    let games = null;
+    if (category) {
+      games = await this.#gameLabels(collected);
+      collected = collected.filter((row) => this.#categoryOfRow(row, games) === category);
+    }
+
     const offset = (page - 1) * limit;
     const pageRows = collected.slice(offset, offset + limit);
 
-    // Both lookups are for the page only — the rows either side of it are never
-    // rendered, so resolving names and titles for them is work nobody reads.
     const names = await this.#namesFor(pageRows.map((r) => r.user_id));
-    const games = await this.#gameLabels(pageRows);
+    games ??= await this.#gameLabels(pageRows);
 
     return {
-      rows: pageRows.map(({ gameCatalog, gameId, providerLabel, ...row }) => {
+      rows: pageRows.map(({ gameCatalog, gameId, gameType, gameName, providerLabel, ...row }) => {
         const game = games.get(`${gameCatalog}:${gameId}`);
         return {
           ...row,
@@ -140,10 +170,12 @@ class BetHistoryService {
           // The provider's id stays available under `game_uid`, because it is
           // what a support ticket names; `game_title` is what a column prints.
           game_uid: gameId,
-          game_title: game?.name ?? gameId,
+          game_title: game?.name ?? gameName ?? gameId,
           // A game the catalog has no row for still came from somewhere, and
           // naming the aggregator beats an empty cell under the title.
           game_vendor: game?.vendor ?? providerLabel,
+          /** original | live | slots — the player's Type filter (`categoryOf`). */
+          game_category: this.#categoryOfRow({ gameCatalog, gameId, gameType, source_key: row.source_key }, games),
         };
       }),
       total: collected.length,
@@ -153,6 +185,7 @@ class BetHistoryService {
 
   /** @legacy GET /betHistory/transactions/user/:userId */
   async listForUser({ userId, staffId, ...rest }) {
+    await this.#assertPlayerInTree({ staffId, userId });
     return this.list({ ...rest, userId, staffId });
   }
 
@@ -166,7 +199,13 @@ class BetHistoryService {
    * `bet` row and a `win` row sharing a `round_id`, and reading `amount` alone
    * shows the stake and the payout as two unrelated lines.
    */
-  async #read(key, { visible, from, to, search }) {
+  /** `categoryOf` for a collected row: its catalogue entry, else the row's own game type. */
+  #categoryOfRow(row, games) {
+    const game = games.get(`${row.gameCatalog}:${row.gameId}`);
+    return categoryOf({ sourceKey: row.source_key, vendor: game?.vendor, type: game?.type ?? row.gameType });
+  }
+
+  async #read(key, { visible, from, to, search, currency }) {
     const source = SOURCES[key];
     const model = this.models[source.model];
 
@@ -175,7 +214,7 @@ class BetHistoryService {
     if (!model) return [];
 
     const where = {};
-    if (!visible.all) where[source.userColumn] = { [Op.in]: visible.ids };
+    Object.assign(where, this.#userWhere(visible, source.userColumn));
 
     if (from || to) {
       where[source.timeColumn] = {
@@ -188,6 +227,10 @@ class BetHistoryService {
     // after the join below, because the name lives in another service's table.
     if (search) where[source.idColumn] = { [Op.iLike]: `%${search}%` };
 
+    // One coin, case-insensitively: `bets.coin` is stored lower-case, every other source
+    // upper-case. The validator allows letters and digits only, so there is nothing to escape.
+    if (currency) where[source.currencyColumn] = { [Op.iLike]: currency };
+
     const rows = await model.findAll({
       where,
       order: [[source.timeColumn, 'DESC']],
@@ -195,7 +238,7 @@ class BetHistoryService {
       raw: true,
     });
 
-    return rows.map((row) => {
+    const legs = rows.map((row) => {
       const profit = row[source.profitColumn];
       const reference = String(row[source.idColumn] ?? '');
       const round = source.roundColumn ? row[source.roundColumn] : null;
@@ -248,8 +291,43 @@ class BetHistoryService {
         // What `?source=` takes; `source` itself is the table, as legacy named it.
         source_key: key,
         gameId: source.gameColumn ? (row[source.gameColumn] ?? null) : null,
+        gameType: source.gameTypeColumn ? (row[source.gameTypeColumn] ?? null) : null,
+        gameName: source.gameNameColumn ? (row[source.gameNameColumn] ?? null) : null,
         gameCatalog: source.catalog,
         providerLabel: source.label,
+      };
+    });
+    return source.oneRowPerRound ? this.#foldRounds(legs) : legs;
+  }
+
+  /**
+   * One row per round for a source whose legs are unsigned (`og`): the stake leg and the win
+   * leg would otherwise both read as wins (profit = amount > 0). The round keeps the newest
+   * leg's fields; `amount` is the stake, `profit` the win less the stake. A rolled-back round
+   * nets to 0 (a push). A round with no win leg yet shows the stake as lost until the win lands.
+   */
+  #foldRounds(legs) {
+    const rounds = new Map();
+    for (const leg of legs) {
+      const round = rounds.get(leg.round_id) ?? { row: leg, stake: 0n, win: 0n, settled: false, void: false };
+      const minor = money.toMinorQuantised(leg.amount);
+      if (leg.transaction_type === KIND.BET) round.stake += minor;
+      else if (leg.transaction_type === KIND.WIN) {
+        round.win += minor;
+        round.settled = true;
+      } else if (leg.transaction_type === KIND.REFUND || leg.transaction_type === KIND.ROLLBACK) round.void = true;
+      rounds.set(leg.round_id, round);
+    }
+    return [...rounds.values()].map(({ row, stake, win, settled, void: rolledBack }) => {
+      const profit = rolledBack ? 0n : win - stake;
+      return {
+        ...row,
+        transaction_type: KIND.ROUND,
+        amount: this.#decimal(money.toDecimalString(stake)),
+        profit: this.#decimal(money.toDecimalString(profit)),
+        outcome: classify(money.toDecimalString(profit)),
+        reason: rolledBack ? 'ROLLBACK' : 'ROUND',
+        round_finished: settled || rolledBack,
       };
     });
   }
@@ -303,22 +381,35 @@ class BetHistoryService {
 
     for (const [key, ids] of wanted) {
       const catalog = CATALOGS[key];
-      const model = catalog && this.models[catalog.model];
-      // A catalog this deployment does not load leaves the raw id in place,
-      // which is worse than a name and better than an empty column.
-      if (!model) continue;
+      if (!catalog) continue;
+      // The primary catalogue first, then the fallback for ids it does not know. A catalog this
+      // deployment does not load leaves the raw id in place, which is worse than a name and
+      // better than an empty column.
+      for (const modelName of [catalog.model, catalog.fallbackModel]) {
+        const model = modelName && this.models[modelName];
+        const missing = [...ids].filter((id) => !labels.has(`${key}:${id}`));
+        if (!model || !missing.length) continue;
 
-      const found = await model.findAll({
-        where: { [catalog.keyColumn]: { [Op.in]: [...ids] } },
-        attributes: [catalog.keyColumn, catalog.nameColumn, catalog.vendorColumn],
-        raw: true,
-      });
-
-      for (const game of found) {
-        labels.set(`${key}:${game[catalog.keyColumn]}`, {
-          name: game[catalog.nameColumn] ?? null,
-          vendor: game[catalog.vendorColumn] ?? null,
+        const found = await model.findAll({
+          where: { [catalog.keyColumn]: { [Op.in]: missing } },
+          attributes: [
+            catalog.keyColumn,
+            catalog.nameColumn,
+            catalog.vendorColumn,
+            ...(catalog.typeColumn ? [catalog.typeColumn] : []),
+            ...(catalog.imageColumn ? [catalog.imageColumn] : []),
+          ],
+          raw: true,
         });
+
+        for (const game of found) {
+          labels.set(`${key}:${game[catalog.keyColumn]}`, {
+            name: game[catalog.nameColumn] ?? null,
+            vendor: game[catalog.vendorColumn] ?? null,
+            type: catalog.typeColumn ? (game[catalog.typeColumn] ?? null) : null,
+            image: catalog.imageColumn ? (game[catalog.imageColumn] ?? null) : null,
+          });
+        }
       }
     }
 
@@ -335,20 +426,28 @@ class BetHistoryService {
    * Counts and net across every source, using ONE definition of win, loss and
    * push — see the class note.
    */
-  async stats({ userId, staffId, from, to }) {
-    const visible = await this.#visibleUserIds({ staffId, userId });
+  async stats({ userId, staffId, from, to, channel, casinoOnly = false }) {
+    const visible = await this.#visibleUserIds({ staffId, userId, channel });
     if (visible.empty) return this.#emptyStats();
 
     const totals = this.#emptyTotals();
     const bySource = {};
+    /** The same figures per wallet: money in two coins does not add up raw. */
+    const currencies = new Map();
+    const dayRows = [];
+    const add = (into, entry) => {
+      for (const field of ['total', 'bets', 'wins', 'paidWins', 'pushes', 'losses', 'refunds']) into[field] += entry[field];
+      for (const field of ['wagered', 'payouts', 'refunded', 'net']) {
+        into[field] = money.toDecimalString(money.toMinorQuantised(into[field]) + money.toMinorQuantised(entry[field]));
+      }
+    };
 
-    for (const key of SOURCE_KEYS) {
+    for (const key of casinoOnly ? CASINO_SOURCE_KEYS : SOURCE_KEYS) {
       const source = SOURCES[key];
       const model = this.models[source.model];
       if (!model) continue;
 
-      const where = {};
-      if (!visible.all) where[source.userColumn] = { [Op.in]: visible.ids };
+      const where = { ...this.#userWhere(visible, source.userColumn) };
       if (from || to) {
         where[source.timeColumn] = { ...(from ? { [Op.gte]: from } : {}), ...(to ? { [Op.lte]: to } : {}) };
       }
@@ -356,39 +455,91 @@ class BetHistoryService {
       // Built from the frozen SOURCES table, never from a request — which is
       // what makes these safe to hand to `literal()`.
       const stat = statExpressions(source);
+      // The providers' names for this platform's wallets: PKR is INR, USD is USDT.
+      const currency = `CASE UPPER(${source.currencyColumn}::text) WHEN 'PKR' THEN 'INR' WHEN 'USD' THEN 'USDT'
+                          ELSE UPPER(COALESCE(${source.currencyColumn}::text, '?')) END`;
 
-      const [row] = await model.findAll({
+      const day = `TO_CHAR(DATE_TRUNC('day', ${source.timeColumn}), 'YYYY-MM-DD')`;
+      const rows = await model.findAll({
         where,
-        attributes: Object.entries(stat).map(([name, sql]) => [literal(sql), name]),
+        attributes: [[literal(currency), 'currency'], [literal(day), 'day'], ...Object.entries(stat).map(([name, sql]) => [literal(sql), name])],
+        group: [literal('1'), literal('2')],
         raw: true,
       });
 
-      const entry = {
-        total: Number(row?.movements ?? 0),
-        bets: Number(row?.bets ?? 0),
-        /** Legacy's `total_wins`: every win row, zero-value ones included. */
-        wins: Number(row?.winRows ?? 0),
-        paidWins: Number(row?.paidWins ?? 0),
-        pushes: Number(row?.pushes ?? 0),
-        losses: Number(row?.losses ?? 0),
-        refunds: Number(row?.refunds ?? 0),
-        wagered: String(row?.wagered ?? '0'),
-        payouts: String(row?.payouts ?? '0'),
-        refunded: String(row?.refunded ?? '0'),
-        /** The PLAYERS' side: positive means the players are up on this source. */
-        net: String(Number(row?.payouts ?? 0) - Number(row?.wagered ?? 0)),
-      };
+      const entry = this.#emptyTotals();
+      for (const row of rows) {
+        const one = this.#statEntry(row);
+        add(entry, one);
+        if (!currencies.has(row.currency)) currencies.set(row.currency, { totals: this.#emptyTotals(), bySource: {} });
+        const wallet = currencies.get(row.currency);
+        wallet.bySource[source.label] ??= this.#emptyTotals();
+        add(wallet.bySource[source.label], one);
+        add(wallet.totals, one);
+        dayRows.push({ ...one, currency: row.currency, day: row.day });
+      }
 
       bySource[source.label] = entry;
-      for (const field of ['total', 'bets', 'wins', 'paidWins', 'pushes', 'losses', 'refunds']) {
-        totals[field] += entry[field];
-      }
-      for (const field of ['wagered', 'payouts', 'refunded', 'net']) {
-        totals[field] = String(Number(totals[field]) + Number(entry[field]));
-      }
+      add(totals, entry);
     }
 
-    return { totals, bySource, byType: this.#byType(totals) };
+    const byCurrency = [...currencies.entries()]
+      .map(([currency, figures]) => ({ currency, ...figures }))
+      .sort((a, b) => b.totals.bets - a.totals.bets);
+    return { totals, bySource, byType: this.#byType(totals), byCurrency, usdt: await this.#inUsdt(dayRows) };
+  }
+
+  /**
+   * Every wallet's figures valued in USDT at the site's current rates (exchangerate.usd_rate;
+   * USDT is 1 USD), in total and per day. A coin with no rate is left out and named in `unconverted`.
+   */
+  async #inUsdt(dayRows) {
+    const rates = new Map(
+      (await this.models.Users.sequelize.query('SELECT UPPER(currency) AS currency, usd_rate FROM exchangerate', { type: QueryTypes.SELECT }))
+        .map((r) => [r.currency, String(r.usd_rate)])
+    );
+    rates.set('USDT', '1');
+    const blank = () => ({ bets: 0, wagered: '0', payouts: '0', ggr: '0' });
+    const add = (into, r, rate) => {
+      const usd = (v) => money.multiply(v, rate);
+      into.bets += r.bets;
+      into.wagered = money.toDecimalString(money.add(into.wagered, money.toDecimalString(usd(r.wagered))));
+      into.payouts = money.toDecimalString(money.add(into.payouts, money.toDecimalString(usd(r.payouts))));
+      into.ggr = money.toDecimalString(money.subtract(into.wagered, into.payouts));
+    };
+    const totals = blank();
+    const days = new Map();
+    const unconverted = new Set();
+    for (const r of dayRows) {
+      const rate = rates.get(r.currency);
+      if (!rate) { unconverted.add(r.currency); continue; }
+      if (!days.has(r.day)) days.set(r.day, { day: r.day, ...blank() });
+      add(days.get(r.day), r, rate);
+      add(totals, r, rate);
+    }
+    return { totals, days: [...days.values()].sort((a, b) => a.day.localeCompare(b.day)), unconverted: [...unconverted] };
+  }
+
+  /** One grouped `statExpressions` row as the totals shape. */
+  #statEntry(row) {
+    const dec = (v) => money.toDecimalString(money.toMinorQuantised(String(v ?? '0')));
+    const wagered = dec(row?.wagered);
+    const payouts = dec(row?.payouts);
+    return {
+      total: Number(row?.movements ?? 0),
+      bets: Number(row?.bets ?? 0),
+      /** Legacy's `total_wins`: every win row, zero-value ones included. */
+      wins: Number(row?.winRows ?? 0),
+      paidWins: Number(row?.paidWins ?? 0),
+      pushes: Number(row?.pushes ?? 0),
+      losses: Number(row?.losses ?? 0),
+      refunds: Number(row?.refunds ?? 0),
+      wagered,
+      payouts,
+      refunded: dec(row?.refunded),
+      /** The PLAYERS' side: positive means the players are up on this source. */
+      net: money.toDecimalString(money.toMinorQuantised(payouts) - money.toMinorQuantised(wagered)),
+    };
   }
 
   /**
@@ -472,6 +623,7 @@ class BetHistoryService {
    * One player's bet and win counts.
    */
   async betWinCount({ userId, staffId }) {
+    await this.#assertPlayerInTree({ staffId, userId });
     const visible = await this.#visibleUserIds({ staffId, userId });
     if (visible.empty) return { userId, bets: 0, wins: 0, bySource: {} };
 
@@ -485,8 +637,8 @@ class BetHistoryService {
    * The dashboard summary: all time, today, by outcome, and the busiest
    * players.
    */
-  async analytics({ staffId }) {
-    const visible = await this.#visibleUserIds({ staffId });
+  async analytics({ staffId, channel, casinoOnly = false }) {
+    const visible = await this.#visibleUserIds({ staffId, channel });
     if (visible.empty) {
       return { ...this.#emptyStats(), today: null, topUsers: [] };
     }
@@ -495,9 +647,9 @@ class BetHistoryService {
     startOfDay.setUTCHours(0, 0, 0, 0);
 
     const [allTime, today, topUsers] = await Promise.all([
-      this.stats({ staffId }),
-      this.stats({ staffId, from: startOfDay }),
-      this.#topUsers(visible),
+      this.stats({ staffId, channel, casinoOnly }),
+      this.stats({ staffId, from: startOfDay, channel, casinoOnly }),
+      this.#topUsers(visible, 10, null, casinoOnly),
     ]);
 
     return {
@@ -528,8 +680,8 @@ class BetHistoryService {
    * the sources that contributed are NAMED in `scope`, so a reader can see
    * what went into the figure instead of being told to assume.
    */
-  async #topUsers(visible, limit = 10, from = null) {
-    const { ranked, scope } = await this.#rankUsers(visible, from);
+  async #topUsers(visible, limit = 10, from = null, casinoOnly = false) {
+    const { ranked, scope } = await this.#rankUsers(visible, from, casinoOnly);
     const top = ranked.slice(0, limit);
     const names = await this.#namesFor(top.map(([id]) => id));
 
@@ -553,18 +705,18 @@ class BetHistoryService {
    * source (`bets.created`, `gis_transactions.created_at`, …) — that is why it
    * is read from `SOURCES` rather than assumed.
    */
-  async #rankUsers(visible, from = null) {
+  async #rankUsers(visible, from = null, casinoOnly = false) {
     const perUser = new Map();
     const contributing = [];
 
-    for (const key of SOURCE_KEYS) {
+    for (const key of casinoOnly ? CASINO_SOURCE_KEYS : SOURCE_KEYS) {
       const source = SOURCES[key];
       const model = this.models[source.model];
       if (!model) continue;
 
       const stat = statExpressions(source);
       const where = {
-        ...(visible.all ? {} : { [source.userColumn]: { [Op.in]: visible.ids } }),
+        ...this.#userWhere(visible, source.userColumn),
         ...(from && source.timeColumn ? { [source.timeColumn]: { [Op.gte]: from } } : {}),
       };
 
@@ -769,14 +921,14 @@ class BetHistoryService {
        * rather than an equality on the column.
        * ═══════════════════════════════════════════════════════════════════
        */
-      where: literal(`"result" IS NOT NULL AND "result"::text <> '"refunded"'`),
+      where: literal(`"result" IS NOT NULL AND "result"::text <> '"refunded"' AND ${NOT_FAKE}`),
       attributes: ['gid', 'amount', 'profit', 'coin', 'created', 'game'],
       order: [['created', 'DESC']],
       limit,
       raw: true,
     });
 
-    return rows.map((row) => ({
+    const inHouse = rows.map((row) => ({
       reference: String(row.gid),
       game: row.game ?? null,
       amount: String(row.amount ?? '0'),
@@ -784,7 +936,114 @@ class BetHistoryService {
       outcome: classify(row.profit),
       currency: row.coin ?? null,
       at: row.created,
+      category: 'original',
     }));
+
+    // Third-party rounds too: the ticker showed only in-house games (on live, only Limbo).
+    const provider = (await this.#providerRounds()).map(({ win, ...round }) => round);
+    return [...inHouse, ...provider]
+      .sort((a, b) => new Date(b.at) - new Date(a.at))
+      .slice(0, limit);
+  }
+
+  /**
+   * Third-party rounds for the public ticker and top wins — one row per finished round, no
+   * player. A provider writes a round as legs (bet, win, …); they are folded here by round:
+   *
+   *   jsgamesv2  every leg carries the round's own `bet_amount` / `win_amount` in
+   *              `additional_data`, keyed by `game_round`, so those are read as-is;
+   *   gis/js v1  legs summed: BET → stake, WIN → payout, NET (v1 settle) → signed profit;
+   *              a REFUND or ROLLBACK voids the round.
+   *
+   * A round with only its stake so far is still open (a crash round in flight) unless it is
+   * older than OPEN_ROUND_GRACE_MS — a losing v2 spin never gets a second leg.
+   *
+   * shortcut: reads each table's newest MAX_ROWS_PER_SOURCE legs, so top wins ranks RECENT
+   * provider rounds; an indexed rounds table is the upgrade if all-time tops are wanted.
+   */
+  async #providerRounds() {
+    const rounds = new Map();
+    const settledBefore = Date.now() - OPEN_ROUND_GRACE_MS;
+
+    for (const key of SOURCE_KEYS) {
+      if (key === 'inhouse') continue;
+      const source = SOURCES[key];
+      const model = this.models[source.model];
+      if (!model) continue;
+
+      const legs = await model.findAll({
+        order: [[source.timeColumn, 'DESC']],
+        limit: MAX_ROWS_PER_SOURCE,
+        raw: true,
+      });
+
+      for (const leg of legs) {
+        const extra = leg.additional_data && typeof leg.additional_data === 'object' ? leg.additional_data : null;
+        const v2 = key === 'jsgamesv2' && extra && extra.bet_amount != null;
+        const roundId = v2 ? extra.game_round : source.roundColumn ? leg[source.roundColumn] : null;
+        const id = `${key}:${roundId ?? leg[source.idColumn]}`;
+        const at = leg[source.timeColumn];
+        const round = rounds.get(id) ?? {
+          reference: String(roundId ?? leg[source.idColumn] ?? ''),
+          sourceKey: key,
+          gameCatalog: source.catalog,
+          gameId: leg[source.gameColumn] ?? null,
+          gameName: source.gameNameColumn ? (leg[source.gameNameColumn] ?? null) : null,
+          currency: leg[source.currencyColumn] ? String(leg[source.currencyColumn]).toUpperCase() : null,
+          at,
+          stake: 0,
+          win: 0,
+          net: 0,
+          settled: false,
+          void: false,
+        };
+        if (new Date(at) > new Date(round.at)) round.at = at;
+
+        const kind = kindOf(source, leg);
+        const amount = Math.abs(Number(leg[source.amountColumn] ?? 0)) || 0;
+        if (v2) {
+          round.stake = Math.max(round.stake, Number(extra.bet_amount) || 0);
+          round.win = Math.max(round.win, Number(extra.win_amount) || 0);
+          if (kind !== KIND.BET) round.settled = true;
+        } else if (kind === KIND.BET) {
+          round.stake += amount;
+        } else if (kind === KIND.WIN) {
+          round.win += amount;
+          round.settled = true;
+        } else if (kind === KIND.NET) {
+          round.net += Number(leg[source.amountColumn] ?? 0) || 0;
+          round.settled = true;
+        } else if (kind === KIND.REFUND || kind === KIND.ROLLBACK) {
+          round.void = true;
+        }
+        if (finishedOf(source, leg) === true) round.settled = true;
+        rounds.set(id, round);
+      }
+    }
+
+    const finished = [...rounds.values()].filter(
+      (r) => !r.void && r.stake > 0 && (r.settled || new Date(r.at).getTime() < settledBefore),
+    );
+    const names = await this.#gameLabels(finished);
+
+    return finished.map((r) => {
+      const profit = r.win - r.stake + r.net;
+      const label = names.get(`${r.gameCatalog}:${r.gameId}`);
+      return {
+        reference: r.reference,
+        game: r.gameId,
+        title: label?.name ?? r.gameName ?? null,
+        // The lobby tile's art and its original | live | slots tab, for the home widgets.
+        image: label?.image ?? null,
+        category: categoryOf({ sourceKey: r.sourceKey, vendor: label?.vendor, type: label?.type }),
+        amount: this.#decimal(r.stake),
+        profit: this.#decimal(profit),
+        outcome: classify(profit),
+        currency: r.currency,
+        at: r.at,
+        win: profit,
+      };
+    });
   }
 
   /**
@@ -940,6 +1199,7 @@ class BetHistoryService {
       where: {
         profit: { [Op.gt]: 0 },
         ...(game ? { game } : {}),
+        [Op.and]: literal(NOT_FAKE),
       },
       attributes: ['gid', 'game', 'amount', 'profit', 'coin', 'created'],
       order: [['profit', 'DESC']],
@@ -947,14 +1207,22 @@ class BetHistoryService {
       raw: true,
     });
 
-    return rows.map((row) => ({
+    const inHouse = rows.map((row) => ({
       reference: row.gid == null ? null : String(row.gid),
       game: row.game ?? null,
       amount: money.toDecimalString(money.toMinor(row.amount ?? '0')),
       profit: money.toDecimalString(money.toMinor(row.profit ?? '0')),
       currency: row.coin ?? null,
       at: row.created,
+      category: 'original',
     }));
+
+    const provider = (await this.#providerRounds())
+      .filter((r) => r.win > 0 && (!game || r.game === game))
+      .map(({ win, outcome, ...round }) => round);
+    return [...inHouse, ...provider]
+      .sort((a, b) => Number(b.profit) - Number(a.profit))
+      .slice(0, limit);
   }
 
   /**
@@ -1033,7 +1301,53 @@ class BetHistoryService {
    * as an empty result rather than as no filter. Legacy's equivalent produced
    * `[-1]` and relied on nothing matching it.
    */
-  async #visibleUserIds({ staffId, userId }) {
+  /**
+   * A per-player route (`/transactions/user/:userId`, `/user/:userId/bet-win-count`)
+   * about a player outside the caller's tree is a 404, like every other
+   * per-player staff route — not a 200 with zero rows, which reads as "this
+   * player never bet". 404 rather than 403 so the answer does not confirm the
+   * id exists. Player-scoped calls (no `staffId`) are already their own id.
+   */
+  async #assertPlayerInTree({ staffId, userId }) {
+    if (!staffId) return;
+    const visible = await this.#visibleUserIds({ staffId, userId });
+    if (visible.empty) throw errors.PLAYER_NOT_IN_YOUR_TREE({ userId: String(userId) });
+  }
+
+  /**
+   * `visible` → Sequelize where on a player column. `text`: column VARCHAR hai (`user_code`,
+   * `bets_2m.uid`). `visible.channel` (root operator + Direct / Agent tab) = users ka subquery,
+   * taaki lakhon ids ki list na banani pade. Literal sirf in do fixed strings se banta hai.
+   */
+  #userWhere(visible, column, { text = false } = {}) {
+    if (visible.all) return {};
+    if (visible.channel) {
+      const id = text ? 'id::text' : 'id';
+      const parent = visible.channel === 'direct' ? 'IS NULL' : 'IS NOT NULL';
+      return { [column]: { [Op.in]: literal(`(SELECT ${id} FROM users WHERE parent_staff_id ${parent})`) } };
+    }
+    return { [column]: { [Op.in]: text ? visible.ids.map(String) : visible.ids } };
+  }
+
+  /**
+   * Direct / Agent tab (`channel`): direct = `users.parent_staff_id IS NULL`, agent = NOT NULL.
+   * Na ho = pehle jaisa. Root ke alawa kisi ke tree me direct user hota hi nahi.
+   */
+  async #visibleUserIds({ staffId, userId, channel }) {
+    const visible = await this.#visibleUserIdsAll({ staffId, userId });
+    if (!channel || visible.empty) return visible;
+
+    if (visible.all) return { all: false, channel };
+    if (userId) {
+      const row = await this.models.Users.findByPk(Number(userId), { attributes: ['parent_staff_id'], raw: true });
+      const direct = row ? row.parent_staff_id == null : null;
+      return row && direct === (channel === 'direct') ? visible : { empty: true };
+    }
+    // Tree ke players ka parent hamesha set hai — sab agent wale.
+    return channel === 'agent' ? visible : { empty: true };
+  }
+
+  async #visibleUserIdsAll({ staffId, userId }) {
     if (!staffId) {
       // A player-scoped call: exactly one id, and it came from their token.
       return userId ? { all: false, ids: [Number(userId)] } : { empty: true };
@@ -1049,7 +1363,13 @@ class BetHistoryService {
      * Legacy reached the same conclusion by checking `ids.includes(1)` — a
      * hard-coded id — on a tree derived from an unauthenticated header.
      */
-    if (this.#isRoot(staffIds)) return { all: true, ids: [] };
+    if (this.#isRoot(staffIds)) {
+      // The root operator may see every player — but a question about ONE
+      // player is still about that player. Returning `all` here dropped the
+      // filter, so a player's detail page showed the whole platform's rounds
+      // (and bet/win counts) under that player's id.
+      return userId ? { all: false, ids: [Number(userId)] } : { all: true, ids: [] };
+    }
 
     const players = await this.models.Users.findAll({
       where: { parent_staff_id: { [Op.in]: staffIds } },
@@ -1096,41 +1416,15 @@ class BetHistoryService {
    *
    * The LuckySports feed, from `transaction_live`.
    */
-  async luckySports({ staffId, userId, from, to, page = 1, limit = 20 }) {
-    const visible = await this.#visibleUserIds({ staffId, userId });
-    if (visible.empty) return { total: 0, rows: [] };
+  async luckySports({ staffId, userId, from, to, page = 1, limit = 20, channel }) {
+    // Same table, same shape as the raw `live` read — with player names.
+    const result = await this.rawTransactions({ table: 'live', staffId, userId, from, to, page, limit, channel });
+    if (!result.rows.length) return result;
 
-    const { rows, count } = await this.models.TransactionLive.findAndCountAll({
-      where: {
-        ...(visible.all ? {} : { user_id: { [Op.in]: visible.ids } }),
-        ...this.#dateWhere('created_at', from, to),
-      },
-      order: [['id', 'DESC']],
-      limit,
-      offset: (page - 1) * limit,
-      raw: true,
-    });
-
-    const names = await this.#namesFor(rows.map((r) => r.user_id));
-
+    const names = await this.#namesFor(result.rows.map((r) => r.userId));
     return {
-      total: count,
-      rows: rows.map((row) => ({
-        id: String(row.id),
-        at: row.created_at ?? null,
-        userId: row.user_id != null ? String(row.user_id) : null,
-        user: names.get(Number(row.user_id)) ?? null,
-        /**
-         * `transaction_live` stores money in a BIGINT column, so every amount
-         * legacy wrote to it was already rounded to a whole unit — migration
-         * 017 records settlements in NUMERIC columns and leaves these as the
-         * historical record. Read as-is; the rounding happened at write time
-         * and cannot be undone here.
-         */
-        amount: money.toDecimalString(money.toMinor(row.amount ?? '0')),
-        type: row.type ?? row.transaction_type ?? null,
-        status: row.status ?? null,
-      })),
+      ...result,
+      rows: result.rows.map((row) => ({ ...row, user: names.get(Number(row.userId)) ?? null })),
     };
   }
 
@@ -1142,31 +1436,57 @@ class BetHistoryService {
    *
    * Legacy served both with no authentication and no scoping — the whole table.
    */
-  async rawTransactions({ table, staffId, userId, from, to, page = 1, limit = 20 }) {
-    const visible = await this.#visibleUserIds({ staffId, userId });
+  async rawTransactions({ table, staffId, userId, from, to, page = 1, limit = 20, channel }) {
+    const visible = await this.#visibleUserIds({ staffId, userId, channel });
     if (visible.empty) return { total: 0, rows: [] };
 
     const model = table === 'slot' ? this.models.TransactionSlot : this.models.TransactionLive;
 
+    /**
+     * The real schema: `id, method, user_code, user_balance, game_type,
+     * provider_code, game_code, type, bet_money, win_money, txn_id, txn_type`.
+     *
+     * The player is `user_code` — a VARCHAR holding the player's id as a
+     * string (the catalogue launches with `userCode: String(player.id)`), so
+     * the scope is matched as strings. There is NO timestamp column, so
+     * `from`/`to` cannot be applied and are ignored; `id` order is insertion
+     * order. Reading `user_id` / `created_at` — which these tables never had —
+     * was a 500 on every call.
+     */
+    void from;
+    void to;
     const { rows, count } = await model.findAndCountAll({
-      where: {
-        ...(visible.all ? {} : { user_id: { [Op.in]: visible.ids } }),
-        ...this.#dateWhere('created_at', from, to),
-      },
+      where: this.#userWhere(visible, 'user_code', { text: true }),
       order: [['id', 'DESC']],
       limit,
       offset: (page - 1) * limit,
       raw: true,
     });
 
+    /**
+     * `bet_money` / `win_money` are BIGINT, so every amount legacy wrote here
+     * was already rounded to a whole unit at write time. Read as-is.
+     */
+    const amount = (v) => money.toDecimalString(money.toMinor(v ?? '0'));
+
     return {
       total: count,
       rows: rows.map((row) => ({
         id: String(row.id),
-        at: row.created_at ?? null,
-        userId: row.user_id != null ? String(row.user_id) : null,
-        amount: money.toDecimalString(money.toMinor(row.amount ?? '0')),
-        status: row.status ?? null,
+        at: null,
+        userId: row.user_code != null ? String(row.user_code) : null,
+        txnId: row.txn_id ?? null,
+        type: row.type ?? row.txn_type ?? null,
+        txnType: row.txn_type ?? null,
+        method: row.method ?? null,
+        gameType: row.game_type ?? null,
+        provider: row.provider_code ?? null,
+        game: row.game_code ?? null,
+        amount: amount(row.bet_money),
+        bet: amount(row.bet_money),
+        win: amount(row.win_money),
+        balance: row.user_balance != null ? amount(row.user_balance) : null,
+        status: null,
       })),
     };
   }
@@ -1188,15 +1508,15 @@ class BetHistoryService {
    * string and no check that the caller owned it.
    * ─────────────────────────────────────────────────────────────────────
    */
-  async houseBets({ table = 'bets', staffId, userId, from, to, page = 1, limit = 20 }) {
-    const visible = await this.#visibleUserIds({ staffId, userId });
+  async houseBets({ table = 'bets', staffId, userId, from, to, page = 1, limit = 20, channel }) {
+    const visible = await this.#visibleUserIds({ staffId, userId, channel });
     if (visible.empty) return { total: 0, rows: [] };
 
-    const model = table === 'bets_2m' ? this.models.Bets2m : this.models.Bets;
+    if (table === 'bets_2m') return this.#bets2m({ visible, page, limit });
 
-    const { rows, count } = await model.findAndCountAll({
+    const { rows, count } = await this.models.Bets.findAndCountAll({
       where: {
-        ...(visible.all ? {} : { uid: { [Op.in]: visible.ids } }),
+        ...this.#userWhere(visible, 'uid'),
         ...this.#dateWhere('created', from, to),
       },
       order: [['id', 'DESC']],
@@ -1217,6 +1537,52 @@ class BetHistoryService {
         amount: money.toDecimalString(money.toMinor(row.amount ?? '0')),
         profit: money.toDecimalString(money.toMinor(row.profit ?? '0')),
         game: row.game ?? null,
+      })),
+    };
+  }
+
+  /**
+   * `bets_2m` is not shaped like `bets`. Its only columns are
+   * `uid VARCHAR, value, amount, sessionid, status, cointype` — no id, no
+   * timestamp, no profit — so the `bets` query (ORDER BY id, WHERE created,
+   * uid IN numbers) was a 500 on every call.
+   *
+   * Scope is matched against `uid` as strings. There is no date column, so
+   * `from`/`to` are ignored for this table; rows are ordered by `sessionid`,
+   * the closest thing it has to a stable key. `amount` is VARCHAR and is
+   * passed through as stored when it is not a number.
+   */
+  async #bets2m({ visible, page, limit }) {
+    const { rows, count } = await this.models.Bets2m.findAndCountAll({
+      where: this.#userWhere(visible, 'uid', { text: true }),
+      order: [['sessionid', 'DESC']],
+      limit,
+      offset: (page - 1) * limit,
+      raw: true,
+    });
+
+    const names = await this.#namesFor(rows.map((r) => r.uid).filter((u) => /^\d+$/.test(String(u ?? ''))));
+    const decimal = (v) => {
+      if (v === null || v === undefined || v === '') return null;
+      try {
+        return money.toDecimalString(money.toMinorQuantised(String(v).trim()));
+      } catch {
+        return String(v);
+      }
+    };
+
+    return {
+      total: count,
+      rows: rows.map((row) => ({
+        id: row.sessionid ?? null,
+        at: null,
+        userId: row.uid != null ? String(row.uid) : null,
+        user: names.get(Number(row.uid)) ?? null,
+        amount: decimal(row.amount),
+        value: row.value ?? null,
+        status: row.status ?? null,
+        coin: row.cointype ?? null,
+        sessionId: row.sessionid ?? null,
       })),
     };
   }
@@ -1251,7 +1617,7 @@ class BetHistoryService {
   }
 
   #emptyStats() {
-    return { totals: this.#emptyTotals(), bySource: {}, byType: [] };
+    return { totals: this.#emptyTotals(), bySource: {}, byType: [], byCurrency: [], usdt: { totals: { bets: 0, wagered: '0', payouts: '0', ggr: '0' }, days: [], unconverted: [] } };
   }
 }
 

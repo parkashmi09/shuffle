@@ -22,6 +22,8 @@ const amount = z
   .transform((v) => String(v))
   .refine((v) => /^\d{1,12}(\.\d{1,8})?$/.test(v), 'must be a positive decimal amount');
 
+const seatRank = z.coerce.number().int().min(1).max(MAX_WINNERS);
+
 const typeParam = { params: z.object({ type: raceType }) };
 
 const listing = {
@@ -41,11 +43,33 @@ const adminListing = {
     .object({
       type: raceType.optional(),
       userId: id.optional(),
+      raceId: id.optional(),
       claimed: z.enum(['true', 'false']).optional(),
       limit: z.coerce.number().int().min(1).max(200).default(50),
       offset: z.coerce.number().int().min(0).default(0),
     })
     .strict(),
+};
+
+/** Public finished-race list: newest first, a page's worth. */
+const history = {
+  query: z
+    .object({
+      type: raceType.optional(),
+      limit: z.coerce.number().int().min(1).max(30).default(10),
+    })
+    .strict(),
+};
+
+/** Cancel: an optional reason, kept on the race and in the audit row. */
+const cancel = {
+  params: z.object({ id }),
+  body: z.object({ reason: z.string().trim().max(200).optional() }).strict(),
+};
+
+/** A staff test race: its own window instead of midnight→midnight / Monday→Monday. */
+const testRace = {
+  body: z.object({ type: raceType, startsAt: z.coerce.date(), endsAt: z.coerce.date() }).strict(),
 };
 
 const rewardParam = { params: z.object({ rewardId: id }) };
@@ -81,7 +105,23 @@ const updateConfig = {
        * at rank 40 of a 25-rank race is a seat that can never be filled, and
        * silently keeping it makes the boat placement loop look broken.
        */
-      bookedSeats: z.array(z.coerce.number().int().min(1).max(MAX_WINNERS)).max(MAX_WINNERS).optional(),
+      bookedSeats: z
+        .array(
+          z.union([
+            seatRank,
+            // A rank pinned to one boat; a plain number is any free boat (the older, stored form).
+            z.object({ rank: seatRank, boatId: id }).strict(),
+          ])
+        )
+        .max(MAX_WINNERS)
+        .optional(),
+
+      /**
+       * The operator's own payout ladder: % of the net pool per rank, rank 1 first. Sets the
+       * ranks paid to its length. `resetLadder: true` goes back to the computed curve.
+       */
+      rankShares: z.array(z.coerce.number().gt(0).max(100)).min(1).max(MAX_WINNERS).optional(),
+      resetLadder: z.boolean().optional(),
     })
     .strict()
     /**
@@ -94,7 +134,7 @@ const updateConfig = {
 const boat = z.object({
   name: z.string().trim().min(1).max(60),
   isActive: z.coerce.boolean().optional(),
-});
+}).strict();
 
 const addBoat = { body: boat.strict() };
 const updateBoat = { params: z.object({ id }), body: boat.partial().strict() };
@@ -103,8 +143,11 @@ const boatParam = { params: z.object({ id }) };
 module.exports = {
   typeParam,
   listing,
+  history,
   adminListing,
   rewardParam,
+  cancel,
+  testRace,
   updateConfig,
   addBoat,
   updateBoat,

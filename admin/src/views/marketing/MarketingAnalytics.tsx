@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useSession } from '@/contexts/SessionContext'
 import { useApi, useListState, usePagedApi } from '@/hooks/use-api'
 import { formatNumber } from '@/lib/format'
 import { CUSTOMER_CHANNELS, CUSTOMER_SORTS, RANGE_PRESETS, type Customer, type Deposits, type Retention, type Signups, type TopAgent, type TopAgents } from './types'
@@ -78,7 +79,7 @@ const SeriesTable = ({ rows, title }: { rows: Record<string, unknown>[] | undefi
 
 const agentColumns: Column<TopAgent>[] = [
   { key: 'n', header: '#', cell: (_r, i) => <span className='text-muted-foreground'>{i + 1}</span> },
-  { key: 'agent', header: 'Agent', cell: r => <Link href={`/staff/${r.agentId}`} className='font-medium hover:underline'>{r.agentName}</Link> },
+  { key: 'agent', header: 'Agent', cell: r => <span className='font-medium'>{r.agentName}</span> },
   { key: 'code', header: 'Code', cell: r => <code className='text-xs'>{r.agentCode ?? '—'}</code> },
   { key: 'role', header: 'Role', cell: r => <Badge variant='secondary'>{r.role ?? '—'}</Badge> },
   { key: 'customers', header: 'Customers', align: 'right', cell: r => formatNumber(r.customers) },
@@ -135,7 +136,7 @@ const customerColumns: Column<Customer>[] = [
     header: 'Customer',
     cell: r => (
       <div className='flex flex-col'>
-        <Link href={`/players/${r.id}`} className='font-medium hover:underline'>
+        <Link href={`/users/${r.id}`} className='font-medium hover:underline'>
           {r.name ?? `#${r.id}`}
         </Link>
         <span className='text-muted-foreground font-mono text-xs'>#{r.id}</span>
@@ -144,7 +145,7 @@ const customerColumns: Column<Customer>[] = [
   },
   { key: 'contact', header: 'Contact', cell: r => <div className='flex flex-col text-xs'><span>{r.email ?? '—'}</span><span className='text-muted-foreground'>{r.phone ?? ''}</span></div> },
   { key: 'loc', header: 'Location', cell: r => <div className='flex flex-col text-xs'><span>{r.country ?? '—'}</span><span className='text-muted-foreground font-mono'>{r.lastIp ?? ''}</span></div> },
-  { key: 'agent', header: 'Agent', cell: r => (r.agent ? <Link href={`/staff/${r.agent.id}`} className='hover:underline'>{r.agent.name}{r.agent.code ? <span className='text-muted-foreground'> · {r.agent.code}</span> : null}</Link> : <Badge variant='outline'>direct</Badge>) },
+  { key: 'agent', header: 'Agent', cell: r => (r.agent ? <span>{r.agent.name}{r.agent.code ? <span className='text-muted-foreground'> · {r.agent.code}</span> : null}</span> : <Badge variant='outline'>direct</Badge>) },
   { key: 'signed', header: 'Signed up', cell: r => <span>{r.createdEstimated ? <span className='text-muted-foreground'>≈ </span> : null}<DateTime value={r.createdAt} /></span> },
   { key: 'login', header: 'Last login', cell: r => <DateTime value={r.lastLoginAt} relative /> },
   { key: 'deposits', header: 'Deposits', align: 'right', cell: r => <span className='flex flex-col items-end'><Money value={r.depositVolume} /><span className='text-muted-foreground text-xs'>{formatNumber(r.depositCount)} txns</span></span> },
@@ -153,6 +154,7 @@ const customerColumns: Column<Customer>[] = [
 
 const Customers = ({ range }: { range: { from: string; to: string } }) => {
   const { state, set, query } = useListState(['channel', 'sort', 'depositors', 'newOnly'])
+
   const list = usePagedApi<Customer>('admin/marketing/customers', {
     limit: query.limit,
     page: query.page,
@@ -219,6 +221,8 @@ const Customers = ({ range }: { range: { from: string; to: string } }) => {
 const MarketingAnalytics = () => {
   const [days, setDays] = useState<number>(30)
   const range = useMemo(() => rangeFor(days), [days])
+  const { actor, loading } = useSession()
+  const allowed = actor?.marketing === true
 
   return (
     <div>
@@ -235,18 +239,22 @@ const MarketingAnalytics = () => {
           </div>
         }
       />
-      <Tabs defaultValue='analytics'>
-        <TabsList className='mb-4'>
-          <TabsTrigger value='analytics'>Analytics</TabsTrigger>
-          <TabsTrigger value='customers'>Customers</TabsTrigger>
-        </TabsList>
-        <TabsContent value='analytics'>
-          <Analytics range={range} />
-        </TabsContent>
-        <TabsContent value='customers'>
-          <Customers range={range} />
-        </TabsContent>
-      </Tabs>
+      {loading ? null : !allowed ? (
+        <ErrorState title='Marketing account required' error={new Error('This panel is served only to a marketing sub-login. Sign in with a marketing account to see it.')} />
+      ) : (
+        <Tabs defaultValue='analytics'>
+          <TabsList className='mb-4'>
+            <TabsTrigger value='analytics'>Analytics</TabsTrigger>
+            <TabsTrigger value='customers'>Customers</TabsTrigger>
+          </TabsList>
+          <TabsContent value='analytics'>
+            <Analytics range={range} />
+          </TabsContent>
+          <TabsContent value='customers'>
+            <Customers range={range} />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   )
 }

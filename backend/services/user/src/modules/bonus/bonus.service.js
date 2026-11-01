@@ -2,6 +2,7 @@
 
 const { Op } = require('sequelize');
 const { money } = require('@ibitplay/common');
+const { assertPlayerCapability } = require('@ibitplay/auth');
 
 const errors = require('./bonus.errors');
 const {
@@ -15,7 +16,10 @@ const { resolveVipLadder } = require('@ibitplay/common');
 const { WalletService } = require('../wallet/wallet.service');
 const { REASON } = require('../wallet/wallet.constants');
 const { VipService } = require('../vip/vip.service');
-const { createRewardCurrencyResolver } = require('./rewardCurrencies');
+const { createRewardMoney } = require('../../lib/rewardMoney');
+const { afterBonus } = require('../notifications/notifyPlayer');
+const { addToUserbonus } = require('../../lib/userbonusTotals');
+const { ownerWhere, assertPlayerVisible, withChannel } = require('../directory/playerScope');
 
 
 /**
@@ -77,12 +81,19 @@ class BonusService {
     this.clients = clients;
     this.wallet = new WalletService(deps);
     this.vip = new VipService(deps);
-    this.rewardCurrencies = createRewardCurrencyResolver(deps);
+    this.rewardMoney = deps.rewardMoney ?? createRewardMoney(deps);
   }
 
-  /** Live payout currency from siteconfig (falls back to BONUS_CURRENCY). */
+  /**
+   * The site's ONE reward currency (`rewardCurrency()`; USDT by default).
+   *
+   * NOT `siteconfig.bonus_currency` any more: on an INR site that paid the
+   * USD-sized daily/weekly/monthly amounts as rupees. Amounts an operator
+   * enters (redeem codes, counter grants) are paid in it as entered; the
+   * periodic awards, designed in USD, are converted with `fromUsd`.
+   */
   async #bonusCurrency() {
-    return this.rewardCurrencies.bonusCurrency();
+    return this.rewardMoney.currency();
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -102,6 +113,12 @@ class BonusService {
    * `awardPeriodic` is idempotent per period, so calling it for one user on
    * every overview is cheap and safe.
    */
+  /** `GET /users/:userId` for staff — the player must be in the caller's tree. */
+  async overviewForStaff({ staff, userId }) {
+    await assertPlayerVisible(this, staff?.id, userId);
+    return this.overview({ userId });
+  }
+
   async overview({ userId }) {
     await this.vip.awardPeriodic({ userId });
 
@@ -142,7 +159,9 @@ class BonusService {
         award: pending
           ? {
               id: pending.id,
-              amount: money.toDecimalString(money.toMinor(pending.bonus_amount ?? '0')),
+              // Stored in USD (the `vipRewards` table); shown in the reward currency.
+              amount: (await this.rewardMoney.fromUsd(pending.bonus_amount ?? '0')).amount,
+              amountUsd: money.toDecimalString(money.toMinor(pending.bonus_amount ?? '0')),
               deadline: pending.claim_deadline,
             }
           : null,
@@ -169,7 +188,10 @@ class BonusService {
       rows: rows.map((r) => ({
         id: r.id,
         type: r.bonus_type,
+        /* The award row keeps the USD table amount; the claim pays it in the
+           reward currency (see `claim`). */
         amount: money.toDecimalString(money.toMinor(r.bonus_amount ?? '0')),
+        amountCurrency: 'USD',
         wagerChange: money.toDecimalString(money.toMinor(r.wager_change ?? '0')),
         claimed: r.is_claimed,
         unclaimable: r.is_unclaimable,
@@ -234,8 +256,9 @@ class BonusService {
       throw errors.NOT_CLAIMABLE({ type });
     }
 
-    const amount = money.toDecimalString(money.toMinor(award.bonus_amount ?? '0'));
-    const currency = await this.#bonusCurrency();
+    // `bonus_amount` is the USD figure from `vipRewards`; paid in the reward currency.
+    const amountUsd = money.toDecimalString(money.toMinor(award.bonus_amount ?? '0'));
+    const { amount, currency } = await this.rewardMoney.fromUsd(amountUsd);
 
     return this.db.transaction(async (transaction) => {
       /**
@@ -274,22 +297,18 @@ class BonusService {
        * the existing admin views select these columns, so they have to keep
        * meaning what they meant.
        */
-      await this.models.Userbonus.update(
-        {
-          [spec.amountColumn]: '0',
-          [spec.paidColumn]: this.db.sequelize.literal(
-            // Column names come from BONUS_TYPES, never from a request.
-            `COALESCE("${spec.paidColumn}", 0) + ${money.toDecimalString(money.toMinor(amount))}`
-          ),
-          updatedat: new Date(),
-        },
-        { where: { userid: userId }, transaction }
+      // Created on first claim — an UPDATE against a missing row moved nothing.
+      await addToUserbonus(
+        this,
+        userId,
+        { [spec.paidColumn]: amount, totalbonus: amount },
+        { transaction, set: { [spec.amountColumn]: '0' } }
       );
 
       this.logger?.info({ userId, type, amount, awardId: award.id, ledgerId: movement.ledgerId }, 'Bonus claimed');
 
-      return { type, amount, currency, newBalance: movement.newBalance };
-    });
+      return { type, amount, amountUsd, currency, newBalance: movement.newBalance };
+    }).then(afterBonus(userId, (r) => ({ key: `bonus:claim:${award.id}`, title: `${type[0].toUpperCase()}${type.slice(1)} bonus claimed`, amount: r.amount, currency: r.currency })));
   }
 
   /**
@@ -355,7 +374,7 @@ class BonusService {
       this.logger?.info({ userId, code, amount }, 'Redeem code claimed');
 
       return { code, amount, currency, newBalance: movement.newBalance };
-    });
+    }).then(afterBonus(userId, (r) => ({ key: `bonus:redeem:${r.code}`, title: 'Redeem code bonus', amount: r.amount, currency: r.currency })));
   }
 
   /** @legacy POST /bonus/user — a player's own codes. */
@@ -412,22 +431,29 @@ class BonusService {
   //  Staff
   // ══════════════════════════════════════════════════════════════════════
 
+  /*
+   * Every staff read below is scoped to the caller's tree with the same helper
+   * the directory and the wallet use. They listed every player on the site to
+   * any staff member with `reports:read` — agents included.
+   */
+
   /** @legacy GET /bonus/admin/userbonus */
-  async listRecords({ userId, limit = 50, offset = 0 }) {
+  async listRecords({ staff, userId, channel, limit = 50, offset = 0 }) {
     const { rows, count } = await this.models.Userbonus.findAndCountAll({
-      where: userId ? { userid: userId } : {},
+      where: withChannel(await ownerWhere(this, staff?.id, 'userid', userId), 'userid', channel),
       order: [['userid', 'ASC']],
       limit,
       offset,
       raw: true,
     });
-    return { total: count, rows: rows.map((r) => this.#shapeRecord(r)) };
+    const currency = await this.#bonusCurrency();
+    return { total: count, currency, rows: rows.map((r) => ({ ...this.#shapeRecord(r), currency })) };
   }
 
   /** @legacy GET /bonus/admin/bonusgame */
-  async listBonusGames({ userId, limit = 50, offset = 0 }) {
+  async listBonusGames({ staff, userId, channel, limit = 50, offset = 0 }) {
     const { rows, count } = await this.models.Bonusgame.findAndCountAll({
-      where: userId ? { userid: userId } : {},
+      where: withChannel(await ownerWhere(this, staff?.id, 'userid', userId), 'userid', channel),
       order: [['userid', 'ASC']],
       limit,
       offset,
@@ -437,9 +463,9 @@ class BonusService {
   }
 
   /** @legacy GET /bonus/admin/bonushistory */
-  async listEvents({ userId, limit = 50, offset = 0 }) {
+  async listEvents({ staff, userId, channel, limit = 50, offset = 0 }) {
     const { rows, count } = await this.models.Bonushistory.findAndCountAll({
-      where: userId ? { userid: userId } : {},
+      where: withChannel(await ownerWhere(this, staff?.id, 'userid', userId), 'userid', channel),
       order: [['createdat', 'DESC']],
       limit,
       offset,
@@ -449,13 +475,13 @@ class BonusService {
   }
 
   /** @legacy GET /bonus/admin/bonushistory (awards, not events) */
-  async listAwards({ userId, type, claimed, limit = 50, offset = 0 }) {
+  async listAwards({ staff, userId, type, claimed, channel, limit = 50, offset = 0 }) {
     const { rows, count } = await this.models.BonusClaim.findAndCountAll({
-      where: {
-        ...(userId ? { userid: userId } : {}),
+      where: withChannel({
+        ...(await ownerWhere(this, staff?.id, 'userid', userId)),
         ...(type ? { bonus_type: type } : {}),
         ...(claimed !== undefined ? { is_claimed: claimed } : {}),
-      },
+      }, 'userid', channel),
       order: [['created_at', 'DESC']],
       limit,
       offset,
@@ -581,6 +607,8 @@ class BonusService {
    * ─────────────────────────────────────────────────────────────────────
    */
   async grantBonusGame({ userId, idempotencyKey, staffId = null, note = null, ...counters }) {
+    // Bonus sirf direct users ka — child user (koi parent) ko grant nahi (403 PROMOTIONS_NOT_FOR_AGENT_USERS).
+    await assertPlayerCapability(userId, 'promotions');
     const patch = this.#counterPatch(counters);
     const total = Object.values(patch).reduce(
       (sum, value) => money.add(sum, money.toMinor(value)),
@@ -660,7 +688,7 @@ class BonusService {
         currency,
         newBalance: movement?.newBalance ?? null,
       };
-    });
+    }).then(afterBonus(userId, (r) => ({ key: `bonus:grant:${idempotencyKey}`, title: 'Bonus credited', amount: r.granted, currency: r.currency })));
   }
 
   /**
@@ -756,8 +784,8 @@ class BonusService {
    *   AND THE HISTORY WAS AN UNPAGED `LIMIT 100`. Not a page — a hard ceiling
    *   with no way to see row 101. Paged.
    */
-  async adminDashboard({ userId, limit = 100, offset = 0 }) {
-    const scope = userId ? { userid: userId } : {};
+  async adminDashboard({ staff, userId, limit = 100, offset = 0 }) {
+    const scope = await ownerWhere(this, staff?.id, 'userid', userId);
 
     const [records, awards, wagers] = await Promise.all([
       this.models.Userbonus.findAll({
@@ -782,7 +810,7 @@ class BonusService {
       // table on every request to compute VIP levels for a hundred rows.
       this.models.Userwager.findAll({
         attributes: ['uid', 'wager'],
-        where: userId ? { uid: userId } : {},
+        where: 'userid' in scope ? { uid: scope.userid } : {},
         raw: true,
       }),
     ]);
@@ -791,8 +819,12 @@ class BonusService {
     const wagerByUser = new Map(wagers.map((w) => [String(w.uid), this.#wagerAmount(w)]));
     const vipOf = (userId) => ladder.levelFor(wagerByUser.get(String(userId)) ?? '0');
 
+    const currency = await this.#bonusCurrency();
+
     return {
       total: awards.count,
+      // Every paid figure on this screen is in the site's reward currency.
+      currency,
       users: records.map((r) => ({
         userId: r.userid,
         name: r.name,
@@ -807,7 +839,9 @@ class BonusService {
         id: h.id,
         userId: h.userid,
         type: h.bonus_type,
+        // Award rows hold the USD table amount; labelled as such.
         amount: money.toDecimalString(money.toMinor(h.bonus_amount ?? '0')),
+        amountCurrency: 'USD',
         claimed: h.is_claimed,
         claimedAt: h.claimed_at,
         createdAt: h.created_at,
@@ -844,10 +878,15 @@ class BonusService {
     }
   }
 
-  /** @legacy GET /bonus/redeem-bonus */
-  async listCodes({ userId, status, limit = 50, offset = 0 }) {
+  /**
+   * @legacy GET /bonus/redeem-bonus
+   *
+   * Scoped to the caller's tree: a redeem code is issued to one player, and
+   * the code and its owner are both on the row.
+   */
+  async listCodes({ staff, userId, status, channel, limit = 50, offset = 0 }) {
     const { rows, count } = await this.models.Redeembonus.findAndCountAll({
-      where: { ...(userId ? { userid: userId } : {}), ...(status ? { status } : {}) },
+      where: withChannel({ ...(await ownerWhere(this, staff?.id, 'userid', userId)), ...(status ? { status } : {}) }, 'userid', channel),
       order: [['createdat', 'DESC']],
       limit,
       offset,
@@ -857,8 +896,9 @@ class BonusService {
   }
 
   /** @legacy GET /bonus/users */
-  async listUserIds({ limit = 200, offset = 0 }) {
+  async listUserIds({ staff, channel, limit = 200, offset = 0 }) {
     const rows = await this.models.Userbonus.findAll({
+      where: withChannel(await ownerWhere(this, staff?.id, 'userid'), 'userid', channel),
       attributes: ['userid', 'name'],
       order: [['userid', 'ASC']],
       limit,

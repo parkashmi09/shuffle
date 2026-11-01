@@ -1,11 +1,12 @@
 'use strict';
 
-const { money } = require('@ibitplay/common');
+const { money, currencyRegistry } = require('@ibitplay/common');
 const { Op, fn, col } = require('@ibitplay/db');
 
 const errors = require('./vault.errors');
 const { WalletService } = require('../wallet/wallet.service');
 const { REASON } = require('../wallet/wallet.constants');
+const { ownerWhere, withChannel } = require('../directory/playerScope');
 
 /**
  * Vault Pro — fixed-term, interest-bearing deposits.
@@ -36,11 +37,12 @@ const { REASON } = require('../wallet/wallet.constants');
  */
 class VaultService {
   constructor(deps) {
-    const { models, db, config, logger } = deps;
+    const { models, db, config, logger, clients } = deps;
     this.models = models;
     this.db = db;
     this.config = config;
     this.logger = logger;
+    this.clients = clients;
     this.wallet = new WalletService(deps);
     this.minimum = config.VAULT_MINIMUM ?? '1';
   }
@@ -68,6 +70,9 @@ class VaultService {
    * @legacy POST /vaultpro/transfer-in
    */
   async transferIn({ userId, coin, amount, lockPeriod }) {
+    // A coin the owner or the site switched off takes no new vault deposits
+    // (CURRENCY_DISABLED); one already locked still matures and comes out.
+    await currencyRegistry.assertCurrencyEnabled(coin);
     if (money.lt(amount, this.minimum)) {
       throw errors.BELOW_MINIMUM({ minimum: this.minimum, amount });
     }
@@ -105,6 +110,10 @@ class VaultService {
         }
         throw error;
       }
+
+      // A replayed key moved no money (same coin + amount within the minute):
+      // opening a deposit for it would mint vault balance with no debit behind it.
+      if (movement.replayed) throw errors.DUPLICATE_REQUEST();
 
       const deposit = await this.models.VaultPro.create(
         {
@@ -386,10 +395,15 @@ class VaultService {
     return { lockPeriod, label: row.label, deactivated: true };
   }
 
+  /*
+   * The three staff reads below cover the caller's tree only. They were
+   * site-wide — every player's vault balance — to anyone with `reports:read`.
+   */
+
   /** @legacy GET /vaultpro/admin/vault/users */
-  async listVaultUsers({ limit, offset }) {
+  async listVaultUsers({ staff, channel, limit, offset }) {
     const result = await this.models.VaultPro.findAndCountAll({
-      where: { status: { [Op.ne]: 'withdrawn' } },
+      where: withChannel({ status: { [Op.ne]: 'withdrawn' }, ...(await ownerWhere(this, staff?.id, 'userid')) }, 'userid', channel),
       order: [['id', 'DESC']],
       limit,
       offset,
@@ -404,25 +418,26 @@ class VaultService {
   }
 
   /** @legacy GET /vaultpro/admin/vault/stats */
-  async stats() {
+  async stats({ staff } = {}) {
     const dayStart = startOfToday();
     const dayEnd = startOfTomorrow();
+    const mine = await ownerWhere(this, staff?.id, 'userid');
 
     const [userRow, balanceRows, interestRows] = await Promise.all([
       this.models.VaultPro.findAll({
         attributes: [[fn('COUNT', fn('DISTINCT', col('userid'))), 'total_users']],
-        where: { status: { [Op.ne]: 'withdrawn' } },
+        where: { status: { [Op.ne]: 'withdrawn' }, ...mine },
         raw: true,
       }),
       this.models.VaultPro.findAll({
         attributes: ['coin', [fn('COALESCE', fn('SUM', col('vaultBalance')), 0), 'total_balance']],
-        where: { status: { [Op.ne]: 'withdrawn' } },
+        where: { status: { [Op.ne]: 'withdrawn' }, ...mine },
         group: ['coin'],
         raw: true,
       }),
       this.models.VaultInterestHistory.findAll({
         attributes: [[fn('COALESCE', fn('SUM', col('interest')), 0), 'today_interest']],
-        where: { createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd } },
+        where: { createdAt: { [Op.gte]: dayStart, [Op.lt]: dayEnd }, ...mine },
         raw: true,
       }),
     ]);
@@ -455,8 +470,9 @@ class VaultService {
   }
 
   /** @legacy GET /vaultpro/admin/vault/interest-history */
-  async listAllInterest({ limit, offset }) {
+  async listAllInterest({ staff, channel, limit, offset }) {
     const result = await this.models.VaultInterestHistory.findAndCountAll({
+      where: withChannel(await ownerWhere(this, staff?.id, 'userid'), 'userid', channel),
       order: [['id', 'DESC']],
       limit,
       offset,
@@ -527,7 +543,8 @@ class VaultService {
       const rate = deposit.interest_rate != null ? String(deposit.interest_rate) : '0';
       if (money.lte(rate, '0')) return null;
 
-      const interest = money.divide(money.percentOf(principal, rate), 365);
+      // `divide` answers in minor units (a BigInt); everything stored or returned is a decimal string.
+      const interest = money.toDecimalString(money.divide(money.percentOf(principal, rate), 365));
       if (money.lte(interest, '0')) return null;
 
       const newBalance = money.toDecimalString(

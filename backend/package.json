@@ -29,7 +29,7 @@
     "staff:2fa:bootstrap": "node scripts/bootstrap-staff-2fa.js",
     "db:verify": "node packages/db/src/cli.js verify",
     "db:generate-models": "node packages/db/tools/generate-models.js",
-    "test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"packages/*/__tests__/*.test.js\" \"services/*/src/modules/**/__tests__/*.test.js\" \"gateway/src/__tests__/*.test.js\"",
+    "test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"packages/*/__tests__/*.test.js\" \"services/*/src/modules/**/__tests__/*.test.js\" \"gateway/src/__tests__/*.test.js\" \"tools/__tests__/*.test.js\"",
     "start:user": "node services/user/src/index.js",
     "start:admin": "node services/admin/src/index.js",
     "start:casino": "node services/casino/src/index.js",
@@ -43,6 +43,7 @@
     "verify:modules": "node tools/verify-modules.js",
     "verify:authz": "node tools/verify-authz.js",
     "verify:internal-acl": "node tools/verify-internal-acl.js",
+    "verify:strict-validators": "node tools/verify-strict-validators.js",
     "db:grants": "node tools/db-grants.js",
     "db:grants:check": "node tools/db-grants.js --check",
     "verify:routes": "node tools/route-inventory.js --report",
@@ -52,7 +53,9 @@
     "verify:models": "node tools/verify-models.js",
     "verify:sockets": "node tools/socket-inventory.js --list",
     "verify:secrets": "node tools/check-secrets.js",
-    "exposures:rebuild": "node scripts/rebuild-exposures.js"
+    "exposures:rebuild": "node scripts/rebuild-exposures.js",
+    "accounts:dummy": "node scripts/make-dummy-accounts.js",
+    "geoip:update": "bash scripts/geoip-update.sh"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

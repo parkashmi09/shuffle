@@ -10,6 +10,13 @@ const { getProvider } = require('./providers');
 const { createHttpClient } = require('./providers/http');
 const { WalletService } = require('../wallet/wallet.service');
 const { REASON } = require('../wallet/wallet.constants');
+const { FirstDepositBonusService } = require('../bonus/firstDepositBonus.service');
+const { notifyPlayer } = require('../notifications/notifyPlayer');
+const hubOrders = require('../wl-hub/hubOrders');
+const companyWallet = require('../wl-hub/companyWallet');
+const { deliver } = require('../wl-hub/delivery');
+const { CCPAYMENT_STATUS } = require('../crypto/crypto.constants');
+const { ccpaymentCoinId } = require('../payment-orders/gateways');
 
 /**
  * Payment-provider callbacks — the one place on the platform where an
@@ -43,11 +50,13 @@ const { REASON } = require('../wallet/wallet.constants');
 class PspService {
   constructor(deps) {
     const { models, db, config, logger, http } = deps;
+    this.deps = deps;
     this.models = models;
     this.db = db;
     this.config = config;
     this.logger = logger;
     this.wallet = new WalletService(deps);
+    this.firstDepositBonus = deps.firstDepositBonus ?? new FirstDepositBonusService(deps);
 
     // Outbound calls to providers. Injectable so a test can confirm a payment
     // without a network, and so the timeout is one decision in one place rather
@@ -109,13 +118,34 @@ class PspService {
       return { status: 'ok', duplicate: true, reference: parsed.reference };
     }
 
+    // An in-between state (F2Pay reports more than paid / failed): nothing to do yet. Kept in the
+    // audit log so the state the provider sent can be read later.
+    if (parsed.status === PSP_STATUS.PENDING) {
+      await this.#record(audit, { accepted: false, rejection: 'NOT_FINAL' });
+      return { status: 'ok', settled: false, reference: parsed.reference };
+    }
+
     // ── 3. A failure is recorded, not credited ────────────────────────
+    if (parsed.status !== PSP_STATUS.SUCCESS && record.wl) {
+      await hubOrders.settle(this.db, record.wl.id, 'failed');
+      await this.#record(audit, { accepted: false, rejection: 'REPORTED_FAILED' });
+      await this.#deliver(record);
+      return { status: 'ok', settled: false, reference: parsed.reference };
+    }
     if (parsed.status !== PSP_STATUS.SUCCESS) {
       await this.#markStatus(providerName, record, PSP_STATUS.FAILED);
       this.logger?.info({ provider: providerName, reference: parsed.reference }, 'Payment reported as failed');
       // Logged, but NOT as an accepted digest: a failure notice must not burn
       // the fingerprint of a payload the provider may resend as a success.
       await this.#record(audit, { accepted: false, rejection: 'REPORTED_FAILED' });
+      void notifyPlayer(record.userId, {
+        kind: 'deposit_failed',
+        key: `psp-deposit:failed:${providerName}:${parsed.reference}`,
+        title: 'Deposit failed',
+        body: 'Your {amount} deposit did not go through. Nothing was credited.',
+        link: '#transactions',
+        meta: { amount: record.amount, currency: record.currency, reference: String(parsed.reference) },
+      });
       return { status: 'ok', settled: false, reference: parsed.reference };
     }
 
@@ -163,8 +193,19 @@ class PspService {
       throw errors.AMOUNT_MISMATCH({ expected, reported });
     }
 
+    // ── 5a. A whitelabel's order: nobody here is credited — its copy is told (modules/wl-hub).
+    if (record.wl) {
+      await this.db.transaction(async (transaction) => {
+        await this.#claimPayload(audit, { amount: expected, transaction, exclusive: provider.selfIdentifying });
+        await hubOrders.settle(this.db, record.wl.id, 'success', { utr: parsed.utr, transaction });
+      });
+      this.logger?.info({ provider: providerName, reference: parsed.reference, whitelabelId: record.wl.whitelabelId, amount: expected }, 'Whitelabel deposit settled');
+      await this.#deliver(record);
+      return { status: 'ok', settled: true, reference: parsed.reference };
+    }
+
     // ── 5. Credit, once — and burn the payload ────────────────────────
-    return this.db.transaction(async (transaction) => {
+    const settled = await this.db.transaction(async (transaction) => {
       // Claim the digest INSIDE the money transaction. If this payload has
       // already settled something the unique index rejects it here, the
       // transaction rolls back, and nothing was credited. Two concurrent
@@ -217,6 +258,25 @@ class PspService {
         newBalance: movement.newBalance,
       };
     });
+
+    // ── 6. First-deposit bonus, after COMMIT — never fails the callback ──
+    await this.firstDepositBonus.onDepositCredited({
+      userId: record.userId,
+      currency: record.currency,
+      amount: expected,
+      ledgerId: settled.ledgerId,
+      source: `PSP_${providerName.toUpperCase()}`,
+      refId: String(parsed.reference),
+    });
+    void notifyPlayer(record.userId, {
+      kind: 'deposit_credited',
+      key: `psp-deposit:credited:${providerName}:${parsed.reference}`,
+      title: 'Deposit received',
+      body: '{amount} has been credited to your wallet.',
+      link: '#transactions',
+      meta: { amount: expected, currency: record.currency, reference: String(parsed.reference) },
+    });
+    return settled;
   }
 
   /**
@@ -268,6 +328,22 @@ class PspService {
     audit.userId = payout.userId;
     audit.currency = payout.currency;
 
+    // ── Still in flight (F2Pay's Processing): nothing to do until a final state arrives. ──
+    if (parsed.status === PSP_STATUS.PENDING) {
+      await this.#record(audit, { accepted: false, rejection: 'NOT_FINAL' });
+      return { status: 'ok', settled: false, pending: true, reference: parsed.reference };
+    }
+
+    // ── A whitelabel's payout: settle it here, its copy finishes it (refund on failure). ──
+    if (payout.wl) {
+      const status = parsed.status === PSP_STATUS.SUCCESS ? 'success' : 'failed';
+      await hubOrders.settle(this.db, payout.wl.id, status);
+      await this.#record(audit, { accepted: true, amount: payout.amount });
+      this.logger?.info({ provider: providerName, reference: parsed.reference, whitelabelId: payout.wl.whitelabelId, status }, 'Whitelabel payout settled');
+      await this.#deliver(payout);
+      return { status: 'ok', settled: status === 'success', reference: parsed.reference };
+    }
+
     // ── Success: the money already left. Record and stop. ─────────────
     if (parsed.status === PSP_STATUS.SUCCESS) {
       await this.#markPayoutStatus(payout, PSP_STATUS.SUCCESS);
@@ -276,6 +352,14 @@ class PspService {
         { provider: providerName, reference: parsed.reference, userId: payout.userId },
         'Payout confirmed by the provider'
       );
+      void notifyPlayer(payout.userId, {
+        kind: 'withdrawal_paid',
+        key: `psp-payout:paid:${providerName}:${payout.reference}`,
+        title: 'Withdrawal paid',
+        body: 'Your {amount} withdrawal has been sent.',
+        link: '#transactions',
+        meta: { amount: payout.amount, currency: payout.currency, reference: String(payout.reference) },
+      });
       return { status: 'ok', settled: true, reference: parsed.reference };
     }
 
@@ -323,6 +407,14 @@ class PspService {
       },
       'Payout failed — balance refunded'
     );
+    void notifyPlayer(payout.userId, {
+      kind: 'withdrawal_rejected',
+      key: `psp-payout:failed:${providerName}:${payout.reference}`,
+      title: 'Withdrawal failed',
+      body: 'Your {amount} withdrawal could not be paid out. The funds are back in your wallet.',
+      link: '#transactions',
+      meta: { amount, currency: payout.currency, reference: String(payout.reference) },
+    });
 
     return {
       status: 'ok',
@@ -353,6 +445,220 @@ class PspService {
       currency: record.currency,
       createdAt: record.createdAt,
     };
+  }
+
+  /** Parent: tell the copy now; the `wl-hub:deliver` job retries whatever it did not confirm. */
+  async #deliver(record) {
+    try {
+      await deliver({ db: this.db, config: this.config, logger: this.logger }, record.wl.id);
+    } catch (error) {
+      this.logger?.warn({ err: error.message, orderId: record.wl.id }, 'Whitelabel delivery deferred to the job');
+    }
+  }
+
+  /**
+   * Copy side: the parent reports the outcome of a gateway order this copy opened through it
+   * (modules/wl-hub; the parent verified the provider's callback and amount). The same effects
+   * as a provider callback here, plus the company's balance (wl-hub/companyWallet), each keyed on
+   * the order so a resend changes nothing:
+   *
+   *   deposit success   player +amount (our recorded figure), company +amount − charge
+   *   deposit failed    order marked failed
+   *   payout success    order marked paid (player and company were debited at request)
+   *   payout failed     player refunded, company gets amount + charge back
+   */
+  async applyHubEvent({ provider: providerName, flow, reference, status, amount, currency, chargePct, utr }) {
+    if (!this.config.WHITELABEL_MODE) throw errors.TRANSACTION_NOT_FOUND({ reference });
+    if (providerName === 'ccpayment') return this.#applyHubCcpayment({ flow, reference, status, amount, currency, chargePct, utr });
+    const audit = { provider: providerName, digest: crypto.createHash('sha256').update(`hub:${flow}:${reference}:${status}`).digest('hex'), ip: 'parent', body: { flow, reference, status, amount, currency, chargePct } };
+
+    if (flow === 'deposit') {
+      const record = await this.#findTransaction(providerName, reference);
+      if (!record) throw errors.TRANSACTION_NOT_FOUND({ reference });
+      if (record.settled) return { status: 'ok', duplicate: true, reference };
+      if (status !== 'success') {
+        await this.#markStatus(providerName, record, PSP_STATUS.FAILED);
+        void notifyPlayer(record.userId, {
+          kind: 'deposit_failed',
+          key: `psp-deposit:failed:${providerName}:${reference}`,
+          title: 'Deposit failed',
+          body: 'Your {amount} deposit did not go through. Nothing was credited.',
+          link: '#transactions',
+          meta: { amount: record.amount, currency: record.currency, reference: String(reference) },
+        });
+        return { status: 'ok', settled: false, reference };
+      }
+      const expected = money.toDecimalString(money.toMinor(record.amount ?? '0'));
+      if (money.compare(expected, money.toDecimalString(money.toMinorQuantised(amount))) !== 0 || String(record.currency).toUpperCase() !== String(currency).toUpperCase()) {
+        this.logger?.error({ provider: providerName, reference, expected, reported: amount }, 'REJECTED hub deposit: amount or coin differs from our record');
+        throw errors.AMOUNT_MISMATCH({ expected, reported: amount });
+      }
+      const settled = await this.db.transaction(async (transaction) => {
+        audit.reference = reference;
+        audit.userId = record.userId;
+        audit.currency = record.currency;
+        await this.#claimPayload(audit, { amount: expected, transaction, exclusive: true });
+        const movement = await this.wallet.credit(
+          {
+            userId: record.userId,
+            currency: record.currency,
+            amount: expected,
+            reason: REASON.DEPOSIT,
+            idempotencyKey: `psp:${providerName}:${reference}`,
+            refType: `PSP_${providerName.toUpperCase()}`,
+            refId: String(reference),
+            description: `${providerName} deposit ${reference}`,
+          },
+          { sourceService: 'user-service', transaction }
+        );
+        await this.#markStatus(providerName, record, PSP_STATUS.SUCCESS, { transaction, utr });
+        const company = await companyWallet.onDeposit(this.db, { provider: providerName, reference, currency: record.currency, amount: expected, chargePct }, transaction);
+        return { ledgerId: movement.ledgerId, newBalance: movement.newBalance, company };
+      });
+      this.logger?.info({ provider: providerName, reference, userId: record.userId, amount: expected, company: settled.company }, 'Hub deposit settled');
+      await this.firstDepositBonus.onDepositCredited({
+        userId: record.userId,
+        currency: record.currency,
+        amount: expected,
+        ledgerId: settled.ledgerId,
+        source: `PSP_${providerName.toUpperCase()}`,
+        refId: String(reference),
+      });
+      void notifyPlayer(record.userId, {
+        kind: 'deposit_credited',
+        key: `psp-deposit:credited:${providerName}:${reference}`,
+        title: 'Deposit received',
+        body: '{amount} has been credited to your wallet.',
+        link: '#transactions',
+        meta: { amount: expected, currency: record.currency, reference: String(reference) },
+      });
+      return { status: 'ok', settled: true, reference };
+    }
+
+    const payout = await this.#findPayout(providerName, reference);
+    if (!payout) throw errors.TRANSACTION_NOT_FOUND({ reference });
+    if (status === 'success') {
+      await this.#markPayoutStatus(payout, PSP_STATUS.SUCCESS);
+      void notifyPlayer(payout.userId, {
+        kind: 'withdrawal_paid',
+        key: `psp-payout:paid:${providerName}:${payout.reference}`,
+        title: 'Withdrawal paid',
+        body: 'Your {amount} withdrawal has been sent.',
+        link: '#transactions',
+        meta: { amount: payout.amount, currency: payout.currency, reference: String(payout.reference) },
+      });
+      return { status: 'ok', settled: true, reference };
+    }
+    const refundAmount = money.toDecimalString(money.toMinor(payout.amount ?? '0'));
+    await this.db.transaction(async (transaction) => {
+      await this.wallet.credit(
+        {
+          userId: payout.userId,
+          currency: payout.currency,
+          amount: refundAmount,
+          reason: REASON.WITHDRAWAL_REVERSAL,
+          idempotencyKey: `payout-refund:${providerName}:${payout.reference}`,
+          refType: `PAYOUT_${providerName.toUpperCase()}_REFUND`,
+          refId: String(payout.reference),
+          description: `Refund for failed withdrawal ${payout.reference}`,
+        },
+        { sourceService: 'user-service', transaction }
+      );
+      await this.#markPayoutStatus(payout, PSP_STATUS.FAILED, { transaction, refunded: true });
+      await companyWallet.onWithdrawalFailed(this.db, { provider: providerName, reference }, transaction);
+    });
+    if (!payout.refunded) {
+      void notifyPlayer(payout.userId, {
+        kind: 'withdrawal_rejected',
+        key: `psp-payout:failed:${providerName}:${payout.reference}`,
+        title: 'Withdrawal failed',
+        body: 'Your {amount} withdrawal could not be paid out. The funds are back in your wallet.',
+        link: '#transactions',
+        meta: { amount: refundAmount, currency: payout.currency, reference: String(payout.reference) },
+      });
+    }
+    return { status: 'ok', settled: false, refunded: true, reference };
+  }
+
+  /**
+   * Copy side, CCPayment. A withdrawal is the crypto withdrawal staff sent through CCPayment
+   * (crypto-withdraw applyGatewayOutcome). A deposit carries what has ARRIVED so far (it can come
+   * in parts): only the difference from what was already credited is credited — to the player and,
+   * less the charge, to the company — keyed on the running total so a resend changes nothing.
+   */
+  async #applyHubCcpayment({ flow, reference, status, amount, currency, chargePct, utr }) {
+    if (flow === 'payout') {
+      const { CryptoWithdrawService } = require('../crypto-withdraw/cryptoWithdraw.service');
+      const applied = await new CryptoWithdrawService({ ...this.deps, http: this.http }).applyGatewayOutcome({ orderId: reference, outcome: status, txId: utr ?? null });
+      if (!applied) throw errors.TRANSACTION_NOT_FOUND({ reference });
+      return { status: 'ok', reference, ...applied };
+    }
+
+    const coin = String(currency).toUpperCase();
+    const outcome = await this.db.transaction(async (transaction) => {
+      const deposit = await this.models.Ccdeposit.findOne({ where: { orderid: reference }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!deposit) throw errors.TRANSACTION_NOT_FOUND({ reference });
+      if (Number(deposit.coinid) !== ccpaymentCoinId(coin, this.config)) throw errors.AMOUNT_MISMATCH({ expected: `coin ${deposit.coinid}`, reported: coin });
+      const credited = deposit.status === CCPAYMENT_STATUS.SUCCESS ? money.toMinorQuantised(deposit.amount ?? '0') : 0n;
+
+      if (status !== 'success') {
+        if (credited > 0n) return { duplicate: true };
+        await deposit.update({ status: CCPAYMENT_STATUS.FAILED, updated_at: new Date() }, { transaction });
+        return { failed: true, userId: deposit.userid, ordered: String(deposit.price ?? '0') };
+      }
+
+      const total = money.toMinorQuantised(amount);
+      if (total <= credited) return { duplicate: true };
+      const delta = money.toDecimalString(total - credited);
+      const totalDecimal = money.toDecimalString(total);
+      const movement = await this.wallet.credit(
+        {
+          userId: deposit.userid,
+          currency: coin,
+          amount: delta,
+          reason: REASON.DEPOSIT,
+          idempotencyKey: `ccpayment-hub:${reference}:${totalDecimal}`,
+          refType: 'CRYPTO_DEPOSIT',
+          refId: reference,
+          description: `${coin} deposit`,
+        },
+        { sourceService: 'user-service', transaction }
+      );
+      await deposit.update({ status: CCPAYMENT_STATUS.SUCCESS, amount: totalDecimal, updated_at: new Date() }, { transaction });
+      const company = await companyWallet.onDeposit(this.db, { provider: 'ccpayment', reference: `${reference}@${totalDecimal}`, currency: coin, amount: delta, chargePct }, transaction);
+      return { userId: deposit.userid, delta, ledgerId: movement.ledgerId, company };
+    });
+
+    if (outcome.duplicate) return { status: 'ok', duplicate: true, reference };
+    if (outcome.failed) {
+      void notifyPlayer(outcome.userId, {
+        kind: 'deposit_failed',
+        key: `crypto-deposit:failed:${reference}`,
+        title: 'Deposit failed',
+        body: 'Your {amount} deposit did not go through. Nothing was credited.',
+        link: '#transactions',
+        meta: { amount: outcome.ordered, currency: coin, reference },
+      });
+      return { status: 'ok', settled: false, reference };
+    }
+    this.logger?.info({ reference, userId: outcome.userId, amount: outcome.delta, company: outcome.company }, 'Hub CCPayment deposit credited');
+    await this.firstDepositBonus.onDepositCredited({
+      userId: outcome.userId,
+      currency: coin,
+      amount: outcome.delta,
+      ledgerId: outcome.ledgerId,
+      source: 'CRYPTO_DEPOSIT',
+      refId: reference,
+    });
+    void notifyPlayer(outcome.userId, {
+      kind: 'deposit_credited',
+      key: `crypto-deposit:credited:${reference}:${outcome.delta}`,
+      title: 'Deposit received',
+      body: '{amount} has been credited to your wallet.',
+      link: '#transactions',
+      meta: { amount: outcome.delta, currency: coin, reference },
+    });
+    return { status: 'ok', settled: true, reference };
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -476,6 +782,12 @@ class PspService {
    * with four different levels of care.
    */
   async #findTransaction(providerName, reference) {
+    const own = await this.#findOwnTransaction(providerName, reference);
+    if (own || this.config.WHITELABEL_MODE) return own;
+    return hubOrders.forCallback(this.db, providerName, 'deposit', String(reference));
+  }
+
+  async #findOwnTransaction(providerName, reference) {
     const { Upideposit, Apaydeposits, Cricpaytransactions, PayInTransactions } = this.models;
 
     if (providerName === 'upi') {
@@ -517,6 +829,17 @@ class PspService {
       };
     }
 
+    if (providerName === 'f2pay') {
+      const row = await this.models.F2payDeposits.findOne({ where: { mch_order_no: reference }, raw: true });
+      return row && {
+        model: 'F2payDeposits', key: { mch_order_no: reference },
+        userId: row.user_id, amount: row.amount, currency: row.currency,
+        // 'Pending' / 'Success' / 'Failed'.
+        status: row.status, settled: SETTLED_STATUSES.has(String(row.status).toLowerCase()),
+        createdAt: row.created_at,
+      };
+    }
+
     const row = await PayInTransactions.findOne({ where: { out_trade_no: reference }, raw: true });
     return row && {
       model: 'PayInTransactions', key: { out_trade_no: reference },
@@ -539,7 +862,22 @@ class PspService {
    */
   /** The payout side of #findTransaction. Two tables rather than four. */
   async #findPayout(providerName, reference) {
+    const own = await this.#findOwnPayout(providerName, reference);
+    if (own || this.config.WHITELABEL_MODE) return own;
+    return hubOrders.forCallback(this.db, providerName, 'payout', String(reference));
+  }
+
+  async #findOwnPayout(providerName, reference) {
     const { Apaywithdrawals, PayOutTransactions } = this.models;
+
+    if (providerName === 'f2pay') {
+      const row = await this.models.F2payWithdrawals.findOne({ where: { mch_order_no: reference }, raw: true });
+      return row && {
+        model: 'F2payWithdrawals', key: { mch_order_no: reference },
+        reference, userId: row.user_id, amount: row.amount, currency: row.currency,
+        status: row.status, refunded: Boolean(row.refunded),
+      };
+    }
 
     if (providerName === 'apay') {
       const row = await Apaywithdrawals.findOne({ where: { custom_transaction_id: reference }, raw: true });
@@ -566,7 +904,7 @@ class PspService {
     if (!model) return;
 
     const success = status === PSP_STATUS.SUCCESS;
-    const patch = payout.model === 'Apaywithdrawals'
+    const patch = payout.model === 'Apaywithdrawals' || payout.model === 'F2payWithdrawals'
       ? { status: success ? 'Success' : 'Failed', ...(refunded !== undefined ? { refunded } : {}) }
       : { status: success ? 1 : 2 };
 
@@ -585,6 +923,7 @@ class PspService {
       Apaydeposits: success ? 'Success' : 'Failed',
       Cricpaytransactions: success ? 'Successful' : 'Failed',
       Upideposit: success ? 'success' : 'failed',
+      F2payDeposits: success ? 'Success' : 'Failed',
     };
 
     const patch = {

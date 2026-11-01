@@ -2,7 +2,10 @@
 
 const { Op, fn, col } = require('sequelize');
 
+const { entitlements } = require('@ibitplay/common');
+
 const E = require('./jsCuration.errors');
+const { isRowEntitledIn } = require('../games/gameEntitlement');
 const {
   COLLECTIONS,
   COLLECTION_SLUGS,
@@ -221,7 +224,11 @@ class JsCurationService {
     const uids = this.#split(row?.game_uids);
     if (!uids.length) return { rows: [], total: 0 };
 
-    const games = (await this.#gamesInOrder(uids)).filter((game) => game.is_active !== false);
+    // The owner's plan: a curated tile whose provider or category is switched off leaves the row.
+    const plan = await entitlements.getEntitlements();
+    const games = (await this.#gamesInOrder(uids)).filter(
+      (game) => game.is_active !== false && isRowEntitledIn(plan, game)
+    );
     const offset = (page - 1) * perPage;
 
     return { rows: games.slice(offset, offset + perPage), total: games.length };

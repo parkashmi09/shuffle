@@ -1,6 +1,7 @@
 'use strict';
 
 const { response, asyncHandler } = require('@ibitplay/common');
+const { hidePrivateNames } = require('../racePrivacy');
 
 function createControllers({ service }) {
   const page = (q) => ({ page: Math.floor(q.offset / q.limit) + 1, limit: q.limit });
@@ -23,8 +24,19 @@ function createControllers({ service }) {
      * by the gateway's token check on any request that carries a token, and a
      * signed-in player wants their own rank whether or not they are winning.
      */
-    leaderboard: asyncHandler(async (req, res) =>
-      response.ok(res, await service.leaderboard({ type: req.params.type, userId: req.user?.id ?? null }))
+    leaderboard: asyncHandler(async (req, res) => {
+      const board = await service.leaderboard({ type: req.params.type, userId: req.user?.id ?? null });
+      // rainbet: players who keep their bets private are not named on the public board.
+      return response.ok(res, await hidePrivateNames(service.models, board, req.user?.id));
+    }
+    ),
+
+    /** The previous window's standings (Last Champion, History). */
+    last: asyncHandler(async (req, res) => response.ok(res, await service.lastLeaderboard({ type: req.params.type }))),
+
+    /** Finished races with their podium; a caller with a token also gets their own placing. */
+    history: asyncHandler(async (req, res) =>
+      response.ok(res, await service.history({ ...req.query, userId: req.user?.id ?? null }))
     ),
 
     // ── Players ───────────────────────────────────────────────────────
@@ -59,7 +71,7 @@ function createControllers({ service }) {
 
     listRewards: asyncHandler(async (req, res) => {
       const result = await service.listRewards(req.query);
-      return response.paginated(res, result.rows, { ...page(req.query), total: result.total });
+      return response.paginated(res, result.rows, { ...page(req.query), total: result.total }, { summary: result.summary });
     }),
 
     /**
@@ -71,6 +83,15 @@ function createControllers({ service }) {
      * drifted.
      */
     settle: asyncHandler(async (req, res) => response.ok(res, await service.settle({ raceId: req.params.id }))),
+
+    cancel: asyncHandler(async (req, res) =>
+      response.ok(res, await service.cancel({ raceId: req.params.id, reason: req.body?.reason ?? null }))
+    ),
+
+    startTestRace: asyncHandler(async (req, res) => response.created(res, await service.startTestRace(req.body))),
+
+    /** Staff view of the open board: the same standings players see, real ids included. */
+    adminLeaderboard: asyncHandler(async (req, res) => response.ok(res, await service.leaderboard({ type: req.params.type, staff: true }))),
 
     listBoats: asyncHandler(async (_req, res) => response.ok(res, await service.listBoats())),
     addBoat: asyncHandler(async (req, res) => response.created(res, await service.addBoat(req.body))),

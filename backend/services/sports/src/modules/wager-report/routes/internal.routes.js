@@ -59,5 +59,14 @@ module.exports = function internalRoutes(deps) {
     )
   );
 
+  /** One player's settled sports bets per currency, for their own profile. */
+  router.get(
+    '/player/:userId/profile-stats',
+    validate({ params: params.params }),
+    asyncHandler(async (req, res) =>
+      response.ok(res, await service.profileStats({ userId: req.params.userId }))
+    )
+  );
+
   return router;
 };

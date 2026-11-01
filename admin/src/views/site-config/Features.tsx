@@ -2,45 +2,108 @@
 
 import { useMemo, useState } from 'react'
 
-import { SendIcon, SettingsIcon } from 'lucide-react'
+import { InfoIcon, Loader2Icon, LockIcon, SendIcon, SettingsIcon } from 'lucide-react'
 
-import Can from '@/components/shared/Can'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import ErrorState from '@/components/shared/ErrorState'
 import FormDialog from '@/components/shared/FormDialog'
 import { TextField } from '@/components/shared/FormField'
 import PageHeader from '@/components/shared/PageHeader'
-import PolicySelect from '@/components/shared/PolicySelect'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { UI_LABEL, uiSupport } from '@/configs/siteUi'
 import { useSession } from '@/contexts/SessionContext'
+import { useLivePoll } from '@/lib/realtime-status'
 import { useApi, useApiMutation } from '@/hooks/use-api'
 import { api } from '@/lib/api/client'
 import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
+  OWNER_MANAGED_MESSAGE,
   type Catalogue,
   type CatalogueFeature,
   type SiteFeature,
   type SiteFeatures
 } from './featureTypes'
 
-const Integration = ({
-  feature,
-  current,
-  canWrite
-}: {
-  feature: CatalogueFeature
-  current: SiteFeature
-  canWrite: boolean
-}) => {
-  const [variant, setVariant] = useState(current.variant === 'none' ? feature.variants[0].key : current.variant)
-  const spec = feature.variants.find(v => v.key === variant)!
+/** `admin/casino/original-games/games`: one Original game and its own switch. */
+type OriginalGame = { gameCode: string; name: string; enabled: boolean; image: string | null }
+
+const ORIGINALS = 'admin/casino/original-games/games'
+
+/** The Super Admin's on/off for a feature in the plan (the variant stays the platform's). */
+const FeatureSwitch = ({ spec, on }: { spec: CatalogueFeature; on: boolean }) => {
+  const save = useApiMutation({
+    fn: (enabled: boolean) => api.put(`admin/features/${spec.key}`, { enabled }),
+    invalidate: [['api', 'admin/features']],
+    success: (_r, enabled) => `${spec.label} ${enabled ? 'on' : 'off'}`
+  })
+
+  return <Switch checked={on} disabled={save.isPending} onCheckedChange={v => save.mutate(v)} aria-label={`${spec.label} on or off`} />
+}
+
+/** Original games, one switch each: off takes the game out of the lobby and refuses its launch. */
+const OriginalGames = ({ canWrite }: { canWrite: boolean }) => {
+  const games = useApi<OriginalGame[]>(ORIGINALS)
+
+  const save = useApiMutation({
+    fn: ({ gameCode, enabled }: { gameCode: string; enabled: boolean }) => api.put(`${ORIGINALS}/${gameCode}`, { enabled }),
+    invalidate: [['api', ORIGINALS]],
+    success: (_r, v) => `${v.gameCode} ${v.enabled ? 'on' : 'off'}`
+  })
+
+  if (games.error) return <ErrorState error={games.error} />
+  if (!games.data?.length) return null
+
+  return (
+    <Card className='gap-0 py-0 shadow-none'>
+      <CardHeader className='border-b py-3'>
+        <CardTitle className='text-muted-foreground text-xs font-semibold tracking-wider uppercase'>Original games</CardTitle>
+      </CardHeader>
+      <Table>
+        <TableBody>
+          {games.data.map(g => (
+            <TableRow key={g.gameCode}>
+              <TableCell className='pl-4 font-medium'>
+                {g.name}
+                <span className='text-muted-foreground block font-mono text-xs'>{g.gameCode}</span>
+              </TableCell>
+              <TableCell className='pr-4 text-right'>
+                {canWrite ? (
+                  <Switch checked={g.enabled} disabled={save.isPending} onCheckedChange={enabled => save.mutate({ gameCode: g.gameCode, enabled })} aria-label={`${g.name} on or off`} />
+                ) : (
+                  <Badge variant={g.enabled ? 'default' : 'outline'}>{g.enabled ? 'On' : 'Off'}</Badge>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
+  )
+}
+
+/** How often the features read is refreshed so what the platform changes shows up live. */
+
+/** Not shown to the site admin: the owner's commercial setup (incl. which games provider), and features this backend does not have. */
+const OWNER_ONLY_FEATURES = new Set(['business_model', 'raffles', 'casino_aggregator', 'slotegrator_inr_as_pkr', 'api_encryption', 'rate_limit', 'branch_management', 'whitelabel', 'deposit_email_verification', 'google_signin'])
+const FEATURES_POLL_MS = 15_000
+
+/** The variant's label as staff see it (read-only: the platform picks the variant). */
+const variantLabel = (spec: CatalogueFeature, cur: SiteFeature) =>
+  spec.variants.find(v => v.key === cur.variant)?.label ?? cur.variantLabel ?? cur.variant
+
+/**
+ * Keys for the variant the platform chose (e.g. push notification App ID / API key). Staff may
+ * still key these in; the variant and the on/off switch are the platform's alone, so neither is
+ * sent — the backend keeps both as they are.
+ */
+const IntegrationSettings = ({ feature, current }: { feature: CatalogueFeature; current: SiteFeature }) => {
+  const spec = feature.variants.find(v => v.key === current.variant)
   const [config, setConfig] = useState<Record<string, string>>(current.config ?? {})
   const [secrets, setSecrets] = useState<Record<string, string>>({})
   const [testUser, setTestUser] = useState('')
@@ -48,15 +111,14 @@ const Integration = ({
   const save = useApiMutation({
     fn: () =>
       api.put(`admin/features/${feature.key}`, {
-        variant,
-        enabled: true,
-        config: Object.fromEntries(spec.configFields.map(f => [f.key, config[f.key] ?? ''])),
+        config: Object.fromEntries((spec?.configFields ?? []).map(f => [f.key, config[f.key] ?? ''])),
         ...(Object.keys(secrets).length ? { secrets } : {})
       }),
     invalidate: [['api', 'admin/features']],
-    success: `${feature.label} is on`,
+    success: `${feature.label} settings saved`,
     onSuccess: () => setSecrets({})
   })
+
   const test = useApiMutation({
     fn: () =>
       api.post<{ accepted: number; failures: string[] }>(
@@ -69,7 +131,7 @@ const Integration = ({
         : `Sent — nobody subscribed${r.failures.length ? ` (${r.failures.join('; ')})` : ''}`
   })
 
-  if (!canWrite) return <Badge variant='outline'>{current.variantLabel}</Badge>
+  if (!spec || (!spec.configFields.length && !spec.secretFields.length)) return null
 
   return (
     <FormDialog
@@ -78,25 +140,15 @@ const Integration = ({
           <SettingsIcon /> Configure
         </Button>
       }
-      title={feature.label}
-      description='Usually set once for every site from the owner panel. Keys are sealed and never shown again; leave one blank to keep it.'
-      submitLabel='Save & switch on'
+      title={`${feature.label} — ${spec.label}`}
+      description='Keys for the variant the platform set. Keys are sealed and never shown again; leave one blank to keep it.'
+      submitLabel='Save'
+      validate={() => ({
+        ...Object.fromEntries(spec.configFields.map(f => [`c-${f.key}`, f.required && !(config[f.key] ?? '').trim() && `${f.label} is required`])),
+        ...Object.fromEntries(spec.secretFields.map(f => [`s-${f.key}`, f.required && !current.secretsSet?.[f.key] && !(secrets[f.key] ?? '').trim() && `${f.label} is required`]))
+      })}
       onSubmit={() => save.mutateAsync()}
     >
-      <Select value={variant} onValueChange={v => v && setVariant(v)}>
-        <SelectTrigger className='w-full'>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {feature.variants
-            .filter(v => v.key !== 'none')
-            .map(v => (
-              <SelectItem key={v.key} value={v.key}>
-                {v.label}
-              </SelectItem>
-            ))}
-        </SelectContent>
-      </Select>
       {spec.configFields.map(f => (
         <TextField
           key={f.key}
@@ -121,16 +173,16 @@ const Integration = ({
           onChange={e => setSecrets(s => ({ ...s, [f.key]: e.target.value }))}
         />
       ))}
-      {current.enabled && current.variant === variant && spec.secretFields.length > 0 && (
+      {spec.secretFields.length > 0 && (
         <div className='flex gap-2'>
           <input
             className='border-input bg-background h-9 flex-1 rounded-md border px-3 text-sm'
-            placeholder='Player id for a test (blank = segment)'
+            placeholder='User id for a test (blank = segment)'
             value={testUser}
             onChange={e => setTestUser(e.target.value.replace(/\D/g, ''))}
           />
           <Button type='button' variant='outline' onClick={() => test.mutate()} disabled={test.isPending}>
-            <SendIcon /> Test
+            {test.isPending ? <Loader2Icon className='animate-spin' /> : <SendIcon />} Test
           </Button>
         </div>
       )}
@@ -139,90 +191,69 @@ const Integration = ({
 }
 
 const Features = () => {
-  const { can, refreshFlags } = useSession()
+  const { can, featureEntitled, actor } = useSession()
   const canWrite = can('config:write')
-  const catalogue = useApi<Catalogue>('admin/features/catalogue')
-  const current = useApi<SiteFeatures>('admin/features')
-  const [template, setTemplate] = useState('')
 
-  const update = useApiMutation({
-    fn: (v: { feature: string; body: Record<string, unknown> }) => api.put(`admin/features/${v.feature}`, v.body),
-    invalidate: [['api', 'admin/features']],
-    success: (_r, v) => `${v.feature} updated`,
-    onSuccess: () => refreshFlags()
-  })
-  const apply = useApiMutation({
-    fn: (t: string) => api.put('admin/features/template', { template: t, enable: true }),
-    invalidate: [['api', 'admin/features']],
-    success: (_r, t) => `Template ${t} applied`,
-    onSuccess: () => refreshFlags()
+  // The Super Admin (and executives) switch features too; agents only read.
+  const canSwitch = canWrite && actor?.direct === true
+  const catalogue = useApi<Catalogue>('admin/features/catalogue')
+  const featuresPoll = useLivePoll(FEATURES_POLL_MS)
+
+  // The platform owner sets every variant, switch and the template; a short poll (plus the
+  // session's entitlements watch, which refetches on a new owner version) keeps this read-only view current.
+  const current = useApi<SiteFeatures>('admin/features', undefined, {
+    refetchInterval: featuresPoll,
+    refetchOnWindowFocus: true
   })
 
   const rows = useMemo(() => {
     if (!catalogue.data || !current.data) return []
     const byKey = new Map(current.data.features.map(f => [f.feature, f]))
 
-    return CATEGORY_ORDER.map(cat => ({
+    // This site's UI (configs/siteUi.ts): features it has no screen for are listed together, last.
+    const absent = (key: string) => uiSupport(key)?.status === 'absent'
+
+    // Owner-only policies and missing features: the site admin does not see them at all.
+    const ownerOnly = (key: string) => OWNER_ONLY_FEATURES.has(key)
+
+    // Business & payments are the owner's policies (owner panel): not shown to the site admin.
+    return [...CATEGORY_ORDER.filter(c => c !== 'business'), 'not_in_ui'].map(cat => ({
       cat,
-      items: catalogue.data!.features.filter(f => f.category === cat).map(spec => ({ spec, cur: byKey.get(spec.key)! }))
+      items: catalogue
+        .data!.features.filter(f => !ownerOnly(f.key) && (cat === 'not_in_ui' ? absent(f.key) : f.category === cat && !absent(f.key)))
+        .flatMap(spec => {
+          const cur = byKey.get(spec.key)
+
+          if (!cur) return []
+
+          // Left out of the plan by the owner (the row itself or the entitlements say so): not listed.
+          const entitled = cur.entitled !== false && featureEntitled(spec.key)
+
+          return entitled ? [{ spec, cur, entitled }] : []
+        })
     })).filter(g => g.items.length)
-  }, [catalogue.data, current.data])
+  }, [catalogue.data, current.data, featureEntitled])
 
   const error = catalogue.error || current.error
 
   return (
     <div>
-      <PageHeader
-        title='Features'
-        description='This site’s business model, how it takes and pays money, and which variant of each feature it offers. Business settings are enforced by the backend on the next request.'
-      />
+      <PageHeader title='Features' />
+
+      <Alert className='mb-4'>
+        <InfoIcon />
+        <AlertDescription>{canSwitch ? 'Switch a feature on or off here; the platform picks the variant. The latest change, here or by the platform, is what players get.' : OWNER_MANAGED_MESSAGE}</AlertDescription>
+      </Alert>
+
       {error && <ErrorState error={error} />}
       {!rows.length && !error && <Skeleton className='h-96' />}
-
-      {catalogue.data && current.data && (
-        <Card className='mb-4 shadow-none'>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-2 text-base'>
-              Template{' '}
-              {current.data.template ? <Badge>{current.data.template}</Badge> : <Badge variant='outline'>none</Badge>}
-            </CardTitle>
-            <CardDescription>
-              Sets every feature at once to the variant that template ships with. Integrations already keyed in are left
-              alone.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='flex flex-wrap gap-2'>
-            <Select value={template || current.data.template || ''} onValueChange={v => v && setTemplate(v)}>
-              <SelectTrigger className='w-64'>
-                <SelectValue placeholder='Choose a template' />
-              </SelectTrigger>
-              <SelectContent>
-                {catalogue.data.templates.map(t => (
-                  <SelectItem key={t.key} value={t.key}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Can permission='config:write'>
-              <ConfirmDialog
-                trigger={<Button disabled={!template}>Apply</Button>}
-                title={`Apply ${template}?`}
-                description={catalogue.data.templates.find(t => t.key === template)?.description}
-                confirmLabel='Apply'
-                onConfirm={() => apply.mutateAsync(template)}
-              />
-            </Can>
-          </CardContent>
-        </Card>
-      )}
 
       <div className='grid gap-4'>
         {rows.map(({ cat, items }) => (
           <Card key={cat} className='gap-0 py-0 shadow-none'>
             <CardHeader className='border-b py-3'>
               <CardTitle className='text-muted-foreground text-xs font-semibold tracking-wider uppercase'>
-                {CATEGORY_LABELS[cat] ?? cat}
+                {cat === 'not_in_ui' ? 'Not in this UI' : (CATEGORY_LABELS[cat] ?? cat)}
               </CardTitle>
             </CardHeader>
             <Table>
@@ -240,64 +271,89 @@ const Features = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map(({ spec, cur }) => (
-                  <TableRow key={spec.key}>
-                    <TableCell className='pl-4'>
-                      <span className='block font-medium'>{spec.label}</span>
-                      <span className='text-muted-foreground block max-w-md truncate text-xs'>
-                        {spec.variants.find(v => v.key === cur.variant)?.description}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {spec.kind === 'policy' ? (
-                        <PolicySelect
-                          label={spec.label}
-                          value={cur.variant}
-                          variants={spec.variants}
-                          isDefault={cur.isDefault}
-                          disabled={!canWrite}
-                          onChange={v => update.mutateAsync({ feature: spec.key, body: { variant: v } })}
-                        />
-                      ) : spec.category === 'integration' ? (
-                        <Integration feature={spec} current={cur} canWrite={canWrite} />
-                      ) : (
-                        <Select
-                          value={cur.variant}
-                          disabled={!canWrite}
-                          onValueChange={v =>
-                            v && update.mutate({ feature: spec.key, body: { variant: v, enabled: v !== 'none' } })
-                          }
-                        >
-                          <SelectTrigger className='w-48'>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {spec.variants.map(v => (
-                              <SelectItem key={v.key} value={v.key}>
-                                {v.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </TableCell>
-                    <TableCell className='pr-4'>
-                      {spec.kind === 'policy' ? (
-                        <span className='text-muted-foreground text-xs'>always on</span>
-                      ) : (
-                        <Switch
-                          checked={cur.enabled}
-                          disabled={!canWrite || cur.variant === 'none'}
-                          onCheckedChange={enabled => update.mutate({ feature: spec.key, body: { enabled } })}
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {items.map(({ spec, cur, entitled }) => {
+                  const policy = spec.kind === 'policy'
+                  const ui = policy ? null : uiSupport(spec.key)
+                  const on = policy ? cur.variant !== 'none' : cur.enabled && cur.variant !== 'none'
+
+                  // An integration's keys, or any feature whose current variant has settings (e.g. Live TV's minimum balance and hours).
+                  const hasFields = spec.category === 'integration' || Boolean(spec.variants.find(v => v.key === cur.variant)?.configFields?.length)
+                  const configurable = hasFields && canWrite && entitled && cur.enabled && cur.variant !== 'none'
+
+                  return (
+                    <TableRow key={spec.key} className={entitled ? undefined : 'opacity-60'}>
+                      <TableCell className='pl-4'>
+                        <span className='flex items-center gap-2 font-medium'>
+                          {spec.label}
+                          {!entitled && (
+                            <Badge variant='outline' className='gap-1 font-normal'>
+                              <LockIcon className='size-3' /> Not in your plan
+                            </Badge>
+                          )}
+                        </span>
+                        <span className='text-muted-foreground block max-w-md truncate text-xs'>
+                          {ui?.status === 'absent'
+                            ? ui.why
+                            : ui
+                              ? `${UI_LABEL}: ${ui.surfaces}.`
+                              : spec.variants.find(v => v.key === cur.variant)?.description}
+                        </span>
+                        {cur.region && cur.variant !== 'none' && (
+                          <span className='text-muted-foreground block text-xs' data-region>
+                            {cur.region.listType === 'allowlist' ? 'Allowed only: ' : 'Restricted: '}
+                            {cur.region.countries.length ? cur.region.countries.join(', ') : 'no countries'}
+                          </span>
+                        )}
+                        {cur.withdrawalCap && (
+                          <span className='text-muted-foreground block text-xs' data-withdrawal-cap>
+                            Deposit cap:{' '}
+                            {cur.withdrawalCap.enabled
+                              ? `${cur.withdrawalCap.depositMultiplier}× deposits${cur.withdrawalCap.wagerBonus ? ` + wagering up to ${cur.withdrawalCap.wagerMultiplier}×` : ''}, per currency`
+                              : 'off'}
+                          </span>
+                        )}
+                        {cur.withdrawalDailyLimit && (
+                          <span className='text-muted-foreground block text-xs' data-withdrawal-daily-limit>
+                            Daily limit:{' '}
+                            {cur.withdrawalDailyLimit.enabled && Object.keys(cur.withdrawalDailyLimit.limits).length
+                              ? `${Object.entries(cur.withdrawalDailyLimit.limits)
+                                  .map(([c, a]) => `${c} ${Number(a).toLocaleString('en-IN', { maximumFractionDigits: 8 })}`)
+                                  .join(' · ')} per 24 h`
+                              : 'off'}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className='flex items-center gap-2'>
+                          <Badge variant={policy ? 'secondary' : 'outline'}>
+                            {ui?.status === 'absent'
+                              ? 'Not in this UI'
+                              : ui?.status === 'fixed'
+                                ? `${UI_LABEL} · always on`
+                                : ui
+                                  ? UI_LABEL
+                                  : variantLabel(spec, cur)}
+                          </Badge>
+                          {configurable && <IntegrationSettings feature={spec} current={cur} />}
+                        </span>
+                      </TableCell>
+                      <TableCell className='pr-4'>
+                        {policy ? (
+                          <span className='text-muted-foreground text-xs'>always on</span>
+                        ) : canSwitch && entitled && cur.variant !== 'none' && ui?.status !== 'fixed' ? (
+                          <FeatureSwitch spec={spec} on={on} />
+                        ) : (
+                          <Badge variant={on ? 'default' : 'outline'}>{on ? 'On' : 'Off'}</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </Card>
         ))}
+        {actor?.direct === true && <OriginalGames canWrite={canSwitch} />}
       </div>
     </div>
   )

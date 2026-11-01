@@ -3,6 +3,7 @@
 const { Server } = require('socket.io');
 const { createSocketServer } = require('@ibitplay/socket');
 const { TokenService, TOKEN_TYPES } = require('@ibitplay/auth');
+const { startDbChanges } = require('./realtime/dbChanges');
 
 /**
  * user-service's socket transport.
@@ -39,6 +40,8 @@ const SOCKET_MODULES = [
   require('./modules/spin-wheel/sockets'),
   require('./modules/bonus/sockets'),
   require('./modules/preferences/sockets'),
+  require('./modules/notifications/sockets'),
+  require('./modules/sync/sockets'),
 ];
 
 function attachSockets({ server, container }) {
@@ -79,7 +82,8 @@ function attachSockets({ server, container }) {
     // `verify` throws on anything invalid — expired, wrong type, wrong secret.
     // The caller logs and treats the connection as signed-out.
     const payload = tokens.verify(token, TOKEN_TYPES.ACCESS);
-    return payload?.sub ? { userId: String(payload.sub) } : null;
+    // `expiresAt` lets the transport drop the identity when the token would stop working on HTTP.
+    return payload?.sub ? { userId: String(payload.sub), expiresAt: payload.exp * 1000 } : null;
   };
 
   /**
@@ -119,7 +123,11 @@ function attachSockets({ server, container }) {
      */
     try {
       const result = await container.clients.admin.get('/internal/admin/auth/verify', {
-        query: { staffId: payload.sub },
+        query: {
+          staffId: payload.sub,
+          tv: Number(payload.tv ?? 0),
+          ...(payload.executiveId ? { executiveId: payload.executiveId, etv: Number(payload.etv ?? 0) } : {}),
+        },
       });
 
       const body = result?.data ?? result;
@@ -153,7 +161,16 @@ function attachSockets({ server, container }) {
 
   logger.info({ modules: SOCKET_MODULES.length }, 'Socket transport attached');
 
-  return { io, close: () => io.close() };
+  // Balance and account changes written by other services, pushed from the database (migration 113).
+  const dbChanges = startDbChanges({ container, io });
+
+  return {
+    io,
+    close: () => {
+      dbChanges.close();
+      io.close();
+    },
+  };
 }
 
 /**

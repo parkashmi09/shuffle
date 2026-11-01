@@ -5,34 +5,36 @@ import { useState } from 'react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import DateTime from '@/components/shared/DateTime'
 import ErrorState from '@/components/shared/ErrorState'
-import JsonView from '@/components/shared/JsonView'
 import Money from '@/components/shared/Money'
+import ChannelTabs, { type Channel } from '@/components/shared/ChannelTabs'
 import PageHeader from '@/components/shared/PageHeader'
 import StatCard from '@/components/shared/StatCard'
 import StatusBadge from '@/components/shared/StatusBadge'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartCard, TimeSeriesChart, seriesTable } from '@/components/shared/charts'
+import { DateRangePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useSession } from '@/contexts/SessionContext'
 import { useApi, useListState } from '@/hooks/use-api'
 import { formatNumber } from '@/lib/format'
-import type { CasinoStats, CasinoTotals, CasinoTxn, RawTxn } from './types'
+import type { CasinoStats, CasinoTxn } from './types'
 import { usePageList } from './usePageList'
+import { casinoSourceLabel } from '@/lib/casinoSource'
 
 const ALL = '__all__'
+
 const SOURCES = [
-  { value: 'inhouse', label: 'In-house' },
-  { value: 'gis', label: 'Slotegrator' },
-  { value: 'jsgames', label: 'JS games' }
+  { value: 'gis', label: casinoSourceLabel('gis') },
+  { value: 'jsgames', label: casinoSourceLabel('jsgames') }
 ]
 
 const txnColumns: Column<CasinoTxn>[] = [
   { key: 'at', header: 'Time', cell: r => <DateTime value={r.transaction_timestamp} /> },
   {
     key: 'user',
-    header: 'Player',
+    header: 'User',
     cell: r => (
       <div>
         <div>{r.user_name ?? '—'}</div>
@@ -46,7 +48,7 @@ const txnColumns: Column<CasinoTxn>[] = [
     cell: r => (
       <div>
         <div>{r.game_title ?? '—'}</div>
-        <div className='text-muted-foreground text-xs'>{r.game_vendor ?? r.source}</div>
+        <div className='text-muted-foreground text-xs'>{casinoSourceLabel(r.source)}</div>
       </div>
     )
   },
@@ -68,14 +70,12 @@ const txnColumns: Column<CasinoTxn>[] = [
 ]
 
 const DateRange = ({ state, set }: { state: Record<string, string | number>; set: (p: Record<string, string | number | null>) => void }) => (
-  <>
-    <Input type='date' className='w-40' value={String(state.from ?? '')} onChange={e => set({ from: e.target.value })} aria-label='From' />
-    <Input type='date' className='w-40' value={String(state.to ?? '')} onChange={e => set({ to: e.target.value })} aria-label='To' />
-  </>
+  <DateRangePicker aria-label='Date range' from={String(state.from ?? '')} to={String(state.to ?? '')} onChange={set} />
 )
 
-const TransactionsTab = () => {
+const TransactionsTab = ({ channel }: { channel: Channel }) => {
   const { state, set } = useListState(['userId', 'source', 'from', 'to'])
+
   const list = usePageList<CasinoTxn>('admin/casino/bet-history/transactions', {
     limit: state.limit,
     page: state.page,
@@ -83,7 +83,8 @@ const TransactionsTab = () => {
     userId: state.userId || undefined,
     source: state.source && state.source !== ALL ? state.source : undefined,
     from: state.from || undefined,
-    to: state.to || undefined
+    to: state.to || undefined,
+    channel
   })
 
   return (
@@ -106,7 +107,7 @@ const TransactionsTab = () => {
           <Input placeholder='User id' className='w-28' value={String(state.userId ?? '')} onChange={e => set({ userId: e.target.value })} />
           <Select value={String(state.source || ALL)} onValueChange={v => v && set({ source: v })}>
             <SelectTrigger className='w-40'>
-              <SelectValue />
+              <SelectValue>{(v: string) => (v === ALL ? 'All sources' : (SOURCES.find(s => s.value === v)?.label ?? v))}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All sources</SelectItem>
@@ -124,227 +125,90 @@ const TransactionsTab = () => {
   )
 }
 
-const TotalsRow = ({ label, t }: { label: string; t: CasinoTotals }) => (
-  <TableRow>
-    <TableCell className='pl-4 font-medium capitalize'>{label}</TableCell>
-    <TableCell className='text-right tabular-nums'>{formatNumber(t.bets)}</TableCell>
-    <TableCell className='text-right tabular-nums'>{formatNumber(t.wins)}</TableCell>
-    <TableCell className='text-right tabular-nums'>{formatNumber(t.losses)}</TableCell>
-    <TableCell className='text-right tabular-nums'>{formatNumber(t.pushes)}</TableCell>
-    <TableCell className='text-right tabular-nums'>{formatNumber(t.refunds)}</TableCell>
-    <TableCell className='text-right'><Money value={t.wagered} /></TableCell>
-    <TableCell className='text-right'><Money value={t.payouts} /></TableCell>
-    <TableCell className='text-right'><Money value={t.refunded} /></TableCell>
-    <TableCell className='pr-4 text-right'><Money value={String(-Number(t.net))} signed /></TableCell>
-  </TableRow>
-)
+type UsdtFigures = { bets: number; wagered: string; payouts: string; ggr: string }
+type UsdtStats = { totals: UsdtFigures; days: (UsdtFigures & { day: string })[]; unconverted: string[] }
 
-const StatsTab = () => {
+/** Every wallet valued in USDT at the site's current rates, with one bar group per day. */
+const StatsTab = ({ channel }: { channel: Channel }) => {
   const [userId, setUserId] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  const stats = useApi<CasinoStats>('admin/casino/bet-history/stats', { userId: userId || undefined, from: from || undefined, to: to || undefined })
-  const t = stats.data?.totals
-  const { totals: _t, bySource, ...rest } = stats.data ?? { totals: undefined, bySource: {} }
+  const stats = useApi<CasinoStats & { usdt?: UsdtStats }>('admin/casino/bet-history/stats', { userId: userId || undefined, from: from || undefined, to: to || undefined, channel })
 
-  void _t
+  const u = stats.data?.usdt
+  const t = u?.totals
+  const days = u?.days ?? []
+  const buckets = days.map(d => d.day)
+
+  const series = [
+    { name: 'Wagered', data: days.map(d => Number(d.wagered)), color: 'primary' as const },
+    { name: 'Paid out', data: days.map(d => Number(d.payouts)), color: 'warning' as const },
+    { name: 'GGR', data: days.map(d => Number(d.ggr)), color: 'success' as const }
+  ]
 
   return (
     <div className='grid gap-4'>
       <div className='flex flex-wrap items-center gap-3'>
         <Input placeholder='User id (optional)' className='w-40' value={userId} onChange={e => setUserId(e.target.value)} />
-        <Input type='date' className='w-40' value={from} onChange={e => setFrom(e.target.value)} />
-        <Input type='date' className='w-40' value={to} onChange={e => setTo(e.target.value)} />
+        <DateRangePicker aria-label='Date range' from={from} to={to} onChange={r => { setFrom(r.from); setTo(r.to) }} />
       </div>
       {stats.error && <ErrorState error={stats.error} />}
       <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
-        <StatCard label='Bets' value={formatNumber(t?.bets)} loading={stats.isLoading} hint={t ? `${formatNumber(t.wins)} won · ${formatNumber(t.losses)} lost · ${formatNumber(t.pushes)} push` : undefined} />
-        <StatCard label='Wagered' value={<Money value={t?.wagered} />} loading={stats.isLoading} />
-        <StatCard label='Paid out' value={<Money value={t?.payouts} />} loading={stats.isLoading} hint={t ? `refunded ${t.refunded}` : undefined} />
-        <StatCard label='GGR (house)' value={<Money value={t ? String(-Number(t.net)) : undefined} signed />} loading={stats.isLoading} hint='Wagered minus payouts' />
+        <StatCard label='Bets' value={formatNumber(t?.bets)} loading={stats.isLoading} />
+        <StatCard label='Wagered' value={<Money value={t?.wagered} currency='USDT' />} loading={stats.isLoading} />
+        <StatCard label='Paid out' value={<Money value={t?.payouts} currency='USDT' />} loading={stats.isLoading} />
+        <StatCard label='GGR' value={<Money value={t?.ggr} currency='USDT' signed />} loading={stats.isLoading} hint='Wagered minus payouts' />
       </div>
-      <Card className='gap-0 overflow-hidden py-0 shadow-none'>
-        <div className='overflow-x-auto'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className='pl-4'>Source</TableHead>
-                <TableHead className='text-right'>Bets</TableHead>
-                <TableHead className='text-right'>Wins</TableHead>
-                <TableHead className='text-right'>Losses</TableHead>
-                <TableHead className='text-right'>Push</TableHead>
-                <TableHead className='text-right'>Refunds</TableHead>
-                <TableHead className='text-right'>Wagered</TableHead>
-                <TableHead className='text-right'>Payouts</TableHead>
-                <TableHead className='text-right'>Refunded</TableHead>
-                <TableHead className='pr-4 text-right'>GGR</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(bySource ?? {}).map(([k, v]) => (
-                <TotalsRow key={k} label={k} t={v} />
-              ))}
-              {t && <TotalsRow label='Total' t={t} />}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-      {Object.keys(rest).length > 0 && (
-        <Card className='shadow-none'>
-          <CardHeader>
-            <CardTitle className='text-base'>More</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <JsonView value={rest} />
-          </CardContent>
-        </Card>
-      )}
+      <ChartCard
+        title='Casino by day'
+        description={`Wagered, paid out and GGR per day, USDT at current rates${u?.unconverted.length ? ` (not counted, no rate: ${u.unconverted.join(', ')})` : ''}`}
+        table={seriesTable({ buckets, granularity: 'day', series, format: 'money', currency: 'USDT' })}
+      >
+        <TimeSeriesChart
+          ariaLabel='Casino wagered, paid out and GGR per day, USDT'
+          buckets={buckets}
+          granularity='day'
+          series={series}
+          kind='bar'
+          format='money'
+          currency='USDT'
+          loading={stats.isLoading}
+          error={stats.error}
+          emptyMessage='No casino bets in this period.'
+        />
+      </ChartCard>
     </div>
   )
 }
 
-const AnalyticsTab = () => {
-  const q = useApi<Record<string, unknown>>('admin/casino/bet-history/analytics')
+const BetHistory = () => {
+  const { actor } = useSession()
 
-  if (q.error) return <ErrorState error={q.error} />
-  const { totals, bySource, ...rest } = (q.data ?? {}) as { totals?: CasinoTotals; bySource?: Record<string, CasinoTotals> } & Record<string, unknown>
+  // A super admin (level 1) sees every user on the site; everyone below sees their own tree.
+  const scope = actor?.level === 1 ? 'for every user on the site' : 'scoped to the users under your staff tree'
 
   return (
-    <div className='grid gap-4'>
-      <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
-        <StatCard label='All-time bets' value={formatNumber(totals?.bets)} loading={q.isLoading} />
-        <StatCard label='Wagered' value={<Money value={totals?.wagered} />} loading={q.isLoading} />
-        <StatCard label='Paid out' value={<Money value={totals?.payouts} />} loading={q.isLoading} />
-        <StatCard label='GGR' value={<Money value={totals ? String(-Number(totals.net)) : undefined} signed />} loading={q.isLoading} />
-      </div>
-      {bySource && (
-        <Card className='gap-0 overflow-hidden py-0 shadow-none'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className='pl-4'>Source</TableHead>
-                <TableHead className='text-right'>Bets</TableHead>
-                <TableHead className='text-right'>Wins</TableHead>
-                <TableHead className='text-right'>Losses</TableHead>
-                <TableHead className='text-right'>Push</TableHead>
-                <TableHead className='text-right'>Refunds</TableHead>
-                <TableHead className='text-right'>Wagered</TableHead>
-                <TableHead className='text-right'>Payouts</TableHead>
-                <TableHead className='text-right'>Refunded</TableHead>
-                <TableHead className='pr-4 text-right'>GGR</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(bySource).map(([k, v]) => (
-                <TotalsRow key={k} label={k} t={v} />
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-      <Card className='shadow-none'>
-        <CardHeader>
-          <CardTitle className='text-base'>Breakdowns</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <JsonView value={Object.keys(rest).length ? rest : 'No further breakdowns reported.'} />
-        </CardContent>
-      </Card>
+    <div>
+      <PageHeader title='Casino bet history' description={`Every third-party casino movement (Originals are not casino), ${scope}.`} />
+      {/* Direct Users / Agent Users: har tab ki listing aur numbers us taraf ke players ke. */}
+      <ChannelTabs>
+        {channel => (
+      <Tabs defaultValue='txns'>
+        <TabsList className='mb-4 flex-wrap'>
+          <TabsTrigger value='txns'>Transactions</TabsTrigger>
+          <TabsTrigger value='stats'>Stats</TabsTrigger>
+        </TabsList>
+        <TabsContent value='txns'>
+          <TransactionsTab channel={channel} />
+        </TabsContent>
+        <TabsContent value='stats'>
+          <StatsTab channel={channel} />
+        </TabsContent>
+      </Tabs>
+        )}
+      </ChannelTabs>
     </div>
   )
 }
-
-const rawColumns: Column<RawTxn>[] = [
-  { key: 'at', header: 'When', cell: r => <DateTime value={r.at} /> },
-  {
-    key: 'user',
-    header: 'Player',
-    cell: r => (
-      <div>
-        <div>{r.user ?? '—'}</div>
-        <div className='text-muted-foreground font-mono text-xs'>#{r.userId}</div>
-      </div>
-    )
-  },
-  { key: 'type', header: 'Type', cell: r => <Badge variant='outline'>{r.type ?? '—'}</Badge> },
-  { key: 'amount', header: 'Amount', align: 'right', cell: r => <Money value={r.amount} /> },
-  { key: 'status', header: 'Status', cell: r => <StatusBadge value={r.status} /> },
-  { key: 'id', header: 'Id', cell: r => <span className='font-mono text-xs'>{r.id}</span> }
-]
-
-const RawTab = ({ path }: { path: string }) => {
-  const { state, set } = useListState(['userId', 'from', 'to'])
-  const list = usePageList<RawTxn>(path, { limit: state.limit, page: state.page, userId: state.userId || undefined, from: state.from || undefined, to: state.to || undefined })
-
-  return (
-    <DataTable
-      columns={rawColumns}
-      rows={list.data?.rows}
-      rowKey={r => r.id}
-      loading={list.isLoading}
-      fetching={list.isFetching}
-      error={list.error}
-      pagination={list.data?.pagination}
-      onPageChange={page => set({ page })}
-      onLimitChange={limit => set({ limit })}
-      dense
-      toolbar={
-        <>
-          <Input placeholder='User id' className='w-28' value={String(state.userId ?? '')} onChange={e => set({ userId: e.target.value })} />
-          <DateRange state={state} set={set} />
-        </>
-      }
-    />
-  )
-}
-
-const RawTablesTab = () => {
-  const [table, setTable] = useState<'live' | 'slot'>('live')
-
-  return (
-    <div className='grid gap-4'>
-      <Select value={table} onValueChange={v => v && setTable(v as 'live' | 'slot')}>
-        <SelectTrigger className='w-56'>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value='live'>transaction_live</SelectItem>
-          <SelectItem value='slot'>transaction_slot</SelectItem>
-        </SelectContent>
-      </Select>
-      <RawTab path={`admin/casino/bet-history/transactions/raw/${table}`} />
-    </div>
-  )
-}
-
-const BetHistory = () => (
-  <div>
-    <PageHeader title='Casino bet history' description='Every casino movement across in-house games, the aggregator and JS games, scoped to the players under your staff tree.' />
-    <Tabs defaultValue='txns'>
-      <TabsList className='mb-4 flex-wrap'>
-        <TabsTrigger value='txns'>Transactions</TabsTrigger>
-        <TabsTrigger value='stats'>Stats</TabsTrigger>
-        <TabsTrigger value='analytics'>Analytics</TabsTrigger>
-        <TabsTrigger value='sportsbook'>Sportsbook (LuckySports)</TabsTrigger>
-        <TabsTrigger value='raw'>Raw provider tables</TabsTrigger>
-      </TabsList>
-      <TabsContent value='txns'>
-        <TransactionsTab />
-      </TabsContent>
-      <TabsContent value='stats'>
-        <StatsTab />
-      </TabsContent>
-      <TabsContent value='analytics'>
-        <AnalyticsTab />
-      </TabsContent>
-      <TabsContent value='sportsbook'>
-        <RawTab path='admin/casino/bet-history/luckysports' />
-      </TabsContent>
-      <TabsContent value='raw'>
-        <RawTablesTab />
-      </TabsContent>
-    </Tabs>
-  </div>
-)
 
 export default BetHistory

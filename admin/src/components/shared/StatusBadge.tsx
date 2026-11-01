@@ -26,9 +26,12 @@ const SUCCESS = [
   'published',
   'enabled',
   'paid',
-  'credited'
+  'credited',
+  'live'
 ]
+
 const WARNING = ['pending', 'processing', 'open', 'submitted', 'review', 'awaiting', 'partial']
+
 const DANGER = [
   'suspended',
   'rejected',
@@ -41,6 +44,8 @@ const DANGER = [
   'blocked',
   'expired'
 ]
+
+
 /** In the system, but not in play — no colour, because nothing is happening. */
 const NEUTRAL = ['void', 'inactive', 'draft', 'archived', 'unknown']
 
@@ -59,7 +64,7 @@ const StatusBadge = ({ value, className }: { value: string | boolean | null | un
   return (
     <Badge
       variant='outline'
-      className={cn('rounded-full border-transparent px-2 py-0.5 text-xs font-medium capitalize', tone, className)}
+      className={cn('h-6 rounded-md border-transparent px-2 text-xs font-semibold capitalize', tone, className)}
     >
       {text.replace(/[_-]+/g, ' ')}
     </Badge>

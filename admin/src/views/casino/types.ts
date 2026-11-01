@@ -13,7 +13,7 @@ export type GisGame = {
 export type GisVendor = { vendor: string; total?: number | string; [k: string]: unknown }
 export type GisType = { type: string; total?: number | string; [k: string]: unknown }
 export type GisProvider = { name: string; enabled: boolean }
-export type GisPriority = { games: GisGame[]; updated_at: string | null; vendor?: string; type?: string }
+export type GisPriority = { games: GisGame[]; updated_at: string | null; pinned?: number; vendor?: string; type?: string }
 
 export type JsGame = {
   id: number
@@ -67,7 +67,31 @@ export type CasinoTotals = {
   refunded: string
   net: string
 }
-export type CasinoStats = { totals: CasinoTotals; bySource: Record<string, CasinoTotals>; [k: string]: unknown }
+export type CasinoStats = {
+  totals: CasinoTotals
+  bySource: Record<string, CasinoTotals>
+
+  /** The same figures per wallet — money in two coins does not add up raw. */
+  byCurrency?: { currency: string; totals: CasinoTotals; bySource: Record<string, CasinoTotals> }[]
+  [k: string]: unknown
+}
 
 export type HouseBet = { id: string; at: string | null; userId: string | null; user: string | null; amount: string; profit: string; game: string | null }
 export type RawTxn = { id: string; at: string | null; userId: string | null; user: string | null; amount: string; type: string | null; status: string | null }
+
+/** One lobby provider's site settings — mirrors casino-service `providerSettingsList` (migration 067). */
+export type ProviderSetting = {
+  key: string
+  name: string
+  displayName: string | null
+  enabled: boolean
+  sortOrder: number | null
+  games: number
+  hasLogo: boolean
+  logoUrl: string | null
+  logoContentType: string | null
+  logoByteSize: number | null
+  logoUpdatedAt: string | null
+  updatedBy: string | null
+  updatedAt: string | null
+}

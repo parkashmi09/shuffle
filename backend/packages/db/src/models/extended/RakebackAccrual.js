@@ -27,6 +27,8 @@ module.exports = (sequelize) => {
       source: { type: DataTypes.STRING(40), allowNull: false, field: 'source' },
       /** That integration's key for what was accrued on — a round id. */
       ref: { type: DataTypes.STRING(190), allowNull: false, field: 'ref' },
+      /** Taken back out by a (partial) stake reversal (migration 090); `amount` is what still counts. */
+      reversed_amount: { type: DataTypes.DECIMAL(30, 8), allowNull: false, defaultValue: '0', field: 'reversed_amount' },
     },
     {
       sequelize,

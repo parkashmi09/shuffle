@@ -14,6 +14,11 @@ const username = z
   .max(30, 'username must be at most 30 characters')
   .regex(/^[A-Za-z0-9_.-]+$/, 'username may contain letters, digits and _ . - only');
 
+/** `POST /profile/avatar` — an id from `GET /admin/avatars/public`. */
+const setAvatar = {
+  body: z.object({ avatarId: z.coerce.number().int().positive() }).strict(),
+};
+
 const updateProfile = {
   body: z
     .object({
@@ -55,4 +60,13 @@ const referralCodeParam = {
   }),
 };
 
-module.exports = { updateProfile, changeEmail, referralCodeParam, userIdParam, username };
+/** `GET /profile/turnover?currency=INR`: the display currency (the site's "View in"); optional. */
+const turnoverQuery = {
+  query: z
+    .object({
+      currency: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{2,10}$/, 'currency must be a currency code').optional(),
+    })
+    .strict(),
+};
+
+module.exports = { setAvatar, updateProfile, changeEmail, referralCodeParam, userIdParam, username, turnoverQuery };

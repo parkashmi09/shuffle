@@ -73,6 +73,7 @@ const path = require('node:path');
 const { QueryTypes } = require('sequelize');
 
 const { parseCsvObjects } = require('./data/parseCsv');
+const { artworkFor } = require('./data/artwork');
 
 const CSV_PATH = path.join(__dirname, 'data', 'js-games.csv');
 
@@ -129,79 +130,10 @@ function category(row) {
 const PSEUDO_VENDORS = Object.freeze(['lobby', 'sports', 'esports']);
 
 /**
- * Artwork hosts, by whether a browser can actually render them.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * THE DUMP'S IMAGE URLS ARE HOTLINKS TO SIXTEEN OTHER OPERATORS' CDNs
- *
- * Not one of the 1,667 rows that carries artwork points at anything this
- * platform controls. They point at coincasino, rajabet, boxbet, rollbit,
- * luckyblock, a Google Drive folder and — for forty-five rows — `example.com`.
- *
- * Each host was tested by loading one of its own URLs IN A BROWSER, which is
- * the only test that counts: `curl` reports `coincasino.com` dead and a browser
- * renders it fine (it refuses the request on user-agent, not on origin), so a
- * command-line probe would have thrown away 453 good rows.
- *
- * ── WHY THE DEAD ONES ARE SET TO NULL RATHER THAN LEFT ───────────────────
- *
- * A URL that can never load is WORSE than no URL. `imageFor` falls back to the
- * star mark the moment the column is empty, so NULL renders a deliberate
- * placeholder immediately; a dead link renders nothing, then a broken-image
- * box, and the card sits empty while the browser waits for a host that will
- * never answer. The row keeps its name, provider and type — only the claim to
- * artwork it does not have is dropped.
- * ═════════════════════════════════════════════════════════════════════════
+ * Artwork: which URLs in the dump a browser can draw, and the verified art of the rest.
+ * See `data/artwork.js`. A URL that can never load is WORSE than no URL: NULL renders the
+ * lobby's own placeholder at once, a dead link renders a broken-image box.
  */
-const ARTWORK_HOSTS = Object.freeze({
-  /** Verified rendering, with the shape each one serves. */
-  renders: Object.freeze([
-    'www.coincasino.com', //                          453 rows, 320x407
-    'huidu-bucket.s3.ap-southeast-1.amazonaws.com', // 296 rows, 300x200 (landscape)
-    'images.rajabet.fun', //                           261 rows, 480x640
-    'd3c3rwqla6qxaf.cloudfront.net', //                 15 rows, 427x575
-    'static-mobile.mbzp67c522.com', //                   9 rows, 512x728
-    'origin-r2.ibbf55-resources.com', //                 1 row,  486x540
-  ]),
-
-  /**
-   * Verified NOT rendering. `mgasia.canto.global` is a Canto asset-manager
-   * page rather than an image, `bc.imgix.net` answers 402 Payment Required,
-   * Drive links are share pages, and `example.com` is a literal placeholder
-   * somebody typed.
-   */
-  dead: Object.freeze([
-    'mgasia.canto.global', // 269
-    'boxbet.io', //           129
-    'drive.google.com', //     97
-    'bc.imgix.net', //          82
-    'example.com', //           45
-    'rollbit.com', //            2
-    'www.luckyblock.com', //     1
-  ]),
-
-  /**
-   * Renders, but 221x80 — a strip, not cover art. Cropped to a portrait card
-   * it is an unreadable smear, so it is treated as no artwork.
-   */
-  unusable: Object.freeze(['s3.ezgif.com', 's7.ezgif.com']),
-});
-
-const hostOf = (url) => {
-  const match = /^https?:\/\/([^/?#]+)/i.exec(String(url || ''));
-  return match ? match[1].toLowerCase() : null;
-};
-
-/** Can a browser draw this? NULL-worthy otherwise. */
-function usableArtwork(url) {
-  const host = hostOf(url);
-  if (!host) return false;
-  if (ARTWORK_HOSTS.dead.includes(host) || ARTWORK_HOSTS.unusable.includes(host)) return false;
-  // An unknown host is kept: it has not been shown to fail, and dropping it
-  // would quietly discard a provider added after this list was written.
-  return true;
-}
-
 /**
  * A row that opens a provider's own lobby rather than a table.
  *
@@ -224,7 +156,8 @@ const INDIAN_NAME = /teen ?patti|andar ?bahar|jhandi|7 ?up ?7 ?down|rummy|indian
  *
  * ── ARTWORK DECIDES WHO GETS IN ──────────────────────────────────────────
  *
- * 945 of the 1,980 rows have no artwork a browser can draw, and the first pass
+ * 945 of the 1,980 rows had no artwork a browser can draw (512 since the
+ * recovery in `data/artwork.js`), and the first pass
  * of these lists ignored that — so the home page filled with flat colour
  * blocks. Every rule is now filtered through `hasArt` FIRST and only falls
  * back to art-less rows if a list cannot be filled otherwise.
@@ -300,10 +233,9 @@ function readCatalogue() {
     if (seen.has(gameUid)) continue;
     seen.add(gameUid);
 
-    const raw = row.game_icon ? String(row.game_icon).trim() : null;
-    // Empty in the dump means "no artwork", and so does a URL no browser can
-    // load — see `ARTWORK_HOSTS`. The lobby's fallback keys on a falsy value.
-    const artwork = usableArtwork(raw) ? raw : null;
+    // The dump's URL if a browser can draw it, else the verified recovery
+    // (`data/recovered-artwork.json`), else NULL — see `data/artwork.js`.
+    const artwork = artworkFor({ game_uid: gameUid, game_icon: row.game_icon });
 
     const game = {
       game_uid: gameUid,

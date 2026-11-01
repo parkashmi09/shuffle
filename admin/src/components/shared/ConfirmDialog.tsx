@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
+import { notifyError } from '@/lib/notify'
 
 type Props = {
   trigger: ReactNode
@@ -23,18 +24,26 @@ type Props = {
   destructive?: boolean
   onConfirm: () => Promise<unknown> | unknown
   children?: ReactNode
+
+  /** Keep the confirm button disabled (e.g. a required reason is still empty). */
+  confirmDisabled?: boolean
 }
 
 /** A yes/no gate around an action. Closes itself when `onConfirm` resolves. */
-const ConfirmDialog = ({ trigger, title, description, confirmLabel = 'Confirm', destructive, onConfirm, children }: Props) => {
+const ConfirmDialog = ({ trigger, title, description, confirmLabel = 'Confirm', destructive, onConfirm, children, confirmDisabled }: Props) => {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const run = async () => {
+    if (busy) return
     setBusy(true)
+
     try {
       await onConfirm()
       setOpen(false)
+    } catch (error) {
+      // Stay open; a mutation has already toasted — anything else is toasted here, never swallowed.
+      notifyError(error)
     } finally {
       setBusy(false)
     }
@@ -42,7 +51,7 @@ const ConfirmDialog = ({ trigger, title, description, confirmLabel = 'Confirm', 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<span />}>{trigger}</DialogTrigger>
+      <DialogTrigger nativeButton={false} render={<span />}>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -53,7 +62,7 @@ const ConfirmDialog = ({ trigger, title, description, confirmLabel = 'Confirm', 
           <Button variant='outline' onClick={() => setOpen(false)} disabled={busy}>
             Cancel
           </Button>
-          <Button variant={destructive ? 'destructive' : 'default'} onClick={run} disabled={busy}>
+          <Button variant={destructive ? 'destructive' : 'default'} onClick={run} disabled={busy || confirmDisabled}>
             {busy && <Loader2Icon className='animate-spin' />}
             {confirmLabel}
           </Button>

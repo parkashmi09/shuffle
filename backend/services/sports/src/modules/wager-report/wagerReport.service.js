@@ -1,6 +1,6 @@
 'use strict';
 
-const { Op, fn, col } = require('sequelize');
+const { Op, fn, col, literal } = require('sequelize');
 const { money } = require('@ibitplay/common');
 
 /**
@@ -103,6 +103,8 @@ class WagerReportService {
       where: {
         result_status: ['won', 'loss'],
         created_at: { [Op.gte]: start, [Op.lt]: end },
+        // A demo user (the Demo button's throwaway account) is in no promotion.
+        user_id: { [Op.notIn]: literal('(SELECT id FROM public.users WHERE is_demo)') },
       },
       attributes: [
         'user_id',
@@ -130,6 +132,50 @@ class WagerReportService {
         currency: 'USD',
         usd: money.toDecimalString(money.toMinor(r.total ?? '0')),
         bets: Number(r.count ?? 0),
+      })),
+    };
+  }
+
+  /**
+   * One player's lifetime sports play, for their own profile page — the sports
+   * half of user-service's `GET /user/profile/stats`.
+   *
+   * Settled bets only (won or lost), the same rule as `turnover()`. Per stake
+   * currency, with the stake-time `usd_amount` beside the original so the
+   * caller adds USD without re-pricing history. No biggest win: a bet row has
+   * no payout column, and deriving one from odds would be wrong for lay bets.
+   * One grouped scan on `idx_sportsbet_user_created`.
+   */
+  async profileStats({ userId }) {
+    const rows = await this.models.SportsBet.findAll({
+      where: { user_id: userId, result_status: ['won', 'loss'] },
+      attributes: [
+        'original_currency',
+        [fn('SUM', col('original_amount')), 'amount'],
+        [fn('SUM', col('usd_amount')), 'usd'],
+        [fn('COUNT', col('id')), 'bets'],
+        [literal(`COUNT(*) FILTER (WHERE result_status = 'won')`), 'wins'],
+        [fn('MIN', col('created_at')), 'firstAt'],
+        [fn('MAX', col('created_at')), 'lastAt'],
+      ],
+      group: ['original_currency'],
+      raw: true,
+    });
+
+    const dec = (v) => money.toDecimalString(money.toMinorQuantised(String(v ?? '0')));
+    const iso = (v) => (v ? new Date(v).toISOString() : null);
+
+    return {
+      userId: String(userId),
+      byCurrency: rows.map((r) => ({
+        // A bet placed before currencies were recorded was staked in USD.
+        currency: String(r.original_currency || 'USD').toUpperCase(),
+        wagered: dec(r.amount ?? r.usd),
+        usd: dec(r.usd),
+        bets: Number(r.bets ?? 0),
+        wins: Number(r.wins ?? 0),
+        firstAt: iso(r.firstAt),
+        lastAt: iso(r.lastAt),
       })),
     };
   }

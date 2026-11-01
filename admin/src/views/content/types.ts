@@ -1,8 +1,14 @@
 /** Row shapes for the content area — mirrors the admin-service banners / blogs / notifications mappers. */
 
+/** Who a banner is for: the direct players' site, or agent mode (/agent). */
+export type BannerMode = 'direct' | 'agent'
+
 export type Banner = {
   id: number
   type: string
+
+  /** `agent` for an `agent-…` placement (shown on /agent), else `direct`. */
+  mode?: BannerMode
   contentType: string | null
   byteSize: number | null
   active: boolean
@@ -31,12 +37,24 @@ export type Blog = {
   byteSize: number | null
   createdAt: string | null
   updatedAt: string | null
+
   /** Only on `GET /blogs/:id`. */
   description?: string
 }
 
 export const NOTIFICATION_TYPES = ['general', 'deposit', 'withdrawal', 'bonus', 'bet', 'promotion'] as const
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
+
+/** One staff send (`admin/notifications/sends`): a broadcast or a one-user push. */
+export type SentNotification = {
+  sendId: string
+  title: string
+  body: string | null
+  type: string
+  players: number
+  userId: number | string | null
+  sentAt: string | null
+}
 
 export type Device = {
   id: number
@@ -59,4 +77,20 @@ export type NotificationRow = {
   readAt: string | null
   delivered: boolean
   createdAt: string | null
+}
+
+/**
+ * `GET admin/avatars` — one profile picture players may choose. `minLevel` 0 is everyone; a
+ * player below it sees the avatar locked. `url` is the public image path
+ * (`/api/v1/admin/avatars/:id/image?v=…`), versioned so a replaced image is fetched again.
+ */
+export type Avatar = {
+  id: number
+  url: string
+  minLevel: number
+  sort: number
+  enabled: boolean
+  byteSize?: number | null
+  contentType?: string | null
+  updatedAt?: string | null
 }

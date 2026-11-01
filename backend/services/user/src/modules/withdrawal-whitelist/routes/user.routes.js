@@ -1,7 +1,8 @@
 'use strict';
 
 const { Router } = require('express');
-const { validate } = require('@ibitplay/common');
+const { validate, noBody, noQuery } = require('@ibitplay/common');
+const { denyAgentPlayer } = require('@ibitplay/auth');
 
 const v = require('../whitelist.validators');
 const { WhitelistService } = require('../whitelist.service');
@@ -18,16 +19,20 @@ module.exports = function userRoutes(deps) {
   const ctrl = createControllers({ service: new WhitelistService(deps) });
   const router = Router();
 
-  router.get('/', ctrl.list);
-  router.post('/', validate(v.create), ctrl.add);
+  // Payout destinations: agent-tree players have no withdrawal rail, so every
+  // write is refused. The list stays readable.
+  const noWithdraw = denyAgentPlayer('withdraw');
+
+  router.get('/', noQuery(), ctrl.list);
+  router.post('/', noWithdraw, validate(v.create), ctrl.add);
 
   /* BEFORE `/:id`, or Express matches the literal against the parameter and a
      switch toggle arrives as a request to rename an address called
      "enforcement". The same ordering the notifications module needed. */
-  router.put('/enforcement', validate(v.enforcement), ctrl.setEnforcement);
+  router.put('/enforcement', noWithdraw, validate(v.enforcement), ctrl.setEnforcement);
 
-  router.patch('/:id', validate(v.rename), ctrl.rename);
-  router.delete('/:id', validate(v.idParam), ctrl.remove);
+  router.patch('/:id', noWithdraw, validate(v.rename), ctrl.rename);
+  router.delete('/:id', noBody(), noWithdraw, validate(v.idParam), ctrl.remove);
 
   return router;
 };

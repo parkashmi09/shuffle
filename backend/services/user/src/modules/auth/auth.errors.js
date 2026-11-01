@@ -24,9 +24,33 @@ module.exports = defineErrors('AUTH', {
     status: 403,
     message: 'This account is not active',
   },
+  /** A demo account's time is up (`users.demo_expires_at`); it is deleted soon after. */
+  DEMO_DISABLED: {
+    status: 403,
+    message: 'Demo accounts are not available on this site',
+  },
+  DEMO_UNAVAILABLE: {
+    status: 503,
+    message: 'A demo account could not be created right now. Try again.',
+  },
+  DEMO_EXPIRED: {
+    status: 401,
+    message: 'Your demo session has ended. Start a new demo or use a real ID.',
+  },
   TOO_MANY_ATTEMPTS: {
     status: 429,
     message: 'Too many failed sign-in attempts. Try again later.',
+  },
+
+  /**
+   * The signup form named a referrer that does not exist. Refused rather than
+   * ignored: the player believes they joined someone's team, and the referrer
+   * believes they will be paid for it. An EMPTY code is fine — that is "no
+   * referrer", not a wrong one.
+   */
+  REFERRAL_CODE_INVALID: {
+    status: 422,
+    message: 'That referral code does not match any player. Check it, or leave it empty.',
   },
 
   // ── Sessions ────────────────────────────────────────────────────────
@@ -56,6 +80,8 @@ module.exports = defineErrors('AUTH', {
   },
 
   // ── Password ────────────────────────────────────────────────────────
+  OWN_PASSWORD_LOCKED: { status: 403, message: 'Your password can only be changed by your upline' },
+
   CURRENT_PASSWORD_INCORRECT: {
     /**
      * 403, NOT 401, AND THE DIFFERENCE IS NOT COSMETIC.
@@ -101,6 +127,21 @@ module.exports = defineErrors('AUTH', {
      * attacker whether a token they hold was ever real.
      */
     message: 'That reset link is not valid or has expired',
+  },
+
+  /** Google sign-in is switched off: its keys are not set. */
+  GOOGLE_NOT_CONFIGURED: { status: 503, message: 'Sign in with Google is not available' },
+  /** The owner's `google_signin` policy is off (owner panel → Features & plan). */
+  GOOGLE_DISABLED: { status: 403, message: 'Sign in with Google is switched off' },
+  /** Google proved the email, but a password account already holds it. Never linked automatically:
+   *  this platform does not verify emails, so the existing account may not belong to this person. */
+  GOOGLE_EMAIL_IN_USE: { status: 409, message: 'An account with this email already exists. Sign in with your password.' },
+  GOOGLE_SIGNIN_FAILED: { status: 401, message: 'Google sign-in did not complete. Try again.' },
+  /** One code for missing, used and expired — same reasoning as the reset link. */
+  GOOGLE_CODE_INVALID: { status: 401, message: 'That sign-in link is not valid or has expired' },
+  GOOGLE_TWO_FACTOR_ON: {
+    status: 403,
+    message: 'Two-factor authentication is on for this account. Sign in with your username, password and code.',
   },
 
   ALREADY_REGISTERED: {

@@ -11,18 +11,37 @@ const {
   hashToken,
   totp,
   createSecretBox,
+  playerCapabilities,
+  isAgentPlayer,
 } = require('@ibitplay/auth');
 
 const errors = require('./auth.errors');
-const { sitePolicy } = require('@ibitplay/common');
+const { sharedIpLocator, normaliseIp } = require('./geo/ipLocation');
+const { sitePolicy, withdrawBlock, manualPayments, operatorSettings, entitlements } = require('@ibitplay/common');
+const { RegionService } = require('../region/region.service');
+const { assertNotPlatformExcluded } = require('../responsible-gambling/responsible.service');
 /* Registration is where a referral becomes a team. Safe to require here —
    the affiliate module does not reach back into auth. */
 const { AffiliateService } = require('../affiliate/affiliate.service');
+const { resolveReferrerOwner } = require('../affiliate/referrerResolver');
 /**
  * The player role id and the empty wallet blob, shared with `admin/players`
  * so an operator-created account and a self-registered one are the same shape.
  */
 const { PLAYER_ROLE_ID, WALLET_SEED } = require('./registration.constants');
+const google = require('./google');
+const { renderGeneral, escape } = require('../email/templates');
+
+/**
+ * One spelling per client address. Node reports an IPv4 client on a dual-stack
+ * socket as `::ffff:1.2.3.4`, and a forwarded header may carry a port or a
+ * list; stored raw, one player became two "distinct IPs" (and a shared-IP
+ * match was missed). Anything that is not an address is kept as given.
+ */
+function withClientIp(context = {}) {
+  const ip = normaliseIp(context.ip) ?? context.ip ?? null;
+  return ip === context.ip ? context : { ...context, ip };
+}
 
 /**
  * Player authentication.
@@ -42,7 +61,21 @@ const { PLAYER_ROLE_ID, WALLET_SEED } = require('./registration.constants');
 
 const LOCKOUT_WINDOW_MINUTES = 15;
 const MAX_FAILED_ATTEMPTS = 8;
+// The email lookup is case-insensitive, so the lockout count must be too, or each case
+// variant of one email would get its own budget of guesses.
+const throttleKey = (identifier) => String(identifier ?? '').trim().toLowerCase().slice(0, 255);
 const SESSION_TTL_DAYS = 30;
+/** The Demo button (TENEXCH's): a throwaway direct account with ₹1500 for 30 minutes. */
+const DEMO_TTL_MS = 30 * 60_000;
+const DEMO_BALANCE = '1500';
+// Idle logout (owner flag `idle_logout` + the Super Admin's switch): a session with no activity
+// (heartbeat or bet) for `idle_logout_minutes` (site config, 1–120, default 5) is signed out.
+const IDLE_LOGOUT_MINUTES = 5;
+/** A bet by `user` (an SQL expression) since `:since`: sports, Originals, Slotegrator, JSGames. */
+const BET_SINCE_SQL = (user) => `EXISTS (SELECT 1 FROM mssports."SportsBet" WHERE user_id = ${user} AND created_at >= :since)
+           OR EXISTS (SELECT 1 FROM og_transactions WHERE user_id = ${user} AND kind = 'bet' AND created_at >= :since)
+           OR EXISTS (SELECT 1 FROM gis_transactions WHERE user_id = ${user} AND action = 'bet' AND created_at >= :since)
+           OR EXISTS (SELECT 1 FROM js_game_transactions WHERE user_id = ${user} AND transaction_type = 'bet' AND "timestamp" >= :since)`;
 
 /**
  * How long withdrawals are frozen after a self-service password change.
@@ -75,7 +108,7 @@ const redactEmail = (address) => {
 };
 
 class AuthService {
-  constructor({ models, db, config, logger, mailer, clients }) {
+  constructor({ models, db, config, logger, mailer, clients, lookupCountry }) {
     this.models = models;
     this.db = db;
     this.config = config;
@@ -85,10 +118,15 @@ class AuthService {
        Absent in unit tests, where the affiliate settings resolver falls back
        to its own defaults rather than calling admin-service. */
     this.clients = clients ?? null;
+    this.settings = operatorSettings({ clients, logger, config });
+    this.entitlements = entitlements;
     this.tokens = new TokenService(config);
     // `users.two_fa` holds an encrypted secret now, so the login path needs the
     // same box the twofa module writes with.
     this.secrets = createSecretBox({ config, logger });
+    // The owner's region restriction: in `block` mode, login and sign-up from a restricted
+    // country answer 403 REGION_RESTRICTED (packages/common/src/regionPolicy.js).
+    this.region = new RegionService({ models, logger, lookupCountry });
   }
 
   /**
@@ -99,8 +137,10 @@ class AuthService {
    * valid password from an invalid one.
    */
   async login({ identifier, password, twoFactorCode, deviceLabel }, context = {}) {
-    const { ip, userAgent } = context;
+    const { ip, userAgent } = withClientIp(context);
 
+    // Before anything about the account: a restricted region learns nothing about it.
+    await this.region.assertAllowed(ip);
     await this.#assertNotThrottled(identifier, ip);
 
     const user = await this.models.Users.findOne({
@@ -123,7 +163,7 @@ class AuthService {
 
     // Only AFTER the password is proven — a locked account should not be
     // discoverable without the password.
-    this.#assertUsable(user);
+    await this.#assertUsable(user);
 
     if (user.two_fa_status && user.two_fa) {
       if (!twoFactorCode) throw errors.TWO_FACTOR_REQUIRED({ userId: user.id });
@@ -185,7 +225,9 @@ class AuthService {
 
     await user.update({ last_login_at: new Date(), last_ip: ip || null });
 
-    return this.#issueSession(user, { ip, userAgent, deviceLabel });
+    const session = await this.#issueSession(user, { ip, userAgent, deviceLabel });
+    this.#trackLogin(user.id, { ip, userAgent }, 'login');
+    return session;
   }
 
   /**
@@ -196,6 +238,34 @@ class AuthService {
    * parties hold it — the legitimate client and someone else. The safe response
    * is to revoke the entire chain and make everyone sign in again.
    */
+  /**
+   * The site's Demo button: a new demo account (`users.is_demo`, a DIRECT user with no owner),
+   * ₹1500 INR, signed in until `demo_expires_at`. Nobody knows its password, it gets no
+   * signup or referral bonus, and the demo cleanup deletes it with everything it made.
+   */
+  async demoLogin(context = {}) {
+    // The owner panel's Demo login switch (on unless the owner turned it off).
+    if (!(await this.entitlements.isFlagEntitled('demo_login'))) throw errors.DEMO_DISABLED();
+    const { ip, userAgent } = withClientIp(context);
+    await this.region.assertAllowed(ip);
+
+    let username = null;
+    for (let tries = 0; tries < 8 && !username; tries += 1) {
+      const name = `demo${crypto.randomInt(100000, 1000000)}`;
+      if (!(await this.models.Users.findOne({ where: { name }, attributes: ['id'], raw: true }))) username = name;
+    }
+    if (!username) throw errors.DEMO_UNAVAILABLE();
+
+    const user = await this.#insertPlayer({
+      username,
+      passwordHash: await hashPassword(randomToken(24)),
+      ip,
+      demoExpiresAt: new Date(Date.now() + DEMO_TTL_MS),
+    });
+    this.logger?.info({ userId: String(user.id) }, 'Demo account created');
+    return this.#issueSession(user, { ip, userAgent, deviceLabel: 'demo' });
+  }
+
   async refresh({ refreshToken }, context = {}) {
     const tokenHash = hashToken(refreshToken);
 
@@ -216,19 +286,24 @@ class AuthService {
 
     const user = await this.models.Users.findByPk(session.user_id);
     if (!user) throw errors.SESSION_NOT_FOUND();
-    this.#assertUsable(user);
+    await this.#assertUsable(user);
 
     return this.db.transaction(async (transaction) => {
       const next = await this.#createSession(
         user,
-        { ip: context.ip, userAgent: context.userAgent, deviceLabel: session.device_label },
+        // A refresh is the client's own timer, not the player: the activity time carries over.
+        { ip: context.ip, userAgent: context.userAgent, deviceLabel: session.device_label, lastActivityAt: session.last_activity_at ?? session.created_at },
         transaction
       );
 
-      await session.update(
+      // Rotate only a session nobody rotated meanwhile: two refreshes racing with one token both
+      // passed the check above. The loser is refused (its new session rolls back); the winner's
+      // chain is left alone, since a tab racing itself is not a stolen token.
+      const [rotated] = await this.models.AuthSession.update(
         { replaced_by: next.session.id, last_used_at: new Date() },
-        { transaction }
+        { where: { id: session.id, replaced_by: null }, transaction }
       );
+      if (!rotated) throw errors.REFRESH_TOKEN_REUSED();
 
       return next.payload;
     });
@@ -244,11 +319,26 @@ class AuthService {
       return { revokedSessions: count };
     }
 
-    if (!refreshToken) return { revokedSessions: 0 };
+    const session = refreshToken
+      ? await this.models.AuthSession.findOne({ where: { token_hash: hashToken(refreshToken) } })
+      : user.sessionId && (await this.models.AuthSession.findOne({ where: { id: user.sessionId, user_id: user.id } }));
+    if (!session) return { revokedSessions: 0 };
+
+    // rainbet: an access token issued before a refresh names an older row of the chain, so all of it ends.
+    const ids = new Set([session.id]);
+    for (let row = session; row?.replaced_by && !ids.has(row.replaced_by); ) {
+      ids.add(row.replaced_by);
+      row = await this.models.AuthSession.findByPk(row.replaced_by);
+    }
+    for (let row = session; row; ) {
+      row = await this.models.AuthSession.findOne({ where: { replaced_by: row.id } });
+      if (!row || ids.has(row.id)) break;
+      ids.add(row.id);
+    }
 
     const [count] = await this.models.AuthSession.update(
       { revoked_at: new Date(), revoked_reason: 'user_logout' },
-      { where: { token_hash: hashToken(refreshToken), revoked_at: null } }
+      { where: { id: [...ids], revoked_at: null } }
     );
     return { revokedSessions: count };
   }
@@ -260,11 +350,74 @@ class AuthService {
         'id', 'name', 'email', 'phone', 'country', 'avatar', 'level',
         'status', 'two_fa_status', 'referalcode', 'referral_link',
         'last_login_at', 'created', 'created_estimated',
+        // migration 058-login-geo: where they last signed in from, and signed up from
+        'last_ip', 'last_country_code', 'last_country', 'last_city', 'last_isp',
+        'signup_ip', 'signup_country_code', 'signup_country', 'signup_city', 'signup_isp',
+        // migration 091-withdraw-lock: the operator's withdrawal block, so the wallet can say so
+        'withdraw_locked',
+        // read only to switch `capabilities.withdraw` off below; not sent
+        'system_locked',
+        // migration 161-demo-users: sent as `demo` / `demoExpiresAt`
+        'is_demo', 'demo_expires_at',
+        'must_change_password',
+        // migration 180: sent as `emailVerified`
+        'email_verified_at',
       ],
       raw: true,
     });
 
     if (!user) throw errors.SESSION_NOT_FOUND();
+    user.mustChangePassword = Boolean(user.must_change_password);
+    user.emailVerified = Boolean(user.email_verified_at);
+    delete user.email_verified_at;
+    delete user.must_change_password;
+    user.withdraw_locked = Boolean(user.withdraw_locked);
+    const systemLocked = Boolean(user.system_locked);
+    delete user.system_locked;
+    user.demo = Boolean(user.is_demo);
+    user.demoExpiresAt = user.demo ? user.demo_expires_at : null;
+    delete user.is_demo;
+    delete user.demo_expires_at;
+
+    /*
+     * What the player site may show: `{ promotions, vault, deposit, swap, withdraw }`, false for
+     * a player owned by the agent tree (see `packages/auth/src/agentPlayers.js`).
+     * If the owner lookup fails the field is left out — the site then shows
+     * everything and the routes themselves still refuse.
+     */
+    try {
+      user.capabilities = await playerCapabilities(user.id);
+      /*
+       * Whether this player came through an agent (any owner, `parent_staff_id` set) or signed up
+       * on the site themselves — the same rule as `isAgentPlayer` and as the sports statement
+       * (`account-statement-direct` refuses an agent-tree player, who reads `account-statement-v2`).
+       * Sent as its own flag because `capabilities.promotions` is also off for everybody on a
+       * B2B site, so it cannot tell the two apart.
+       */
+      user.agentTree = await isAgentPlayer(user.id);
+    } catch (error) {
+      this.logger?.warn({ userId: String(user.id), err: error.message }, 'Player capabilities could not be resolved');
+    }
+    /*
+     * A withdraw-blocked or system-locked player may not withdraw either, so `withdraw` says
+     * so — every rail refuses them (WITHDRAW_BLOCKED). `withdraw_locked` stays beside it: it
+     * tells the site WHY, so the wallet can keep the tab and show the blocked notice.
+     * Set even when the owner lookup failed (the rest then still reads as "all on").
+     */
+    if (user.withdraw_locked || systemLocked) user.capabilities = { ...(user.capabilities ?? {}), withdraw: false };
+    /*
+     * Admin ke switch, taaki site form hi na dikhaye (routes waise bhi refuse karte hain):
+     * owner panel → Withdrawals "Withdrawals enabled" OFF → withdraw false; Transactions → Manual ON / OFF →
+     * manualDeposit / manualWithdraw. Padh na paaye to chhod do (sab ON maana jaata hai).
+     */
+    try {
+      const sequelize = this.models.Users.sequelize;
+      const [withdrawalsOn, manual] = await Promise.all([withdrawBlock.withdrawalsEnabled(sequelize), manualPayments.readManualPayments(sequelize)]);
+      user.capabilities = { ...(user.capabilities ?? {}), manualDeposit: manual.deposit, manualWithdraw: manual.withdraw };
+      if (!withdrawalsOn) user.capabilities.withdraw = false;
+    } catch (error) {
+      this.logger?.warn({ userId: String(user.id), err: error.message }, 'Payment switches could not be read');
+    }
     return user;
   }
 
@@ -306,6 +459,9 @@ class AuthService {
   async changePassword({ currentPassword, newPassword }, user) {
     const record = await this.models.Users.findByPk(user.id);
     if (!record) throw errors.SESSION_NOT_FOUND();
+    // rainbet: a player with an upline changes it only at the forced change; afterwards the upline does.
+    const forced = record.must_change_password === true;
+    if (record.parent_staff_id != null && !forced) throw errors.OWN_PASSWORD_LOCKED();
 
     const ok = record.password ? await verifyPassword(currentPassword, record.password) : false;
     if (!ok) throw errors.CURRENT_PASSWORD_INCORRECT();
@@ -325,13 +481,14 @@ class AuthService {
      * genuine owner a day's delay on a withdrawal they were probably not
      * making at that exact moment.
      */
-    const lockedUntil = new Date(Date.now() + WITHDRAW_COOLDOWN_MS);
+    // Not on the forced change: that is the owner replacing a temporary password, not a takeover risk.
+    const lockedUntil = forced ? record.withdraw_locked_until : new Date(Date.now() + WITHDRAW_COOLDOWN_MS);
 
     return this.db.transaction(async (transaction) => {
       /* One update, so a password that changed always carries its freeze — two
          writes could leave the password changed and the window unset. */
       await record.update(
-        { password: await hashPassword(newPassword), withdraw_locked_until: lockedUntil },
+        { password: await hashPassword(newPassword), withdraw_locked_until: lockedUntil, must_change_password: false },
         { transaction }
       );
 
@@ -342,7 +499,7 @@ class AuthService {
 
       /* Returned so the client can say WHEN rather than only THAT — the same
          reason the column is a timestamp and not a flag. */
-      return { revokedSessions: revoked, withdrawLockedUntil: lockedUntil.toISOString() };
+      return { revokedSessions: revoked, withdrawLockedUntil: lockedUntil ? new Date(lockedUntil).toISOString() : null };
     });
   }
 
@@ -378,6 +535,8 @@ class AuthService {
     // write their own row and never reach this, so a B2B site's agents can
     // still open accounts while the public cannot.
     await sitePolicy.assertAllowed(this.models, 'business_model', 'public_signup', this.logger);
+    context = withClientIp(context);
+    await this.region.assertAllowed(context.ip);
 
     const clash = await this.models.Users.findOne({
       where: { [Op.or]: [{ name: username }, ...(email ? [{ email }] : [])] },
@@ -396,35 +555,31 @@ class AuthService {
       });
     }
 
-    const created = await this.db.transaction(async (transaction) => {
-      const id = await this.#allocateUserId(transaction);
-      const referralCode = await this.#uniqueReferralCode(username, transaction);
+    /*
+     * Resolve the referrer BEFORE anything is written. Legacy (and this code
+     * until now) stored whatever was typed in `refree` and let the team link
+     * fail silently afterwards, so a typo produced an account that looked
+     * referred and was not — and the free text was later matched against
+     * usernames by the team backfill. A code that names nobody is now refused;
+     * one that resolves is stored as the referrer's CANONICAL `referalcode`,
+     * whatever case or username the player typed.
+     */
+    const typedReferral = String(referredBy ?? '').trim();
+    let referrer = null;
+    if (typedReferral) {
+      referrer = await resolveReferrerOwner(this.models, typedReferral);
+      if (!referrer) throw errors.REFERRAL_CODE_INVALID({ referredBy: typedReferral });
+    }
 
-      const user = await this.models.Users.create(
-        {
-          id,
-          name: username,
-          email: email || null,
-          // Hash only. `password2` is left null — see the reset flow for why
-          // that column exists and what depends on it.
-          password: await hashPassword(password),
-          phone: phone || null,
-          country: country || null,
-          role_id: PLAYER_ROLE_ID,
-          friends: 'Support,',
-          wallet: WALLET_SEED,
-          referalcode: referralCode,
-          refree: referredBy || null,
-          status: 'active',
-          created: new Date(),
-          last_ip: context.ip ?? null,
-        },
-        { transaction }
-      );
-
-      await this.models.Credits.create({ uid: user.id, inr: '0' }, { transaction });
-
-      return user;
+    const created = await this.#insertPlayer({
+      username,
+      email,
+      // Hash only. `password2` is left null — see the reset flow for why that column exists.
+      passwordHash: await hashPassword(password),
+      phone,
+      country,
+      refree: referrer?.referalcode ?? null,
+      ip: context.ip,
     });
 
     /*
@@ -438,13 +593,14 @@ class AuthService {
      * looked was never paid, and the register/joining bonuses were never
      * applied at all because nothing called `applyRegistrationBonuses`.
      */
-    await this.#linkReferrer({ userId: created.id, referredBy });
+    await this.#linkReferrer({ userId: created.id, referredBy: referrer?.referalcode ?? null });
 
     this.logger?.info(
       // No password, and no email — the id is enough to find the row.
-      { userId: String(created.id), referredBy: referredBy || null },
+      { userId: String(created.id), referredBy: referrer?.referalcode ?? null },
       'Player registered'
     );
+    this.#trackLogin(created.id, context, 'register');
 
     return { id: created.id, name: created.name, email: created.email };
   }
@@ -455,14 +611,15 @@ class AuthService {
    * ── NEITHER STEP MAY FAIL THE REGISTRATION ──────────────────────────────
    *
    * The account and its wallet are already committed by the time this runs.
-   * A referral code with a typo in it, or an admin-service that is down when
-   * the bonus settings are read, must not turn a successful signup into an
-   * error the player sees — they would retry and hit "username taken" on
-   * their own account. So both steps are logged and swallowed.
-   *
-   * That is the opposite of the `joinTeam` ENDPOINT, which rejects an unknown
-   * code loudly: there the player is asking to join a specific team and a
-   * silent no-op would be a lie. Here they are asking to register.
+   * An unknown referral code never gets this far — `register` resolves it
+   * first and refuses the signup with `REFERRAL_CODE_INVALID` — so
+   * `referredBy` here is the referrer's canonical code. What can still go
+   * wrong is transient (a failed insert, an admin-service that is down when
+   * the bonus settings are read), and that must not turn a successful signup
+   * into an error the player sees — they would retry and hit "username
+   * taken" on their own account. So both steps are logged and swallowed; a
+   * missing team row is repaired by `myTeam`'s backfill, which matches
+   * `refree` against the owner's exact code.
    *
    * `joined` gates the joining bonus rather than being assumed: the referrer
    * is only owed it if the team row actually exists, and
@@ -504,6 +661,168 @@ class AuthService {
     }
   }
 
+  /** The user row and its wallet, in one transaction — shared by password and Google sign-up. */
+  async #insertPlayer({ username, email, passwordHash, phone, country, refree, ip, googleSub = null, demoExpiresAt = null }) {
+    return this.db.transaction(async (transaction) => {
+      const id = await this.#allocateUserId(transaction);
+      const referralCode = await this.#uniqueReferralCode(username, transaction);
+      const user = await this.models.Users.create(
+        {
+          id,
+          name: username,
+          email: email || null,
+          password: passwordHash,
+          phone: phone || null,
+          country: country || null,
+          role_id: PLAYER_ROLE_ID,
+          friends: 'Support,',
+          wallet: WALLET_SEED,
+          referalcode: referralCode,
+          refree: refree ?? null,
+          status: 'active',
+          created: new Date(),
+          last_ip: ip ?? null,
+          // Google only signs in a verified address (google.js), so that address counts as verified.
+          ...(googleSub ? { google_sub: googleSub, email_verified_at: new Date() } : {}),
+          ...(demoExpiresAt ? { is_demo: true, demo_expires_at: demoExpiresAt } : {}),
+        },
+        { transaction }
+      );
+      await this.models.Credits.create({ uid: user.id, inr: demoExpiresAt ? DEMO_BALANCE : '0' }, { transaction });
+      return user;
+    });
+  }
+
+  // ══ Google sign-in (./google.js) ═══════════════════════════════════════
+
+  /** The server has the Google keys. */
+  googleConfigured() {
+    return google.configured(this.config);
+  }
+
+  /**
+   * The owner's one Google switch: the `google_signin` policy (owner panel → Features & plan).
+   * The player site draws the button on it, keys or not. A site whose owner had turned the older
+   * `google_login` flag off reads `off` here too (entitlements.store aliases it into the policy).
+   */
+  async googleAllowed() {
+    return (await sitePolicy.readPolicy(this.models, 'google_signin')) === 'on';
+  }
+
+  /** Keys present and the owner's switch on — off hides the button, sign-in and sign-up alike. */
+  async googleEnabled() {
+    return this.googleConfigured() && (await this.googleAllowed());
+  }
+
+  /** Why a Google start cannot go ahead (an error code for `/login/google?error=`), or null. */
+  async googleUnavailable() {
+    if (!(await this.googleAllowed())) return 'AUTH_GOOGLE_DISABLED';
+    return this.googleConfigured() ? null : 'AUTH_GOOGLE_NOT_CONFIGURED';
+  }
+
+  /** The player site's `/login/google` with these query params. */
+  googleReturnUrl(params) {
+    return `${String(this.config.PUBLIC_SITE_URL).replace(/\/+$/, '')}/login/google?${new URLSearchParams(params)}`;
+  }
+
+  /** `{ url, cookie }`: where to send the browser, and the signed state cookie to set first. */
+  async googleStart({ nonce } = {}) {
+    if (!(await this.googleEnabled())) throw errors.GOOGLE_NOT_CONFIGURED();
+    // No tab nonce, nothing to bind the code to: refuse up front rather than mint a dead code.
+    if (!google.NONCE.test(String(nonce ?? ''))) throw errors.GOOGLE_SIGNIN_FAILED();
+    return google.startRequest(this.config, nonce);
+  }
+
+  /**
+   * Google's redirect back. Answers the PLAYER SITE URL to send the browser to: on success with a
+   * one-time `code` (traded by `googleExchange`, never tokens in a URL), else with `error=<code>`.
+   *
+   * Find-or-create: the Google account (`sub`) first; a new `sub` whose verified email already
+   * belongs to a password account is refused, not linked — emails are not verified here, so that
+   * account may not be this person's. A new player is a SIGN-UP, so the B2B rule applies; region
+   * and locks apply exactly as at password login.
+   */
+  async googleCallback({ code, state, cookie }, rawContext = {}, { fetchImpl } = {}) {
+    const back = (params) => this.googleReturnUrl(params);
+    const unavailable = await this.googleUnavailable();
+    if (unavailable) return back({ error: unavailable });
+    const context = withClientIp(rawContext);
+    try {
+      const { verifier, nonce } = google.verifierFor(cookie, state, this.config) ?? {};
+      if (!verifier || !nonce || !code) throw errors.GOOGLE_SIGNIN_FAILED();
+      let identity;
+      try {
+        const idToken = await google.exchangeCode({ code, verifier, config: this.config, fetchImpl });
+        identity = await google.verifyIdToken(idToken, { clientId: this.config.GOOGLE_CLIENT_ID, fetchImpl });
+      } catch (error) {
+        this.logger?.warn({ err: error.message }, 'Google sign-in rejected');
+        throw errors.GOOGLE_SIGNIN_FAILED();
+      }
+      await this.region.assertAllowed(context.ip);
+      const user = await this.#googleUser(identity, context);
+      // Google is for the site's own (B2C) players: an agent's player signs in with what the agent gave them.
+      if (await isAgentPlayer(user.id)) throw errors.GOOGLE_SIGNIN_FAILED();
+      await this.#assertUsable(user);
+      const oneTime = randomToken(32);
+      // Hashed with the starting tab's nonce: only the browser that began this flow can redeem it.
+      await this.db.sequelize.query(
+        `INSERT INTO oauth_login_codes (code_hash, user_id, expires_at) VALUES (:hash, :userId, NOW() + INTERVAL '2 minutes')`,
+        { replacements: { hash: hashToken(`${oneTime}.${nonce}`), userId: user.id } }
+      );
+      return back({ code: oneTime });
+    } catch (error) {
+      if (!error.code) this.logger?.warn({ err: error.message }, 'Google sign-in failed after Google answered');
+      return back({ error: error.code ?? 'AUTH_GOOGLE_SIGNIN_FAILED' });
+    }
+  }
+
+  async #googleUser({ sub, email }, context) {
+    const linked = await this.models.Users.findOne({ where: { google_sub: sub } });
+    if (linked) {
+      if (!linked.email_verified_at && String(linked.email ?? '').toLowerCase() === String(email).toLowerCase()) await linked.update({ email_verified_at: new Date() });
+      return linked;
+    }
+    const holder = await this.models.Users.findOne({ where: { email }, attributes: ['id'], raw: true });
+    if (holder) throw errors.GOOGLE_EMAIL_IN_USE();
+    await sitePolicy.assertAllowed(this.models, 'business_model', 'public_signup', this.logger);
+    const base = google.usernameBase(email);
+    let username = base;
+    for (let i = 0; i < 5 && (await this.models.Users.findOne({ where: { name: username }, attributes: ['id'], raw: true })); i += 1) {
+      username = `${base}${crypto.randomInt(1000, 9999)}`;
+    }
+    // users.password is NOT NULL: a random hash nobody knows, so the password sign-in stays closed
+    // until the player sets one through "forgot password".
+    const created = await this.#insertPlayer({ username, email, passwordHash: await hashPassword(randomToken(24)), ip: context.ip, googleSub: sub });
+    await this.#linkReferrer({ userId: created.id, referredBy: null });
+    this.logger?.info({ userId: String(created.id) }, 'Player registered with Google');
+    this.#trackLogin(created.id, context, 'register');
+    return created;
+  }
+
+  /** The one-time code + the starting tab's nonce → the usual token pair. Single use, two minutes. */
+  async googleExchange({ code, nonce }, rawContext = {}) {
+    if (!(await this.googleAllowed())) throw errors.GOOGLE_DISABLED();
+    const context = withClientIp(rawContext);
+    const [rows] = await this.db.sequelize.query(
+      `UPDATE oauth_login_codes SET used_at = NOW()
+        WHERE code_hash = :hash AND used_at IS NULL AND expires_at > NOW()
+        RETURNING user_id`,
+      { replacements: { hash: hashToken(`${code ?? ''}.${nonce ?? ''}`) } }
+    );
+    const userId = rows?.[0]?.user_id;
+    if (!userId) throw errors.GOOGLE_CODE_INVALID();
+    const user = await this.models.Users.findByPk(userId);
+    if (!user) throw errors.GOOGLE_CODE_INVALID();
+    await this.#assertUsable(user);
+    // Google proves the email, not the second factor: with 2FA on, the password sign-in (and its
+    // code) is the only way in, or a taken-over Google account would skip the code.
+    if (user.two_fa_status && user.two_fa) throw errors.GOOGLE_TWO_FACTOR_ON({ userId: user.id });
+    await user.update({ last_login_at: new Date(), last_ip: context.ip || null });
+    const session = await this.#issueSession(user, context);
+    this.#trackLogin(user.id, context, 'login');
+    return session;
+  }
+
   /**
    * Register, then open the session — the HTTP signup path.
    *
@@ -516,7 +835,8 @@ class AuthService {
    * `register()` and then `login()` would send the password over a second
    * code path and re-run the rate limiter against a brand-new account.
    */
-  async registerAndSignIn(input, context = {}) {
+  async registerAndSignIn(input, rawContext = {}) {
+    const context = withClientIp(rawContext);
     const account = await this.register(input, context);
     const user = await this.models.Users.findByPk(account.id);
     return this.#issueSession(user, context);
@@ -572,6 +892,9 @@ class AuthService {
      */
     const answer = { requested: true };
 
+    // rainbet: an upline changes this player's password. Same answer, so nothing is learned.
+    if (user && user.parent_staff_id != null) return answer;
+
     if (!user) {
       this.logger?.info({ email: redactEmail(address) }, 'Password reset requested for an unknown address');
       return answer;
@@ -610,11 +933,18 @@ class AuthService {
      * The token goes to the mailer, never to the caller — returning it here
      * would make the endpoint a password reset for anyone who knows an email.
      */
+    // NOT the password. Legacy sent the password itself. rainbet: the mailer takes subject/html,
+    // not a template name — `{ template, data }` went out as an empty message.
+    const link = `${String(this.config?.PUBLIC_SITE_URL ?? '').replace(/\/+$/, '')}/reset-password?${new URLSearchParams({ token })}`;
     await this.mailer?.send({
       to: user.email,
-      template: 'password-reset',
-      // NOT the password. Legacy sent the password itself.
-      data: { name: user.name, token, expiresInMinutes: RESET_TTL_MS / 60_000 },
+      ...renderGeneral({
+        subject: 'Reset your password',
+        title: 'Reset your password',
+        content: `<p>Hi ${escape(user.name)},</p><p>Someone asked to reset the password on your account. The link works once and expires in ${RESET_TTL_MS / 60_000} minutes.</p><p>If it was not you, ignore this email: your password stays the same.</p>`,
+        ctaLink: link,
+        ctaText: 'Reset password',
+      }),
     });
 
     this.logger?.info(
@@ -717,7 +1047,7 @@ class AuthService {
    * `seen` guards the walk for the same reason it does there: `replaced_by` is
    * a column, not a guarantee, and a cycle would hang the request.
    */
-  async revokeSession(userId, sessionId) {
+  async revokeSession(userId, sessionId, reason = 'signed_out_by_user') {
     const session = await this.models.AuthSession.findOne({
       where: { id: sessionId, user_id: userId, revoked_at: null },
     });
@@ -732,7 +1062,7 @@ class AuthService {
     while (current && !seen.has(current.id)) {
       seen.add(current.id);
       const [affected] = await this.models.AuthSession.update(
-        { revoked_at: new Date(), revoked_reason: 'signed_out_by_user' },
+        { revoked_at: new Date(), revoked_reason: reason },
         { where: { id: current.id, revoked_at: null } }
       );
       revoked += affected;
@@ -788,22 +1118,183 @@ class AuthService {
     throw errors.REGISTRATION_FAILED({ reason: 'could not allocate a referral code' });
   }
 
-  #assertUsable(user) {
+  async #assertUsable(user) {
+    if (user.is_demo && !(new Date(user.demo_expires_at) > new Date())) throw errors.DEMO_EXPIRED();
     if (user.system_locked) throw errors.ACCOUNT_LOCKED({ reason: 'system' });
     if (user.is_locked) throw errors.ACCOUNT_LOCKED({ reason: 'manual' });
     if (user.status && user.status !== 'active') throw errors.ACCOUNT_INACTIVE({ status: user.status });
+    // rainbet: the player's own whole-account break (responsible-gambling) — no sign-in, no refresh.
+    await assertNotPlatformExcluded(this.models, user.id);
+    await this.#assertUplineUsable(user);
   }
 
+  /**
+   * A player whose agent — or any staff account above it — is suspended or
+   * system-locked cannot sign in. Suspension also cascades `system_locked`
+   * onto the players (admin `locks/suspendCascade.js`); this walk covers a
+   * player added under a suspended branch afterwards, and legacy rows.
+   *
+   * `staff_hierarchy` is admin-owned, so admin-service answers. It fails
+   * CLOSED, like the bet lock: an unreachable check must not let a blocked
+   * downline in.
+   */
+  async #assertUplineUsable(user) {
+    const parent = user.parent_staff_id == null ? null : Number(user.parent_staff_id);
+    if (!parent || !this.clients?.admin) return;
+
+    let state;
+    try {
+      state = await this.clients.admin.get(`/internal/admin/staff-directory/staff/${parent}/access`);
+    } catch (error) {
+      this.logger?.error({ err: error, userId: user.id }, 'Could not check the upline access state — refusing sign-in');
+      throw errors.ACCOUNT_LOCKED({ reason: 'upline' });
+    }
+    if ((state?.data ?? state)?.blocked) throw errors.ACCOUNT_LOCKED({ reason: 'upline' });
+  }
+
+  /**
+   * One `user_login_history` row per sign-in, with where the IP is (ipinfo.io →
+   * ipwho.is → offline DB-IP, cached in `ip_locations`; see ./geo/ipLocation),
+   * and the latest / signup location on the user row. Fire-and-forget: the
+   * player already has their session, and a slow or failed lookup still records
+   * the IP and the time with the location left empty.
+   */
+  #trackLogin(userId, { ip, userAgent } = {}, source) {
+    // The moment of the sign-in, not of the lookup: the row used to be stamped
+    // when the (up to 2 s per provider) lookup returned, so a login with no
+    // lookup (a private address) could land BEFORE an earlier one that had one.
+    const at = new Date();
+    const run = async () => {
+      const geo = await sharedIpLocator({ models: this.models, config: this.config, logger: this.logger }).resolve(ip);
+      await this.models.UserLoginHistory.create({
+        user_id: userId,
+        ip_address: ip || null,
+        user_agent: userAgent ? String(userAgent).slice(0, 512) : null,
+        country_code: geo?.country ?? null,
+        country: geo?.country_name ?? null,
+        region: geo?.region_name ?? null,
+        city: geo?.city ?? null,
+        isp: geo?.isp ?? null,
+        org: geo?.org ?? null,
+        asn: geo?.asn ?? null,
+        is_proxy: null,
+        is_hosting: null,
+        ip_location_id: geo?.id ?? null,
+        source,
+        created_at: at,
+      });
+      const where = { where: { id: userId } };
+      const latest = { last_country_code: geo?.country ?? null, last_country: geo?.country_name ?? null, last_city: geo?.city ?? null, last_isp: geo?.isp ?? null };
+      await this.models.Users.update(
+        source === 'register'
+          ? { ...latest, signup_ip: ip || null, signup_country_code: latest.last_country_code, signup_country: latest.last_country, signup_city: latest.last_city, signup_region: geo?.region_name ?? null, signup_isp: latest.last_isp }
+          : latest,
+        where
+      );
+    };
+    run().catch((err) => this.logger?.warn({ err: err.message, userId: String(userId) }, 'Login history not recorded'));
+  }
+
+  /* A sign-in (password, Google, sign-up). With idle logout on, `idleCheckAt` is when the player
+     site first calls `POST /idle-check` (hash's frontend still reads it); a refresh answers none. */
   async #issueSession(user, context) {
     const { payload } = await this.db.transaction((transaction) =>
       this.#createSession(user, context, transaction)
     );
-    return payload;
+    // A demo account has its own 30-minute end, so no idle logout.
+    const idleMs = !user.is_demo && (await this.#idleWindowMs());
+    return { ...payload, idleCheckAt: idleMs ? new Date(Date.now() + idleMs) : null };
   }
 
-  async #createSession(user, { ip, userAgent, deviceLabel }, transaction) {
+  /**
+   * The idle window in ms while idle logout is in force, else 0: the owner's flag (off unless set)
+   * AND the Super Admin's switch (on unless set); the length is `idle_logout_minutes`.
+   */
+  async #idleWindowMs() {
+    if (!(await this.entitlements.isFlagEntitled('idle_logout'))) return 0;
+    if (String(await this.settings.read('idle_logout', true)) === 'false') return 0;
+    const minutes = Number(await this.settings.read('idle_logout_minutes', IDLE_LOGOUT_MINUTES));
+    return (Number.isInteger(minutes) && minutes >= 1 && minutes <= 120 ? minutes : IDLE_LOGOUT_MINUTES) * 60_000;
+  }
+
+  /** The newest row of the chain a session id belongs to (an access token may name an older one). */
+  async #chainHead(userId, sessionId) {
+    const seen = new Set();
+    let row = await this.models.AuthSession.findOne({ where: { id: sessionId, user_id: userId }, attributes: ['id', 'replaced_by', 'revoked_at', 'last_activity_at', 'created_at'] });
+    while (row?.replaced_by && !seen.has(row.id)) {
+      seen.add(row.id);
+      row = await this.models.AuthSession.findByPk(row.replaced_by, { attributes: ['id', 'replaced_by', 'revoked_at', 'last_activity_at', 'created_at'] });
+    }
+    return row;
+  }
+
+  /** Whether the player placed a sports, Originals or casino (Slotegrator / JSGames) bet since `since`. */
+  async #betSince(userId, since) {
+    const [[{ bet }]] = await this.db.sequelize.query(
+      `SELECT ${BET_SINCE_SQL('CAST(:userId AS BIGINT)')} AS bet`,
+      { replacements: { userId, since } }
+    );
+    return Boolean(bet);
+  }
+
+  /** `POST /activity`: the player site's heartbeat while the player interacts (≤ 1 a minute). */
+  async recordActivity({ id: userId, sessionId }) {
+    if (!sessionId) return { recorded: false };
+    const head = await this.#chainHead(userId, sessionId);
+    if (!head || head.revoked_at) return { recorded: false };
+    await this.models.AuthSession.update({ last_activity_at: new Date() }, { where: { id: head.id, revoked_at: null } });
+    return { recorded: true };
+  }
+
+  /**
+   * Idle logout's check: idle = no heartbeat AND no bet within the window → this session is signed
+   * out. Otherwise `nextCheckAt` is when it could next be idle. Off → nothing happens.
+   */
+  async idleCheck({ id: userId, sessionId }) {
+    const windowMs = sessionId ? await this.#idleWindowMs() : 0;
+    if (!windowMs) return { signedOut: false };
+
+    const head = await this.#chainHead(userId, sessionId);
+    const last = new Date(head?.last_activity_at ?? head?.created_at ?? 0).getTime();
+    if (last + windowMs > Date.now()) return { signedOut: false, nextCheckAt: new Date(last + windowMs) };
+    if (await this.#betSince(userId, new Date(Date.now() - windowMs))) return { signedOut: false, nextCheckAt: new Date(Date.now() + windowMs) };
+
+    await this.revokeSession(userId, sessionId, 'idle_logout');
+    return { signedOut: true };
+  }
+
+  /**
+   * The user-worker's sweep (job `auth:idle-logout-sweep`): the same rule for a closed tab or a
+   * client that never calls `/idle-check`. Each idle live chain head is revoked with the rows it
+   * was rotated from (an access token may still name one of them).
+   */
+  async sweepIdleSessions() {
+    const windowMs = await this.#idleWindowMs();
+    if (!windowMs) return { revoked: 0 };
+    const [rows] = await this.db.sequelize.query(
+      `WITH RECURSIVE idle AS (
+         SELECT s.id FROM auth_sessions s JOIN users u ON u.id = s.user_id
+          WHERE s.revoked_at IS NULL AND s.replaced_by IS NULL AND s.expires_at > NOW()
+            AND COALESCE(s.last_activity_at, s.created_at) < :since
+            AND NOT COALESCE(u.is_demo, false)
+            AND NOT (${BET_SINCE_SQL('s.user_id')})
+       ), chain AS (
+         SELECT id FROM idle
+         UNION SELECT p.id FROM auth_sessions p JOIN chain c ON p.replaced_by = c.id
+       )
+       UPDATE auth_sessions SET revoked_at = NOW(), revoked_reason = 'idle_logout', updated_at = NOW()
+        WHERE id IN (SELECT id FROM chain) AND revoked_at IS NULL
+       RETURNING id`,
+      { replacements: { since: new Date(Date.now() - windowMs) } }
+    );
+    if (rows.length) this.logger?.info({ revoked: rows.length }, 'Idle sessions signed out');
+    return { revoked: rows.length };
+  }
+
+  async #createSession(user, { ip, userAgent, deviceLabel, lastActivityAt }, transaction) {
     const refreshToken = randomToken(48);
-    const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 3600 * 1000);
+    // A demo account's session (and every access token) ends with the demo.
+    const expiresAt = user.is_demo ? new Date(user.demo_expires_at) : new Date(Date.now() + SESSION_TTL_DAYS * 24 * 3600 * 1000);
 
     const session = await this.models.AuthSession.create(
       {
@@ -815,6 +1306,7 @@ class AuthService {
         device_label: deviceLabel || null,
         expires_at: expiresAt,
         last_used_at: new Date(),
+        last_activity_at: lastActivityAt ?? new Date(),
       },
       { transaction }
     );
@@ -824,6 +1316,9 @@ class AuthService {
       sessionId: session.id,
       role: 'player',
       status: user.status || 'active',
+      // rainbet: every service reads this and allows only the password change until it is done.
+      extra: user.must_change_password ? { pcr: true } : {},
+      notAfter: user.is_demo ? expiresAt : null,
     });
 
     return {
@@ -839,6 +1334,7 @@ class AuthService {
           email: user.email,
           status: user.status,
           twoFactorEnabled: Boolean(user.two_fa_status),
+          mustChangePassword: Boolean(user.must_change_password),
         },
       },
     };
@@ -871,7 +1367,7 @@ class AuthService {
   async #recordAttempt(identifier, ip, successful, failureReason) {
     try {
       await this.models.AuthLoginAttempt.create({
-        identifier: String(identifier).slice(0, 255),
+        identifier: throttleKey(identifier),
         ip_address: ip || null,
         successful,
         failure_reason: failureReason,
@@ -893,7 +1389,7 @@ class AuthService {
 
     const [byIdentifier, byIp] = await Promise.all([
       this.models.AuthLoginAttempt.count({
-        where: { identifier, successful: false, created_at: { [Op.gte]: since } },
+        where: { identifier: throttleKey(identifier), successful: false, created_at: { [Op.gte]: since } },
       }),
       ip
         ? this.models.AuthLoginAttempt.count({

@@ -325,6 +325,39 @@ const PLATFORM_EVENTS = Object.freeze({
    */
   FEATURES_UPDATED: 'featuresUpdated',
   /**
+   * rainbet: staff changed player-visible content (`{ scopes: ['casino:games', …] }`, names only).
+   * Emitted by user-service from `POST /internal/user/preferences/site-config` `{ content }`; the
+   * player site re-reads what it shows. See packages/common/src/contentPush.js.
+   */
+  CONTENT_UPDATED: 'contentUpdated',
+  /**
+   * The site's coin registry changed (a coin renamed, re-imaged, switched, a
+   * network renamed or switched) — pushed to every client on the USER socket
+   * the same way as `featuresUpdated`: admin-service owns `currencies` and
+   * calls `POST /internal/user/preferences/site-config` with `{ currencies }`.
+   * The payload is exactly what `GET /admin/currencies/public` returns.
+   */
+  CURRENCIES_UPDATED: 'currenciesUpdated',
+  /**
+   * The signed-in player's own account changed — an operator locked or
+   * unlocked it (system / casino / sports / withdrawal) or changed its status.
+   * Pushed to `user:<id>` only, `{ reason: 'account' }`; the client re-reads
+   * `/user/auth/me` and its capabilities. The source is the `account_changed`
+   * database notification (migration 113), so it fires whichever service made
+   * the change.
+   */
+  ACCOUNT_UPDATED: 'accountUpdated',
+  /** rainbet: a stake was counted or reversed, so rank progress and rewards re-read. */
+  WAGER_UPDATED: 'wagerUpdated',
+  /**
+   * The whole client state in one read — the player's record and capabilities, balances and
+   * preferences (signed in), plus the site's flags, features and coin list. The Parker567 client
+   * asks every 2 s over its one socket instead of polling six HTTP routes. PUBLIC: a signed-out
+   * visitor gets the site half. The name is opaque and the reply is scrambled
+   * (`services/user/src/modules/sync/`) so the frames are not readable at a glance.
+   */
+  SYNC_STATE: '3b84d3951808e13e1b8c65a67d6b7235',
+  /**
    * Load the site's public config over the socket — the flags and the
    * feature list together, as `{ flags, features }` on the ack.
    *
@@ -336,6 +369,24 @@ const PLATFORM_EVENTS = Object.freeze({
    * the owner of both tables.
    */
   GET_SITE_CONFIG: 'getSiteConfig',
+  /**
+   * The signed-in player's own record over the socket: the same fields as
+   * `GET /user/auth/me`, including where they last signed in and signed up
+   * from (IP, city, country, ISP — migration 058-login-geo). USER audience.
+   */
+  GET_ME: 'getMe',
+  /**
+   * The player's unread notification count, `{ unread }` — what
+   * `GET /user/notifications/unread-count` answers. The client asks on connect
+   * and on an interval over the open socket instead of polling HTTP. USER.
+   */
+  NOTIFICATIONS_UNREAD: 'notificationsUnread',
+  /**
+   * The live wins ticker over the socket, `{ rows }` — exactly the rows
+   * `GET /casino/bet-history/live` returns (settled, non-voided rounds, newest
+   * first). PUBLIC. Clients poll it over the open socket instead of HTTP.
+   */
+  LIVE_BETS: 'liveBets',
 });
 
 /**

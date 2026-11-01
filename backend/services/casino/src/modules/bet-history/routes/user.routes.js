@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { validate, response, asyncHandler } = require('@ibitplay/common');
+const { validate, response, asyncHandler, noQuery } = require('@ibitplay/common');
 
 const v = require('../betHistory.validators');
 const { BetHistoryService } = require('../betHistory.service');
@@ -47,6 +47,7 @@ module.exports = function userRoutes(deps) {
    */
   router.get(
     '/stats',
+    noQuery(),
     asyncHandler(async (req, res) =>
       response.ok(res, await service.playerStats({ userId: req.user.id }))
     )
@@ -98,6 +99,7 @@ module.exports = function userRoutes(deps) {
    */
   router.get(
     '/:betId',
+    noQuery(),
     validate(v.myBet),
     asyncHandler(async (req, res) => {
       const bet = await service.myBet({ userId: req.user.id, betId: req.params.betId });

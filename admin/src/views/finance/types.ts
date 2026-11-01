@@ -9,6 +9,10 @@ export type FiatDepositRow = {
   bankName?: string | null
   accountHolderName?: string | null
   upiId?: string | null
+
+  /** Manual crypto deposit (migration 118): the network and the house address it was sent to. */
+  network?: string | null
+  walletAddress?: string | null
   status: 'pending' | 'approved' | 'rejected' | string
   hasScreenshot: boolean
   adminComment?: string | null
@@ -17,6 +21,8 @@ export type FiatDepositRow = {
   ifscCode?: string | null
   handledBy?: number | string | null
   handledAt?: string | null
+  username?: string | null
+  avatar?: string | null
 }
 
 export type DepositStats = {
@@ -38,8 +44,16 @@ export type CryptoDepositRow = {
   orderId?: string | null
   address?: string | null
   status: string
-  amountUsd: string
-  amountInr: string
+  coinId?: number | null
+
+  /** Ticker from the coin id (`#<id>` when unknown); null when the row has no coin id. */
+  coin: string | null
+
+  /** In the coin, not USD: `COALESCE(price, amount)`. */
+  amount: string
+
+  /** Only when the rate table prices the coin. */
+  amountUsd: string | null
   createdAt: string
 }
 
@@ -82,8 +96,12 @@ export type FiatWithdrawalRow = {
   requestedAt?: string | null
   accountNumber?: string | null
   ifscCode?: string | null
+  username?: string | null
+  /** Staff's reason for the decision (a rejection's reason). */
+  comment?: string | null
 }
 
+/** What staff can set. A player can also cancel a request still In Queue ('Cancelled', final). */
 export const FIAT_WITHDRAW_STATUSES = ['In Queue', 'Approved', 'Rejected', 'Paid'] as const
 
 export type CryptoWithdrawalRow = {
@@ -101,31 +119,22 @@ export type CryptoWithdrawalRow = {
   decidedAt?: string | null
 }
 
-export const CRYPTO_WITHDRAW_STATUSES = ['In Queue', 'Approved', 'Sent', 'Rejected'] as const
+// `Sending` = handed to CCPayment; its webhook moves it to Sent or Rejected (refunded).
+export const CRYPTO_WITHDRAW_STATUSES = ['In Queue', 'Approved', 'Sending', 'Sent', 'Rejected'] as const
 
 export type CryptoWithdrawSummary = { status: string; coin: string; count: number; total: string }
 
-export type WalletBalanceRow = {
-  uid: number | string
-  name: string
-  balances: Record<string, string>
-}
-
-export type StaffTransferRow = {
-  id: number
-  from: { type: string; id: number | string; name?: string | null }
-  to: { type: string; id: number | string; name?: string | null }
-  amount: string
-  direction: 'deposit' | 'withdraw' | string
-  transferType?: string | null
-  createdAt?: string | null
-}
-
-export type TransferSummary = { direction: string; count: number; total: string }
-
 export type ExchangeRateRow = { currency: string; usdRate: string; lastUpdated?: string | null }
 
-export type VaultStat = { coin: string; totalUsers: number; totalBalance: string; todayInterest: string }
+/** `GET admin/user/vault/stats` — platform-wide totals plus the locked balance per coin. */
+export type VaultStats = {
+  totalUsers: number
+
+  /** Sum across every coin (mixed units) — show `byCoin` instead. */
+  totalBalance: number
+  todayInterest: number
+  byCoin: { coin: string; totalBalance: string }[]
+}
 
 export type VaultLockPeriod = { value: string; label: string; days: number; rate: string }
 
@@ -242,12 +251,67 @@ export type BankDetailRow = {
   isActive: boolean
 }
 
-/** The wallet's currency allow-list (`wallet.constants.SUPPORTED_CURRENCIES`). */
+/**
+ * The wallet's currency allow-list (`wallet.constants.SUPPORTED_CURRENCIES`).
+ * BJB is retired (nothing may credit it) and so is not offered here.
+ */
 export const SUPPORTED_CURRENCIES = [
   'BTC', 'ETH', 'LTC', 'BCH', 'USDT', 'TRX', 'DOGE', 'ADA', 'XRP', 'BNB', 'USDP', 'NEXO', 'MKR', 'TUSD',
-  'USDC', 'BUSD', 'NC', 'INR', 'SHIB', 'MATIC', 'SC', 'MVR', 'BJB', 'AED', 'NPR', 'PKR', 'EUR', 'BDT'
+  'USDC', 'BUSD', 'NC', 'INR', 'SHIB', 'MATIC', 'SC', 'MVR', 'AED', 'NPR', 'PKR', 'EUR', 'BDT'
 ] as const
 
 export const FIAT_CURRENCIES = ['INR', 'BDT', 'NPR', 'PKR', 'AED', 'EUR'] as const
 
-export const PSP_PROVIDERS = ['waypay', 'apay', 'cricpay', 'upi'] as const
+export const PSP_PROVIDERS = ['waypay', 'apay', 'cricpay', 'upi', 'f2pay'] as const
+
+/** A coin network: `key` is the contract a deposit / withdrawal names; `name` and `enabled` are the site's. */
+export type CoinNetwork = { key: string; name: string; enabled: boolean }
+
+/** `GET admin/currencies` — the coin registry (backend migration 061). */
+export type CurrencyRow = {
+  code: string
+  kind: 'fiat' | 'crypto' | 'points'
+  decimals: number
+  builtin: boolean
+  retired: boolean
+  name: string
+  symbol: string
+  sortOrder: number
+  networks: CoinNetwork[]
+
+  /** In the owner's plan (owner panel). Off: the site cannot switch it on. */
+  ownerEnabled: boolean
+
+  /** The site's own switch (mirrors the siteconfig flag). */
+  siteEnabled: boolean
+
+  /** What players get: owner AND site AND not retired. */
+  enabled: boolean
+  image: string | null
+  imageVersion: string | null
+  imageContentType: string | null
+  managedBy: 'owner' | null
+  updatedAt: string | null
+}
+
+/** One side of a tip: the player's id and username. */
+export type TipParty = { id: string | number; name: string | null }
+
+/** `GET admin/user/tip/admin/list` — one player-to-player tip. `amount` is a decimal string. */
+export type TipRow = {
+  id: string | number
+  from: TipParty
+  to: TipParty
+  currency: string
+  amount: string
+  note: string | null
+  createdAt: string
+}
+
+/** The list's totals for the same filters (not just the page). */
+export type TipSummary = {
+  totalTips: number
+  byCurrency: Array<{ currency: string; count: number; amount: string }>
+}
+
+export type TipList = { rows: TipRow[]; total: number; summary: TipSummary }

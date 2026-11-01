@@ -21,16 +21,19 @@ const { bucketCaseSql } = require('@ibitplay/common');
  * already using for the rest of the calculation, and then applies the
  * multipliers, which are also user-service's configuration.
  *
- * ── THE FOUR SOURCES ─────────────────────────────────────────────────────
+ * ── THE SOURCES ─────────────────────────────────────────────────────
  *
  *   bets                   in-house originals. One row IS a round: `amount` is
  *                          the stake, so every row counts, with no kind column
  *                          to filter on.
- *   gis_transactions       Slotegrator. `action = 'bet'`.
+ *   gis_transactions       Slotegrator. `action = 'bet'`, stake = ABS(amount), not rolled back.
  *   js_game_transactions   jsGames v1. `transaction_type = 'bet'` AND
  *                          `transaction_status = 'completed'`.
- *   game_transactions      jsGames v2. A losing spin is its own debit, so the
- *                          stake rows are `bet` and `loss`.
+ *   game_transactions      jsGames v2. `amount` is the round's net, so the
+ *                          stake is `additional_data.bet_amount` (negative on
+ *                          a provider's negative-bet correction).
+ *   seamless_transactions  the seamless wallet. `withdraw`/`pushbet` debits
+ *                          that were not rolled back or cancelled.
  *
  * Only STAKES. Wins, refunds and rollbacks are excluded — a race scores
  * turnover, not profit, so a bet that won still counts as having been risked.
@@ -89,19 +92,26 @@ class RaceTurnoverService {
          WHERE b.created >= :start AND b.created < :end
            AND b.uid IS NOT NULL
            AND b.amount > 0
+           -- a refunded round never happened: not turnover, same as the rollover
+           AND (b.result IS NULL OR b.result::text <> '"refunded"')
 
         UNION ALL
 
-        -- Slotegrator
+        -- Slotegrator. gis.service writes a bet as a DEBIT (negative amount; legacy rows were
+        -- unsigned), so the stake is ABS(amount); a bet it rolled back (its 'rb:<id>' row) never
+        -- happened. The type comes from the lobby's catalogue (gisgamesnew), the legacy gis_games
+        -- after it — gis_games is emptied by its own sync, which left every slot in 'other'.
         SELECT g.user_id,
-               ${bucketCaseSql('gg.type')},
+               ${bucketCaseSql('COALESCE(gn.type, gg.type)')},
                UPPER(g.currency),
-               g.amount
+               ABS(g.amount)
           FROM gis_transactions g
+          LEFT JOIN gisgamesnew gn ON gn.uuid = g.game_uuid
           LEFT JOIN gis_games gg ON gg.uuid = g.game_uuid
          WHERE g.created_at >= :start AND g.created_at < :end
            AND LOWER(g.action) = 'bet'
-           AND g.amount > 0
+           AND g.amount <> 0
+           AND NOT EXISTS (SELECT 1 FROM gis_transactions r WHERE r.transaction_id = 'rb:' || g.transaction_id)
 
         UNION ALL
 
@@ -119,22 +129,61 @@ class RaceTurnoverService {
 
         UNION ALL
 
-        -- jsGames v2. 'loss' is a stake here, not an outcome: v2 records a
-        -- losing spin as its own debit rather than a zero win, so excluding it
-        -- would drop most of this source's turnover.
+        -- jsGames v2. The stored 'amount' is the round's NET (win − bet), so a
+        -- stake is negative there and a 'loss' row (bet 0, win 0) is 0 — the
+        -- stake has to come from the callback's own 'bet_amount'. Every row that
+        -- carries one counts it: a positive stake ('bet', 'bet_result',
+        -- 'bet_with_negative_result') adds, a provider's negative-bet
+        -- correction ('negative_bet*') takes it back out.
         SELECT v.user_id,
                ${bucketCaseSql('jg2.game_type')},
                UPPER(v.currency),
-               v.amount
+               (v.additional_data->>'bet_amount')::numeric
           FROM game_transactions v
           LEFT JOIN js_games jg2 ON jg2.game_uid = v.game_uid
          WHERE v.created_at >= :start AND v.created_at < :end
-           AND LOWER(v.transaction_type) IN ('bet', 'loss')
-           AND v.amount > 0
+           AND (v.additional_data->>'bet_amount') ~ '^-?[0-9]+([.][0-9]+)?$'
+           AND (v.additional_data->>'bet_amount')::numeric <> 0
+
+        UNION ALL
+
+        -- Original Games aggregator (migration 130): an applied bet that was not
+        -- rolled back — the same rule as the profile stats.
+        SELECT o.user_id,
+               ${bucketCaseSql('o.game_code')},
+               UPPER(o.currency),
+               o.amount
+          FROM og_transactions o
+         WHERE o.created_at >= :start AND o.created_at < :end
+           AND o.kind = 'bet' AND o.status = 'applied' AND o.amount > 0
+           AND NOT EXISTS (
+                 SELECT 1 FROM og_transactions r
+                  WHERE r.kind = 'rollback' AND r.status = 'applied'
+                    AND r.reference_transaction_id = o.transaction_id)
+
+        UNION ALL
+
+        -- Seamless (the casino provider's seamless wallet, a casino product).
+        -- A stake is a 'withdraw' / 'pushbet' debit (amount < 0, settlement
+        -- coin USDT), and one that was rolled back or cancelled never happened.
+        SELECT s.user_id,
+               ${bucketCaseSql('NULL')},
+               'USDT',
+               -s.amount
+          FROM seamless_transactions s
+         WHERE s.created_at >= :start AND s.created_at < :end
+           AND s.user_id IS NOT NULL
+           AND LOWER(s.action) IN ('withdraw', 'pushbet')
+           AND s.amount < 0
+           AND NOT EXISTS (
+                 SELECT 1 FROM seamless_transactions r
+                  WHERE r.reverses_id = s.transaction_id
+                    AND LOWER(r.action) IN ('rollback', 'cancel'))
       )
       SELECT user_id, bucket, currency,
              SUM(amount)  AS amount,
-             COUNT(*)     AS bets
+             -- a correction row is not another bet
+             COUNT(*) FILTER (WHERE amount > 0) AS bets
         FROM stakes
        GROUP BY user_id, bucket, currency
        ORDER BY user_id

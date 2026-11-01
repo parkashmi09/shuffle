@@ -1,9 +1,11 @@
 'use strict';
 
-const { money } = require('@ibitplay/common');
+const { money, withdrawalCapFigures } = require('@ibitplay/common');
 const { Op, fn, col } = require('@ibitplay/db');
 
 const errors = require('./wager.errors');
+const { visibleStaff, assertPlayerVisible } = require('../directory/playerScope');
+const { createRewardMoney } = require('../../lib/rewardMoney');
 
 /**
  * Wagering requirements ("targetX").
@@ -32,10 +34,23 @@ const errors = require('./wager.errors');
 const DEFAULT_MULTIPLIER = '3';
 
 class WagerService {
-  constructor({ models, db, logger }) {
+  constructor({ models, db, logger, config, clients }) {
     this.models = models;
     this.db = db;
     this.logger = logger;
+    this.config = config;
+    this.clients = clients;
+    /* `toUsd` only — the target is compared against `userwager`, which is USD. */
+    this.rewardMoney = createRewardMoney({ models, db, logger, config, clients });
+  }
+
+  /**
+   * A staff caller naming one player: the player must be in their tree.
+   * `users:read` / `users:write` reach agents and masters, and these routes
+   * took any player id.
+   */
+  async assertStaffMayAct(staff, userId) {
+    await assertPlayerVisible(this, staff?.id, userId);
   }
 
   /** The platform-wide default. */
@@ -66,7 +81,8 @@ class WagerService {
     const multiplier = user.wager_multiplier != null ? String(user.wager_multiplier) : await this.getCommonMultiplier();
     const deposited = await this.#totalApprovedDeposits(userId);
     const target = money.toDecimalString(money.multiply(deposited, multiplier));
-    const achieved = money.toDecimalString(money.toMinor(wagered?.wager ?? '0'));
+    // `userwager.wager` is TEXT and legacy rows hold thousands separators ("1,00.00").
+    const achieved = money.toDecimalString(money.toMinor(String(wagered?.wager ?? '0').replace(/,/g, '').trim() || '0'));
 
     const remaining = money.gte(achieved, target)
       ? '0.00000000'
@@ -142,8 +158,9 @@ class WagerService {
       }),
     ]);
 
-    const currencies = [...new Set(deposits.map((d) => d.currency ?? 'INR'))];
-    const currency = currencies.length === 1 ? currencies[0] : null;
+    /* Deposits are converted to USD per currency (`#totalApprovedDeposits`)
+       because `userwager` is counted in USD, so the requirement is in USD. */
+    const currency = deposits.length ? 'USD' : null;
     const since = deposits[0]?.created_at ?? null;
 
     /**
@@ -203,8 +220,13 @@ class WagerService {
    * and both use the same definitions as `getProgress`: the list and the
    * per-player read cannot disagree about the same player.
    */
-  async listMultipliers({ search, lockedOnly, channel = 'direct', limit, offset }) {
+  async listMultipliers({ staff, search, lockedOnly, channel = 'direct', limit, offset }) {
+    // The caller's tree only — this listed every player's name, email and
+    // deposits to any staff member with `users:read`, agents included.
+    const scope = await visibleStaff(this, staff?.id);
+
     const where = {
+      ...(scope.all ? {} : { [Op.and]: [{ parent_staff_id: scope.staffIds }] }),
       ...(lockedOnly ? { lock_targetx: true } : {}),
       ...(search ? { name: { [Op.iLike]: `%${search}%` } } : {}),
       // `parent_staff_id IS NULL` is a direct signup; not null is an agent's
@@ -269,26 +291,26 @@ class WagerService {
   }
 
   /**
-   * Approved deposits per player, grouped in the database.
-   *
-   * Same filter as `#totalApprovedDeposits`, which is the single-player form.
+   * Every credited deposit per player, in USD — EVERY rail, not only `fiat_deposits`: crypto,
+   * UPI / PSP, payment gateways, staff transfers and the owner's direct credits too
+   * (`withdrawalCapFigures` DEPOSITED_SQL, the definition the withdrawal cap already uses).
+   * Before this only manual fiat deposits counted, so a crypto or UPI depositor had no rollover.
+   * Each currency is converted at today's rate; one with no rate counts nothing (logged).
    */
   async #depositTotalsFor(ids) {
     if (!ids.length) return new Map();
-
-    const rows = await this.models.FiatDeposits.findAll({
-      attributes: ['user_id', [fn('COALESCE', fn('SUM', col('amount')), 0), 'total']],
-      where: { user_id: ids, status: 'approved' },
-      group: ['user_id'],
-      raw: true,
-    });
-
-    // `toMinorQuantised`, not `toMinor`: a SUM over a bare `numeric` column
-    // carries whatever precision the widest row had, and `toMinor` refuses more
-    // than eight places — one over-precise deposit would 400 the whole listing.
-    return new Map(
-      rows.map((r) => [String(r.user_id), money.toDecimalString(money.toMinorQuantised(r.total ?? '0'))])
-    );
+    const figures = withdrawalCapFigures.createCapFigures({ db: this.db });
+    const totals = new Map();
+    for (const id of ids) {
+      let total = '0';
+      for (const currency of await figures.currencies(id)) {
+        const { deposited } = await figures.figures(id, currency, { wagered: false });
+        if (!money.gt(deposited, '0')) continue;
+        total = money.toDecimalString(money.add(total, await this.#usd(deposited, currency)));
+      }
+      totals.set(String(id), money.toDecimalString(money.toMinorQuantised(total)));
+    }
+    return totals;
   }
 
   /** What each player has actually wagered. */
@@ -336,7 +358,7 @@ class WagerService {
       const skipped = await this.models.Users.count({ where: { lock_targetx: true }, transaction });
 
       await this.models.WagerMultiplierCommon.create(
-        { multiplier: Math.round(Number.parseFloat(multiplier)) },
+        { multiplier: String(multiplier) },
         { transaction }
       );
 
@@ -364,13 +386,23 @@ class WagerService {
    * target denominator without depositing anything.
    */
   async #totalApprovedDeposits(userId) {
-    const rows = await this.models.FiatDeposits.findAll({
-      attributes: ['amount'],
-      where: { user_id: userId, status: 'approved' },
-      raw: true,
-    });
+    const totals = await this.#depositTotalsFor([userId]);
+    return totals.get(String(userId)) ?? '0.00000000';
+  }
 
-    return money.toDecimalString(money.sum(rows.map((r) => r.amount ?? '0')));
+  /**
+   * A deposit total in USD. `userwager` is counted in USD (stakes are
+   * converted when they are counted), so the target it is measured against
+   * must be too — summing raw INR here would make the requirement ~83x too
+   * large. A currency with no rate contributes nothing, and is logged.
+   */
+  async #usd(amount, currency) {
+    const usd = await this.rewardMoney.toUsd(amount, currency ?? 'INR');
+    if (usd == null) {
+      this.logger?.warn({ currency }, 'Wager target: no USD rate for deposit currency — not counted');
+      return '0';
+    }
+    return usd;
   }
 }
 

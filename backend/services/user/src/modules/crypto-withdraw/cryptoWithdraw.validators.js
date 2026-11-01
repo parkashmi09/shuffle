@@ -9,7 +9,7 @@ const id = z.coerce.number().int().positive();
 const paging = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
-});
+}).strict();
 
 /** Coin tickers are short and uppercase. Legacy compared them unnormalised. */
 const coin = z.string().trim().toUpperCase().min(2).max(12).regex(/^[A-Z0-9]+$/);
@@ -32,6 +32,8 @@ const listAll = {
     coin: coin.optional(),
     from: z.coerce.date().optional(),
     to: z.coerce.date().optional(),
+    // Direct Users | Agent Users — na ho to sab (purana jawab).
+    channel: z.enum(['direct', 'agent']).optional(),
   }),
 };
 
@@ -63,4 +65,7 @@ const decide = {
     .strict(),
 };
 
-module.exports = { listMine, listAll, userParam, decide };
+/** Send through CCPayment / check with it: the withdrawal only (the transaction code is taken off first). */
+const gateway = { params: z.object({ withdrawalId: id }), body: z.object({}).strict() };
+
+module.exports = { listMine, listAll, userParam, decide, gateway };

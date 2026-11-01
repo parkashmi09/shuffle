@@ -7,6 +7,7 @@ const db = require('@ibitplay/db');
 const { createLogger, money } = require('@ibitplay/common');
 
 const { BonusService } = require('../bonus.service');
+const { configureAgentPlayers, resetAgentPlayers } = require('@ibitplay/auth');
 const { vipLevelFor, VIP_LEVELS } = require('@ibitplay/common');
 const { BONUS_TYPES } = require('../bonus.constants');
 
@@ -49,44 +50,43 @@ test('bonus', async (t) => {
     const whale = vipLevelFor('999999999999999');
 
     assert.equal(whale.level, top.level);
-    assert.equal(whale.card, 'diamond');
+    assert.equal(whale.card, 'eternal');
   });
 
   await t.test('below the first band is VIP 0, not VIP 1', async () => {
-    // The ladder starts at 500, not at 1 — a player who has wagered a little
-    // is unranked, and the first band has to be earned.
+    // hash.game's ladder starts at 1,000 (Bronze I) — a player who has wagered a
+    // little is a Beginner, and the first band has to be earned.
     assert.equal(vipLevelFor('0').level, 0);
-    assert.equal(vipLevelFor('499').level, 0);
-    assert.equal(vipLevelFor('500').level, 1);
+    assert.equal(vipLevelFor('999').level, 0);
+    assert.equal(vipLevelFor('1000').level, 1);
   });
 
   await t.test('band boundaries land on the right side', async () => {
-    assert.equal(vipLevelFor('999').level, 1);   // Wood
-    assert.equal(vipLevelFor('1000').level, 2);  // Bronze 1
-    assert.equal(vipLevelFor('1999').level, 2);
-    assert.equal(vipLevelFor('2000').level, 3);  // Bronze 2
+    assert.equal(vipLevelFor('999').level, 0);   // Beginner
+    assert.equal(vipLevelFor('1000').level, 1);  // Bronze I
+    assert.equal(vipLevelFor('2999').level, 1);
+    assert.equal(vipLevelFor('3000').level, 2);  // Bronze II
   });
 
   await t.test('every band names itself, using the reference names', async () => {
     // The VIP page prints `name` verbatim, so a wrong one is a wrong rank
-    // shown to a player. Wood is the one tier with no number after it.
+    // shown to a player. hash.game's names: Roman numerals, Beginner below the ladder.
     const named = (w) => vipLevelFor(w).name;
-    assert.equal(named('0'), 'Unranked');
-    assert.equal(named('500'), 'Wood');
-    assert.equal(named('1000'), 'Bronze 1');
-    assert.equal(named('10000'), 'Silver 1');
-    assert.equal(named('37000000'), 'Diamond 5');
-    assert.equal(VIP_LEVELS.length, 41);
-    assert.equal(new Set(VIP_LEVELS.map((b) => b.name)).size, 41, 'names must be unique');
+    assert.equal(named('0'), 'Beginner');
+    assert.equal(named('1000'), 'Bronze I');
+    assert.equal(named('30000'), 'Silver I');
+    assert.equal(named('25000000'), 'Diamond I');
+    assert.equal(named('10000000000'), 'Eternal X');
+    assert.equal(VIP_LEVELS.length, 33);
+    assert.equal(new Set(VIP_LEVELS.map((b) => b.name)).size, 33, 'names must be unique');
   });
 
   await t.test('the bonus gates sit on the ranks the reference publishes', async () => {
-    // Its locked cards read "Bronze 1", "Bronze 1" and "Silver 1". These are
-    // level NUMBERS, so they only mean that against this ladder — if the
-    // ladder is reverted these have to move with it.
+    // hash.game: "Users must have a VIP Level of 1 or higher to receive bonus" —
+    // all three open at Bronze I (1,000). Level NUMBERS, so they move with the ladder.
     assert.equal(vipLevelFor('1000').level, BONUS_TYPES.daily.minVipLevel);
     assert.equal(vipLevelFor('1000').level, BONUS_TYPES.weekly.minVipLevel);
-    assert.equal(vipLevelFor('10000').level, BONUS_TYPES.monthly.minVipLevel);
+    assert.equal(vipLevelFor('1000').level, BONUS_TYPES.monthly.minVipLevel);
   });
 
   await t.test('a wager with thousands separators parses', async () => {
@@ -129,6 +129,9 @@ test('bonus', async (t) => {
     db: connection,
     logger,
     config: { SERVICE_NAME: 'user-service' },
+    // Staff reads are scoped to the caller's tree; this admin client answers
+    // that the caller's tree contains the platform root, i.e. the whole site.
+    clients: { admin: { get: async () => ({ ids: [1] }) } },
   });
 
   /** A player at a given VIP level, with a bonus record. */
@@ -198,37 +201,25 @@ test('bonus', async (t) => {
     assert.equal(await bonusBalance(uid), '0.00000000');
   });
 
-  await t.test('the VIP gates separate the monthly bonus from the other two', async () => {
+  await t.test('Bronze I opens all three bonuses (hash.game)', async () => {
     const uid = newUid();
-    /*
-     * Bronze 5 — past the daily and weekly gate (Bronze 1, 1,000) and short of
-     * the monthly one (Silver 1, 10,000).
-     *
-     * This used to read "each bonus type has its OWN threshold" and seeded
-     * 29,000 for VIP 20 on the legacy ladder. Daily and weekly now share a
-     * gate, because that is where the reference puts them — its locked cards
-     * read "Bronze 1", "Bronze 1", "Silver 1" — so no wager separates those
-     * two any more, and a test claiming otherwise would be asserting a rule
-     * the platform does not have.
-     */
     await seed(uid, { wager: '5000' });
 
     const view = await service.overview({ userId: uid });
-    assert.equal(view.vip.level, 6);
-    assert.equal(view.vip.name, 'Bronze 5');
+    assert.equal(view.vip.level, 2);
+    assert.equal(view.vip.name, 'Bronze II');
     assert.equal(view.types.daily.eligible, true);
     assert.equal(view.types.weekly.eligible, true);
-    assert.equal(view.types.monthly.eligible, false);
+    assert.equal(view.types.monthly.eligible, true);
   });
 
-  await t.test('the first band is still below every gate', async () => {
-    // Wood is level 1 and the lowest gate is level 2, so reaching the ladder
-    // at all does not yet earn a bonus.
+  await t.test('a Beginner (below Bronze I) earns no bonus yet', async () => {
+    // hash.game: "Reach Bronze I to claim." 500 wagered is still Beginner.
     const uid = newUid();
     await seed(uid, { wager: '500' });
 
     const view = await service.overview({ userId: uid });
-    assert.equal(view.vip.name, 'Wood');
+    assert.equal(view.vip.name, 'Beginner');
     assert.equal(view.types.daily.eligible, false);
     assert.equal(view.types.weekly.eligible, false);
     assert.equal(view.types.monthly.eligible, false);
@@ -462,6 +453,21 @@ test('bonus', async (t) => {
     assert.equal(await bonusBalance(uid), '0.00000000');
   });
 
+  await t.test('a CHILD user (any parent) gets no bonus grant', async () => {
+    const uid = newUid();
+    await seed(uid);
+    configureAgentPlayers({ isAgentPlayer: async (id) => Number(id) === uid });
+    try {
+      await assert.rejects(
+        () => service.grantBonusGame({ userId: uid, idempotencyKey: `grant-${uid}-child`, dailybonus: '5' }),
+        (err) => err.code === 'PROMOTIONS_NOT_FOR_AGENT_USERS' && err.status === 403
+      );
+    } finally {
+      resetAgentPlayers();
+    }
+    assert.equal(await bonusBalance(uid), '0.00000000');
+  });
+
   await t.test('a grant writes a log entry naming the staff member', async () => {
     const uid = newUid();
     await seed(uid);
@@ -563,7 +569,7 @@ test('bonus', async (t) => {
     await seed(uid);
     await connection.models.Userwager.destroy({ where: { uid } });
 
-    const view = await service.adminDashboard({ userId: uid, limit: 200, offset: 0 });
+    const view = await service.adminDashboard({ staff: { id: 1 }, userId: uid, limit: 200, offset: 0 });
     const found = view.users.find((u) => String(u.userId) === String(uid));
 
     assert.ok(found, 'a player with no wager row must still appear');

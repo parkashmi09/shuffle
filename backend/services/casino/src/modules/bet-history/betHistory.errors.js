@@ -21,4 +21,9 @@ module.exports = defineErrors('BETHISTORY', {
     status: 404,
     message: 'No such bet',
   },
+  /** A per-player staff route asked about a player outside the caller's tree (404, as elsewhere). */
+  PLAYER_NOT_IN_YOUR_TREE: {
+    status: 404,
+    message: 'Player not found',
+  },
 });
