@@ -11,6 +11,12 @@
  */
 import { del, get, patch, post, put } from "./api";
 
+/** One request per page load, shared by every caller; a failure is not kept, so the next caller retries. */
+const once = (fn) => {
+  let p = null;
+  return () => (p ??= fn().catch((e) => { p = null; throw e; }));
+};
+
 export const auth = {
   login: (identifier, password, extra) => post("/user/auth/login", { identifier, password, ...extra }, { auth: false }),
   register: (body) => post("/user/auth/register", body, { auth: false }),
@@ -224,6 +230,11 @@ export const race = {
   leaderboard: (type = "weekly") => get(`/user/race/${type}/leaderboard`),
 };
 
+/** `GET /casino/challenges` — `{ active, completed }`, each `{ id, game, gameName, imageUrl, minMultiplier, minBetUsd, prizeUsd, winners, winnersFound, winnerNames }`. */
+export const challenges = {
+  list: () => get("/casino/challenges", { auth: false }),
+};
+
 export const betHistory = {
   /** The public ticker — nobody is named. */
   live: (limit = 20) => get("/casino/bet-history/live", { query: { limit }, auth: false }),
@@ -240,7 +251,7 @@ export const betHistory = {
 
 export const site = {
   /** The feature flags every browser needs, signed in or not. */
-  config: () => get("/admin/site-config/public", { auth: false }),
+  config: once(() => get("/admin/site-config/public", { auth: false })),
   /** The owner's branding: `{ branded, siteName, title, titleTemplate, description, keywords, themeColor, logoUrl, markUrl, ogImageUrl, … }`. */
   branding: () => get("/admin/branding/public", { auth: false }),
   /** The site admin's copy, `{ footer?, social?, support?, legal?, home?, pages?, vip? }` — only saved sections. */
@@ -250,7 +261,7 @@ export const site = {
   blogs: (query) => get("/admin/blogs", { query, auth: false, withMeta: true }),
   blogBySlug: (slug) => get(`/admin/blogs/slug/${slug}`, { auth: false }),
   promotions: (query) => get("/admin/promotions", { query, auth: false, withMeta: true }),
-  promotionSidebar: () => get("/admin/promotions/sidebar", { auth: false }),
+  promotionSidebar: once(() => get("/admin/promotions/sidebar", { auth: false })),
   promotionBySlug: (segment, slug) => get(`/admin/promotions/slug/${segment}/${slug}`, { auth: false }),
 };
 

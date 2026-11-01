@@ -304,7 +304,7 @@ function Shell({ children }) {
       {walletOpen && signedIn && <WalletModal onClose={closeWallet} />}
       {vaultOpen && signedIn && <VaultModal onClose={closeVault} />}
       {redeemCodeOpen && signedIn && <RedeemCodeModal onClose={() => setRedeemCodeOpen(false)} />}
-      {logoutOpen && signedIn && <LogoutModal onClose={() => setLogoutOpen(false)} onConfirm={logout} />}
+      {logoutOpen && signedIn && <LogoutModal onClose={() => setLogoutOpen(false)} onConfirm={async () => { await logout(); setLogoutOpen(false); }} />}
 
       {/* Last, and outside every modal: the toast stack is `position: fixed`
           above `--z-mobile-modal`, so a message raised by a dialog is still

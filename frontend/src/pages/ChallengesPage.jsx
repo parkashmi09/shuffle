@@ -3,47 +3,48 @@ import { cx } from "../lib/carousel";
 import { useReveal } from "../lib/useReveal";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import { ShowMoreButton } from "./LatestReleasesPage";
-import { challenges } from "../data/challenges";
+import { useApi } from "../lib/useResource";
+import { challenges as challengesApi } from "../lib/endpoints";
+import { formatAmount } from "../lib/adapters";
 
 /** Challenges browse page — reference `/challenges`. */
 
 const PAGE = 24;
 const TABS = [
   { id: "live", label: "Live" },
-  { id: "finished", label: "Finished" },
-  { id: "completed", label: "My Completed", disabled: true },
+  { id: "completed", label: "Finished" },
+  { id: "mine", label: "My Completed", disabled: true },
 ];
 
 function ChallengeCard({ c, index }) {
   const [ref, shown] = useReveal();
   return (
-    <a ref={ref} className={cx("ChallengeCard_challengeCardWrapper", "TallGameCard_reveal", shown && "TallGameCard_show")} style={{ "--card-i": index }} href={`/games/${c.slug}`} onClick={(e) => e.preventDefault()}>
-      <span className="SkeletonPlaceholder_root SkeletonPlaceholder_imageVariant SkeletonPlaceholder_hasColor" style={{ "--skeleton-color": c.color }}>
-        <img alt={c.game} className="nimg-fill" src={c.img} />
-        <div className="GameCardBorder_root" style={{ border: `2px solid ${c.color}` }} />
+    <a ref={ref} className={cx("ChallengeCard_challengeCardWrapper", "TallGameCard_reveal", shown && "TallGameCard_show")} style={{ "--card-i": index }} href="/challenges" onClick={(e) => e.preventDefault()}>
+      <span className="SkeletonPlaceholder_root SkeletonPlaceholder_imageVariant SkeletonPlaceholder_hasColor">
+        {c.imageUrl && <img alt={c.gameName || c.game} className="nimg-fill" src={c.imageUrl} />}
+        <div className="GameCardBorder_root" />
       </span>
       <div className="ChallengeCard_challengeFooter">
         <div className="ChallengeCard_challengeName">
-          First to hit {c.multiplier} with minimum {c.minBet} bet
+          First to hit {Number(c.minMultiplier).toLocaleString("en-US")}x with minimum ${formatAmount(c.minBetUsd)} bet
         </div>
         <div>
           <div className="ChallengeCard_challengeLabel">Reward</div>
           <div className="ChallengeCard_challengeInfoBlock">
             <span className="IconValue_root">
-              <img alt="SHFL" className="CryptoIcon_root CryptoIcon_image" height="16" src="/icons/crypto/shfl.svg" width="16" />
               <span className="Tooltip_trigger">
-                <span className="FiatWithTooltip_root fiat-with-tool-tip-text">{c.reward}</span>
+                <span className="FiatWithTooltip_root fiat-with-tool-tip-text">${formatAmount(c.prizeUsd)}</span>
               </span>
             </span>
           </div>
         </div>
         <div>
-          <div className="ChallengeCard_challengeLabel">Creator</div>
-          <a className="ModalLink_root" href="/challenges?modal=user" onClick={(e) => e.preventDefault()}>
-            <div className="ChallengeCard_challengeInfoBlock">
-              <div className="ChallengeCard_challengeName ChallengeCard_challengeCreator ChallengeCard_textTruncated">{c.creator}</div>
+          <div className="ChallengeCard_challengeLabel">Winners</div>
+          <div className="ChallengeCard_challengeInfoBlock">
+            <div className="ChallengeCard_challengeName ChallengeCard_textTruncated">
+              {c.winnerNames?.length ? c.winnerNames.join(", ") : `${c.winnersFound ?? 0}/${c.winners}`}
             </div>
-          </a>
+          </div>
         </div>
       </div>
     </a>
@@ -53,8 +54,8 @@ function ChallengeCard({ c, index }) {
 export default function ChallengesPage() {
   const [tab, setTab] = useState("live");
   const [count, setCount] = useState(PAGE);
-  // The reference keeps paging further challenges in; repeat the captured set so "Show More" has something to load.
-  const list = tab === "live" ? [...challenges, ...challenges] : challenges.slice(0, 10).reverse();
+  const { data, loading } = useApi("challenges", challengesApi.list);
+  const list = (tab === "live" ? data?.active : data?.completed) ?? [];
   const shown = list.slice(0, count);
 
   return (
@@ -81,9 +82,15 @@ export default function ChallengesPage() {
         <div className="CardGrid_cardGridWrapper">
           <div className="CardGrid_cardGridElement BrowsingChallenges_cardLayout">
             {shown.map((c, i) => (
-              <ChallengeCard key={`${c.slug}-${c.multiplier}-${i}`} c={c} index={i % 5} />
+              <ChallengeCard key={c.id} c={c} index={i % 5} />
             ))}
           </div>
+          {!loading && list.length === 0 && (
+            <div className="CardGridEmpty_root">
+              <img alt="" height="62" src="/icons/cross.svg" width="62" />
+              <p>No Challenges</p>
+            </div>
+          )}
           {count < list.length && <ShowMoreButton onClick={() => setCount((n) => n + PAGE)} />}
         </div>
       </section>
