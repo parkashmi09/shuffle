@@ -1,17 +1,31 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 
+import { useApi } from '@/hooks/use-api'
 import { cn } from '@/lib/utils'
 
 /**
- * The site's brand mark: the common TestPlay mark (frontend/apps/web/public/brand/testplay-mark.svg), not the shared
- * API's owner branding, which is another site's. It is also the tab icon.
+ * The site's brand MARK (the owner panel's square "mark" slot), from the public
+ * `admin/branding/public` read — once per session, and the bundled mark when the owner has
+ * none, the read fails or the image does not load. It is also the tab icon.
  */
+type PublicBranding = { markUrl?: string | null; logoUrl?: string | null; siteName?: string | null }
+
 export const DEFAULT_MARK = '/brand-mark.svg'
 
+// The asset route answers on the platform; the browser reaches it through the `/api/gw` proxy.
+const proxied = (url: string | null | undefined) => {
+  const m = /\/api\/v1\/(admin\/branding\/asset\/[^/?#]+)$/.exec(String(url ?? ''))
+
+  return m ? `/api/gw/api/v1/${m[1]}` : null
+}
+
 const BrandMark = ({ className }: { className?: string }) => {
-  const src = DEFAULT_MARK
+  const branding = useApi<PublicBranding>('admin/branding/public', undefined, { staleTime: Infinity, retry: false })
+  const markUrl = proxied(branding.data?.markUrl)
+  const [failed, setFailed] = useState<string | null>(null)
+  const src = markUrl && failed !== markUrl ? markUrl : DEFAULT_MARK
 
   useEffect(() => {
     document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]').forEach(link => (link.href = src))
@@ -22,14 +36,33 @@ const BrandMark = ({ className }: { className?: string }) => {
       src={src}
       alt=''
       className={cn('size-8 shrink-0 rounded-md object-contain', className)}
+      onError={() => setFailed(markUrl)}
     />
   )
 }
 
 /**
- * The site's full wordmark slot. The shared API's owner branding is another site's, so bitcasino
- * always shows its own mark + name (`fallback`).
+ * The site's full wordmark (the owner panel's wide "logo" slot) from the same public read — dark theme only,
+ * since it is drawn for the dark header (white text). The light theme, and any load gap or failure, show `fallback`.
  */
-export const BrandLogo = ({ fallback }: { className?: string; fallback: ReactNode }) => <>{fallback}</>
+export const BrandLogo = ({ className, fallback }: { className?: string; fallback: React.ReactNode }) => {
+  const branding = useApi<PublicBranding>('admin/branding/public', undefined, { staleTime: Infinity, retry: false })
+  const logoUrl = proxied(branding.data?.logoUrl)
+  const [failed, setFailed] = useState<string | null>(null)
+
+  if (!logoUrl || failed === logoUrl) return <>{fallback}</>
+
+  return (
+    <>
+      <div className='dark:hidden'>{fallback}</div>
+      <img
+        src={logoUrl}
+        alt={branding.data?.siteName ?? ''}
+        className={cn('hidden h-12 w-auto max-w-[320px] object-contain dark:block', className)}
+        onError={() => setFailed(logoUrl)}
+      />
+    </>
+  )
+}
 
 export default BrandMark

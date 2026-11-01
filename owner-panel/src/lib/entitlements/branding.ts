@@ -18,7 +18,7 @@ export type Branding = {
   siteName: string
   title: string
 
-  /** e.g. `%s · TestPlay`: how a page's own title is shown; empty = the title alone. */
+  /** e.g. `%s | Shuffle`: how a page's own title is shown; empty = the title alone. */
   titleTemplate: string
   description: string
   keywords: string[]

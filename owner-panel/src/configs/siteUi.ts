@@ -1,20 +1,20 @@
 /**
  * What THIS client's frontend can draw — and so what the owner panel offers for it.
  *
- * hash-game-exchange runs the fixed bc.game UI (`frontend/`, copied from cfz/hash-games). It has
- * one layout per feature, so a SmartBet layout "variant" changes nothing there; only ON/OFF and
- * the policies do. Each catalogue feature is one of:
+ * shuffle runs its own fixed UI (`frontend/`, Vite). It has one layout per feature, so a
+ * layout "variant" changes nothing there; only ON/OFF and the policies do.
+ * Each catalogue feature is one of:
  *
- *   toggle  the UI renders it and hides it when off (frontend/src/services/gates.js GATES). The
- *           owner gets an ON/OFF switch only; the variant is pinned to `variant` ("bc.game UI").
+ *   toggle  the UI has a screen for it; when off the backend refuses its API. The owner gets an
+ *           ON/OFF switch only; the variant is pinned to `variant`.
  *   fixed   part of the UI that cannot be hidden here (the casino lobby, the home hero). Always on,
  *           pinned to `variant`; no switch, because "off" would leave a visible section that the
  *           backend refuses.
- *   absent  the UI has no screen for it (frontend/docs/backend-gaps.md). Shown as "Not in this UI",
+ *   absent  the UI has no screen for it (`why` says what is there instead). Shown as "Not in this UI",
  *           always off (variant `none`), so the backend refuses it too.
  *
  * `variant` is the backend catalogue key the site row is stored with (a valid variant of that
- * feature, the bc.game-ported one). The owner's save pins every row to this table
+ * feature, the one closest to this UI). The owner's save pins every row to this table
  * (`pinToUi` in lib/entitlements/store.ts), so the document can never say otherwise.
  */
 
@@ -23,30 +23,31 @@ export const UI_LABEL = 'Site UI'
 export type UiSupport = { status: 'toggle'; variant: string; surfaces: string } | { status: 'fixed'; variant: string; surfaces: string } | { status: 'absent'; why: string }
 
 export const SITE_UI: Record<string, UiSupport> = {
-  vip: { status: 'toggle', variant: 'ring_panel', surfaces: '/vip, /loyalty, sidebar and account menu rows' },
-  promotions: { status: 'toggle', variant: 'event_list', surfaces: '/promotions and the promotion pages' },
-  bonus: { status: 'toggle', variant: 'reward_hub', surfaces: '/profile/boosts, /profile/rewards, account menu rows' },
-  affiliate: { status: 'toggle', variant: 'referral_hub', surfaces: '/profile/refer-a-friend, /ref/:code sign-up links' },
-  races: { status: 'toggle', variant: 'daily_contest', surfaces: '/promotions/league-of-bitcasino, /tournaments' },
-  challenges: { status: 'toggle', variant: 'quest_hub', surfaces: 'no quest page in this UI yet; switches the backend' },
-  raffles: { status: 'absent', why: 'No raffle in this backend; the weekly raffle page is hidden.' },
-  vault: { status: 'toggle', variant: 'flat_balance', surfaces: 'wallet Vault tab' },
-  swap: { status: 'toggle', variant: 'swap_page', surfaces: 'wallet Swap tab' },
-  notifications: { status: 'toggle', variant: 'notice_centre', surfaces: '/profile/notifications' },
-  kyc: { status: 'toggle', variant: 'document_cockpit', surfaces: 'account verification in Settings' },
-  gift_cards: { status: 'toggle', variant: 'redeem_dialog', surfaces: 'redeem a code in Rewards' },
-  blog: { status: 'toggle', variant: 'category_feed', surfaces: '/blog, /blog/:slug and the links in the home copy' },
+  vip: { status: 'toggle', variant: 'program_page', surfaces: '/vip-program (public page signed out; overview, rewards and levels signed in), header VIP panel' },
+  promotions: { status: 'toggle', variant: 'tile_grid', surfaces: '/promotions tiles with All/Casino/Sports tabs, /promotions/:slug and /sports/promotions/:slug articles' },
+  bonus: { status: 'toggle', variant: 'reward_cards', surfaces: 'rakeback, daily, weekly and monthly reward cards on /vip-program and in the VIP panel; redeem-code modal from the user menu' },
+  affiliate: { status: 'toggle', variant: 'marketing_dashboard', surfaces: '/affiliate marketing page, /affiliate/overview, referred-users, campaigns, earnings' },
+  races: { status: 'toggle', variant: 'tournaments', surfaces: 'home tournaments carousel, Weekly Race tab on the activity board, race info modal' },
+  challenges: { status: 'toggle', variant: 'multiplier_grid', surfaces: '/challenges grid with Live/Finished tabs' },
+  raffles: { status: 'absent', why: 'No raffle screen; /lottery is the token lottery page, not a raffle.' },
+  vault: { status: 'toggle', variant: 'term_lock', surfaces: 'Vault modal from the user menu, with lock-period picker' },
+  swap: { status: 'absent', why: 'The wallet has Deposit, Withdraw, Buy Crypto and Tip tabs; no Swap screen.' },
+  tips: { status: 'absent', why: 'The wallet Tip tab is a layout only; it calls no tip API.' },
+  notifications: { status: 'toggle', variant: 'side_panel', surfaces: 'right-side notification panel with filter chips and unread count' },
+  kyc: { status: 'toggle', variant: 'status_card', surfaces: '/settings/verify status cards (L1 details, L2 ID)' },
+  gift_cards: { status: 'absent', why: 'No gift-card screen; the redeem modal redeems bonus codes (Bonus).' },
+  blog: { status: 'toggle', variant: 'category_feed', surfaces: '/blog category tabs over the site admin blogs, /blog/:slug' },
 
-  casino_lobby: { status: 'fixed', variant: 'tabbed_themes', surfaces: 'the casino lobby is the site itself; use the Casino flag and the game-category flags' },
-  banners: { status: 'fixed', variant: 'artwork_slides', surfaces: 'the home hero banners (artwork from the site admin banners)' },
+  casino_lobby: { status: 'fixed', variant: 'aggregator', surfaces: 'the casino lobby is the site itself; use the Casino flag and the game-category flags' },
+  banners: { status: 'fixed', variant: 'image_carousel', surfaces: "the home hero carousel (site admin banners, placement 'home')" },
 
-  spin_wheel: { status: 'absent', why: 'Kept off here; the wheel page follows the site admin Spin wheel flag.' },
-  tips: { status: 'absent', why: 'No tip-sending screen in this UI.' },
-  chat: { status: 'absent', why: 'No chat screen in this UI.' },
+  push_notifications: { status: 'toggle', variant: 'onesignal', surfaces: 'OneSignal web push, loaded only when the backend says push is on' },
+
+  spin_wheel: { status: 'absent', why: 'No wheel screen in this UI.' },
+  chat: { status: 'absent', why: 'The header Chat button is disabled; there is no chat screen.' },
   club_membership: { status: 'absent', why: 'No club screens in this UI.' },
-  push_notifications: { status: 'absent', why: 'This UI does not load a push SDK.' },
   analytics: { status: 'absent', why: 'This UI does not load a Google tag.' },
-  live_tv: { status: 'absent', why: 'This UI has no TV button on a sports match yet (the backend gate is ported).' }
+  live_tv: { status: 'absent', why: 'The match page Live Stream switch is cosmetic; no stream is played.' }
 }
 
 /** Owner options that do nothing in this UI (their page does not exist here). Hidden, value kept. */
