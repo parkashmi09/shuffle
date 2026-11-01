@@ -1,0 +1,250 @@
+/* ==========================================================================
+   shuffle: the sports exchange's stylesheet (stake's port, via rainbet, of hash-game-exchange).
+   shuffle has no Tailwind and no `--ds-color-*` palette: the block right after the @theme maps
+   those names onto shuffle's own tokens (styles/shuffle-tokens.css — the sports page's grays and
+   violet), and a scoped preflight stands in for the one stake's App.css carries.
+
+   The exchange UI is ported from hash-game-exchange, whose markup is Tailwind utilities. Rather
+   than rewrite ~5k lines of markup, Tailwind builds ONLY the utilities that markup uses
+   (`source(none)` + the two `@source` folders below), with hash's colour names mapped onto
+   stake's own `--ds-color-*` tokens (src/App.css), so the owner's palette still recolours
+   every surface. Back stays blue and lay pink, as on hash.
+
+   Why the odd shape:
+   - `theme(inline)` / `@theme inline`: stake's :root already defines --text-xs, --color-primary,
+     --radius-lg … for its own CSS. Inlined, the utilities carry their values and never read
+     those variables.
+   - No preflight: App.css already carries Tailwind's.
+   - Utilities UNLAYERED (`@tailwind utilities`): App.css' unlayered base rules would
+     beat a layered utility on a price button.
+   - hash's component classes (.button, .input, .badge …) come first and are `:where(.rb-exch)`-
+     scoped (one class of specificity), so the utilities after them still win, as in hash.
+   ========================================================================== */
+
+@import "tailwindcss/theme.css" theme(inline);
+
+@source "../components/exchange";
+@source "../pages/Exchange";
+@source "../../pages/SportsPage.jsx";
+
+@theme inline {
+  --color-layer1: var(--ds-color-surface-lowest);
+  --color-layer2: var(--ds-color-surface-lowest);
+  --color-layer3: var(--ds-color-surface-default);
+  --color-layer4: var(--ds-color-surface-highest);
+  --color-layer5: color-mix(in srgb, var(--ds-color-surface-highest) 55%, var(--ds-color-base-neutral));
+  --color-layer6: var(--ds-color-base-neutral);
+  --color-primary: var(--ds-color-on-surface);
+  --color-secondary: var(--ds-color-subtle-on-surface);
+  --color-tertiary: var(--ds-color-nontext-strong-on-surface);
+  --color-quarterary: var(--ds-color-nontext-strong-on-surface);
+  --color-third: var(--ds-color-nontext-decorative-on-surface);
+  --color-brand: var(--ds-color-base-primary);
+  --color-button-brand: var(--ds-color-base-primary);
+  --color-button_bright: var(--ds-color-base-neutral);
+  --color-input: var(--ds-color-base-neutral);
+  --color-input_bright: var(--ds-color-surface-lowest);
+  --color-success: var(--ds-color-positive-on-surface);
+  --color-error: var(--ds-color-critical-on-surface);
+  --color-warning: var(--ds-color-caution-on-surface);
+  --color-alw_white: #ffffff;
+  --color-alw_dark: #10161a;
+  --color-only: var(--ds-color-on-surface);
+  /* Back / lay: hash's dark-theme values; not palette colours on purpose. */
+  --color-back: #72bbef;
+  --color-back-hover: #8ccaf5;
+  --color-lay: #f5a3b5;
+  --color-lay-hover: #f9bccb;
+  --color-back-muted: color-mix(in srgb, #72bbef 28%, var(--ds-color-surface-highest));
+  --color-lay-muted: color-mix(in srgb, #f5a3b5 28%, var(--ds-color-surface-highest));
+  --color-exchange-ink: #10161a;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+}
+
+/* shuffle: stake's palette names, on shuffle's sports-page tokens. Scoped, so nothing outside the
+   exchange sees them. */
+:where(.rb-exch, .RbExch_scrim) {
+  --ds-color-surface-lowest: var(--color-gray900);
+  --ds-color-surface-default: var(--color-gray800);
+  --ds-color-surface-highest: var(--color-gray700);
+  --ds-color-base-neutral: var(--color-gray600);
+  --ds-color-on-surface: var(--color-white);
+  --ds-color-subtle-on-surface: var(--color-gray300);
+  --ds-color-nontext-strong-on-surface: var(--color-gray400);
+  --ds-color-nontext-decorative-on-surface: var(--color-gray600);
+  --ds-color-base-primary: var(--color-primaryViolet);
+  --ds-color-on-base-primary: var(--color-white);
+  --ds-color-positive-on-surface: var(--color-success);
+  --ds-color-critical-on-surface: var(--color-error);
+  --ds-color-caution-on-surface: var(--color-warning);
+  --ds-color-overlay-scrim: var(--color-overlay-darker);
+  font-family: var(--font-body);
+}
+
+/* shuffle: the bits of Tailwind's preflight the hash markup assumes, zero-specificity so every
+   utility still wins. */
+:where(.rb-exch, .rb-exch *, .rb-exch ::before, .rb-exch ::after) { border: 0 solid; margin: 0; padding: 0; }
+:where(.rb-exch) :is(button, input, select, textarea) { font: inherit; color: inherit; background: transparent; }
+:where(.rb-exch) button { cursor: pointer; }
+:where(.rb-exch) :is(ul, ol) { list-style: none; }
+:where(.rb-exch) :is(img, svg, video) { display: block; max-width: 100%; }
+:where(.rb-exch) a { color: inherit; text-decoration: inherit; }
+:where(.rb-exch) table { border-collapse: collapse; }
+
+/* exchange.css (hash's kit file, unchanged) reads these three directly. */
+:root {
+  --color-alw_white: #ffffff;
+  --color-alw_dark: #10161a;
+  --color-white_alpha5: rgba(255, 255, 255, 0.05);
+}
+
+/* ── hash index.css component classes the exchange markup uses ─────────────── */
+:where(.rb-exch) .button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  cursor: pointer;
+  border-radius: 0.375rem;
+  user-select: none;
+}
+:where(.rb-exch) .button-m { height: 2.5rem; border-radius: 0.5rem; }
+:where(.rb-exch) .button-s { height: 2rem; border-radius: 0.375rem; padding-left: 0.25rem; padding-right: 0.25rem; }
+:where(.rb-exch) .button-xs { height: 1.5rem; border-radius: 0.375rem; }
+:where(.rb-exch) .button-brand { color: var(--ds-color-on-base-primary, #fff); font-weight: 700; background-color: var(--ds-color-base-primary); }
+:where(.rb-exch) .button-brand:hover:not(:disabled) { filter: brightness(1.1); }
+:where(.rb-exch) .button-second { color: var(--ds-color-on-surface); font-weight: 700; background-color: var(--ds-color-base-neutral); }
+:where(.rb-exch) .button-second:hover:not(:disabled) { filter: brightness(1.15); }
+:where(.rb-exch) .badge {
+  height: 1rem;
+  line-height: 1rem;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  text-align: center;
+  font-weight: 700;
+  color: var(--ds-color-on-base-primary, #fff);
+  background-color: var(--ds-color-base-primary);
+}
+:where(.rb-exch) .input-label {
+  margin-top: 1.25rem;
+  margin-bottom: 0.375rem;
+  padding-inline: 0.375rem;
+  color: var(--ds-color-subtle-on-surface);
+}
+:where(.rb-exch) .input {
+  display: flex;
+  align-items: center;
+  height: 2.5rem;
+  gap: 0.5rem;
+  padding-inline: 0.75rem 0.5rem;
+  border: 1px solid var(--ds-color-base-neutral);
+  border-radius: 0.5rem;
+  background-color: var(--ds-color-surface-lowest);
+  color: var(--ds-color-on-surface);
+  transition: border-color 0.2s ease-out;
+}
+:where(.rb-exch) .input:focus-within { border-color: var(--ds-color-base-primary); }
+:where(.rb-exch) .input[data-disabled] { opacity: 0.6; }
+:where(.rb-exch) .input > input,
+:where(.rb-exch) .input > select {
+  flex: 1;
+  width: 8rem;
+  min-width: 0;
+  align-self: stretch;
+  border: 0;
+  background-color: transparent;
+  color: inherit;
+  outline: none;
+}
+:where(.rb-exch) .input > select option { background-color: var(--ds-color-surface-highest); }
+:where(.rb-exch) .input > input::placeholder { color: var(--ds-color-nontext-strong-on-surface); }
+:where(.rb-exch) .input > input[type="date"] { color-scheme: dark; }
+:where(.rb-exch) .center { display: flex; align-items: center; justify-content: center; }
+:where(.rb-exch) .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:where(.rb-exch) .hide-scroll { scrollbar-width: none; }
+:where(.rb-exch) .hide-scroll::-webkit-scrollbar { width: 0; height: 0; }
+:where(.rb-exch) svg { flex: none; }
+
+/* ── the exchange rail (hash's `.sports-rail*` from pages/Sports/Sports.css) ── */
+:where(.rb-exch) .sports-rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding-inline: 8px;
+  border-radius: 8px;
+  background-color: var(--ds-color-surface-highest);
+}
+:where(.rb-exch) .sports-rail-scroll { display: flex; align-items: center; flex: 1 1 auto; min-width: 0; overflow-x: auto; }
+:where(.rb-exch) .sports-rail-cell {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+}
+:where(.rb-exch) .sports-rail-icon { width: 28px; height: 28px; }
+:where(.rb-exch) .sports-rail-icon svg { width: 100%; height: 100%; }
+:where(.rb-exch) .sports-rail-cell svg { fill: var(--ds-color-subtle-on-surface); }
+:where(.rb-exch) .sports-rail-cell:hover svg,
+:where(.rb-exch) .sports-rail-cell:focus-visible svg,
+:where(.rb-exch) .sports-rail-cell.is-active svg { fill: var(--ds-color-base-primary); }
+:where(.rb-exch) .sports-rail-divider { flex: none; width: 1px; height: 32px; margin-inline: 4px; background-color: var(--ds-color-nontext-decorative-on-surface); }
+:where(.rb-exch) .sports-rail-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--ds-color-on-surface);
+  background-color: color-mix(in srgb, var(--ds-color-surface-highest) 55%, var(--ds-color-base-neutral));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+/* The page and dialog shells (components/exchange/stakeKit.jsx). */
+.rb-exch { color: var(--ds-color-on-surface); font-size: 0.875rem; line-height: 1.25rem; }
+.RbExch_page { width: 100%; max-width: 1200px; margin: 0 auto; padding: 16px 0 24px; }
+.RbExch_dialog { padding: 20px; }
+.RbExch_dialogTitle { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+
+/* The dialog scrim (components/exchange/stakeKit.jsx); toasts are shuffle's own (lib/alerts.js). */
+.RbExch_scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: var(--ds-color-overlay-scrim);
+}
+.RbExch_scrim > .RbExch_dialog {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border-radius: 8px;
+  background-color: var(--ds-color-surface-default);
+}
+.RbExch_dialogClose { position: absolute; top: 14px; right: 14px; padding: 4px; cursor: pointer; }
+@media (max-width: 767px) {
+  .RbExch_scrim { align-items: flex-end; padding: 0; }
+  .RbExch_scrim > .RbExch_dialog { max-width: none; border-radius: 12px 12px 0 0; }
+}
+
+@tailwind utilities source(none);

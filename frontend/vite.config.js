@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, loadEnv } from 'vite'
 import process from 'node:process'
 
@@ -34,7 +35,8 @@ export default defineConfig(({ mode }) => {
   const gateway = env.VITE_GATEWAY_URL || 'http://127.0.0.1:4000'
 
   return {
-    plugins: [react()],
+    // tailwind builds only the sports exchange's utilities (src/exchange/styles/shuffle-exchange.css).
+    plugins: [react(), tailwindcss()],
     server: {
       // `host: true` also binds the LAN address, which is what the reference
       // comparison runs against — shuffle.com is compared side by side in a
@@ -46,6 +48,8 @@ export default defineConfig(({ mode }) => {
         // ports. `VITE_API_BASE` bypasses this for a deployed API.
         '/api': { target: gateway, changeOrigin: true, configure: stripOrigin },
         '/health': { target: gateway, changeOrigin: true, configure: stripOrigin },
+        // The sports exchange's odds / balance sockets (`/ws/sports/socket.io`).
+        '/ws': { target: gateway, changeOrigin: true, ws: true, configure: stripOrigin },
       },
     },
   }

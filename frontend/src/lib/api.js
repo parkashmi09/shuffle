@@ -99,7 +99,7 @@ export const setAuthLostHandler = (fn) => {
   onAuthLost = fn;
 };
 
-async function refreshAccessToken() {
+export async function refreshAccessToken() {
   const refreshToken = tokens.refresh();
   if (!refreshToken) return null;
 

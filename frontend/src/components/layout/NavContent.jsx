@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 /**
  * Navigation list shared by the desktop rail and the mobile menu panel —
@@ -10,6 +10,8 @@ import { navigate } from "../../lib/router";
 import { site } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
+import { useSharedSportsTree } from "../../exchange/hooks/exchange/sharedSportsTree";
+import { sportTabsOf } from "../../exchange/pages/Exchange/sportTabs";
 
 const casinoLinks = [
   { id: "originals", label: "Originals", icon: "original", href: "/casino/categories/originals" },
@@ -23,24 +25,32 @@ const casinoLinks = [
   { id: "providers", label: "Providers", icon: "providers", href: "/casino/providers" },
 ];
 
+/* The exchange's fixed entries; the sports list itself is the live feed (`useLiveSports`). */
 const sportsTop = [
-  { id: "upcoming", label: "Upcoming", icon: "calender-days", href: "/sports?section=upcoming", counter: "1335", counterClass: "Counter_violet" },
-  { id: "bet-live", label: "Bet Live", icon: "bet-live", href: "/sports?section=bet-live", counter: "316", counterClass: "Counter_green", greenDot: true },
+  { id: "sports-inplay", label: "In-Play", icon: "bet-live", href: "/sports?sport=inplay", greenDot: true },
+  { id: "sports-my-bets", label: "My Bets", icon: "sports-bet-slip", href: "/sports/my-bets" },
 ];
-const sportsFeatured = [
-  { id: "us-open-race", label: "$10k US Open Race!", icon: "sports/race-wager", href: "/sports/promotions/us-open-2026" },
-  { id: "premier-league", label: "Premier League", icon: "sports/soccer", href: "/sports/soccer/1-england/17-premier-league" },
-  { id: "laliga", label: "LaLiga", icon: "sports/soccer", href: "/sports/soccer/32-spain/8-laliga" },
-  { id: "ufc-paris", label: "UFC Paris", icon: "sports/mma", href: "/sports/mma/1089-ufc/194848-ufc-fight-night-hooker-vs-parnasse" },
-  { id: "blast-open", label: "BLAST Open Porto", icon: "sports/cs2", href: "/sports/cs2/counter-strike-2-international/14485-blast-open-fall-2026" },
-  { id: "nfl", label: "NFL", icon: "sports/american-football", href: "/sports/american-football/43-usa/31-nfl" },
-];
-const allSports = [
-  ["American Football", "american-football"], ["Aussie Rules", "aussie-rules"], ["Badminton", "badminton"], ["Baseball", "baseball"], ["Basketball", "basketball"], ["Boxing", "boxing"], ["Cricket", "cricket"], ["Darts", "darts"], ["Formula 1", "f1"], ["Futsal", "futsal"], ["Golf", "golf"], ["Handball", "handball"], ["Ice Hockey", "ice-hockey"], ["MMA", "mma"], ["Novelties", "novelties"], ["Rugby", "rugby-union"], ["Soccer", "soccer"], ["Table Tennis", "table-tennis"], ["Tennis", "tennis"], ["Volleyball", "volleyball"],
-].map(([label, slug]) => ({ id: `sport-${slug}`, label, icon: `sports/${slug}`, href: `/sports/${slug}` }));
-const allEsports = [
-  ["Arena of Valor", "aov", "aov"], ["Counter-Strike 2", "cs2", "cs2"], ["CS2 Duels", "cs2-duels", "cs2-duels"], ["Dota 2", "dota2", "dota2"], ["Dota 2 Duels", "dota2-duels", "dota2-duels"], ["eCricket", "ecricket", "ecricket"], ["FIFA", "fifa", "efootball"], ["King of Glory", "kog", "kog"], ["League of Legends", "lol", "lol"], ["Mobile Legends", "ml", "ml"], ["NBA2K", "nba2k", "ebasketball"], ["Rainbow Six", "rainbowsix", "r6"], ["Rocket League", "rocketleague", "rocketleague"], ["Valorant", "valorant", "valorant"], ["Warcraft 3", "w3", "w3"],
-].map(([label, icon, slug]) => ({ id: `esport-${slug}`, label, icon: `sports/${icon}`, href: `/sports/${slug}` }));
+/* Exchange tab id → shuffle's sport glyph (public/icons/sports); unknown ones get the generic one. */
+const SPORT_ICON = { "american-football": 1, badminton: 1, baseball: 1, basketball: 1, boxing: 1, cricket: 1, darts: 1, futsal: 1, golf: 1, handball: 1, "ice-hockey": 1, mma: 1, soccer: 1, "table-tennis": 1, tennis: 1, volleyball: 1 };
+
+/** The rail's "All sports" group from the exchange's sports tree (`GET /sports/user/all/sports/tree`). */
+function useLiveSports(enabled) {
+  const { data } = useSharedSportsTree({ enabled });
+  return useMemo(() => {
+    if (!enabled || !data) return [];
+    return sportTabsOf(data).map((t) => {
+      const sport = (data.sports || []).find((s) => Number(s.etid) === t.sid);
+      const total = (sport?.children || []).reduce((n, c) => n + (c.children?.length || 0), 0);
+      return {
+        id: `sport-${t.id}`,
+        label: t.label,
+        icon: SPORT_ICON[t.id] ? `sports/${t.id}` : "all-sports",
+        href: `/sports?sport=${encodeURIComponent(t.id)}`,
+        counter: total ? String(total) : undefined,
+      };
+    });
+  }, [enabled, data]);
+}
 
 const footerLinks = [
   { id: "vip", label: "VIP", icon: "vip", href: "/vip-program" },
@@ -235,6 +245,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   // the session directly rather than having it threaded through two shells.
   const { signedIn } = useSession();
   const on = useGate();
+  const liveSports = useLiveSports(sportsbook && on("sports"));
   /** The admin's sidebar promotions — `[]` until answered and on a failed read; nothing invented. */
   const [sidebarPromos, setSidebarPromos] = useState(null);
 
@@ -304,7 +315,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
               site it is there on every account page (VIP, transactions,
               settings, Shuffle Wise), where the casino categories are not. */}
           {!casino && !sportsbook && (
-            <NavLink id="my-bets" label="My Bets" icon="sports-bet-slip" href="/sports?section=my-bets" expanded={expanded} active={active === "my-bets"} onSelect={handleSelect} />
+            <NavLink id="my-bets" label="My Bets" icon="sports-bet-slip" href="/sports/my-bets" expanded={expanded} active={active === "my-bets"} onSelect={handleSelect} />
           )}
           {casino && (
             <>
@@ -361,11 +372,9 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
             {minimal && profileGroup}
           </div>
 
-          {sportsbook && sportsFeatured.map((l) => <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={handleSelect} />)}
           {sportsbook && (
             <div className={cx("NavigationLineBreakWrapper_root", expanded && "NavigationLineBreakWrapper_expanded")}>
-              <ExpandableGroup expanded={expanded} icon="all-sports" label="All sports" links={allSports} active={active} onSelect={handleSelect} open={openDirectory === "sports"} onToggle={() => toggleDirectory("sports")} />
-              <ExpandableGroup expanded={expanded} icon="esports" label="All Esports" links={allEsports} active={active} onSelect={handleSelect} open={openDirectory === "esports"} onToggle={() => toggleDirectory("esports")} />
+              <ExpandableGroup expanded={expanded} icon="all-sports" label="All sports" links={liveSports} active={active} onSelect={handleSelect} open={openDirectory === "sports"} onToggle={() => toggleDirectory("sports")} />
             </div>
           )}
 

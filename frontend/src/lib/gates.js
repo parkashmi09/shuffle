@@ -13,7 +13,8 @@ import { usePublicSiteConfig } from "./usePublicSiteConfig";
  */
 export const GATES = {
   casino: { flag: "casino" },
-  sports: { flag: "sports", anyOf: ["sportsbook", "sportsexchange"] },
+  // shuffle's /sports is the native exchange only (no third-party book iframe here).
+  sports: { flag: "sports", anyOf: ["sportsexchange"] },
   lottery: { flag: "lotto" },
   vip: { feature: "vip", flag: "vipclub", promo: true },
   promotions: { feature: "promotions", promo: true },

@@ -19,13 +19,9 @@ import SportsPage from "./pages/SportsPage";
 import ChallengesPage from "./pages/ChallengesPage";
 import PromotionsPage from "./pages/PromotionsPage";
 import PromotionArticlePage from "./pages/PromotionArticlePage";
-import SportPage from "./pages/SportPage";
-import CompetitionPage from "./pages/CompetitionPage";
-import FixturePage from "./pages/FixturePage";
 import TransactionsPage from "./pages/TransactionsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ShuffleWisePage from "./pages/ShuffleWisePage";
-import sportsPages from "./data/sports-pages.json";
 import { hasCategory } from "./lib/categories";
 import { navigate, usePath } from "./lib/router";
 import { useSession } from "./lib/sessionContext";
@@ -77,12 +73,9 @@ function renderPage(path) {
   // page the reference serves to everyone; these four are the account menu's.
   const affiliateTab = path.match(/^\/affiliate\/(overview|referred-users|campaigns|earnings)$/)?.[1];
   if (affiliateTab) return <AffiliateProgram key={affiliateTab} tab={affiliateTab} />;
-  const sport = path.match(/^\/sports\/([^/]+)(?:\/[^/]+)?$/)?.[1];
-  if (sport && sportsPages.sports[sport]) return <SportPage key={sport} slug={sport} />;
-  const comp = path.match(/^\/sports\/([^/]+)\/([^/]+)\/([^/]+)$/);
-  if (comp) return <CompetitionPage key={path} category={comp[2]} competition={comp[3]} sport={comp[1]} />;
-  const fx = path.match(/^\/sports\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/);
-  if (fx) return <FixturePage key={path} category={fx[2]} competition={fx[3]} event={fx[4]} sport={fx[1]} />;
+  // Every other `/sports/...` is the exchange (lobby, match, My Bets, Statement) — one page, so its
+  // own navigations never remount it.
+  if (path.startsWith("/sports/")) return <SportsPage />;
   const cat = path.match(/^\/casino\/categories\/([^/]+)$/)?.[1];
   if (cat && hasCategory(cat)) return <CategoryPage key={cat} slug={cat} />;
   const provider = path.match(/^\/casino\/providers\/([^/]+)$/)?.[1];
