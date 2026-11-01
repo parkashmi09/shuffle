@@ -9,7 +9,7 @@ const tabs = [
 ];
 
 /** Category tab strip + search box — reference `Home_wrapper`. */
-export default function CategoryTabs({ active, onChange }) {
+export default function CategoryTabs({ active, onChange, query = "", onQuery }) {
   return (
     <section className="LayoutContainer_root LayoutContainer_mobile-top-sm1 LayoutContainer_mobile-bottom-lg1 LayoutContainer_column">
       <div className="Home_wrapper">
@@ -41,7 +41,7 @@ export default function CategoryTabs({ active, onChange }) {
               <span className="TextInput_inputPrefix">
                 <img alt="search" src="/icons/search.svg" />
               </span>
-              <input className="Input_root Input_hasPrefix" placeholder="Search" aria-label="Search games" />
+              <input className="Input_root Input_hasPrefix" placeholder="Search" aria-label="Search games" value={query} onChange={(e) => onQuery?.(e.target.value)} />
             </div>
           </div>
         </div>

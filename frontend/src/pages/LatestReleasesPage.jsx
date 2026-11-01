@@ -273,7 +273,8 @@ export function CategoryPage({ slug }) {
   const { games: liveGames = [], total: liveTotal = 0, isLive } = useCategory(slug, {
     captured: [],
     ...categoryQuery(slug),
-    search: query.trim() || undefined,
+    // Blackjack / Roulette / Baccarat ARE a search; the toolbar's query narrows it, an empty box keeps it.
+    search: query.trim() || categoryQuery(slug).search,
     provider: provider || undefined,
     limit: count,
   });

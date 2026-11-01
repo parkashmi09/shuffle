@@ -9,14 +9,15 @@
  * whole group carries `Flex_root Flex_sm5` alongside `IconMenu_root` exactly as
  * the live DOM does.
  *
- * The bet slip and VIP both open the right-hand rail — see
- * `layout/BetSlipPanel.jsx` and `layout/VipPanel.jsx`. Chat has no backend
+ * The bets button opens the exchange's My Bets; VIP opens the right-hand rail
+ * (`layout/VipPanel.jsx`). Chat has no backend
  * module at all (`docs/FRONTEND-BACKEND-INTEGRATION.md` §4.4), so it alone is
  * rendered and inert. `keepEnabledStyle` is the variant the stylesheet provides for that
  * case: it holds the enabled background on a `:disabled` button, so an unbuilt
  * destination still matches the others instead of greying out.
  */
-import { useBetSlip } from "../../../lib/betSlipContext";
+import { navigate } from "../../../lib/router";
+import { useGate } from "../../../lib/gates";
 
 /** The count bubble — the rail's own `Counter`, which the reference reuses here. */
 function Badge({ count }) {
@@ -53,32 +54,21 @@ function IconButton({ icon, alt, label, badge, onClick, disabled = false }) {
 }
 
 export default function IconMenu() {
-  /**
-   * The badge counts the legs in the slip, so it is read from the slip rather
-   * than passed in: `TopBar` renders this and has no reason to know about
-   * selections, and the count has to survive a page change.
-   */
-  const { count } = useBetSlip();
-
+  const on = useGate();
   return (
     <div className="Flex_root Flex_sm5 IconMenu_root">
       <div className="IconMenu_menuWrapper">
-        {/* The live header labels this one "show bets panel". The rail listens
-            for the event rather than taking a callback, because the shell owns
-            which panel is docked and this button is three components deep. */}
-        <IconButton
-          icon="/icons/bet-slip.svg"
-          alt="bet slip"
-          label="show bets panel"
-          badge={count}
-          onClick={() => window.dispatchEvent(new CustomEvent("shuffle:bet-slip"))}
-        />
-        <IconButton
-          icon="/icons/crown.svg"
-          alt="crown"
-          label="VIP Club"
-          onClick={() => window.dispatchEvent(new CustomEvent("shuffle:vip"))}
-        />
+        {on("sports") && (
+          <IconButton icon="/icons/bet-slip.svg" alt="bet slip" label="My Bets" onClick={() => navigate("/sports/my-bets")} />
+        )}
+        {on("vip") && (
+          <IconButton
+            icon="/icons/crown.svg"
+            alt="crown"
+            label="VIP Club"
+            onClick={() => window.dispatchEvent(new CustomEvent("shuffle:vip"))}
+          />
+        )}
         <IconButton icon="/icons/chat.svg" alt="chat" label="Chat" disabled />
       </div>
     </div>

@@ -7,6 +7,7 @@ import { redeem as redeemApi, vip as vipApi } from "../../lib/endpoints";
 import { navigate } from "../../lib/router";
 import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
+import { useGate } from "../../lib/gates";
 import VipBadge from "../vip/VipBadge";
 import VipRewards from "../vip/VipRewards";
 import { tierFor } from "../vip/vipTiers";
@@ -176,7 +177,8 @@ export default function VipPanel({ open, onClose }) {
    * disabled state from the key the same way `NotificationPanel` does, so a
    * rail nobody has opened costs no request.
    */
-  const enabled = Boolean(signedIn && open);
+  const on = useGate();
+  const enabled = Boolean(signedIn && open && on.ready && on("vip"));
   const { data: vip } = useApi(
     enabled ? "vip:rail:progress" : "vip:rail:off",
     () => vipApi.progress(),

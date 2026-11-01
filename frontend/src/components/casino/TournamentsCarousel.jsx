@@ -3,6 +3,7 @@ import { useCarousel } from "../../lib/carousel";
 import { site } from "../../lib/endpoints";
 import { promotionToTile } from "../../lib/promotions";
 import { useApi } from "../../lib/useResource";
+import { useGate } from "../../lib/gates";
 import { PromoBanner } from "./PromoWidgets";
 
 /**
@@ -13,7 +14,8 @@ import { PromoBanner } from "./PromoWidgets";
  */
 export default function TournamentsCarousel() {
   const { trackRef, carousel } = useCarousel();
-  const { data } = useApi("home:tournaments", () => site.promotions({ page: 1, limit: 8 }));
+  const on = useGate();
+  const { data } = useApi("home:tournaments", () => site.promotions({ page: 1, limit: 8 }), { enabled: on.ready && on("promotions") });
   const tiles = (Array.isArray(data?.data) ? data.data : []).map(promotionToTile).filter((t) => t.status === "live");
   if (!tiles.length) return null;
 

@@ -220,7 +220,7 @@ export default function UserMenu({ user }) {
 
   // The card only renders for a signed-in caller, which is the only case this
   // component mounts in, so the read needs no `enabled` guard.
-  const { data: vip } = useApi("vip:progress", () => vipApi.progress());
+  const { data: vip } = useApi("vip:progress", () => vipApi.progress(), { enabled: on.ready && on("vip") });
 
   useEffect(() => {
     if (!open) return undefined;

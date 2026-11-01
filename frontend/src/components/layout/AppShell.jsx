@@ -11,14 +11,12 @@ import WalletModal from "../wallet/WalletModal";
 import VaultModal from "../wallet/VaultModal";
 import RedeemCodeModal from "../rewards/RedeemCodeModal";
 import NotificationPanel from "./NotificationPanel";
-import BetSlipPanel from "./BetSlipPanel";
 import VipPanel from "./VipPanel";
 import Alerts from "../ui/Alerts";
 import { navIdForPath, navigate, routes, usePath, useSearch } from "../../lib/router";
 import { captureReferralFromSearch } from "../../lib/referralCapture";
 import { SessionProvider } from "../../lib/session";
 import { FavouritesProvider } from "../../lib/favourites";
-import { BetSlipProvider } from "../../lib/betSlip";
 import { PoppedGameProvider } from "../../lib/poppedGame";
 import PoppedGame from "../casino/PoppedGame";
 import { useSession } from "../../lib/sessionContext";
@@ -41,16 +39,10 @@ export default function AppShell({ children }) {
         {/* Outside the shell's page slot on purpose: a popped-out game keeps
             running while the player browses, so its dock must outlive the page
             they popped it from. */}
-        {/* Above the shell because BOTH ends of the slip live in it: the
-            header's bet-slip button reads the count, the rail reads the legs,
-            and every odds button on every sports page asks it whether its own
-            price is picked. */}
-        <BetSlipProvider>
-          <PoppedGameProvider>
-            <Shell>{children}</Shell>
-            <PoppedGame />
-          </PoppedGameProvider>
-        </BetSlipProvider>
+        <PoppedGameProvider>
+          <Shell>{children}</Shell>
+          <PoppedGame />
+        </PoppedGameProvider>
       </FavouritesProvider>
     </SessionProvider>
   );
@@ -97,9 +89,8 @@ function Shell({ children }) {
    * on the site has a rule for. Opening either closes the other, which is also
    * what the reference does.
    */
-  const [rightRail, setRightRail] = useState(null); // null | "notifications" | "bet-slip" | "vip"
+  const [rightRail, setRightRail] = useState(null); // null | "notifications" | "vip"
   const notificationsOpen = rightRail === "notifications";
-  const betSlipOpen = rightRail === "bet-slip";
   const vipOpen = rightRail === "vip";
   const rightRailOpen = rightRail !== null;
   const [notificationFilter, setNotificationFilter] = useState("ALL");
@@ -133,12 +124,6 @@ function Shell({ children }) {
     const onNotifications = () => {
       if (signedIn) setRightRail((current) => (current === "notifications" ? null : "notifications"));
     };
-    /**
-     * The bet slip is NOT gated on a session. A visitor builds a slip first and
-     * signs in to place it — gating the panel would mean the odds buttons had
-     * somewhere to put a pick that could not be opened.
-     */
-    const onBetSlip = () => setRightRail((current) => (current === "bet-slip" ? null : "bet-slip"));
     /** Signed out too: the panel's own pitch is what asks for an account. */
     const onVip = () => setRightRail((current) => (current === "vip" ? null : "vip"));
     const onLogout = () => { if (signedIn) setLogoutOpen(true); };
@@ -148,7 +133,6 @@ function Shell({ children }) {
     window.addEventListener("shuffle:vault", onVault);
     window.addEventListener("shuffle:redeem-code", onRedeemCode);
     window.addEventListener("shuffle:notifications", onNotifications);
-    window.addEventListener("shuffle:bet-slip", onBetSlip);
     window.addEventListener("shuffle:vip", onVip);
     window.addEventListener("shuffle:logout", onLogout);
     return () => {
@@ -158,7 +142,6 @@ function Shell({ children }) {
       window.removeEventListener("shuffle:vault", onVault);
       window.removeEventListener("shuffle:redeem-code", onRedeemCode);
       window.removeEventListener("shuffle:notifications", onNotifications);
-      window.removeEventListener("shuffle:bet-slip", onBetSlip);
       window.removeEventListener("shuffle:vip", onVip);
       window.removeEventListener("shuffle:logout", onLogout);
     };
@@ -289,7 +272,6 @@ function Shell({ children }) {
         can fill a slip and is asked for an account at the point of placing it,
         not at the point of picking. Same dock, and the two never open together.
       */}
-      <BetSlipPanel open={betSlipOpen} onClose={() => setRightRail(null)} />
 
       {/* Also rendered signed out — where it pitches the programme instead of
           reporting a rank. Same dock; the three never open together. */}

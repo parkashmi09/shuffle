@@ -66,12 +66,38 @@ function HomeCategoryTab({ slug, title, icon, href }) {
   );
 }
 
+/** The lobby search box's results — `GET /casino/games?search=`, the same read as a category page. */
+function SearchResults({ q }) {
+  const [count, setCount] = useState(PAGE);
+  const { games, total, isLive, loading } = useCategory(`search:${q}`, { captured: [], search: q, limit: count });
+  return (
+    <>
+      <CategoryGrid
+        title={`Results for "${q}"`}
+        icon="/icons/search.svg"
+        href="/"
+        games={games}
+        total={isLive ? total : 0}
+        onShowMore={isLive ? () => setCount((c) => c + PAGE) : undefined}
+      />
+      {!loading && !isLive && (
+        <div className="CardGridEmpty_root">
+          <img alt="" height="62" src="/icons/cross.svg" width="62" />
+          <p>No games found</p>
+        </div>
+      )}
+    </>
+  );
+}
+
 /**
  * Casino lobby — reference home page. "Lobby" renders the full section stack;
  * any other tab shows that category as a wrapped grid.
  */
 export default function CasinoHome() {
   const [tab, setTab] = useState("LOBBY");
+  const [query, setQuery] = useState("");
+  const q = query.trim();
   const category = tab === "LOBBY" ? null : categories[tab];
 
   // Each of these reads its route and keeps the capture when the table is
@@ -88,11 +114,13 @@ export default function CasinoHome() {
   return (
     <>
       <HeroBanners banners={banners} />
-      <CategoryTabs active={tab} onChange={setTab} />
+      <CategoryTabs active={tab} onChange={setTab} query={query} onQuery={setQuery} />
 
       <section className="LayoutContainer_root LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-0 LayoutContainer_column">
         <div className="Home_homeTabContainer">
-          {category ? (
+          {q.length >= 2 ? (
+            <SearchResults key={q} q={q} />
+          ) : category ? (
             <HomeCategoryTab key={tab} {...category} />
           ) : (
             <div className="HomeTabLobby_homeTabLobbyWrapper">

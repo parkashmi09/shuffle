@@ -32,7 +32,7 @@ export const GATES = {
 export function makeGate({ features, flags }) {
   const listed = features?.list?.length ? new Set(features.list.map((f) => f.feature)) : null;
   const b2b = features?.policy?.("business_model") === "b2b";
-  return (key) => {
+  const on = (key) => {
     const gate = GATES[key];
     if (!gate) return true;
     if (gate.promo && b2b) return false;
@@ -41,6 +41,9 @@ export function makeGate({ features, flags }) {
     if (gate.anyOf && flags && !gate.anyOf.some((k) => flags[k] === true)) return false;
     return true;
   };
+  /** Both reads answered — a caller that would REQUEST a gated route waits for this, so an owner-off feature is never asked for. */
+  on.ready = Array.isArray(features?.list) && flags != null;
+  return on;
 }
 
 /** `const on = useGate(); on("vip")`. */

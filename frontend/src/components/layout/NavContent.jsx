@@ -249,7 +249,9 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   /** The admin's sidebar promotions — `[]` until answered and on a failed read; nothing invented. */
   const [sidebarPromos, setSidebarPromos] = useState(null);
 
+  const promosOn = on.ready && on("promotions");
   useEffect(() => {
+    if (!promosOn) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -263,7 +265,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [promosOn]);
 
   const promoLinks = sidebarPromos ?? [];
   // Footer link ids are gate keys (`vip`, `blog`, `affiliate`).

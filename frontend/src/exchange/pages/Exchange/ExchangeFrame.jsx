@@ -10,7 +10,7 @@ import '../../styles/shuffle-exchange.css';
  */
 export default function ExchangeFrame({ children }) {
   return (
-    <div className="rb-exch RbExch_page px-4 pb-4 sm:px-0">
+    <div className="rb-exch RbExch_page px-4 pb-4 lg:px-12">
       <ExchangeRail />
       {children}
     </div>

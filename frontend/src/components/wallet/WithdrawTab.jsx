@@ -3,7 +3,7 @@ import { cx } from "../../lib/carousel";
 import { ApiError } from "../../lib/api";
 import { funding } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
-import { displayBalance, isFiat } from "../../lib/adapters";
+import { displayBalance, formatAmount, isFiat } from "../../lib/adapters";
 import { currencyName } from "../../lib/currencies";
 import { networkLabel, networksFor } from "../../lib/networks";
 import { MASKED_AMOUNT } from "../../lib/playerPreferences";
@@ -47,7 +47,7 @@ function requirementText(req) {
     m === "kyc"
       ? WITHDRAW_REFUSALS.FIAT_WITHDRAW_KYC_REQUIRED
       : m === "wager"
-        ? `Wager ${req.wager?.remaining ?? ""} ${req.wager?.currency ?? ""} more before withdrawing.`.replace(/\s+/g, " ")
+        ? `Wager ${req.wager?.remaining != null ? formatAmount(req.wager.remaining) : ""} ${req.wager?.currency ?? ""} more before withdrawing.`.replace(/\s+/g, " ")
         : m === "cap"
           ? "You have reached your withdrawal cap — wager more to raise it."
           : m === "daily"

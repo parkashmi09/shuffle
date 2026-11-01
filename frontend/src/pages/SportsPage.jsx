@@ -82,7 +82,7 @@ export default function SportsPage() {
     return (
       <MatchBoundary key={path}>
         <Suspense fallback={null}>
-          <div className="rb-exch">
+          <div className="rb-exch lg:px-12">
             <ExchangeMatch key={path} sid={decodeURIComponent(match[1])} gmid={decodeURIComponent(match[2])} />
           </div>
         </Suspense>
