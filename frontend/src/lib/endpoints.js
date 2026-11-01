@@ -235,6 +235,10 @@ export const betHistory = {
 export const site = {
   /** The feature flags every browser needs, signed in or not. */
   config: () => get("/admin/site-config/public", { auth: false }),
+  /** The owner's branding: `{ branded, siteName, title, titleTemplate, description, keywords, themeColor, logoUrl, markUrl, ogImageUrl, … }`. */
+  branding: () => get("/admin/branding/public", { auth: false }),
+  /** The site admin's copy, `{ footer?, social?, support?, legal?, home?, pages?, vip? }` — only saved sections. */
+  content: () => get("/admin/site-content/public", { auth: false }),
   /** Placement is the path segment: `home`, `sports`, … 404s when none is set. */
   banners: (type) => get(`/admin/banners/${type}`, { auth: false }),
   blogs: (query) => get("/admin/blogs", { query, auth: false, withMeta: true }),
@@ -331,6 +335,19 @@ export const funding = {
 
   fiatDeposits: (query) => get("/user/deposits/fiat", { query }),
   createFiatDeposit: (body) => post("/user/deposits/fiat", body),
+
+  /**
+   * The owner's withdrawal gate for one currency: `{ ok, missing[], kyc, wager,
+   * bonusForfeitRequired, bonusForfeitAllowed, … }`. The POST refuses with the
+   * same reasons (403 FIAT_WITHDRAW_KYC_REQUIRED / WITHDRAW_WAGER_REQUIRED,
+   * 409 BONUS_FORFEIT_REQUIRED), so this is what the form shows up front.
+   */
+  withdrawRequirements: (currency) => get("/user/withdrawals/requirements", { query: { currency } }),
+
+  /** Saved payout accounts: `[{ id, method, accountHolderName, bankName, accountNumberMasked, ifscCode, upiId, isDefault }]`. */
+  bankAccounts: () => get("/user/bank-accounts"),
+  /** `{ method: "upi", accountHolderName, upiId }` or `{ method: "bank", accountHolderName, bankName?, accountNumber, ifscCode }`. */
+  addBankAccount: (body) => post("/user/bank-accounts", body),
 
   fiatWithdrawals: (query) => get("/user/withdrawals/fiat", { query }),
   createFiatWithdrawal: (body) => post("/user/withdrawals/fiat", body),

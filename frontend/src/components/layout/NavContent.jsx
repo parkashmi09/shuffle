@@ -9,7 +9,7 @@ import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
 import { site } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
-import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
+import { useGate } from "../../lib/gates";
 
 const casinoLinks = [
   { id: "originals", label: "Originals", icon: "original", href: "/casino/categories/originals" },
@@ -21,15 +21,6 @@ const casinoLinks = [
   { id: "game-shows", label: "Game Shows", icon: "game-show", href: "/casino/categories/game-shows" },
   { id: "baccarat", label: "Baccarat", icon: "baccarat", href: "/casino/categories/baccarat" },
   { id: "providers", label: "Providers", icon: "providers", href: "/casino/providers" },
-];
-
-const FALLBACK_PROMO_LINKS = [
-  { id: "promo-race", label: "$100K Weekly Race", href: "/promotions/100000-weekly-race", icon: "trophy", counter: "16h" },
-  { id: "promo-freak", label: "$20K Freak Show!", href: "/promotions/freak-show", icon: "promos/multi", counter: "5d" },
-  { id: "promo-level", label: "Level Up Rewards!", href: "/promotions/level-up", icon: "promos/diamond", counter: "10d" },
-  { id: "promo-mines", label: "$20K Mines Master!", href: "/promotions/mines-master", icon: "promos/highest-multiplier", counter: "11d" },
-  { id: "promo-vip", label: "$30K VIP only", href: "/promotions/vip-hacksaw-heist", icon: "promos/vip", counter: "12d" },
-  { id: "promo-chips", label: "Free Chips Drops!", href: "/promotions/free-chips-prize-and-drops", icon: "promos/vip-bonus", counter: "15d" },
 ];
 
 const sportsTop = [
@@ -243,8 +234,8 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   // The account group only exists for a signed-in visitor, so the rail reads
   // the session directly rather than having it threaded through two shells.
   const { signedIn } = useSession();
-  const { affiliateEnabled } = usePublicSiteConfig();
-  /** `null` until the sidebar API responds; then use API list (may be empty). Fallback only on error. */
+  const on = useGate();
+  /** The admin's sidebar promotions — `[]` until answered and on a failed read; nothing invented. */
   const [sidebarPromos, setSidebarPromos] = useState(null);
 
   useEffect(() => {
@@ -255,7 +246,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
         const links = Array.isArray(data) ? data : [];
         if (!cancelled) setSidebarPromos(links);
       } catch {
-        if (!cancelled) setSidebarPromos(FALLBACK_PROMO_LINKS);
+        if (!cancelled) setSidebarPromos([]);
       }
     })();
     return () => {
@@ -263,8 +254,10 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
     };
   }, []);
 
-  const promoLinks = sidebarPromos ?? FALLBACK_PROMO_LINKS;
-  const siteFooterLinks = affiliateEnabled ? footerLinks : footerLinks.filter((l) => l.id !== "affiliate");
+  const promoLinks = sidebarPromos ?? [];
+  // Footer link ids are gate keys (`vip`, `blog`, `affiliate`).
+  const siteFooterLinks = footerLinks.filter((l) => on(l.id));
+  const accountLinks = profileLinks.filter((l) => l.action !== "vault" || on("vault"));
   // The two sport directories behave as one accordion: opening either closes the
   // other, so only one long list is ever pushed into the rail at a time.
   const [openDirectory, setOpenDirectory] = useState(null);
@@ -288,7 +281,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
       expanded={expanded}
       icon="profile"
       label="Profile"
-      links={profileLinks}
+      links={accountLinks}
       active={active}
       onSelect={handleSelect}
       open={profileOpen}
@@ -321,12 +314,14 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
               <NavLink id="favourites" label="Favourites" icon="star" href="/favourites" expanded={expanded} active={active === "favourites"} disabled={!signedIn} onSelect={handleSelect} />
               <NavLink id="latest" label="Latest Releases" icon="latest-releases" href="/casino/categories/latest-releases" expanded={expanded} active={active === "latest"} onSelect={handleSelect} />
               <NavLink id="recent" label="Recently Played" icon="recent-played" href="/casino/recently-played" expanded={expanded} active={active === "recent"} disabled={!signedIn} onSelect={handleSelect} />
-              <NavLink id="challenges" label="Challenges" icon="challenge" href="/challenges" expanded={expanded} active={active === "challenges"} counter="26" onSelect={handleSelect} />
+              {on("challenges") && (
+                <NavLink id="challenges" label="Challenges" icon="challenge" href="/challenges" expanded={expanded} active={active === "challenges"} onSelect={handleSelect} />
+              )}
             </>
           )}
 
           <div className={cx("NavigationLineBreakWrapper_root", expanded && "NavigationLineBreakWrapper_expanded")}>
-            <div className="NavigationLottery_root">
+            {on("lottery") && <div className="NavigationLottery_root">
               <NavLink
                 id="lottery"
                 label="SHFL Lottery"
@@ -336,11 +331,9 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
                 active={active === "lottery"}
                 greenDot
                 linkClass="NavigationLottery_lottery"
-                counter={<span className="NavigationLottery_date">5d</span>}
-                counterClass="Counter_text"
                 onSelect={handleSelect}
               />
-            </div>
+            </div>}
             <div className="NavigationTokenAirdrop_root">
               <NavLink
                 id="airdrop"
@@ -355,7 +348,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
                 onSelect={handleSelect}
               />
             </div>
-            <ExpandableGroup
+            {on("promotions") && <ExpandableGroup
               expanded={expanded}
               icon="promotions"
               label="Promotions"
@@ -364,7 +357,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
               onSelect={handleSelect}
               open={promosOpen}
               onToggle={() => setPromosOpen((o) => !o)}
-            />
+            />}
             {minimal && profileGroup}
           </div>
 

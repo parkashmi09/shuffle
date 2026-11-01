@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApi } from "../../lib/useResource";
 import { emailVerify, kyc as kycApi, profile as profileApi } from "../../lib/endpoints";
 import Modal from "../ui/Modal";
+import { useGate } from "../../lib/gates";
 
 /**
  * Settings → Verify — reference `VerificationCard` + `SupportChatPrompt`.
@@ -178,6 +179,7 @@ function KycModal({ onClose, onDone }) {
 export default function SettingsVerify() {
   const [nonce, setNonce] = useState(0);
   const [open, setOpen] = useState(null);
+  const kycOn = useGate()("kyc");
   const { data: status } = useApi(`settings:kyc:${nonce}`, () => kycApi.status().catch(() => null));
   const { data: me } = useApi(`settings:profile:${nonce}`, () => profileApi.get().catch(() => null));
 
@@ -211,6 +213,7 @@ export default function SettingsVerify() {
           }
         />
 
+        {kycOn && (<>
         <VerificationCard
           done={submitted}
           tag={submitted ? (approved ? COMPLETE : PENDING) : INCOMPLETE}
@@ -239,6 +242,7 @@ export default function SettingsVerify() {
             </button>
           }
         />
+        </>)}
       </div>
 
       {open === "email" && <EmailVerifyModal onClose={() => setOpen(null)} onDone={finish} />}

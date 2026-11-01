@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cx } from "../../../lib/carousel";
 import { navigate } from "../../../lib/router";
-import { usePublicSiteConfig } from "../../../lib/usePublicSiteConfig";
+import { useGate } from "../../../lib/gates";
 import { useApi } from "../../../lib/useResource";
 import { vip as vipApi } from "../../../lib/endpoints";
 import VipBadge from "../../vip/VipBadge";
@@ -212,8 +212,9 @@ function MenuRow({ item, onClose }) {
  * a handler, so the shell can put its confirmation in front of the sign-out.
  */
 export default function UserMenu({ user }) {
-  const { affiliateEnabled } = usePublicSiteConfig();
-  const menuItems = affiliateEnabled ? items : items.filter((i) => i.id !== "affiliate");
+  // Item ids that are gate keys (vip, vault, affiliate, notifications) follow the owner/admin switches.
+  const on = useGate();
+  const menuItems = items.filter((i) => on(i.id));
   const [open, setOpen] = useState(false);
   const root = useRef(null);
 

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
-import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
+import { useGate } from "../../lib/gates";
+import { useBranding, useSiteContent } from "../../lib/siteContent";
 
 const columns = [
   {
@@ -10,7 +11,7 @@ const columns = [
     title: "Support",
     links: [
       { label: "Live Support", button: true },
-      { label: "Help Center", href: "https://help.shuffle.com", external: true },
+      { label: "Help Center", external: true }, // href from site content `support.helpCenterUrl`
       { label: "Game Responsibly", href: "https://www.begambleaware.org/", external: true },
     ],
   },
@@ -42,14 +43,8 @@ const columns = [
   {
     order: 5,
     title: "Community",
-    links: [
-      { label: "X", href: "https://x.com/shufflecom", external: true },
-      { label: "Instagram", href: "https://www.instagram.com/shufflecom", external: true },
-      { label: "Facebook", href: "https://facebook.com/shufflefb", external: true },
-      { label: "Telegram", href: "https://t.me/shufflecom", external: true },
-      { label: "Merch", href: "https://shuffle.store/", external: true },
-      { label: "Shuffle Forum", href: "https://shufflecommunity.com", external: true },
-    ],
+    // Filled from Admin → Site content → social.
+    links: [],
   },
 ];
 
@@ -152,12 +147,41 @@ function LanguageAndOddSelectors({ className, language, setLanguage, odd, setOdd
 
 /** Site footer — reference `Footer` module. */
 export default function Footer() {
-  const { signedIn } = useSession();
-  const { affiliateEnabled } = usePublicSiteConfig();
-  const linkColumns = columns.map((col) => ({
-    ...col,
-    links: col.links.filter((l) => affiliateEnabled || l.label !== "Affiliate Program"),
+  const { signedIn, rates } = useSession();
+  const on = useGate();
+  const brand = useBranding();
+  const { footer, social, support, legal } = useSiteContent();
+  const siteName = brand?.siteName || "Shuffle";
+  const ethUsd = Number((Array.isArray(rates) ? rates : []).find((r) => r.currency === "ETH")?.usdRate);
+  // The site admin's footer columns (Admin → Site content) replace the built-in ones when saved;
+  // its social links replace the Community column. External = an http(s) link.
+  const adminColumns = (footer?.columns || []).map((col, i) => ({
+    order: i + 2,
+    title: col.title,
+    links: (col.links || []).map((l) => ({ label: l.label, href: l.href, external: /^https?:/i.test(l.href) })),
   }));
+  const socialLinks = (social?.links || []).map((l) => ({
+    label: l.network === "x" ? "X" : l.network.charAt(0).toUpperCase() + l.network.slice(1),
+    href: l.href,
+    external: true,
+  }));
+  const builtIn = columns
+    .map((col) => (col.title === "Community" ? { ...col, links: socialLinks } : col))
+    .map((col) =>
+      col.title === "Support" && support?.helpCenterUrl
+        ? { ...col, links: col.links.map((l) => (l.label === "Help Center" ? { ...l, href: support.helpCenterUrl } : l)) }
+        : col.title === "Support"
+          ? { ...col, links: col.links.filter((l) => l.label !== "Help Center") }
+          : col
+    );
+  const linkColumns = (adminColumns.length ? adminColumns : builtIn)
+    .map((col) => ({
+      ...col,
+      links: col.links.filter(
+        (l) => (l.label !== "Affiliate Program" || on("affiliate")) && (l.label !== "VIP Program" || on("vip"))
+      ),
+    }))
+    .filter((col) => col.links.length);
   const [language, setLanguage] = useState("English");
   const [odd, setOdd] = useState("Decimal");
 
@@ -167,9 +191,9 @@ export default function Footer() {
         <div className="Footer_row">
           <div className="Footer_column mobile-top Footer_columnOrder0">
             <div className="Footer_brandingWrapper">
-              <a href="/" title="Shuffle Casino" onClick={(e) => e.preventDefault()}>
+              <a href="/" title={siteName} onClick={(e) => e.preventDefault()}>
                 <div className="Footer_icon">
-                  <img alt="logo" height="24" src="/icons/logo.svg" />
+                  <img alt="logo" height="24" src={brand?.logoUrl || "/icons/logo.svg"} />
                 </div>
               </a>
             </div>
@@ -228,16 +252,21 @@ export default function Footer() {
           setOdd={setOdd}
         />
 
-        <p className="Footer_description">
-          Shuffle is owned and operated by Natural Nine B.V., Curaçao company registration number 160998, with its registered address at
-          Korporaalweg 10, Willemstad, Curaçao and is licensed by the Curaçao Gaming Control Board to offer games of chance under license
-          number OGL/2024/1337/0628. Contact us at <a href="mailto:support@shuffle.com">support@shuffle.com</a>.
-        </p>
+        {(legal?.companyNote || support?.email) && (
+          <p className="Footer_description" style={{ whiteSpace: "pre-line" }}>
+            {legal?.companyNote}
+            {support?.email && (
+              <>
+                {" "}Contact us at <a href={`mailto:${support.email}`}>{support.email}</a>.
+              </>
+            )}
+          </p>
+        )}
 
         <div className="Footer_footerBottom">
-          <span>1 ETH = $2,454.82</span>
+          <span>{Number.isFinite(ethUsd) && ethUsd > 0 ? `1 ETH = $${ethUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}</span>
           <div className="Footer_bottomRight">
-            <span className="Footer_copyrightText">© {new Date().getFullYear()} Shuffle.com | All Rights Reserved</span>
+            <span className="Footer_copyrightText">{legal?.copyright || `© ${new Date().getFullYear()} ${siteName} | All Rights Reserved`}</span>
             <div className="Footer_bottomRightIcons">
               <a href="https://cert.cga.cw/" rel="noopener noreferrer" target="_blank">
                 <img alt="CGA Verified Certificate Seal" src="/images/cga-seal.png" width="51" height="32" />

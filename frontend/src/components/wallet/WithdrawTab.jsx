@@ -10,6 +10,7 @@ import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import WalletSelect, { CoinIcon } from "./CurrencySelect";
 import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
+import { useApi } from "../../lib/useResource";
 
 /**
  * The Withdraw tab — reference `Withdraw`.
@@ -32,6 +33,32 @@ import { useSiteFeatures } from "../../lib/useSiteFeatures";
  */
 
 const PERCENTAGES = [25, 50, 75];
+
+/** The withdrawal refusals a player can act on, in their words. */
+const WITHDRAW_REFUSALS = {
+  FIAT_WITHDRAW_KYC_REQUIRED: "Complete identity verification (Settings → Verify) before withdrawing.",
+  WITHDRAW_WAGER_REQUIRED: "Wager your deposit and bonus before withdrawing.",
+  BONUS_FORFEIT_REQUIRED: "This withdrawal forfeits your active bonus — tick the box to confirm.",
+};
+
+/** Why `GET /withdrawals/requirements` says no, from its `missing[]`. */
+function requirementText(req) {
+  const parts = (req.missing || []).map((m) =>
+    m === "kyc"
+      ? WITHDRAW_REFUSALS.FIAT_WITHDRAW_KYC_REQUIRED
+      : m === "wager"
+        ? `Wager ${req.wager?.remaining ?? ""} ${req.wager?.currency ?? ""} more before withdrawing.`.replace(/\s+/g, " ")
+        : m === "cap"
+          ? "You have reached your withdrawal cap — wager more to raise it."
+          : m === "daily"
+            ? "You have reached today's withdrawal limit."
+            : `Withdrawal blocked: ${m}.`
+  );
+  return parts.join(" ") || "Withdrawals are not available on this account yet.";
+}
+
+const accountLabel = (a) =>
+  a.method === "upi" ? `UPI · ${a.upiId}` : `${a.bankName || "Bank"} · ${a.accountNumberMasked || ""} · ${a.ifscCode || ""}`;
 
 /**
  * The crypto payout form.
@@ -218,15 +245,29 @@ export default function WithdrawTab({
   });
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [nonce, setNonce] = useState(0);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const fiat = isFiat(coin);
+  const { data: accounts } = useApi(`wallet:bank-accounts:${nonce}`, () => funding.bankAccounts(), { enabled: fiat });
+  const { data: requirements } = useApi(`wallet:wd-req:${coin}:${nonce}`, () => funding.withdrawRequirements(coin), { enabled: fiat });
+  /** "" = the default saved account, "new" = type one in. */
+  const [accountChoice, setAccountChoice] = useState("");
+  const saved = Array.isArray(accounts) ? accounts : [];
+  const account = accountChoice === "new" ? null : saved.find((a) => a.id === accountChoice) || saved.find((a) => a.isDefault) || saved[0] || null;
+  const [forfeitBonus, setForfeitBonus] = useState(false);
+  const blocked = requirements && requirements.ok === false ? requirementText(requirements) : null;
 
   /** The same rule the backend's `superRefine` applies, checked before the request. */
   const missing = (() => {
     if (!form.amount || Number(form.amount) <= 0) return "Enter an amount.";
     if (Number(form.amount) > Number(available)) return "That is more than your balance.";
+    if (account) return null;
     if (!form.accountHolderName.trim()) return "The account holder name is required.";
     if (coin === "INR") {
-      if (!form.ifscCode.trim() && !form.upiId.trim()) return "For INR, enter either an IFSC code or a UPI id.";
+      if (!form.upiId.trim() && !(form.accountNumber.trim() && form.ifscCode.trim())) {
+        return "For INR, enter a UPI id, or an account number with its IFSC code.";
+      }
       return null;
     }
     if (!form.bankName.trim() || !form.accountNumber.trim() || !form.ifscCode.trim()) {
@@ -251,17 +292,42 @@ export default function WithdrawTab({
     try {
       // `.strict()` — an empty optional string is still an unexpected value to
       // send, so only the filled fields go.
-      const body = { amount: form.amount, currency: coin, accountHolderName: form.accountHolderName.trim() };
-      for (const key of ["bankName", "accountNumber", "ifscCode", "upiId"]) {
-        if (form[key].trim()) body[key] = form[key].trim();
+      const body = { amount: form.amount, currency: coin, ...(forfeitBonus ? { forfeitBonus: true } : {}) };
+      let accountId = account?.id;
+      // INR payout details are saved as a payout account first (`/bank-accounts` is India-shaped:
+      // UPI or account + IFSC), so the next withdrawal is one tap. Other fiat goes inline.
+      if (!accountId && coin === "INR") {
+        const holder = form.accountHolderName.trim();
+        const created = await funding.addBankAccount(
+          form.upiId.trim()
+            ? { method: "upi", accountHolderName: holder, upiId: form.upiId.trim() }
+            : {
+                method: "bank",
+                accountHolderName: holder,
+                accountNumber: form.accountNumber.trim(),
+                ifscCode: form.ifscCode.trim(),
+                ...(form.bankName.trim() ? { bankName: form.bankName.trim() } : {}),
+              }
+        );
+        accountId = created?.id;
+        setAccountChoice(String(accountId || ""));
+      }
+      if (accountId) body.bankAccountId = String(accountId);
+      else {
+        body.accountHolderName = form.accountHolderName.trim();
+        for (const key of ["bankName", "accountNumber", "ifscCode", "upiId"]) {
+          if (form[key].trim()) body[key] = form[key].trim();
+        }
       }
       await funding.createFiatWithdrawal(body);
       setStatus({ ok: true, message: "Withdrawal requested. It stays pending until an operator approves it." });
       setForm((f) => ({ ...f, amount: "" }));
       refreshBalances();
+      setNonce((n) => n + 1);
     } catch (error) {
       const fields = error instanceof ApiError ? error.fields.map((f) => f.message).join(" ") : "";
-      setStatus({ ok: false, message: fields || error.message || "Could not request the withdrawal." });
+      if (error?.code === "BONUS_FORFEIT_REQUIRED") setNonce((n) => n + 1);
+      setStatus({ ok: false, message: fields || WITHDRAW_REFUSALS[error?.code] || error.message || "Could not request the withdrawal." });
     } finally {
       setBusy(false);
     }
@@ -298,12 +364,24 @@ export default function WithdrawTab({
         ) : (
           <>
             <div className="Withdraw_inputWrapper">
-              {field("wd-holder", "Account holder name*", "accountHolderName", "As it appears on the account")}
-              {coin === "INR"
+              {saved.length > 0 && (
+                <WalletSelect
+                  label="Payout account"
+                  options={[
+                    ...saved.map((a) => ({ value: a.id, label: accountLabel(a) })),
+                    { value: "new", label: "Add a new account" },
+                  ]}
+                  value={account ? account.id : "new"}
+                  onChange={setAccountChoice}
+                />
+              )}
+              {!account && field("wd-holder", "Account holder name*", "accountHolderName", "As it appears on the account")}
+              {account ? null : coin === "INR"
                 ? (
                   <>
-                    {field("wd-ifsc", "IFSC code", "ifscCode", "e.g. HDFC0000123")}
                     {field("wd-upi", "UPI id", "upiId", "name@bank")}
+                    {field("wd-account", "Account number (if no UPI)", "accountNumber", "")}
+                    {field("wd-ifsc", "IFSC code (if no UPI)", "ifscCode", "e.g. HDFC0000123")}
                   </>
                 )
                 : (
@@ -362,6 +440,19 @@ export default function WithdrawTab({
               Withdrawals are reviewed by an operator before they are paid out.
             </span>
 
+            {blocked && (
+              <div className="NoticeMessage_root" role="alert">
+                <span className="NoticeMessage_text" style={{ color: "var(--color-warning)" }}>{blocked}</span>
+              </div>
+            )}
+
+            {requirements?.bonusForfeitRequired && requirements?.bonusForfeitAllowed && (
+              <label className="NoticeMessage_text">
+                <input type="checkbox" checked={forfeitBonus} onChange={(e) => setForfeitBonus(e.target.checked)} /> I forfeit my
+                active bonus with this withdrawal
+              </label>
+            )}
+
             {status && (
               <div className="NoticeMessage_root" role={status.ok ? "status" : "alert"}>
                 <span
@@ -375,7 +466,7 @@ export default function WithdrawTab({
 
             <button
               type="submit"
-              disabled={busy || Boolean(missing)}
+              disabled={busy || Boolean(missing) || Boolean(blocked) || (requirements?.bonusForfeitRequired && !forfeitBonus)}
               className={cx("ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary")}
             >
               <span className="ButtonVariants_buttonContent">{busy ? "Requesting…" : "Withdraw"}</span>

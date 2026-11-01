@@ -29,6 +29,7 @@ import sportsPages from "./data/sports-pages.json";
 import { hasCategory } from "./lib/categories";
 import { navigate, usePath } from "./lib/router";
 import { useSession } from "./lib/sessionContext";
+import { useGate } from "./lib/gates";
 
 const pages = {
   "/": CasinoHome,
@@ -132,9 +133,24 @@ function AffiliateProgram({ tab }) {
   return signedIn ? <AffiliateProgramPage tab={tab} /> : <AffiliatePage />;
 }
 
+/** Path prefix → the owner/admin gate that must be open for it (`lib/gates.js`). First match wins. */
+const ROUTE_GATES = [
+  [/^\/vip-program$/, "vip"],
+  [/^\/blog(\/|$)/, "blog"],
+  [/^\/affiliate(\/|$)/, "affiliate"],
+  [/^\/challenges$/, "challenges"],
+  [/^\/(sports\/)?promotions(\/|$)/, "promotions"],
+  [/^\/sports(\/|$)/, "sports"],
+  [/^\/lottery$/, "lottery"],
+  [/^\/casino\//, "casino"],
+];
+
 export default function App() {
   const path = usePath();
+  const on = useGate();
+  const gate = ROUTE_GATES.find(([re]) => re.test(path))?.[1];
+  // A page the owner or the site admin switched off is the lobby, like any unknown path.
   return (
-    <AppShell>{renderPage(path)}</AppShell>
+    <AppShell>{gate && !on(gate) ? <CasinoHome /> : renderPage(path)}</AppShell>
   );
 }

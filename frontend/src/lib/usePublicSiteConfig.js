@@ -8,6 +8,8 @@ export function usePublicSiteConfig() {
   const { data } = useApi("site:public", () => site.config());
   return {
     loading: !data,
+    /** Every site-admin switch, raw — `lib/gates.js` reads these. `null` until answered. */
+    flags: data ?? null,
     affiliateEnabled: data?.affiliate !== false,
     commissionPercent: data?.comissionpercent ?? DEFAULT_COMMISSION,
     registerBonus: data?.registerbonus,

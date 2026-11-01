@@ -4,6 +4,7 @@ import { useSession } from "../lib/sessionContext";
 import VipPublic from "../components/vip/VipPublic";
 import VipOverview from "../components/vip/VipOverview";
 import VipRewards from "../components/vip/VipRewards";
+import { useGate } from "../lib/gates";
 import VipLevels from "../components/vip/VipLevels";
 import VipBenefitsTable from "../components/vip/VipBenefitsTable";
 
@@ -30,13 +31,14 @@ import VipBenefitsTable from "../components/vip/VipBenefitsTable";
 function VipMember({ user }) {
   const { data: vip } = useApi("vip:progress", () => vipApi.progress());
   const { data: levels } = useApi("vip:levels", () => vipApi.levels());
+  const on = useGate();
 
   return (
     <section className="LayoutContainer_root LayoutContainer_column LayoutContainer_mobile-top-md2 LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-top-lg1 LayoutContainer_tablet-bottom-lg1 LayoutContainer_desktop-top-lg1 LayoutContainer_desktop-bottom-lg1">
       <h2 className="Heading_root Heading_h2 TitlePage_root">VIP Program</h2>
 
       <VipOverview username={user?.name} vip={vip} levels={levels} />
-      <VipRewards levels={levels} />
+      {on("bonus") && <VipRewards levels={levels} />}
       <VipLevels levels={levels} vip={vip} />
 
       <div className="VipOverviewSectionWrapper_root">

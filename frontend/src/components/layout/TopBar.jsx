@@ -1,3 +1,4 @@
+import { useBranding } from "../../lib/siteContent";
 /**
  * Main-column header — reference `Header` module.
  *
@@ -148,9 +149,11 @@ function SignedOutActions({ onAuth }) {
 export default function TopBar({ onAuth = () => {} }) {
   const { signedIn, restoring } = useSession();
 
+  // The owner's logo and mark when branded; the bundled Shuffle artwork otherwise.
+  const brand = useBranding();
   const logo = (cls, src = "/icons/logo.svg") => (
     <a
-      title="Shuffle Casino"
+      title={brand?.siteName || "Shuffle Casino"}
       aria-label="Home"
       className={cls}
       href="/"
@@ -159,7 +162,7 @@ export default function TopBar({ onAuth = () => {} }) {
         navigate("/");
       }}
     >
-      <img height="28" alt="logo" src={src} />
+      <img height="28" alt="logo" src={(src.includes("small") ? brand?.markUrl : brand?.logoUrl) || src} />
     </a>
   );
 
