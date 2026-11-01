@@ -264,6 +264,24 @@ export const toStandingRow = (row, index) => ({
 
 export const toStandingRows = (rows) => (Array.isArray(rows) ? rows.map(toStandingRow) : []);
 
+/** A `/user/race/:type/leaderboard` entry. `name` is already masked server-side for hidden players. */
+export const toRaceRows = (rows, currency) =>
+  (Array.isArray(rows) ? rows : []).map((r) => ({
+    rank: r.rank,
+    user: r.name ? { name: r.name, vip: null } : null,
+    amount: `$${formatAmount(r.usdWagered)}`,
+    prize: Number(r.payout) > 0 ? `${formatAmount(r.payout)} ${currency || ""}`.trim() : null,
+    coin: String(currency || "").toLowerCase(),
+  }));
+
+/** `2026-11-08T18:30:00Z` → `5d 3h 12m`, or `""` once passed. */
+export function timeLeft(iso) {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return "";
+  const m = Math.floor(ms / 60000);
+  return `${Math.floor(m / 1440)}d ${Math.floor((m % 1440) / 60)}h ${m % 60}m`;
+}
+
 /** Grouped to two decimals — the board's own format. */
 export function formatAmount(value) {
   const n = Number(value);

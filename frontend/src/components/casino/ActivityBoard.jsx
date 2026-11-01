@@ -3,9 +3,10 @@ import { cx } from "../../lib/carousel";
 import { UserCell } from "./PromoWidgets";
 import { RaceHeader } from "./BoardHeaders";
 import { sections } from "../../data/catalog";
-import { betHistory } from "../../lib/endpoints";
-import { toBoardRows, toStandingRows } from "../../lib/adapters";
+import { betHistory, race as raceApi } from "../../lib/endpoints";
+import { formatAmount, timeLeft, toBoardRows, toRaceRows } from "../../lib/adapters";
 import { useSession } from "../../lib/sessionContext";
+import { useGate } from "../../lib/gates";
 
 /**
  * "My Bets" is the one tab that needs a session. The reference disables it
@@ -119,6 +120,7 @@ function Row({ r, index }) {
  */
 export default function ActivityBoard({ visible = true, initialTab = "latest-bets", hideTabs = [] }) {
   const { signedIn } = useSession();
+  const on = useGate();
   const [selected, setSelected] = useState(initialTab);
   const [limit, setLimit] = useState("10");
   const [limitOpen, setLimitOpen] = useState(false);
@@ -150,7 +152,7 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
    * for the reason in `lib/useResource.js`: a fresh database has four bets in
    * it and an empty board would read as a broken page rather than a quiet one.
    */
-  const [live, setLive] = useState({ latest: null, high: null, mine: null, race: null });
+  const [live, setLive] = useState({ latest: null, high: null, mine: null, race: null, raceInfo: null });
 
   useEffect(() => {
     if (!visible) return undefined;
@@ -169,8 +171,10 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
           const { data } = await betHistory.mine({ limit: size });
           if (!cancelled) setLive((s) => ({ ...s, mine: toBoardRows(data, knownGames) }));
         } else if (active === "race") {
-          const board = await betHistory.leaderboard({ limit: size });
-          if (!cancelled) setLive((s) => ({ ...s, race: toStandingRows(board?.rows) }));
+          const board = await raceApi.leaderboard("weekly");
+          if (!cancelled) {
+            setLive((s) => ({ ...s, race: toRaceRows(board?.leaderboard, board?.payoutCurrency), raceInfo: board }));
+          }
         }
       } catch {
         // Leave whatever is on screen. The fallback below covers a null.
@@ -199,7 +203,16 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
 
   const feed = feeds[feedKey];
   const staticBoard = boards[active];
-  const board = staticBoard && active === "race" ? { ...staticBoard, rows: live.race || [] } : staticBoard;
+  const board = staticBoard && active === "race" ? {
+          ...staticBoard,
+          rows: live.race || [],
+          header: (
+            <RaceHeader
+              prize={live.raceInfo ? `${formatAmount(live.raceInfo.payoutNetPrizePool)} ${live.raceInfo.payoutCurrency || ""}` : "—"}
+              remaining={live.raceInfo ? timeLeft(live.raceInfo.endsAt) || "—" : "—"}
+            />
+          ),
+        } : staticBoard;
   const cols = board ? board.columns : columns;
 
   const rows = feed.slice(0, Number(limit) || 10);
@@ -258,7 +271,7 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
           <div className="Flex_root Flex_column Flex_md2 ActivityBoard_actionPanel">
             <div className="Tab_root">
               <div className="Tab_tabsContainer" role="tablist">
-                {tabs.filter((t) => !hideTabs.includes(t.id)).map((t) => (
+                {tabs.filter((t) => !hideTabs.includes(t.id) && (t.id !== "race" || on("races"))).map((t) => (
                   <button
                     key={t.id}
                     type="button"

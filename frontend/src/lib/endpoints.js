@@ -218,6 +218,12 @@ export const jsGames = {
   history: () => get("/casino/js-games/v2/history"),
 };
 
+/** The site's races — `GET /user/race/:type/leaderboard` (`daily` | `weekly` | `monthly`), public. */
+export const race = {
+  /** `{ endsAt, payoutNetPrizePool, payoutCurrency, leaderboard: [{ rank, name, points, usdWagered, payout }], me }`. */
+  leaderboard: (type = "weekly") => get(`/user/race/${type}/leaderboard`),
+};
+
 export const betHistory = {
   /** The public ticker — nobody is named. */
   live: (limit = 20) => get("/casino/bet-history/live", { query: { limit }, auth: false }),
