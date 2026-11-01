@@ -3,7 +3,7 @@
  */
 
 import { betHistory } from "./endpoints";
-import { formatBlogDate, stripHtml } from "./blogs";
+import { stripHtml } from "./blogs";
 
 export function promotionImageUrl(imageUrl) {
   if (!imageUrl) return null;

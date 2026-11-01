@@ -68,16 +68,30 @@ export const redeem = {
   mine: (query) => get("/user/bonus/codes", { query }),
 };
 
+/** `status` is `NotSubmitted` | `Unverified` | `Pending` | `Verified` | `Rejected`. */
 export const kyc = {
   status: () => get("/user/kyc/status"),
+  /**
+   * Multipart: firstName, lastName, dateOfBirth, address, city, country,
+   * documentType (`id_card` | `passport` | `driving_licence`), and at least one
+   * of the files `idFront`, `idBack`, `passport`.
+   */
+  submit: (form) => post("/user/kyc/submit", form),
 };
 
+/** The email-verification code (6 digits) — deposits can be gated on a verified address. */
+export const emailVerify = {
+  request: () => post("/user/email/verify/request"),
+  confirm: (code) => post("/user/email/verify/confirm", { code }),
+};
+
+/** `status` answers `{ isEnabled, hasInitiated }`. */
 export const twoFactor = {
   status: () => get("/user/2fa/status"),
-  /** Begins setup — answers the secret and the otpauth URI to show as a QR. */
+  /** Begins setup — answers `{ qrCode, secret }`; `qrCode` is a data: URL. */
   begin: () => post("/user/2fa/enable"),
-  confirm: (token) => post("/user/2fa/setup-verify", { token }),
-  disable: (token) => post("/user/2fa/disable", { token }),
+  confirm: (code) => post("/user/2fa/setup-verify", { code }),
+  disable: (code, password) => post("/user/2fa/disable", { code, password }),
 };
 
 export const wallet = {
@@ -95,9 +109,13 @@ export const wallet = {
   ledger: (query) => get("/user/wallet/ledger", { query, withMeta: true }),
 };
 
-/** The sportsbook's own bet list — `sports-service`, which may be down. */
+/**
+ * The player's exchange bets — mssports `GET /sports/user/cricket/sports-bets/user`.
+ * `page` + `limit`; `status: "all"` is open and settled together (the default is matched only).
+ * Answers `{ success, data: rows[], pagination }` with raw `sports_bets` columns.
+ */
 export const sportsBets = {
-  mine: (query) => get("/sports/bets", { query, withMeta: true }),
+  mine: (query) => get("/sports/user/cricket/sports-bets/user", { query: { status: "all", ...query }, withMeta: true }),
 };
 
 export const vip = {
@@ -269,10 +287,8 @@ export const affiliate = {
   /** Attach the signed-in player to a referrer (code or username). */
   joinTeam: (referralCode, campaign) =>
     post("/user/affiliate/team/join", {
-      body: {
-        referralCode,
-        ...(campaign ? { campaign: String(campaign).trim().slice(0, 80) } : {}),
-      },
+      referralCode,
+      ...(campaign ? { campaign: String(campaign).trim().slice(0, 80) } : {}),
     }),
   /** `{ referralCode, total, members }` — who signed up under the code. */
   team: (query) => get("/user/affiliate/team", { query }),
@@ -281,7 +297,7 @@ export const affiliate = {
   /** `{ total, claimedTotal, currency, rows }` — unlocked rewards summary. */
   unclaimed: () => get("/user/affiliate/rewards/unclaimed"),
   claimAll: () => post("/user/affiliate/rewards/claim-all"),
-  claimOne: (rewardId) => post("/user/affiliate/rewards/claim", { body: { rewardId } }),
+  claimOne: (rewardId) => post("/user/affiliate/rewards/claim", { rewardId }),
 };
 
 export const rates = {

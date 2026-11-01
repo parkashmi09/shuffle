@@ -10,13 +10,12 @@ import Modal from "../ui/Modal";
  */
 export default function CreateCampaignModal({ referralCode, onClose, onCreated }) {
   const [name, setName] = useState("");
-  const [campaignId, setCampaignId] = useState(() => generateCampaignId());
+  const [campaignId] = useState(() => generateCampaignId());
   const [pending, setPending] = useState(false);
   const nameRef = useRef(null);
 
+  // Mounted fresh on every open, so the initial state is already a new id and an empty name.
   useEffect(() => {
-    setCampaignId(generateCampaignId());
-    setName("");
     let second = 0;
     const first = requestAnimationFrame(() => {
       second = requestAnimationFrame(() => nameRef.current?.focus());

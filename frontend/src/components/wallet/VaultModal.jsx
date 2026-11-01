@@ -80,7 +80,7 @@ export default function VaultModal({ onClose }) {
     useSession();
   const [direction, setDirection] = useState("transfer-in");
   const [withdrawMode, setWithdrawMode] = useState("standard");
-  const [lockPeriod, setLockPeriod] = useState("");
+  const [chosenLock, setLockPeriod] = useState("");
   const [coin, setCoin] = useState(headerCurrency);
   const [amount, setAmount] = useState("");
   const [pending, setPending] = useState(false);
@@ -113,11 +113,8 @@ export default function VaultModal({ onClose }) {
     [lockOptions]
   );
 
-  useEffect(() => {
-    if (!lockPeriod && lockOptions?.length) {
-      setLockPeriod(lockOptions[0].value);
-    }
-  }, [lockOptions, lockPeriod]);
+  // Nothing chosen yet means the shortest term — derived, not copied into state.
+  const lockPeriod = chosenLock || lockOptions?.[0]?.value || "";
 
   const walletBalance = balances?.[coin] ?? "0";
 

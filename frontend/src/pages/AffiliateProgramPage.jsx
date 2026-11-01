@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { cx } from "../lib/carousel";
 import { navigate } from "../lib/router";
 import { useApi } from "../lib/useResource";
@@ -353,7 +353,7 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
   const [claimingRewardId, setClaimingRewardId] = useState(null);
   const [nonce, setNonce] = useState(0);
   const [createCampaignOpen, setCreateCampaignOpen] = useState(false);
-  const [savedCampaigns, setSavedCampaigns] = useState([]);
+  const [campaignNonce, setCampaignNonce] = useState(0);
 
   const { data: info } = useApi("affiliate:info", () => affiliateApi.referralInfo(), { enabled: affiliateEnabled });
   const { data: team } = useApi("affiliate:team", () => affiliateApi.team(), { enabled: affiliateEnabled });
@@ -386,17 +386,12 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
 
   const referralCode = info?.referralCode || "";
 
-  const refreshSavedCampaigns = useCallback(() => {
-    if (!referralCode) {
-      setSavedCampaigns([]);
-      return;
-    }
-    setSavedCampaigns(listAffiliateCampaigns(referralCode));
-  }, [referralCode]);
-
-  useEffect(() => {
-    refreshSavedCampaigns();
-  }, [refreshSavedCampaigns]);
+  // Campaigns are saved in this browser; the nonce re-reads them after a create.
+  const savedCampaigns = useMemo(
+    () => (referralCode && campaignNonce >= 0 ? listAffiliateCampaigns(referralCode) : []),
+    [referralCode, campaignNonce]
+  );
+  const refreshSavedCampaigns = useCallback(() => setCampaignNonce((n) => n + 1), []);
 
   const campaignGroups = useMemo(() => {
     const code = referralCode;
@@ -445,8 +440,8 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
 
   const earnings = useMemo(() => {
     const wagered =
-      team?.totalWager != null && team.totalWager !== ""
-        ? team.totalWager
+      team?.totalWager != null && team?.totalWager !== ""
+        ? team?.totalWager
         : totalReferredWager(rewards?.rows ?? []);
     // Joining bonuses and tier unlocks live in `unlocked_rewards`; wager commission
     // is in `rewards`. Overview must count both, not commission rows alone.
@@ -603,7 +598,7 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
         <CreateCampaignModal
           referralCode={referralCode}
           onClose={() => setCreateCampaignOpen(false)}
-          onCreated={(campaigns) => setSavedCampaigns(campaigns)}
+          onCreated={refreshSavedCampaigns}
         />
       )}
     </section>

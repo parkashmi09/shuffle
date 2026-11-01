@@ -161,6 +161,8 @@ function FiatDeposit({ coin }) {
   const account = accounts?.[0] || null;
 
   const [form, setForm] = useState({ amount: "", transactionId: "" });
+  // The backend refuses a fiat claim without the transfer's screenshot (SCREENSHOT_REQUIRED).
+  const [screenshot, setScreenshot] = useState(null);
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -179,6 +181,7 @@ function FiatDeposit({ coin }) {
       body.append("amount", form.amount);
       body.append("currency", coin);
       body.append("transactionId", form.transactionId);
+      if (screenshot) body.append("screenshot", screenshot);
       if (account) {
         body.append("bankName", account.bankName || "");
         body.append("accountNumber", account.accountNumber || "");
@@ -189,6 +192,7 @@ function FiatDeposit({ coin }) {
       await funding.createFiatDeposit(body);
       setStatus({ ok: true, message: "Deposit submitted. It will show as pending until an operator confirms it." });
       setForm({ amount: "", transactionId: "" });
+      setScreenshot(null);
     } catch (error) {
       const fields = error instanceof ApiError ? error.fields.map((f) => f.message).join(" ") : "";
       setStatus({ ok: false, message: fields || error.message || "Could not submit the deposit." });
@@ -257,6 +261,23 @@ function FiatDeposit({ coin }) {
             />
           </div>
         </div>
+
+        <div className="TextInput_formControlWrapper">
+          <div className="TextInput_labelGroup">
+            <div className="LabelBlock_root TextInput_labelBlock">
+              <label className="Label_root" htmlFor="deposit-screenshot">Payment screenshot*</label>
+            </div>
+          </div>
+          <div className="InputWrapper_root">
+            <input
+              id="deposit-screenshot"
+              className="Input_root"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
+            />
+          </div>
+        </div>
       </div>
 
       {status && (
@@ -270,7 +291,7 @@ function FiatDeposit({ coin }) {
       <button
         type="submit"
         form="deposit-form"
-        disabled={busy || !form.amount || !form.transactionId}
+        disabled={busy || !form.amount || !form.transactionId || !screenshot}
         className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary"
         onClick={submit}
       >

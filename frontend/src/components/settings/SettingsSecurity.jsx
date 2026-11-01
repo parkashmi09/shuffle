@@ -3,6 +3,7 @@ import { cx } from "../../lib/carousel";
 import { useApi } from "../../lib/useResource";
 import { twoFactor as twoFactorApi } from "../../lib/endpoints";
 import ChangePasswordModal from "./ChangePasswordModal";
+import Modal from "../ui/Modal";
 import Switch from "./Switch";
 
 /**
@@ -27,8 +28,44 @@ const PROVIDERS = [
 
 export default function SettingsSecurity() {
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const { data: totp } = useApi("settings:2fa", () => twoFactorApi.status().catch(() => null));
-  const enabled = Boolean(totp?.enabled);
+  const { data: totp, reload } = useApi("settings:2fa", () => twoFactorApi.status().catch(() => null));
+  const enabled = Boolean(totp?.isEnabled);
+  // `setup` holds `{ qrCode, secret }` while enabling; `disabling` asks for the code + password.
+  const [setup, setSetup] = useState(null);
+  const [disabling, setDisabling] = useState(false);
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const run = async (fn) => {
+    setError(null);
+    setBusy(true);
+    try {
+      await fn();
+    } catch (err) {
+      setError(err?.message || "That did not go through.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const done = () => {
+    setSetup(null);
+    setDisabling(false);
+    setCode("");
+    setPassword("");
+    reload();
+  };
+  const onToggle = () =>
+    enabled ? setDisabling(true) : run(async () => setSetup(await twoFactorApi.begin()));
+  const onConfirm = (event) => {
+    event.preventDefault();
+    run(async () => {
+      if (setup) await twoFactorApi.confirm(code.trim());
+      else await twoFactorApi.disable(code.trim(), password);
+      done();
+    });
+  };
 
   return (
     <div className="PasswordAndSecurity_passwordAndSecurityPageWrapper">
@@ -56,12 +93,51 @@ export default function SettingsSecurity() {
             <p className="TwoFactorAuthentication_totpStatusText">{enabled ? "Enabled" : "Disabled"}</p>
           </div>
           <div className="TwoFactorAuthentication_buttonWrapper">
-            <button type="button" className="ButtonVariants_root ButtonVariants_buttonHeightSmall ButtonVariants_primary">
+            <button type="button" disabled={busy || !totp} onClick={onToggle} className="ButtonVariants_root ButtonVariants_buttonHeightSmall ButtonVariants_primary">
               <span className="ButtonVariants_buttonContent">{enabled ? "Disable" : "Enable"}</span>
             </button>
           </div>
         </div>
+        {error && !setup && !disabling && <p className="TwoFactorAuthentication_descriptionText" role="alert">{error}</p>}
       </form>
+
+      {(setup || disabling) && (
+        <Modal onClose={done} label="Two-Factor Authentication">
+          <h3 className="Header_root">{setup ? "Enable 2FA" : "Disable 2FA"}</h3>
+          <form className="ChangePasswordModal_root" onSubmit={onConfirm}>
+            {setup && (
+              <>
+                <p className="Subheader_root"><span>Scan this code with your authenticator app, then enter the 6-digit code.</span></p>
+                <img alt="2FA QR code" width="180" height="180" src={setup.qrCode} style={{ alignSelf: "center", background: "#fff" }} />
+                <p className="VerificationCard_text" style={{ wordBreak: "break-all" }}>{setup.secret}</p>
+              </>
+            )}
+            <div className="FormControlWrapper_root">
+              <label className="Label_root" htmlFor="totp-code">Code*</label>
+              <div className="InputWrapper_root">
+                <input id="totp-code" className="Input_root" inputMode="numeric" maxLength={6} placeholder="000000" value={code} onChange={(e) => setCode(e.target.value)} />
+              </div>
+            </div>
+            {!setup && (
+              <div className="FormControlWrapper_root">
+                <label className="Label_root" htmlFor="totp-password">Password*</label>
+                <div className="InputWrapper_root">
+                  <input id="totp-password" type="password" className="Input_root" value={password} onChange={(e) => setPassword(e.target.value)} />
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="WarningMessage_container">
+                <img alt="warning" className="WarningMessage_icon" src="/icons/exclamation.svg" />
+                <span className="WarningMessage_content">{error}</span>
+              </div>
+            )}
+            <button type="submit" disabled={busy || code.trim().length !== 6 || (!setup && !password)} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary ChangePasswordModal_button">
+              <span className="ButtonVariants_buttonContent">{setup ? "Enable" : "Disable"}</span>
+            </button>
+          </form>
+        </Modal>
+      )}
 
       <div className="LinkedAccountsPanel_passwordAndSecurityLinkedAccountsPanel">
         <form className="Panel_panelWrapper" onSubmit={(event) => event.preventDefault()}>

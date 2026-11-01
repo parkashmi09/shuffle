@@ -325,15 +325,16 @@ const SOURCES = {
   },
   "sports-bets": {
     fetch: ({ limit }) => sportsBets.mine({ limit }).then((r) => r?.data ?? []),
-    key: (row) => row.betId || row.id,
+    key: (row) => row.id,
+    // Raw `sports_bets` columns — see `sportsPayout` for the missing payout column.
     cells: (row) => [
-      row.status || "—",
-      <span className="SportsBetsTransactions_fixtureName">{row.eventName || row.matchName || "—"}</span>,
-      shortDate(row.createdAt || row.placedAt),
+      row.result_status || row.status || "—",
+      <span className="SportsBetsTransactions_fixtureName">{row.match_title || row.event_name || "—"}</span>,
+      shortDate(row.created_at),
       row.odds ?? "—",
-      <Money amount={row.stake} coin={row.currency} />,
-      <Money amount={row.payout} coin={row.currency} />,
-      shorten(row.betId || row.id),
+      <Money amount={row.stake_amount} coin={row.original_currency || "INR"} />,
+      <Money amount={sportsPayout(row)} coin={row.original_currency || "INR"} />,
+      shorten(String(row.id)),
     ],
   },
   "tip-rain": null,
@@ -353,6 +354,13 @@ const SOURCES = {
     ],
   },
 };
+
+/** No payout column on `sports_bets`: a won back bet returns stake × odds, a won lay its liability + the stake. */
+function sportsPayout(row) {
+  if (!/^won$/i.test(row.result_status || "")) return 0;
+  const stake = Number(row.stake_amount) || 0;
+  return /^(lay|no)$/i.test(row.bet_type || "") ? stake + (Number(row.liability) || 0) : stake * (Number(row.odds) || 0);
+}
 
 export default function TransactionsPage() {
   const path = usePath();

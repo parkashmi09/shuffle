@@ -229,10 +229,7 @@ export function SessionProvider({ children }) {
 
   /** Streamer Mode (`hideBalance`) follows the account, not just this browser. */
   useEffect(() => {
-    if (state.status !== "authenticated") {
-      setHideBalance(false);
-      return undefined;
-    }
+    if (state.status !== "authenticated") return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -267,9 +264,8 @@ export function SessionProvider({ children }) {
     async (body) => {
       const referredBy = normalizeReferralInput(body.referredBy || readStoredReferral());
       const referralCampaign = readStoredCampaign();
-      const payload = referredBy
-        ? { ...body, referredBy, ...(referralCampaign ? { referralCampaign } : {}) }
-        : body;
+      // The register schema is strict and has no campaign field; the campaign goes with `joinTeam` below.
+      const payload = referredBy ? { ...body, referredBy } : body;
       const created = await authApi.register(payload);
       await login(body.username, body.password);
       if (referredBy) {
@@ -318,8 +314,8 @@ export function SessionProvider({ children }) {
       setFiatView,
       hideZeroBalances,
       setHideZeroBalances,
-      /** Streamer Mode — sensitive figures render as a mask when true. */
-      hideBalance,
+      /** Streamer Mode — sensitive figures render as a mask when true. Signed out is always off. */
+      hideBalance: state.status === "authenticated" && hideBalance,
       setHideBalance,
       rates,
       login,

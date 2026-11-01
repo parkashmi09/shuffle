@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { PromotionTile } from "./PromotionsPage";
 import { cx } from "../lib/carousel";
 import { navigate } from "../lib/router";
 import ActivityBoard from "../components/casino/ActivityBoard";
@@ -19,23 +18,24 @@ export default function PromotionArticlePage({ path }) {
   const parsed = useMemo(() => parsePromotionPath(path), [path]);
   const [post, setPost] = useState(null);
   const [board, setBoard] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [fetchError, setError] = useState(null);
+  const [fetching, setLoading] = useState(true);
+  const segment = parsed?.segment;
+  const slug = parsed?.slug;
+  // An unparseable path is known at render time — no request, no state to set.
+  const error = parsed ? fetchError : "Promotion not found.";
+  const loading = parsed ? fetching : false;
 
   const root = parsed?.segment === "sports" ? "/sports/promotions" : "/promotions";
 
   useEffect(() => {
-    if (!parsed) {
-      setLoading(false);
-      setError("Promotion not found.");
-      return;
-    }
+    if (!segment) return undefined;
     let cancelled = false;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await site.promotionBySlug(parsed.segment, parsed.slug);
+        const data = await site.promotionBySlug(segment, slug);
         if (cancelled) return;
         setPost(data);
         const resolved = data.leaderboard ? await fetchLivePromotionBoard(data.leaderboard) : null;
@@ -53,7 +53,7 @@ export default function PromotionArticlePage({ path }) {
     return () => {
       cancelled = true;
     };
-  }, [parsed?.segment, parsed?.slug]);
+  }, [segment, slug]);
 
   const tile = useMemo(() => (post ? promotionToTile(post) : null), [post]);
   const bodyHtml = useMemo(() => {
