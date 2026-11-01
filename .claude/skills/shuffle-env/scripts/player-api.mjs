@@ -137,7 +137,6 @@ if (!NO_MONEY) {
 
 await step('casino bet history', 'GET', '/api/v1/casino/bet-history', t)
 await step('casino bet stats', 'GET', '/api/v1/casino/bet-history/stats', t)
-await step('sports bets (site route)', 'GET', '/api/v1/sports/bets', t)
 await step('exchange bets (cricket)', 'GET', '/api/v1/sports/user/cricket/sports-bets/user', t, undefined, '/sports/user/cricket/sports-bets/user')
 await step('history all', 'GET', '/api/v1/user/history', t)
 await step('history deposits', 'GET', '/api/v1/user/history/deposits', t)

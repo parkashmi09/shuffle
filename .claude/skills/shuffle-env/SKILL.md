@@ -69,7 +69,7 @@ A fresh player through: register → login → me / profile get + update / prefe
 overview, history, record → VIP / rakeback / notifications / vault → KYC + 2FA status → wallet → INR deposit methods → lodge ₹1000
 (screenshot) → admin approve (balance must go +1000) → payout account → withdrawal requirements → withdraw ₹200 (either −200 then
 cancel refunds it, or the owner's gate answers: `FIAT_WITHDRAW_KYC_REQUIRED` / `WITHDRAW_WAGER_REQUIRED` / `BONUS_FORFEIT_REQUIRED`)
-→ casino bet history + stats → sports bets → history (all / deposits / withdrawals) / ledger / fiat stats. It calls the gateway
+→ casino bet history + stats → exchange bets (My Bets) → history (all / deposits / withdrawals) / ledger / fiat stats. It calls the gateway
 directly (`VITE_GATEWAY_URL`). Each row prints PASS/FAIL, the status, and `site✓`/`site✗` = whether `frontend/src` has that route
 inside a string literal (comments stripped; `lib/endpoints.js` is where they live, `*` in a key = a `${param}`).
 The player's login is saved to `.run/qa-player.local.json` (gitignored) for a browser pass.
