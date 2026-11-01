@@ -1,4 +1,5 @@
 import NavContent, { SearchButton } from "./NavContent";
+import { openSearch } from "../../lib/router";
 import { cx } from "../../lib/carousel";
 import { ProductTabs } from "./Sidebar";
 
@@ -15,6 +16,8 @@ const items = [
  * `MobileNavigationBar` slide-up menu panel. Both are hidden from 768px up.
  */
 export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, product, onProductChange, variant }) {
+  const closeMenu = menuOpen ? onToggleMenu : undefined;
+  const searchFromBar = () => { openSearch(); closeMenu?.(); };
   const item = (it) => {
     const body = (
       <div className="MobileNavItemContent_mobileNavItemWrapper" style={{ color: "#FFFFFF", opacity: 1 }}>
@@ -25,7 +28,7 @@ export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, pr
       </div>
     );
     return it.button ? (
-      <button className="MobileNavItem_button" type="button" onClick={it.id === "menu" ? onToggleMenu : undefined}>
+      <button className="MobileNavItem_button" type="button" onClick={it.id === "menu" ? onToggleMenu : it.id === "search" ? searchFromBar : undefined}>
         {body}
       </button>
     ) : (
@@ -45,7 +48,7 @@ export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, pr
             </div>
           </div>
           <div>
-            <SearchButton expanded />
+            <SearchButton expanded onOpen={closeMenu} />
           </div>
           <NavContent expanded active={active} onSelect={onSelect} mobile variant={variant} />
         </div>

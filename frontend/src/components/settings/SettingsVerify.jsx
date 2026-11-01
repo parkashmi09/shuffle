@@ -115,11 +115,12 @@ const KYC_TEXT = [
   ["city", "City*"],
   ["country", "Country*"],
 ];
-const KYC_FILES = [
-  ["idFront", "ID front"],
-  ["idBack", "ID back"],
-  ["passport", "Passport"],
-];
+/** Upload fields per document type (backend `DOCUMENT_FIELDS`); the first one is required. */
+const KYC_FILES = {
+  id_card: [["idFront", "ID front*"], ["idBack", "ID back"]],
+  driving_licence: [["idFront", "Licence front*"], ["idBack", "Licence back"]],
+  passport: [["passport", "Passport photo page*"]],
+};
 
 /** `POST /user/kyc/submit` — multipart, the details plus at least one document image. */
 function KycModal({ onClose, onDone }) {
@@ -127,7 +128,8 @@ function KycModal({ onClose, onDone }) {
   const [files, setFiles] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const ready = KYC_TEXT.every(([k]) => values[k]?.trim()) && Object.values(files).some(Boolean);
+  const docFiles = KYC_FILES[values.documentType];
+  const ready = KYC_TEXT.every(([k]) => values[k]?.trim()) && Boolean(files[docFiles[0][0]]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -136,7 +138,8 @@ function KycModal({ onClose, onDone }) {
     try {
       const form = new FormData();
       for (const [k] of [...KYC_TEXT, ["documentType"]]) form.append(k, values[k].trim());
-      for (const [k] of KYC_FILES) if (files[k]) form.append(k, files[k]);
+      // Only the chosen document's files — a passport picked earlier is not sent with an ID card.
+      for (const [k] of docFiles) if (files[k]) form.append(k, files[k]);
       await kycApi.submit(form);
       onDone();
     } catch (err) {
@@ -156,15 +159,15 @@ function KycModal({ onClose, onDone }) {
           ))
         )}
         {field("kyc-documentType", "Document type*", (
-          <select id="kyc-documentType" className="Input_root" value={values.documentType} onChange={(e) => setValues((v) => ({ ...v, documentType: e.target.value }))}>
+          <select id="kyc-documentType" className="Input_root" value={values.documentType} onChange={(e) => { setValues((v) => ({ ...v, documentType: e.target.value })); setFiles({}); }}>
             <option value="id_card">ID card</option>
             <option value="passport">Passport</option>
             <option value="driving_licence">Driving licence</option>
           </select>
         ))}
-        {KYC_FILES.map(([k, label]) =>
+        {docFiles.map(([k, label]) =>
           field(`kyc-${k}`, label, (
-            <input id={`kyc-${k}`} className="Input_root" type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => setFiles((f) => ({ ...f, [k]: e.target.files?.[0] || null }))} />
+            <input key={`${values.documentType}-${k}`} id={`kyc-${k}`} className="Input_root" type="file" accept="image/png,image/jpeg,application/pdf" onChange={(e) => setFiles((f) => ({ ...f, [k]: e.target.files?.[0] || null }))} />
           ))
         )}
         {error && <Warning>{error}</Warning>}

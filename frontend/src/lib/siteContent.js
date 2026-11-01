@@ -35,6 +35,9 @@ export const loadBranding = () => (brandingOnce ??= site.branding().then(cleanBr
 export const loadSiteContent = () => (contentOnce ??= site.content().then((d) => d || {}).catch(() => ({})));
 
 export const useBranding = () => useApi("site:branding", loadBranding).data;
+/** Captured copy names the reference brand; the owner's site name replaces it (unbranded keeps the copy). */
+export const withSiteName = (html, brand) => (brand?.siteName ? html.replace(/\bShuffle\b/g, () => brand.siteName) : html);
+
 export const useSiteContent = () => useApi("site:content", loadSiteContent).data || {};
 
 function meta(attr, key, content) {

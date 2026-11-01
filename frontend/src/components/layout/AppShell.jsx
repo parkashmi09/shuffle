@@ -28,6 +28,17 @@ import "./AppShell.css";
  * content, the footer and the mobile navigation. The container's state class
  * tells the reference stylesheet how wide the content column is.
  */
+/** Drop the modal's query params once it closes, so a reload or a repeat link does not reopen a stale one. */
+function clearModalParams() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("modal")) return;
+  url.searchParams.delete("modal");
+  url.searchParams.delete("md-tab");
+  url.searchParams.delete("tab");
+  window.history.replaceState(null, "", url);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 export default function AppShell({ children }) {
   // The session wraps the shell rather than sitting inside it, so the header,
   // the auth modal and anything a page renders all read one source.
@@ -49,7 +60,7 @@ export default function AppShell({ children }) {
 }
 
 function Shell({ children }) {
-  const { signedIn, logout } = useSession();
+  const { signedIn, restoring, logout } = useSession();
   // The reference opens the rail by default only on wide desktops (≥1140px).
   const [railExpanded, setRailExpanded] = useState(() => typeof window === "undefined" || window.innerWidth >= 1140);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -67,10 +78,10 @@ function Shell({ children }) {
   const sectionParam = new URLSearchParams(search).get("section");
   const nav = navIdForPath(sectionParam ? `${path}?section=${sectionParam}` : path) || navIdForPath(path) || (/^\/(sports\/)?promotions\//.test(path) ? "promotions" : /^\/shuffle-wise\//.test(path) ? "shuffle-wise" : /^\/affiliate\//.test(path) ? "affiliate" : /^\/casino\/providers\//.test(path) ? "providers" : navState) || "home";
   // The reference trims the rail to the site-wide links on non-casino routes and clears the product tab.
-  // Site-wide (non-casino) routes: lottery, VIP, blog, affiliate and the account
+  // Site-wide (non-casino) routes: VIP, blog, affiliate and the account
   // pages (transactions, settings, Shuffle Wise); the sportsbook gets its own rail.
   const isSports = /^\/sports(\/|$)/.test(path);
-  const navVariant = isSports ? "sports" : /^\/(lottery|vip-program|affiliate|blog|transactions|settings|shuffle-wise)(\/|$)/.test(path) ? "minimal" : "casino";
+  const navVariant = isSports ? "sports" : /^\/(vip-program|affiliate|blog|transactions|settings|shuffle-wise)(\/|$)/.test(path) ? "minimal" : "casino";
   const product = isSports ? "sports" : "casino";
   const setProduct = (p) => navigate(p === "sports" ? "/sports" : "/");
   const [auth, setAuth] = useState(null); // null | "login" | "register"
@@ -95,8 +106,24 @@ function Shell({ children }) {
   const rightRailOpen = rightRail !== null;
   const [notificationFilter, setNotificationFilter] = useState("ALL");
   // Stable identity: the modals key effects off their close handler.
-  const closeWallet = useCallback(() => setWalletOpen(false), []);
-  const closeVault = useCallback(() => setVaultOpen(false), []);
+  const closeWallet = useCallback(() => { setWalletOpen(false); clearModalParams(); }, []);
+  const closeVault = useCallback(() => { setVaultOpen(false); clearModalParams(); }, []);
+
+  // `?modal=wallet[&md-tab=…]`, `?modal=vault`, `?modal=auth&tab=login|register` open their modal, as on
+  // the reference. A money modal asked for while signed out asks for a login first, then opens.
+  useEffect(() => {
+    if (restoring) return;
+    const params = new URLSearchParams(search);
+    const modal = params.get("modal");
+    if (modal === "wallet" || modal === "vault") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the URL is the source of truth for which modal is open
+      if (!signedIn) setAuth("login");
+      else if (modal === "wallet") setWalletOpen(true);
+      else setVaultOpen(true);
+    } else if (modal === "auth" && !signedIn) {
+      setAuth(params.get("tab") === "register" ? "register" : "login");
+    }
+  }, [search, signedIn, restoring]);
 
   useEffect(() => {
     const floating = (railExpanded && window.innerWidth < 1140 && window.innerWidth >= 768) || (menuOpen && window.innerWidth < 768);
@@ -281,7 +308,7 @@ function Shell({ children }) {
           signed in on another tab — makes it redundant. Derived rather than
           closed from an effect, so there is no render where a login form sits
           over a signed-in page. */}
-      {auth !== null && !signedIn && <AuthModal tab={auth} onTabChange={setAuth} onClose={() => setAuth(null)} />}
+      {auth !== null && !signedIn && <AuthModal tab={auth} onTabChange={setAuth} onClose={() => { setAuth(null); clearModalParams(); }} />}
       {raceOpen && <WeeklyRaceModal onClose={() => setRaceOpen(false)} />}
       {walletOpen && signedIn && <WalletModal onClose={closeWallet} />}
       {vaultOpen && signedIn && <VaultModal onClose={closeVault} />}

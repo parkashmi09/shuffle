@@ -42,8 +42,6 @@ export function useSearch() {
 /** Sidebar / nav ids that have their own page. */
 export const routes = {
   home: "/",
-  lottery: "/lottery",
-  airdrop: "/airdrop",
   // The reference serves this one off the ROOT, not under /casino — the
   // sidebar link is `/favourites`. `/casino/favourites` 404s there.
   favourites: "/favourites",
@@ -122,3 +120,14 @@ export const routes = {
 };
 
 export const navIdForPath = (path) => Object.keys(routes).find((k) => routes[k] === path) || null;
+
+/** The site's search is the lobby's game search box: go there and focus it. */
+export function openSearch() {
+  navigate("/");
+  // The lobby renders on the next commit; the box is the first `Search games` input.
+  setTimeout(() => {
+    const box = document.querySelector('input[aria-label="Search games"]');
+    box?.scrollIntoView({ block: "center" });
+    box?.focus();
+  }, 0);
+}

@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from "react";
  */
 
 import { cx } from "../../lib/carousel";
-import { navigate } from "../../lib/router";
+import { navigate, openSearch } from "../../lib/router";
 import { site } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
@@ -157,7 +157,7 @@ export function NavLink({
   );
 }
 
-export function SearchButton({ expanded, mobileOnly = false }) {
+export function SearchButton({ expanded, mobileOnly = false, onOpen }) {
   return (
     <div
       className={cx(
@@ -166,39 +166,10 @@ export function SearchButton({ expanded, mobileOnly = false }) {
         expanded ? "SearchComponent_expandedSearch" : "SearchComponent_expandedButtonContainer"
       )}
     >
-      <button className="SearchComponent_searchButton" type="button" aria-label="Search">
+      <button className="SearchComponent_searchButton" type="button" aria-label="Search" onClick={() => { openSearch(); onOpen?.(); }}>
         <img alt="search" loading="lazy" src="/icons/search.svg" />
         {expanded && <span>Search</span>}
       </button>
-    </div>
-  );
-}
-
-export function TokenCard({ expanded }) {
-  return (
-    <div className={cx("NavigationToken_token", !expanded && "NavigationToken_collapsed")}>
-      <div className="NavigationToken_tokenInfo">
-        <a className="NavigationToken_iconLink" href="/token" onClick={(e) => { e.preventDefault(); navigate("/token"); }}>
-          <img alt="token" src="/icons/token.svg" />
-        </a>
-        <div className="NavigationToken_textContainer">
-          <p>
-            Shuffle <span className="NavigationToken_code">(SHFL)</span>
-          </p>
-          <p className="NavigationToken_coming">
-            <span className="NavigationToken_code">$0.3093</span>&nbsp;
-            <span className="TokenPercentageText_negative">-0.55%</span>
-          </p>
-        </div>
-      </div>
-      <div className="NavigationToken_btnContainer">
-        <a className="NavigationToken_linkBtn NavigationToken_linkBtnDisabled" href="/?modal=wallet">
-          Convert
-        </a>
-        <a className="NavigationToken_linkBtn" href="/token" onClick={(e) => { e.preventDefault(); navigate("/token"); }}>
-          Dashboard
-        </a>
-      </div>
     </div>
   );
 }
@@ -307,8 +278,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
     // (the icon tab strip takes the extra 80px).
     <div className={cx("NavigationContent_navContent", !expanded && !mobile && "NavigationContent_isExpanded")}>
       <div className={cx("NavigationSideAnimate_root NavigationSideAnimate_ready", expanded && "NavigationSideAnimate_isExpanded")}>
-        {mobile && <SearchButton expanded mobileOnly />}
-        <TokenCard expanded={expanded} />
+        {mobile && <SearchButton expanded mobileOnly onOpen={() => onSelect?.("search")} />}
 
         <div className={cx("NavList_root", expanded && "NavList_isExpanded")}>
           <NavLink id={sportsbook ? "sports" : "home"} label="Home" icon="home" href={sportsbook ? "/sports" : "/"} expanded={expanded} active={active === (sportsbook ? "sports" : "home")} onSelect={handleSelect} />
@@ -334,33 +304,6 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
           )}
 
           <div className={cx("NavigationLineBreakWrapper_root", expanded && "NavigationLineBreakWrapper_expanded")}>
-            {on("lottery") && <div className="NavigationLottery_root">
-              <NavLink
-                id="lottery"
-                label="SHFL Lottery"
-                icon="8"
-                href="/lottery"
-                expanded={expanded}
-                active={active === "lottery"}
-                greenDot
-                linkClass="NavigationLottery_lottery"
-                onSelect={handleSelect}
-              />
-            </div>}
-            <div className="NavigationTokenAirdrop_root">
-              <NavLink
-                id="airdrop"
-                label="SHFL Airdrop"
-                icon="token-white"
-                href="/airdrop"
-                expanded={expanded}
-                active={active === "airdrop"}
-                greenDot
-                counter={<span className="NavigationTokenAirdrop_date">6d</span>}
-                counterClass="Counter_text"
-                onSelect={handleSelect}
-              />
-            </div>
             {on("promotions") && <ExpandableGroup
               expanded={expanded}
               icon="promotions"

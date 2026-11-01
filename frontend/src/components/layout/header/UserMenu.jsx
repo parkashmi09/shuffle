@@ -39,7 +39,6 @@ const items = [
   { id: "wallet", label: "Wallet", icon: "/icons/wallet.svg" },
   { id: "vip", label: "VIP", icon: "/icons/crown.svg", href: "/vip-program" },
   { id: "vault", label: "Vault", icon: "/icons/shield-lock.svg" },
-  { id: "token", label: "Token", icon: "/icons/token-white.svg", href: "/token" },
   { id: "affiliate", label: "Affiliate Program", icon: "/icons/affiliate.svg", href: "/affiliate/overview" },
   { id: "notifications", label: "Notifications", icon: "/icons/notifications.svg" },
   { id: "transactions", label: "Transactions", icon: "/icons/transactions.svg", href: "/transactions" },

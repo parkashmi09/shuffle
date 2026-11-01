@@ -75,7 +75,7 @@ export default function Sidebar({ expanded, active, product, onProductChange, on
         )}
 
         <div>
-          <SearchButton expanded={expanded} />
+          <SearchButton expanded={expanded} onOpen={() => { if (window.innerWidth < 1140) onClose(); }} />
         </div>
 
         <NavContent expanded={expanded} active={active} onSelect={onSelect} variant={variant} />

@@ -4,7 +4,6 @@ import CategoryTabs from "../components/casino/CategoryTabs";
 import GameCarousel from "../components/casino/GameCarousel";
 import CategoryGrid from "../components/casino/CategoryGrid";
 import ProviderCarousel from "../components/casino/ProviderCarousel";
-import AirdropTile from "../components/casino/AirdropTile";
 import TournamentsCarousel from "../components/casino/TournamentsCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import SeoArticle from "../components/casino/SeoArticle";
@@ -129,7 +128,6 @@ export default function CasinoHome() {
               <GameCarousel section={slots} />
               <GameCarousel section={liveCasino} />
               <ProviderCarousel providers={providers} />
-              <AirdropTile />
               <GameCarousel section={gameShows} />
               <GameCarousel section={shufflePicks} />
               <GameCarousel section={latestReleases} />

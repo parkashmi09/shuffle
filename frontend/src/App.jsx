@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 import AppShell from "./components/layout/AppShell";
 import CasinoHome from "./pages/CasinoHome";
-import LotteryPage from "./pages/LotteryPage";
-import AirdropPage from "./pages/AirdropPage";
 import { CategoryPage } from "./pages/LatestReleasesPage";
 import ProvidersPage from "./pages/ProvidersPage";
 import ProviderPage from "./pages/ProviderPage";
@@ -14,7 +12,6 @@ import { AffiliatePage } from "./pages/StaticPage";
 import AffiliateProgramPage from "./pages/AffiliateProgramPage";
 import { usePublicSiteConfig } from "./lib/usePublicSiteConfig";
 import VipPage from "./pages/VipPage";
-import TokenPage from "./pages/TokenPage";
 import SportsPage from "./pages/SportsPage";
 import ChallengesPage from "./pages/ChallengesPage";
 import PromotionsPage from "./pages/PromotionsPage";
@@ -29,12 +26,9 @@ import { useGate } from "./lib/gates";
 
 const pages = {
   "/": CasinoHome,
-  "/lottery": LotteryPage,
-  "/airdrop": AirdropPage,
   "/casino/providers": ProvidersPage,
   "/sports": SportsPage,
   "/vip-program": VipPage,
-  "/token": TokenPage,
   "/blog": BlogPage,
   "/affiliate": AffiliatePage,
   "/challenges": ChallengesPage,
@@ -45,6 +39,8 @@ const pages = {
 function renderPage(path) {
   const Static = pages[path];
   if (Static) return <Static />;
+  // SHFL token, airdrop and lottery are the reference's own product: no platform API behind them.
+  if (/^\/(token|airdrop|lottery)$/.test(path)) return <Redirect to="/" />;
   if (/^\/(sports\/)?promotions\/[^/]+$/.test(path)) return <PromotionArticlePage path={path} />;
   if (/^\/blog\/([^/]+)$/.test(path)) {
     const slug = path.match(/^\/blog\/([^/]+)$/)[1];
@@ -134,7 +130,6 @@ const ROUTE_GATES = [
   [/^\/challenges$/, "challenges"],
   [/^\/(sports\/)?promotions(\/|$)/, "promotions"],
   [/^\/sports(\/|$)/, "sports"],
-  [/^\/lottery$/, "lottery"],
   [/^\/casino\//, "casino"],
 ];
 

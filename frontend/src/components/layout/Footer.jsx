@@ -35,9 +35,6 @@ const columns = [
       { label: "AML Policy", href: "/info/aml" },
       { label: "License", href: "/info/license" },
       { label: "Sports", href: "/info/sports" },
-      { label: "Lottery", href: "/info/lottery" },
-      { label: "Convert", href: "/info/convert" },
-      { label: "Airdrop", href: "/info/airdrop" },
     ],
   },
   {
