@@ -3,7 +3,7 @@ import { GameCard } from "../components/casino/GameCarousel";
 import ProviderCarousel from "../components/casino/ProviderCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import { navigate } from "../lib/router";
-import { providers, sections } from "../data/catalog";
+import { providers } from "../data/catalog";
 import { categoryFor, categoryIcon, categoryQuery } from "../lib/categories";
 import { useCategory, useProviders } from "../lib/catalogue";
 import { cx } from "../lib/carousel";
@@ -19,7 +19,6 @@ import { FilterSelect, SortSelect } from "../components/ui/SelectMenu";
 const PAGE = 28;
 const CATEGORY_PAGE = 40;
 const seos = import.meta.glob("../data/seo-*.html", { query: "?raw", import: "default", eager: true });
-const pool = ["latest-releases", "slots", "game-shows", "shuffle-picks", "live-casino"].flatMap((id) => sections.find((s) => s.id === id)?.games || []);
 
 
 /**
@@ -285,7 +284,8 @@ export function CategoryPage({ slug }) {
     .filter((p) => p.hasGames)
     .map((p) => ({ value: p.name, label: p.label || p.name }));
 
-  const source = isLive ? liveGames : isLatest ? pool : cat.games;
+  // The catalogue only — the captured reference lists are not shown in its place.
+  const source = isLive ? liveGames : [];
 
   /**
    * Searching and sorting a LIVE list happen at opposite ends.
@@ -311,7 +311,7 @@ export function CategoryPage({ slug }) {
    * `more: true` still cycles — that is the reference's own behaviour on a list
    * it has no more rows for, and it applies to nothing that is live.
    */
-  const endless = !isLive && !isLatest && cat.more && !query;
+  const endless = false;
   const games = sorted.length
     ? Array.from({ length: Math.min(count, endless ? Infinity : sorted.length) }, (_, i) => sorted[i % sorted.length])
     : [];

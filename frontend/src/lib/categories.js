@@ -64,6 +64,11 @@ const QUERY = {
   "live-casino": { category: "live" },
   "table-games": { category: "table" },
   crash: { category: "crash" },
+  // The catalogue's own answer for these — `originals` is empty until in-house games are catalogued.
+  originals: { category: "originals" },
+  "game-shows": { category: "game-shows" },
+  "shuffle-picks": { sort: "popular" },
+  "latest-releases": { sort: "newest" },
   blackjack: { search: "blackjack" },
   roulette: { search: "roulette" },
   baccarat: { search: "baccarat" },

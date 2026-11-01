@@ -239,8 +239,8 @@ export const site = {
   branding: () => get("/admin/branding/public", { auth: false }),
   /** The site admin's copy, `{ footer?, social?, support?, legal?, home?, pages?, vip? }` — only saved sections. */
   content: () => get("/admin/site-content/public", { auth: false }),
-  /** Placement is the path segment: `home`, `sports`, … 404s when none is set. */
-  banners: (type) => get(`/admin/banners/${type}`, { auth: false }),
+  /** Every active slide, in slide order — `[{ type, title, subtitle, cta, sortOrder, url }]`. */
+  banners: () => get("/admin/banners", { auth: false }),
   blogs: (query) => get("/admin/blogs", { query, auth: false, withMeta: true }),
   blogBySlug: (slug) => get(`/admin/blogs/slug/${slug}`, { auth: false }),
   promotions: (query) => get("/admin/promotions", { query, auth: false, withMeta: true }),

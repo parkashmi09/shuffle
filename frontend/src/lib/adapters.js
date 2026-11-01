@@ -178,10 +178,11 @@ export const toProviderRoster = (rows, staticProviders, brands = {}, order = [])
 };
 
 /** `banners` row → a hero slide. `image` is a filename the binary route serves. */
+/** A `GET /admin/banners` row: `{ type, title, cta: {label, href} | null, url }`, `url` an API path. */
 export const toBanner = (row) => ({
-  href: row.link || "/",
-  alt: row.type || "banner",
-  img: /^https?:\/\//.test(row.image || "") ? row.image : `${API_BASE}/admin/banners/image/${row.image}`,
+  href: row.cta?.href || "/",
+  alt: row.title || row.type || "banner",
+  img: row.url ? `${API_BASE.replace(/\/api\/v1\/?$/, "")}${row.url}` : "",
 });
 
 export const toBanners = (rows) => (Array.isArray(rows) ? rows.map(toBanner) : []);

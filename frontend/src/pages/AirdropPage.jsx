@@ -147,7 +147,7 @@ export default function AirdropPage() {
         </div>
       </section>
 
-      <ActivityBoard initialTab="airDropRace" hideTabs={["race"]} />
+      <ActivityBoard initialTab="latest-bets" hideTabs={["race"]} />
     </div>
   );
 }

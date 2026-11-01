@@ -144,6 +144,8 @@ function ViewAllCard({ href }) {
  */
 export default function GameCarousel({ section, viewAll = true }) {
   const { trackRef, carousel } = useCarousel();
+  // An empty catalogue answer draws no row rather than a heading over nothing.
+  if (!section?.games?.length) return null;
 
   return (
     <section>

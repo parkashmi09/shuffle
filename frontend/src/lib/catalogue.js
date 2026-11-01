@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { casino, site } from "./endpoints";
 import { toBanners, toGameCard, toGameCards, toProviderRoster } from "./adapters";
 import { useApi, useResource } from "./useResource";
-import { banners as staticBanners, providers as staticProviders, sections as staticSections } from "../data/catalog";
+import { providers as staticProviders, sections as staticSections } from "../data/catalog";
 import { capturedGamesFor } from "./providerGames";
 import { providerBrands, providerOrder } from "../data/providerBrands";
 
@@ -39,7 +39,13 @@ import { providerBrands, providerOrder } from "../data/providerBrands";
 const ROW_COLLECTION = {
   slots: "popular-slots",
   "live-casino": "live-casino",
-  "game-shows": "hot",
+};
+/** Rows with no curated collection read the catalogue itself — see `categoryQuery`. */
+const ROW_QUERY = {
+  "shuffle-games": { category: "originals" },
+  "game-shows": { category: "game-shows" },
+  "shuffle-picks": { sort: "popular" },
+  "latest-releases": { sort: "newest" },
 };
 
 /** One lobby row, live where the catalogue can fill it. */
@@ -50,11 +56,12 @@ export function useLobbySection(id) {
   const { data, isLive } = useResource(
     `lobby:${id}`,
     async () => {
-      if (!collection) return null;
-      const { data: rows } = await casino.collection(collection, { limit: 30 });
+      const { data: rows } = collection
+        ? await casino.collection(collection, { limit: 30 })
+        : await casino.games({ limit: 30, ...ROW_QUERY[id] });
       return toGameCards(rows);
     },
-    captured?.games || []
+    []
   );
 
   // The heading, icon and "view all" link are the capture's either way — they
@@ -80,12 +87,12 @@ export function useProviders() {
   return { providers: data, isLive };
 }
 
-/** Home hero slides. `banners` is keyed by placement; `home` is this one. */
-export function useBanners(placement = "home") {
+/** Home hero slides — the admin's active banners (agent placements excluded). Empty when none are uploaded. */
+export function useBanners() {
   const { data, isLive } = useResource(
-    `banners:${placement}`,
-    async () => toBanners(await site.banners(placement)),
-    staticBanners
+    "banners",
+    async () => toBanners((await site.banners()).filter((b) => b.mode !== "agent" && b.url)),
+    []
   );
   return { banners: data, isLive };
 }
@@ -111,18 +118,19 @@ export function useBanners(placement = "home") {
  * rather than the page length — the reference shows the catalogue size, not how
  * many tiles are up.
  */
-export function useCategory(slug, { captured, category, search, provider, limit = 40 } = {}) {
+export function useCategory(slug, { captured, category, search, provider, sort, limit = 40 } = {}) {
   const { data, isLive, loading } = useResource(
-    `category:${slug}:${category || ""}:${search || ""}:${provider || ""}:${limit}`,
+    `category:${slug}:${category || ""}:${search || ""}:${provider || ""}:${sort || ""}:${limit}`,
     async () => {
       // A slug the catalogue cannot express — Originals, Shuffle Picks — asks
       // for nothing and keeps its capture, rather than asking for everything.
-      if (!category && !search) return null;
+      if (!category && !search && !sort) return null;
       const { data: rows, meta } = await casino.games({
         limit,
         ...(category ? { category } : {}),
         ...(search ? { search } : {}),
         ...(provider ? { provider } : {}),
+        ...(sort ? { sort } : {}),
       });
       const games = toGameCards(rows);
       return games.length ? { games, total: meta?.pagination?.total ?? games.length } : null;

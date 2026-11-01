@@ -1,3 +1,4 @@
+import { navigate } from "../../lib/router";
 import { cx } from "../../lib/carousel";
 
 const CIRCUMFERENCE = 2 * Math.PI * 28;
@@ -92,10 +93,10 @@ export function PromoBanner({ image, href, title, countdown, countdownSuffix, pr
           <CircleProgress progress={progress} size={size} />
         </div>
         <div className="HomePromotionHeading_weekInfo">
-          <a className="TextLink_root HomePromotionHeading_link" href={href} onClick={(e) => e.preventDefault()}>
+          <a className="TextLink_root HomePromotionHeading_link" href={href} onClick={(e) => { e.preventDefault(); navigate(href); }}>
             <h4 className="HomePromotionHeading_weekLabel">{title}</h4>
           </a>
-          <a className="HomePromotionHeading_countdown HomePromotionHeading_link" href={href} onClick={(e) => e.preventDefault()}>
+          <a className="HomePromotionHeading_countdown HomePromotionHeading_link" href={href} onClick={(e) => { e.preventDefault(); navigate(href); }}>
             {countdown}&nbsp;{countdownSuffix && <span>{countdownSuffix}</span>}
             <img aria-hidden="true" alt="chevron" className="HomePromotionHeading_arrow" height="16" src="/icons/chevron-small.svg" width="16" />
           </a>

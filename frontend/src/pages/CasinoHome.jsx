@@ -8,13 +8,9 @@ import AirdropTile from "../components/casino/AirdropTile";
 import TournamentsCarousel from "../components/casino/TournamentsCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import SeoArticle from "../components/casino/SeoArticle";
-import { sections } from "../data/catalog";
 import { categoryQuery } from "../lib/categories";
 import { useBanners, useCategory, useLobbySection, useProviders } from "../lib/catalogue";
 
-const bySlug = Object.fromEntries(sections.map((s) => [s.id, s]));
-const row = (id) => bySlug[id];
-const pool = (...ids) => ids.flatMap((id) => row(id)?.games || []);
 
 const PAGE = 28;
 
@@ -28,40 +24,32 @@ const categories = {
     title: "Originals",
     icon: "/icons/original.svg",
     href: "/casino/categories/originals",
-    captured: pool("shuffle-games", "shuffle-picks"),
-    total: 33,
   },
   SLOTS: {
     slug: "slots",
     title: "Slots",
     icon: "/icons/slots.svg",
     href: "/casino/categories/slots",
-    captured: pool("slots", "latest-releases"),
-    total: 6488,
   },
   LIVE_CASINO: {
     slug: "live-casino",
     title: "Live Casino",
     icon: "/icons/casino.svg",
     href: "/casino/categories/live-casino",
-    captured: pool("live-casino", "game-shows"),
-    total: 412,
   },
   TABLE_GAMES: {
     slug: "table-games",
     title: "Table Games",
     icon: "/icons/table-games.svg",
     href: "/casino/categories/table-games",
-    captured: pool("shuffle-picks", "live-casino"),
-    total: 190,
   },
 };
 
 /** One non-lobby tab — mounts only while selected so we don't prefetch every tab. */
-function HomeCategoryTab({ slug, title, icon, href, captured, total: captureTotal }) {
+function HomeCategoryTab({ slug, title, icon, href }) {
   const [count, setCount] = useState(PAGE);
   const { games, total, isLive } = useCategory(slug, {
-    captured,
+    captured: [],
     ...categoryQuery(slug),
     limit: count,
   });
@@ -72,7 +60,7 @@ function HomeCategoryTab({ slug, title, icon, href, captured, total: captureTota
       icon={icon}
       href={href}
       games={games}
-      total={isLive ? total : captureTotal}
+      total={isLive ? total : 0}
       onShowMore={isLive ? () => setCount((c) => c + PAGE) : undefined}
     />
   );

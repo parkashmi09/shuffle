@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { UserCell } from "./PromoWidgets";
-import { AirdropHeader, RaceHeader } from "./BoardHeaders";
+import { RaceHeader } from "./BoardHeaders";
 import { sections } from "../../data/catalog";
 import { betHistory } from "../../lib/endpoints";
 import { toBoardRows, toStandingRows } from "../../lib/adapters";
@@ -17,7 +17,6 @@ const tabsFor = (signedIn) => [
   { id: "latest-bets", label: "Latest Bets" },
   { id: "high-roller-bets", label: "High Rollers" },
   { id: "race", label: "Weekly Race" },
-  { id: "airDropRace", label: "SHFL Airdrop" },
 ];
 
 const columns = ["User", "Game", "Bet Amount", "Multiplier", "Payout"];
@@ -26,51 +25,10 @@ const LIMITS = ["0", "10", "20", "30", "40"];
 /** How often the live tabs re-read. The reference pushes over a socket; this polls. */
 const POLL_MS = 5000;
 
-const game = (sectionId, name) => {
-  const s = sections.find((x) => x.id === sectionId);
-  return s?.games.find((g) => g.name === name) || s?.games[0];
-};
-
-/** Sample feed rows modelled on the reference's live-bets table. */
-const latest = [
-  { user: { name: "Tenkinek", vip: "bronze" }, game: game("shuffle-games", "Blackjack"), coin: "sol", bet: "0.06568787", mult: 0, payout: "-0.06568787" },
-  { user: { name: "RileyD", vip: "gold" }, game: game("slots", "Shuffle Spinman"), coin: "usdt", bet: "5.40932025", mult: 0, payout: "-5.40932025" },
-  { user: null, game: game("slots", "3 Wildos"), coin: "usdc", bet: "16.00000000", mult: 0.93, payout: "-1.16000000" },
-  { user: { name: "boldropfr", vip: "sapphire" }, game: game("live-casino", "Blackjack Italia Tricolore"), coin: "eth", bet: "150.98192000", mult: 1.54, payout: "232.27987693" },
-  { user: { name: "Zephyr_88", vip: "opal" }, game: game("shuffle-games", "Dice"), coin: "btc", bet: "0.00120000", mult: 1.98, payout: "0.00117600" },
-  { user: null, game: game("shuffle-games", "Plinko"), coin: "shfl", bet: "250.00000000", mult: 0, payout: "-250.00000000" },
-  { user: { name: "mikaelsson", vip: "gold" }, game: game("game-shows", "Crazy Time"), coin: "usdt", bet: "40.00000000", mult: 5.0, payout: "160.00000000" },
-  { user: { name: "Lunaria", vip: "bronze" }, game: game("shuffle-games", "Mines"), coin: "sol", bet: "1.20000000", mult: 2.06, payout: "1.27200000" },
-  { user: null, game: game("latest-releases"), coin: "eth", bet: "0.05000000", mult: 0, payout: "-0.05000000" },
-  { user: { name: "goldenhand", vip: "sapphire" }, game: game("shuffle-picks"), coin: "usdc", bet: "75.00000000", mult: 12.4, payout: "855.00000000" },
-];
-
-const highRollers = latest.map((r, i) => ({ ...r, bet: (Number(r.bet) * 40 + i).toFixed(8), payout: (Number(r.payout) * 40).toFixed(8) }));
-
-const names = ["Benwarner", null, "GOATZK", "vladz", null, "apabapanapa", "Zephyr_88", null, "mikaelsson", "Lunaria"];
-const vips = ["opal", null, "opal", "gold", null, "sapphire", "platinum", null, "gold", "bronze"];
-const standings = (prizes, coin, amounts) =>
-  names.map((n, i) => ({ rank: i + 1, user: n ? { name: n, vip: vips[i] } : null, amount: amounts[i], prize: prizes[i], coin }));
-
-/** Weekly race: wagered in USD, prizes paid in BTC. */
-const race = standings(
-  ["$25,000.00", "$15,000.00", "$7,000.00", "$5,000.00", "$4,000.00", "$3,500.00", "$3,000.00", "$2,500.00", "$2,000.00", "$1,750.00"],
-  "btc",
-  ["$13,486,927.14", "$13,228,488.27", "$11,971,228.62", "$11,138,400.00", "$7,733,245.47", "$6,821,551.74", "$4,784,527.19", "$4,443,999.96", "$4,068,726.46", "$3,902,118.30"]
-);
-
-/** SHFL airdrop race: points earned, prizes in SHFL. */
-const airdropRace = standings(
-  ["50,000.00", "30,000.00", "20,000.00", "16,500.00", "14,150.00", "11,720.00", "9,800.00", "8,250.00", "7,100.00", "6,400.00"],
-  "shfl",
-  ["4,094,348.92", "2,751,753.00", "1,659,194.43", "1,638,210.84", "1,345,963.50", "1,111,125.72", "566,265.26", "512,004.10", "488,730.55", "401,220.00"]
-);
-
 const ordinal = (n) => `${n}${n % 100 > 10 && n % 100 < 14 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"}`;
 
 const boards = {
-  race: { columns: ["Rank", "User", "Wagered", "Prize"], widths: [null, null, null, null], tableClass: "Race_table", rows: race, header: <RaceHeader /> },
-  airDropRace: { columns: ["Rank", "User", "Points", "Allocation"], widths: ["25%", "25%", "25%", "25%"], wrap: true, rows: airdropRace, header: <AirdropHeader /> },
+  race: { columns: ["Rank", "User", "Wagered", "Prize"], widths: [null, null, null, null], tableClass: "Race_table", rows: [], header: <RaceHeader /> },
 };
 
 function StandingRow({ r, index, kind }) {
@@ -230,12 +188,10 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
     };
   }, [active, limit, visible, signedIn, knownGames]);
 
-  /** Live rows if the read found any, the capture otherwise. An empty array is not "some". */
-  const pick = (fetched, captured) => (fetched && fetched.length ? fetched : captured);
-
   const feeds = {
-    latest: pick(live.latest, latest.map((r, i) => ({ ...r, key: `s${i}` }))),
-    high: pick(live.high, highRollers.map((r, i) => ({ ...r, key: `s${i}` }))),
+    // Platform rows only — an empty feed is an empty table, not sample players.
+    latest: live.latest || [],
+    high: live.high || [],
     // A signed-in player with no bets yet has an empty history, and that is the
     // honest answer for their own tab — no capture stands in for it.
     mine: live.mine || [],
@@ -243,7 +199,7 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
 
   const feed = feeds[feedKey];
   const staticBoard = boards[active];
-  const board = staticBoard && active === "race" ? { ...staticBoard, rows: pick(live.race, staticBoard.rows) } : staticBoard;
+  const board = staticBoard && active === "race" ? { ...staticBoard, rows: live.race || [] } : staticBoard;
   const cols = board ? board.columns : columns;
 
   const rows = feed.slice(0, Number(limit) || 10);
