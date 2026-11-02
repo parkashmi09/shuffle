@@ -1,67 +1,62 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, type ReactNode } from 'react'
 
+import themeConfig from '@/configs/themeConfig'
 import { useApi } from '@/hooks/use-api'
+import { api } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
-/**
- * The site's brand MARK (the owner panel's square "mark" slot), from the public
- * `admin/branding/public` read — once per session, and the bundled mark when the owner has
- * none, the read fails or the image does not load. It is also the tab icon.
- */
-type PublicBranding = { markUrl?: string | null; logoUrl?: string | null; siteName?: string | null }
-
+/** The common TestPlay mark: shown until the owner uploads one (owner panel → Branding). */
 export const DEFAULT_MARK = '/brand-mark.svg'
 
-// The asset route answers on the platform; the browser reaches it through the `/api/gw` proxy.
-const proxied = (url: string | null | undefined) => {
-  const m = /\/api\/v1\/(admin\/branding\/asset\/[^/?#]+)$/.exec(String(url ?? ''))
+type PublicBranding = { siteName: string | null; logoUrl: string | null; markUrl: string | null }
 
-  return m ? `/api/gw/api/v1/${m[1]}` : null
+/* `/api/v1/admin/branding/asset/<file>` → the same file through this panel's gateway proxy. */
+const asset = (path: string | null | undefined) => (path ? api.url(path.replace(/^\/api\/v1\//, '')) : null)
+
+/**
+ * The owner's branding (owner panel → Branding), the same document the player site draws:
+ * name, wordmark and square mark. Public, so the login screen reads it too.
+ */
+export function useOwnerBranding() {
+  const q = useApi<PublicBranding>('admin/branding/public', undefined, { staleTime: 60_000, retry: false })
+
+  return {
+    siteName: q.data?.siteName || themeConfig.templateName,
+    logoUrl: asset(q.data?.logoUrl),
+    markUrl: asset(q.data?.markUrl)
+  }
 }
 
+/** The site's square mark (the owner's, else TestPlay's). It is also the tab icon. */
 const BrandMark = ({ className }: { className?: string }) => {
-  const branding = useApi<PublicBranding>('admin/branding/public', undefined, { staleTime: Infinity, retry: false })
-  const markUrl = proxied(branding.data?.markUrl)
-  const [failed, setFailed] = useState<string | null>(null)
-  const src = markUrl && failed !== markUrl ? markUrl : DEFAULT_MARK
+  const { markUrl } = useOwnerBranding()
+  const src = markUrl ?? DEFAULT_MARK
 
   useEffect(() => {
     document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]').forEach(link => (link.href = src))
   }, [src])
 
-  return (
-    <img
-      src={src}
-      alt=''
-      className={cn('size-8 shrink-0 rounded-md object-contain', className)}
-      onError={() => setFailed(markUrl)}
-    />
-  )
+  return <img src={src} alt='' className={cn('size-8 shrink-0 rounded-md object-contain', className)} />
 }
 
-/**
- * The site's full wordmark (the owner panel's wide "logo" slot) from the same public read — dark theme only,
- * since it is drawn for the dark header (white text). The light theme, and any load gap or failure, show `fallback`.
- */
-export const BrandLogo = ({ className, fallback }: { className?: string; fallback: React.ReactNode }) => {
-  const branding = useApi<PublicBranding>('admin/branding/public', undefined, { staleTime: Infinity, retry: false })
-  const logoUrl = proxied(branding.data?.logoUrl)
-  const [failed, setFailed] = useState<string | null>(null)
+/** The site's name: the owner's, else this panel's. */
+export const BrandName = () => <>{useOwnerBranding().siteName}</>
 
-  if (!logoUrl || failed === logoUrl) return <>{fallback}</>
+/**
+ * The full wordmark slot (login screen): the owner's logo on a white chip, since a wordmark is
+ * drawn for a light page; else `fallback` (mark + name).
+ */
+export const BrandLogo = ({ className, fallback }: { className?: string; fallback: ReactNode }) => {
+  const { logoUrl, siteName } = useOwnerBranding()
+
+  if (!logoUrl) return <>{fallback}</>
 
   return (
-    <>
-      <div className='dark:hidden'>{fallback}</div>
-      <img
-        src={logoUrl}
-        alt={branding.data?.siteName ?? ''}
-        className={cn('hidden h-12 w-auto max-w-[320px] object-contain dark:block', className)}
-        onError={() => setFailed(logoUrl)}
-      />
-    </>
+    <span className={cn('inline-flex self-start rounded-lg bg-white px-3 py-2', className)}>
+      <img src={logoUrl} alt={siteName} className='h-10 w-auto max-w-[240px] object-contain' />
+    </span>
   )
 }
 
