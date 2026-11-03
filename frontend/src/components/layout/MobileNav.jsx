@@ -2,6 +2,8 @@ import NavContent, { SearchButton } from "./NavContent";
 import { openSearch } from "../../lib/router";
 import { cx } from "../../lib/carousel";
 import { ProductTabs } from "./Sidebar";
+import { useBrandExtras } from "../../lib/siteContent";
+import { useGate } from "../../lib/gates";
 
 const items = [
   { id: "menu", label: "Menu", icon: "menu", button: true },
@@ -17,6 +19,10 @@ const items = [
  */
 export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, product, onProductChange, variant }) {
   const closeMenu = menuOpen ? onToggleMenu : undefined;
+  const sportsLabel = useBrandExtras()?.sportsbook?.tabName;
+  const on = useGate();
+  // Rewards is the VIP programme: gone for an agent's player (and when the owner/admin turns VIP off).
+  const shown = items.filter((it) => it.id !== "rewards" || on("vip")).map((it) => (it.id === "sports" && sportsLabel ? { ...it, label: sportsLabel } : it));
   const searchFromBar = () => { openSearch(); closeMenu?.(); };
   const item = (it) => {
     const body = (
@@ -55,7 +61,7 @@ export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, pr
       </div>
 
       <div className="MobileNavigation_root">
-        {items.map((it) => (
+        {shown.map((it) => (
           <div key={it.id}>{item(it)}</div>
         ))}
       </div>

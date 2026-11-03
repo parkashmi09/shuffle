@@ -13,6 +13,10 @@ import Modal from "../ui/Modal";
  *
  * `POST /user/auth/change-password` takes `{ currentPassword, newPassword }`
  * and signs every other session out, which is what the subheader promises.
+ *
+ * `forced`: an agent's player on the password their upline chose. Every other call answers 403
+ * until it is changed, so closing this signs out (the shell passes logout as `onClose`), and a
+ * success hands the new password to `onChanged` to sign in again.
  */
 
 function PasswordField({ label, name, placeholder, value, onChange, children }) {
@@ -48,7 +52,7 @@ function PasswordField({ label, name, placeholder, value, onChange, children }) 
   );
 }
 
-export default function ChangePasswordModal({ onClose }) {
+export default function ChangePasswordModal({ onClose, forced = false, onChanged }) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -66,6 +70,7 @@ export default function ChangePasswordModal({ onClose }) {
     setPending(true);
     try {
       await authApi.changePassword({ currentPassword: current, newPassword: next });
+      if (forced) return await onChanged(next);
       setDone(true);
     } catch (err) {
       setError(err?.message || "That did not go through.");
@@ -78,9 +83,13 @@ export default function ChangePasswordModal({ onClose }) {
 
   return (
     <Modal onClose={onClose} label="Change Password">
-      <h3 className="Header_root">Change Password</h3>
+      <h3 className="Header_root" id="force-password-title">{forced ? "Set a new password" : "Change Password"}</h3>
       <p className="Subheader_root">
-        <span>Changing your password will sign you out on all other devices</span>
+        <span>
+          {forced
+            ? "Your upline gave you a temporary password. Choose a new one to continue — closing this signs you out."
+            : "Changing your password will sign you out on all other devices"}
+        </span>
       </p>
 
       {done ? (
@@ -88,7 +97,7 @@ export default function ChangePasswordModal({ onClose }) {
       ) : (
         <form className="ChangePasswordModal_root" onSubmit={submit}>
           <PasswordField label="Current Password*" name="password" placeholder="Enter Your Password" value={current} onChange={setCurrent}>
-            <button type="button" className="PasswordInput_forgotPasswordText">Forgot Password?</button>
+            {!forced && <button type="button" className="PasswordInput_forgotPasswordText">Forgot Password?</button>}
           </PasswordField>
           <PasswordField label="New Password" name="newPassword" placeholder="Enter New Password" value={next} onChange={setNext} />
           <PasswordField label="Confirm New Password" name="confirmNewPassword" placeholder="Confirm New Password" value={confirm} onChange={setConfirm} />

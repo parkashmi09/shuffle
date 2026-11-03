@@ -1,3 +1,50 @@
+import { useEffect, useSyncExternalStore } from "react";
+import { site } from "./endpoints";
+
+/* ── The site's own coin list ─────────────────────────────────────────────
+ * `GET /admin/currencies/public` names each coin and carries the mark the admin
+ * uploaded. It wins wherever it answers; the local names and `/icons/` below are
+ * the fallback for a code it does not list, or before it has answered. */
+
+let coins = null; // Map code → row, once loaded
+const listeners = new Set();
+let loading = false;
+
+function loadCoins() {
+  if (coins || loading) return;
+  loading = true;
+  site
+    .coins()
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      coins = new Map(rows.map((row) => [String(row.code).toUpperCase(), row]));
+      listeners.forEach((fn) => fn());
+    })
+    .catch(() => {})
+    .finally(() => {
+      loading = false;
+    });
+}
+
+const subscribe = (fn) => {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+};
+
+/** The coin rows by code (null until loaded); re-renders the caller when they arrive. */
+export function useCoins() {
+  useEffect(loadCoins, []);
+  return useSyncExternalStore(subscribe, () => coins);
+}
+
+/** The row's image path is the gateway's (`/api/v1/…`); a split-origin build serves it from `VITE_API_BASE`. */
+function coinImage(code) {
+  const image = coins?.get(code)?.image;
+  if (!image) return null;
+  const base = import.meta.env.VITE_API_BASE;
+  return base ? image.replace(/^\/api\/v1/, base.replace(/\/+$/, "")) : image;
+}
+
 /**
  * Display names for the codes the wallet returns.
  *
@@ -52,13 +99,14 @@ const NAMES = {
 /** `ETH` → `Ethereum (ETH)`; an unknown code → `BJB`. */
 export function currencyLabel(code) {
   const key = String(code || "").toUpperCase();
-  return NAMES[key] ? `${NAMES[key]} (${key})` : key;
+  const name = currencyName(key);
+  return name !== key ? `${name} (${key})` : key;
 }
 
 /** Just the name, for the places the reference uses it without the ticker. */
 export function currencyName(code) {
   const key = String(code || "").toUpperCase();
-  return NAMES[key] || key;
+  return coins?.get(key)?.name || NAMES[key] || key;
 }
 
 /**
@@ -127,6 +175,12 @@ export const COIN_FALLBACK_ICON = "/icons/coin-outline.svg";
  * rendering an empty box for a balance the player actually holds.
  */
 export function currencyIcon(code) {
+  const key = String(code || "").toUpperCase();
+  return coinImage(key) || localCurrencyIcon(key);
+}
+
+/** The mark shipped under `public/icons/`, or the generic coin. */
+export function localCurrencyIcon(code) {
   const key = String(code || "").toUpperCase();
   if (FIAT_ICONS.has(key) && FIAT_WITH_ICON.has(key)) return `/icons/fiat/${key}.svg`;
   const lower = key.toLowerCase();

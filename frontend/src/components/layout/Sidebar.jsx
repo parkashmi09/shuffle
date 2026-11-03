@@ -1,6 +1,7 @@
 import NavContent, { SearchButton } from "./NavContent";
 import { cx } from "../../lib/carousel";
 import "./Sidebar.css";
+import { useBrandExtras } from "../../lib/siteContent";
 
 /**
  * Desktop navigation rail — a 1:1 port of the reference DesktopNavigation
@@ -8,13 +9,15 @@ import "./Sidebar.css";
  */
 
 export function ProductTabs({ expanded, product, onProductChange }) {
+  // The owner's name for the sports tab (owner panel → Branding → Sportsbook).
+  const sportsLabel = useBrandExtras()?.sportsbook?.tabName || "Sports";
   if (expanded) {
     return (
       <div className="NavigationTab_root DesktopNavigation_showTabs">
         <div className="NavigationTab_container">
           {[
             ["casino", "Casino", "/"],
-            ["sports", "Sports", "/sports?section=featured"],
+            ["sports", sportsLabel, "/sports?section=featured"],
           ].map(([key, label, href]) => (
             <a
               key={key}
@@ -36,7 +39,7 @@ export function ProductTabs({ expanded, product, onProductChange }) {
         <img alt="casino" src="/icons/dice.svg" />
       </a>
       <a className={product === "sports" ? "NavigationTab_active" : ""} href="/sports?section=featured" onClick={(e) => { e.preventDefault(); onProductChange("sports"); }}>
-        <img alt="sports" src="/icons/sports/tennis.svg" />
+        <img alt={sportsLabel} src="/icons/sports/tennis.svg" />
       </a>
     </div>
   );

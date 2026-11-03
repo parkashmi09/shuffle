@@ -1,0 +1,39 @@
+.ChatButtons_root {
+  position: fixed;
+  right: 16px;
+  bottom: 88px; /* above the mobile nav */
+  z-index: var(--z-header);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ChatButtons_button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
+}
+
+.ChatButtons_whatsapp {
+  background: #25d366; /* WhatsApp's own green */
+}
+
+.ChatButtons_telegram {
+  background: #229ed9; /* Telegram's own blue */
+}
+
+.ChatButtons_button svg {
+  width: 28px;
+  height: 28px;
+  fill: #fff;
+}
+
+@media (min-width: 1024px) {
+  .ChatButtons_root {
+    bottom: 24px;
+  }
+}

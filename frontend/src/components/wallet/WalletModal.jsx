@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
+import { useGate } from "../../lib/gates";
 import DepositTab from "./DepositTab";
 import WithdrawTab from "./WithdrawTab";
 import { BuyCryptoTab, TipTab } from "./UnbuiltTabs";
@@ -52,7 +53,12 @@ export default function WalletModal({ onClose }) {
     hideZeroBalances,
     hideBalance,
   } = useSession();
-  const [tab, setTab] = useState(tabFromUrl);
+  /* An agent's player has no deposit, withdrawal or tips (their agent funds and pays them): those tabs go. */
+  const on = useGate();
+  const GATE = { deposit: "deposit", withdraw: "withdraw", tip: "tips" };
+  const tabs = TABS.filter((t) => !GATE[t.id] || on(GATE[t.id]));
+  const [picked, setTab] = useState(tabFromUrl);
+  const tab = tabs.some((t) => t.id === picked) ? picked : (tabs[0]?.id ?? null);
   /**
    * The wallet the modal is working on.
    *
@@ -106,7 +112,7 @@ export default function WalletModal({ onClose }) {
       <div className="WalletModal_tabsGap">
         <div className="TabViewOutline_root">
           <div className="TabViewOutline_tabOutlineWrapper" role="tablist">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t.id}
                 type="button"

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { alertFromError } from "../../lib/alerts";
 
 import { useSession } from "../../lib/sessionContext";
 import { navigate } from "../../lib/router";
@@ -133,16 +134,21 @@ export default function SelfExclusionModal({ step, isModify, prevSelfExclusion, 
     event.preventDefault();
     if (!ready) return;
     setPending(true);
-    if (step === "STEP1") {
-      createCooldown({ selfExclusionType: type });
-    } else {
-      createSelfExclusion({ selfExclusionType: type, breakPeriod: period });
+    try {
+      if (step === "STEP1") {
+        await createCooldown({ selfExclusionType: type });
+      } else {
+        await createSelfExclusion({ selfExclusionType: type, breakPeriod: period });
+      }
+    } catch (error) {
+      alertFromError(error, "Your break could not be started. Please try again.");
+      setPending(false);
+      return;
     }
     onDone();
     if (platformBreak) {
-      // The reference ends every session and drops the player on the lobby.
-      // Nothing on this backend refuses the next sign-in, which is the whole
-      // difference between this screen and a real self-exclusion.
+      // The reference ends every session and drops the player on the lobby; the
+      // backend refuses the next sign-in for as long as the break runs.
       await logout();
       navigate("/");
       return;

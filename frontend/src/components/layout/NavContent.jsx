@@ -7,7 +7,9 @@ import { useState, useEffect, useMemo } from "react";
 
 import { cx } from "../../lib/carousel";
 import { navigate, openSearch } from "../../lib/router";
-import { site } from "../../lib/endpoints";
+import { casino as casinoApi, site } from "../../lib/endpoints";
+import { adminCategorySlug } from "../../lib/categories";
+import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
 import { useSharedSportsTree } from "../../exchange/hooks/exchange/sharedSportsTree";
@@ -239,6 +241,12 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   }, [promosOn]);
 
   const promoLinks = sidebarPromos ?? [];
+  // A category the admin switched off (`active: false` on `/casino/games/categories`) leaves the rail; URLs stay as they are.
+  const { data: adminCategories } = useApi("casino:categories", () => casinoApi.categories(), { enabled: casino });
+  const shownCasinoLinks = casinoLinks.filter((l) => {
+    const slug = adminCategorySlug(l.id);
+    return !slug || !Array.isArray(adminCategories) || adminCategories.find((c) => c.slug === slug)?.active !== false;
+  });
   // Footer link ids are gate keys (`vip`, `blog`, `affiliate`).
   const siteFooterLinks = footerLinks.filter((l) => on(l.id));
   const accountLinks = profileLinks.filter((l) => l.action !== "vault" || on("vault"));
@@ -323,7 +331,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
             </div>
           )}
 
-          {casino && casinoLinks.map((l) => (
+          {casino && shownCasinoLinks.map((l) => (
             <NavLink key={l.id} {...l} expanded={expanded} active={active === l.id} onSelect={handleSelect} />
           ))}
 

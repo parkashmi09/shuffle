@@ -3,10 +3,14 @@ import { cx } from "../../lib/carousel";
 import { displayBalance } from "../../lib/adapters";
 import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import { currencyOptions } from "../../lib/walletOptions";
+import { ApiError } from "../../lib/api";
+import { tips } from "../../lib/endpoints";
+import { useSession } from "../../lib/sessionContext";
 import WalletSelect, { CoinIcon } from "./CurrencySelect";
 
 /**
- * Buy Crypto and Tip — the two tabs with no backend behind them.
+ * Buy Crypto and Tip. Buy Crypto has no backend behind it; Tip sends through
+ * `POST /user/tip/send`.
  *
  * Both are the live modal's own layouts, read off `?modal=wallet&md-tab=…`
  * rather than designed here. Neither carries a notice about what is missing:
@@ -142,8 +146,12 @@ export function TipTab({
 }) {
   const [username, setUsername] = useState("");
   const [amount, setAmount] = useState("");
-  /* The live modal opens with the switch off. */
+  /* The live modal opens with the switch off. The backend has no public-tip
+     field (a tip is always private), so the switch is visual only. */
   const [isPublic, setIsPublic] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState(null);
+  const { refreshBalances } = useSession();
 
   const options = useMemo(
     () =>
@@ -158,9 +166,28 @@ export function TipTab({
     [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin]
   );
   const available = balances?.[coin] ?? "0";
+  const ready = username.trim() && /^\d+(\.\d{1,8})?$/.test(amount.trim()) && Number(amount) > 0;
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!ready || busy) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      await tips.send({ toUsername: username.trim(), currency: coin, amount: amount.trim() });
+      setStatus({ ok: true, message: `Tip of ${amount.trim()} ${coin} sent to ${username.trim()}.` });
+      setAmount("");
+      refreshBalances?.();
+    } catch (error) {
+      const fields = error instanceof ApiError ? error.fields.map((f) => f.message).join(" ") : "";
+      setStatus({ ok: false, message: fields || error?.message || "Could not send the tip." });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <form className="Tip_form" onSubmit={(e) => e.preventDefault()}>
+    <form className="Tip_form" onSubmit={submit}>
       <WalletSelect label="Currency" options={options} value={coin} onChange={onCoinChange} />
 
       <div className="TextInput_formControlWrapper">
@@ -239,9 +266,17 @@ export function TipTab({
         </div>
       </div>
 
+      {status && (
+        <div className="NoticeMessage_root" role={status.ok ? "status" : "alert"}>
+          <span className="NoticeMessage_text" style={{ color: status.ok ? "var(--color-success)" : "var(--color-warning)" }}>
+            {status.message}
+          </span>
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled
+        disabled={!ready || busy}
         className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary Tip_button"
       >
         <span className="ButtonVariants_buttonContent">Send Tip</span>

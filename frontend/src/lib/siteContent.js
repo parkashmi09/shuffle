@@ -1,5 +1,6 @@
 import { useApi } from "./useResource";
 import { site } from "./endpoints";
+import { onBump, useSiteVersion } from "./siteLive";
 
 /**
  * The owner's branding (`GET /admin/branding/public`) and the site admin's
@@ -7,9 +8,11 @@ import { site } from "./endpoints";
  * legal, home, pages, vip). Each is read once per page load and shared.
  *
  * Unset reads as `null` / `{}`, and callers keep their own default — an
- * unbranded site still renders.
+ * unbranded site still renders. Both are read again on a live save (lib/siteLive.js).
  */
+let rawOnce = null;
 let brandingOnce = null;
+let extrasOnce = null;
 let contentOnce = null;
 
 const ASSET = /^\/api\/v1\/admin\/branding\/asset\/[0-9a-f]{64}\.(png|webp|svg)$/;
@@ -31,14 +34,50 @@ function cleanBranding(data) {
   return out.siteName ? out : null;
 }
 
-export const loadBranding = () => (brandingOnce ??= site.branding().then(cleanBranding).catch(() => null));
+/**
+ * Not branding as such, and readable unbranded: the floating chat buttons (owner allows, site
+ * admin switches on + link; the backend normalises the link) and the sportsbook tab name / game.
+ */
+function cleanExtras(data) {
+  const sb = data?.sportsbook ?? {};
+  const wa = data?.whatsapp ?? {};
+  const tg = data?.telegram ?? {};
+  const waLink = typeof wa.link === "string" ? wa.link.trim() : "";
+  const waHref = /^\+?\d{6,15}$/.test(waLink)
+    ? `https://wa.me/${waLink.replace("+", "")}`
+    : /^https:\/\/(wa\.me|([a-z0-9-]+\.)*whatsapp\.com)\//i.test(waLink) ? waLink : null;
+  const message = safeText(wa.message, 300);
+  const tgLink = typeof tg.link === "string" ? tg.link.trim() : "";
+  return {
+    whatsapp: wa.enabled === true && waHref ? `${waHref}${message ? `${waHref.includes("?") ? "&" : "?"}text=${encodeURIComponent(message)}` : ""}` : null,
+    telegram: tg.enabled === true && tgLink.length <= 300 && /^https:\/\/(t|telegram)\.me\/[^\s<>"]+$/i.test(tgLink) ? tgLink : null,
+    sportsbook: {
+      tabName: safeText(sb.tabName, 30),
+      gameUid: /^[A-Za-z0-9_-]{1,64}$/.test(sb.gameUid || "") ? sb.gameUid : null,
+    },
+  };
+}
+
+const loadRaw = () => (rawOnce ??= site.branding().catch(() => null));
+export const loadBranding = () => (brandingOnce ??= loadRaw().then(cleanBranding));
+export const loadBrandExtras = () => (extrasOnce ??= loadRaw().then(cleanExtras));
 export const loadSiteContent = () => (contentOnce ??= site.content().then((d) => d || {}).catch(() => ({})));
 
-export const useBranding = () => useApi("site:branding", loadBranding).data;
+onBump("branding", () => {
+  rawOnce = brandingOnce = extrasOnce = null;
+  queueMicrotask(applyBranding);
+});
+onBump("content", () => {
+  contentOnce = null;
+});
+
+export const useBranding = () => useApi(`site:branding:${useSiteVersion("branding")}`, loadBranding).data;
+/** `{ whatsapp, telegram, sportsbook: { tabName, gameUid } }` — see `cleanExtras`. */
+export const useBrandExtras = () => useApi(`site:brand-extras:${useSiteVersion("branding")}`, loadBrandExtras).data;
 /** Captured copy names the reference brand; the owner's site name replaces it (unbranded keeps the copy). */
 export const withSiteName = (html, brand) => (brand?.siteName ? html.replace(/\bShuffle\b/g, () => brand.siteName) : html);
 
-export const useSiteContent = () => useApi("site:content", loadSiteContent).data || {};
+export const useSiteContent = () => useApi(`site:content:${useSiteVersion("content")}`, loadSiteContent).data || {};
 
 function meta(attr, key, content) {
   if (!content) return;

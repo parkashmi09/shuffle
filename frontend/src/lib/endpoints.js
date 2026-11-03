@@ -23,6 +23,12 @@ export const auth = {
   me: () => get("/user/auth/me"),
   logout: (refreshToken) => post("/user/auth/logout", refreshToken ? { refreshToken } : {}),
   forgotPassword: (email) => post("/user/auth/forgot-password", { email }, { auth: false }),
+  /** The token from the reset email (`/reset-password?token=`) and the new password (min 8). */
+  resetPassword: (token, newPassword) => post("/user/auth/reset-password", { token, newPassword }, { auth: false }),
+  /** `{ enabled, configured }` — the button follows `enabled` (the owner's `google_signin`), keys or not. */
+  googleStatus: () => get("/user/auth/google/status", { auth: false }),
+  /** The one-time `code` from `/login/google?code=` plus this tab's nonce → the session, as login answers it. */
+  googleExchange: (code, nonce) => post("/user/auth/google/exchange", { code, nonce }, { auth: false }),
   changePassword: (body) => post("/user/auth/change-password", body),
   sessions: () => get("/user/auth/sessions"),
   revokeSession: (sessionId) => del(`/user/auth/sessions/${sessionId}`),
@@ -140,6 +146,8 @@ export const vip = {
    */
   levels: () =>
     get("/user/vip/levels").then((res) => (Array.isArray(res) ? res : res?.levels ?? [])),
+  /** The benefits table: `{ perks: [{ label, cards: ["bronze", …] }] }`, enabled perks only, public. */
+  perks: () => get("/admin/vip-branding/perks", { auth: false }),
 };
 
 /**
@@ -183,6 +191,10 @@ export const casino = {
   providers: () => get("/casino/games/providers", { auth: false }),
   search: (q, query) => get("/casino/games/search", { query: { q, ...query }, auth: false }),
   stats: () => get("/casino/games/stats", { auth: false }),
+  /** The admin's lobby categories, `[{ slug, name, sortOrder, active, count }]` — read once per page load. */
+  categories: once(() => get("/casino/games/categories", { auth: false })),
+  /** One category's hand-picked games, paginated; `provider` and `sort` (`az` | `za`) narrow it. */
+  categoryGames: (slug, query) => get(`/casino/games/categories/${slug}`, { query, auth: false, withMeta: true }),
 
   favourites: () => get("/casino/games/favourites"),
   addFavourite: (gameRef, source) => put(`/casino/games/favourites/${gameRef}`, { source }),
@@ -252,6 +264,12 @@ export const betHistory = {
 export const site = {
   /** The feature flags every browser needs, signed in or not. */
   config: once(() => get("/admin/site-config/public", { auth: false })),
+  /**
+   * The coins players may use, in the site's order (owner plan + site admin both on):
+   * `[{ code, name, symbol, decimals, kind, image, networks: [{ key, name }], sort }]`.
+   * `image` is `/api/v1/admin/currencies/:code/image?v=…`, or null when none is uploaded.
+   */
+  coins: once(() => get("/admin/currencies/public", { auth: false })),
   /** The owner's branding: `{ branded, siteName, title, titleTemplate, description, keywords, themeColor, logoUrl, markUrl, ogImageUrl, … }`. */
   branding: () => get("/admin/branding/public", { auth: false }),
   /** The site admin's copy, `{ footer?, social?, support?, legal?, home?, pages?, vip? }` — only saved sections. */
@@ -338,8 +356,8 @@ export const rates = {
  *   `bankDetails` returns where to send it, `POST /deposits/fiat` files the
  *   claim with a screenshot.
  *
- * There is no tipping module and no on-ramp module in any of the four
- * services, so the modal's Buy Crypto and Tip tabs have nothing to call.
+ * There is no on-ramp module in any of the four services, so the modal's Buy
+ * Crypto tab has nothing to call. Tips are `tips` below.
  */
 export const funding = {
   /** Networks a coin can be deposited on. Public; needs the provider configured. */
@@ -371,6 +389,33 @@ export const funding = {
 
   cryptoWithdrawals: (query) => get("/user/withdrawals/crypto", { query }),
   cryptoWithdrawalSummary: () => get("/user/withdrawals/crypto/summary"),
+};
+
+/**
+ * Shuffle Wise — `/user/responsible-gambling`, the player's own breaks and limits.
+ *
+ * `GET /` answers `{ selfExclusions[], limits[] }` (only rows still in force).
+ * `type` is `CASINO` | `SPORTS` | `PLATFORM`; `breakPeriod` is one of the
+ * `BREAK_PERIODS` values in `lib/shuffleWise.js`; a limit is
+ * `{ type: LOSS_LIMIT | WAGER_LIMIT, usdAmount, periodUnit: DAYS | WEEKS | MONTHS }`.
+ */
+export const responsibleGambling = {
+  overview: () => get("/user/responsible-gambling"),
+  cooldown: (type) => post("/user/responsible-gambling/self-exclusions/cooldown", { type }),
+  selfExclude: (type, breakPeriod) => post("/user/responsible-gambling/self-exclusions", { type, breakPeriod }),
+  createLimit: (body) => post("/user/responsible-gambling/limits", body),
+  removeLimit: (id) => post(`/user/responsible-gambling/limits/${id}/remove`),
+};
+
+/**
+ * The wallet modal's Tip tab — `POST /user/tip/send`.
+ *
+ * Body `{ toUsername, currency, amount, note?, requestId? }`; the sender is the
+ * token's player. Refusals (`TIP_USER_NOT_FOUND`, `TIP_INSUFFICIENT_BALANCE`,
+ * `TIP_OVER_DAILY_LIMIT`, …) carry player-readable messages.
+ */
+export const tips = {
+  send: (body) => post("/user/tip/send", body),
 };
 
 /**

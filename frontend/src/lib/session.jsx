@@ -5,8 +5,10 @@ import {
   affiliate as affiliateApi,
   preferences as preferencesApi,
   rates as ratesApi,
+  site as siteApi,
   wallet as walletApi,
 } from "./endpoints";
+import { setPlayerCapabilities } from "./siteLive";
 import {
   clearStoredReferral,
   normalizeReferralInput,
@@ -129,10 +131,20 @@ export function SessionProvider({ children }) {
     writeStoredPreferences({ hideZeroBalances: next });
   }, []);
 
+  /** The site admin's default currency: the header's fallback when the wallet holds nothing else. */
+  const [defaultCurrency, setDefaultCurrency] = useState(null);
+  useEffect(() => {
+    siteApi
+      .config()
+      .then((c) => typeof c?.defaultCurrency === "string" && setDefaultCurrency(c.defaultCurrency.toUpperCase()))
+      .catch(() => {});
+  }, []);
+
   const signOutLocal = useCallback(() => {
     // Untie this browser from the player, so a shared machine stops receiving their pushes.
     pushLogout();
     tokens.clear();
+    setPlayerCapabilities(null);
     setState(SIGNED_OUT);
   }, []);
 
@@ -162,8 +174,11 @@ export function SessionProvider({ children }) {
 
     (async () => {
       try {
+        // `/auth/me` also answers on an agent player's temporary password (everything else is 403
+        // PASSWORD_CHANGE_REQUIRED), and carries `mustChangePassword` and `capabilities`.
         const user = await authApi.me();
         if (cancelled) return;
+        setPlayerCapabilities(user?.capabilities);
         // A reload restoring the session — tie the push subscription to the player again.
         pushLogin(user?.id);
         setState({ user, balances: null, status: "authenticated" });
@@ -207,9 +222,12 @@ export function SessionProvider({ children }) {
     };
   }, []);
 
+  // On a temporary password every read but `/auth/me` is refused: wait for ForcePasswordModal.
+  const pendingPassword = Boolean(state.user?.mustChangePassword);
+
   /** Pull the wallet once a user is known. Later refreshes go through `refreshBalances`. */
   useEffect(() => {
-    if (state.status !== "authenticated" || state.balances) return undefined;
+    if (state.status !== "authenticated" || state.balances || pendingPassword) return undefined;
     let cancelled = false;
 
     (async () => {
@@ -225,11 +243,11 @@ export function SessionProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [state.status, state.balances]);
+  }, [state.status, state.balances, pendingPassword]);
 
   /** Streamer Mode (`hideBalance`) follows the account, not just this browser. */
   useEffect(() => {
-    if (state.status !== "authenticated") return undefined;
+    if (state.status !== "authenticated" || pendingPassword) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -242,15 +260,29 @@ export function SessionProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [state.status]);
+  }, [state.status, pendingPassword]);
 
-  const login = useCallback(async (identifier, password, extra) => {
-    const session = await authApi.login(identifier, password, extra);
+  /** A session obtained elsewhere (Google's `/login/google` exchange) — stored as `login` stores one. */
+  const acceptSession = useCallback(async (session) => {
     tokens.set(session);
     pushLogin(session.user?.id);
-    setState({ user: session.user, balances: null, status: "authenticated" });
+    // The login reply has no capabilities; `/auth/me` does (and answers on a temporary password).
+    let user = session.user;
+    try {
+      const me = await authApi.me();
+      user = { ...user, ...me };
+    } catch {
+      /* keep the login reply: the gates stay open and the routes still refuse */
+    }
+    setPlayerCapabilities(user?.capabilities);
+    setState({ user, balances: null, status: "authenticated" });
     return session;
   }, []);
+
+  const login = useCallback(
+    async (identifier, password, extra) => acceptSession(await authApi.login(identifier, password, extra)),
+    [acceptSession]
+  );
 
   /**
    * Register, then sign in.
@@ -295,7 +327,7 @@ export function SessionProvider({ children }) {
     // A stored preference wins only if the wallet still carries that code;
     // otherwise fall back to whatever the account actually holds most of.
     const currency =
-      preferred && balances && preferred in balances ? preferred : primaryBalance(balances).currency;
+      preferred && balances && preferred in balances ? preferred : primaryBalance(balances, defaultCurrency || undefined).currency;
 
     return {
       user: state.user,
@@ -319,12 +351,17 @@ export function SessionProvider({ children }) {
       setHideBalance,
       rates,
       login,
+      acceptSession,
       register,
       logout,
       refreshBalances: loadBalances,
+      /** An agent's player on the upline's temporary password (ForcePasswordModal). */
+      mustChangePassword: pendingPassword,
     };
   }, [
     state,
+    pendingPassword,
+    defaultCurrency,
     preferred,
     chooseCurrency,
     displayCurrency,
@@ -336,6 +373,7 @@ export function SessionProvider({ children }) {
     hideBalance,
     rates,
     login,
+    acceptSession,
     register,
     logout,
     loadBalances,

@@ -33,6 +33,9 @@ const pages = {
   "/affiliate": AffiliatePage,
   "/challenges": ChallengesPage,
   "/promotions": PromotionsPage,
+  // The reset email's link and Google's return: the lobby, with AppShell's auth modal / exchange over it.
+  "/reset-password": CasinoHome,
+  "/login/google": CasinoHome,
 };
 
 /** Dynamic routes: promotion articles under `/promotions/<slug>` and `/sports/promotions/<slug>`. */
@@ -64,7 +67,7 @@ function renderPage(path) {
   const settingsTab = path.match(/^\/settings\/(account|verify|security|preferences|sessions|ignored-users)$/);
   if (settingsTab) return <Settings key={settingsTab[1]} />;
   const txTab = path.match(/^\/transactions(?:\/(deposits|withdrawals|bets|sports-bets|tip-rain|other))?$/);
-  if (txTab) return <TransactionsPage key={txTab[1] || "deposits"} />;
+  if (txTab) return <MyGames><TransactionsPage key={txTab[1] || "deposits"} /></MyGames>;
   // The signed-in affiliate dashboard. `/affiliate` itself stays the marketing
   // page the reference serves to everyone; these four are the account menu's.
   const affiliateTab = path.match(/^\/affiliate\/(overview|referred-users|campaigns|earnings)$/)?.[1];
@@ -89,11 +92,19 @@ function Redirect({ to }) {
   return null;
 }
 
+/** An account page reached signed out: the lobby, with the login sheet up asking for the account. */
+function SignInFirst() {
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("shuffle:auth", { detail: "login" }));
+  }, []);
+  return <CasinoHome />;
+}
+
 /** Favourites and Recently Played exist only for an account that has them. */
 function MyGames({ children }) {
   const { signedIn, restoring } = useSession();
   if (restoring) return <div className="CardGrid_cardGridWrapper" />;
-  if (!signedIn) return <CasinoHome />;
+  if (!signedIn) return <SignInFirst />;
   return children;
 }
 
@@ -101,7 +112,7 @@ function MyGames({ children }) {
 function Settings() {
   const { signedIn, restoring } = useSession();
   if (restoring) return <div className="Settings_settingsViewContainer" />;
-  if (!signedIn) return <CasinoHome />;
+  if (!signedIn) return <SignInFirst />;
   return <SettingsPage />;
 }
 
@@ -109,7 +120,7 @@ function Settings() {
 function ShuffleWise() {
   const { signedIn, restoring } = useSession();
   if (restoring) return <div className="ShuffleWise_container" />;
-  if (!signedIn) return <CasinoHome />;
+  if (!signedIn) return <SignInFirst />;
   return <ShuffleWisePage />;
 }
 

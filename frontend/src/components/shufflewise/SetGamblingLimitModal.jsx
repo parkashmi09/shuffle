@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { alertFromError } from "../../lib/alerts";
 
 import { useSession } from "../../lib/sessionContext";
 import { toFiat } from "../../lib/adapters";
@@ -39,12 +40,20 @@ export default function SetGamblingLimitModal({ taken = [], onDone, onClose }) {
 
   const ready = type && periodUnit && Number(amount) > 0;
 
-  const submit = (event) => {
+  const [pending, setPending] = useState(false);
+  const submit = async (event) => {
     event.preventDefault();
-    if (!ready) return;
-    const row = enableLimit({ type, usdAmount: Number(amount), periodUnit });
-    onDone();
-    setSaved(row);
+    if (!ready || pending) return;
+    setPending(true);
+    try {
+      const row = await enableLimit({ type, usdAmount: Number(amount), periodUnit });
+      onDone();
+      setSaved(row);
+    } catch (error) {
+      alertFromError(error, "Your limit could not be set. Please try again.");
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -156,7 +165,7 @@ export default function SetGamblingLimitModal({ taken = [], onDone, onClose }) {
 
           <button
             type="submit"
-            disabled={!ready}
+            disabled={!ready || pending}
             className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary"
           >
             <span className="ButtonVariants_buttonContent">Add Limit</span>

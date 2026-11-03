@@ -4,6 +4,7 @@ import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
 import { useBranding, useSiteContent } from "../../lib/siteContent";
+import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
 
 const columns = [
   {
@@ -45,7 +46,16 @@ const columns = [
   },
 ];
 
-const languages = ["English", "Français", "中文", "Español", "Português", "한국어", "日本語", "Deutsch", "Magyar", "Türkçe", "Pусский", "Tiếng Việt", "Srbija", "Polski", "Indonesian", "Norsk", "Italiano"];
+/* [backend code (site-config SITE_LANGUAGES), label]. The owner's Languages list hides the rest; the
+   ones with no backend code (null) show only until the list has answered. */
+const LANGUAGES = [
+  ["en", "English"], ["fr", "Français"], ["zh", "中文"], ["es", "Español"], ["pt", "Português"], ["ko", "한국어"],
+  ["ja", "日本語"], [null, "Deutsch"], [null, "Magyar"], ["tr", "Türkçe"], ["ru", "Pусский"], ["vi", "Tiếng Việt"],
+  ["sr", "Srbija"], [null, "Polski"], ["id", "Indonesian"], [null, "Norsk"], [null, "Italiano"],
+  ["en-IN", "English (India)"], ["hi", "हिन्दी"], ["ar", "العربية"], ["cs", "Čeština"], ["fil", "Filipino"],
+  ["fa", "فارسی"], ["fi", "Suomi"], ["th", "ไทย"],
+];
+const languagesFor = (allowed) => LANGUAGES.filter(([code]) => !allowed || (code && allowed.includes(code))).map(([, label]) => label);
 const odds = ["Decimal", "Fractional", "American", "Indonesian", "Hong Kong", "Malaysian"];
 
 /**
@@ -128,6 +138,7 @@ function SelectButton({ label, options, value, onChange, children }) {
  * copies drive the same preference, so the state lives in `Footer`.
  */
 function LanguageAndOddSelectors({ className, language, setLanguage, odd, setOdd }) {
+  const languages = languagesFor(usePublicSiteConfig().languages);
   return (
     <div className={className}>
       <SelectButton label="language" options={languages} value={language} onChange={setLanguage}>

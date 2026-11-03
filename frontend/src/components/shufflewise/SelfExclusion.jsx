@@ -26,8 +26,8 @@ import { activeSelfExclusions, isPermanent, EXCLUSION_TYPES } from "../../lib/sh
  *   • cooldown running, PLATFORM  → the button is disabled; there is nothing
  *                                   left to change
  *
- * Nothing here is enforced — see `lib/shuffleWise.js`. The screen is real; the
- * block behind it is not, because no service has one.
+ * Served and enforced by the user-service `responsible-gambling` module — see
+ * `lib/shuffleWise.js`.
  */
 
 /** `Sports & Casino` in step 1, `Platform` in step 2 — the reference's own split. */
@@ -103,7 +103,7 @@ function InstructionCard({ title, description, icon, alt, iconColor, dimText, di
 }
 
 export default function SelfExclusion() {
-  const [rows, setRows] = useState(() => activeSelfExclusions());
+  const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -112,7 +112,13 @@ export default function SelfExclusion() {
     return () => clearInterval(timer);
   }, []);
 
-  const refetch = useCallback(() => setRows(activeSelfExclusions()), []);
+  const refetch = useCallback(() => {
+    activeSelfExclusions().then(setRows, () => {});
+  }, []);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const exclusion = rows.find((r) => r.selfExclusionCooldownUntilAt === null);
   const cooldowns = rows.filter((r) => r.selfExclusionCooldownUntilAt !== null);

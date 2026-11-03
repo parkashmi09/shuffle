@@ -4,7 +4,7 @@ import ProviderCarousel from "../components/casino/ProviderCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import { navigate } from "../lib/router";
 import { providers } from "../data/catalog";
-import { categoryFor, categoryIcon, categoryQuery } from "../lib/categories";
+import { adminCategorySlug, categoryFor, categoryIcon, categoryQuery } from "../lib/categories";
 import { useCategory, useProviders } from "../lib/catalogue";
 import { cx } from "../lib/carousel";
 import { useBranding, withSiteName } from "../lib/siteContent";
@@ -279,6 +279,7 @@ export function CategoryPage({ slug }) {
     search: query.trim() || categoryQuery(slug).search,
     provider: provider || undefined,
     limit: count,
+    admin: query.trim() ? undefined : adminCategorySlug(slug) || undefined,
   });
 
   // The provider filter offers the studios this catalogue actually carries.

@@ -1,32 +1,18 @@
 /**
- * Shuffle Wise — the data behind `/shuffle-wise/*`.
+ * Shuffle Wise — the data behind `/shuffle-wise/*`: a player's own breaks and
+ * loss / wager limits.
  *
- * ── WHY THIS IS A LOCAL STORE ────────────────────────────────────────────
+ * Served by the user-service `responsible-gambling` module and ENFORCED there:
+ * the wallet refuses a stake while a break covers it or a limit would be
+ * passed, and a PLATFORM break refuses sign-in. Rows come back in the
+ * reference's shape — `selfExclusionType`, `createdAt`, `selfExclusionUntilAt`,
+ * `selfExclusionCooldownUntilAt` for a break; `type`, `usdAmount`, `periodUnit`,
+ * `progressAmount`, `expiredAt` for a limit.
  *
- * The reference serves both tabs from GraphQL: `getActiveSelfExclusions`,
- * `updateAndReturnResponsibleLimits`, `enableResponsibleLimit` and
- * `initiateResponsibleLimitRemoval`. This backend has no responsible-gambling
- * module at all — `backend/services/user/src/modules` has no route that stores
- * a limit or a break, and nothing in the casino service consults one before
- * settling a bet.
- *
- * So this file keeps what the player sets in `localStorage`, which makes the
- * two tabs behave correctly and persist across reloads. Be clear about what
- * that is and is not:
- *
- *   • It is the reference's UI, with its real states — active cooldown,
- *     finished cooldown, an extension, a limit, a limit awaiting removal.
- *   • It is NOT enforcement. A cooldown here stops nothing: the bet endpoints
- *     never see it, and clearing site data clears it. A platform self-exclusion
- *     signs this browser out, and signing back in works.
- *
- * When the module arrives, every function below becomes a call and the shape
- * it returns is already the reference's: `selfExclusionType`, `createdAt`,
- * `selfExclusionUntilAt`, `selfExclusionCooldownUntilAt` for a break, and
- * `type`, `usdAmount`, `periodUnit`, `progressAmount`, `expiredAt` for a limit.
+ * The backend lists only rows still in force, so a cooldown that has run out
+ * drops off the list rather than staying as a "finished" row.
  */
-
-const KEY = "shuffle.shuffle-wise";
+import { responsibleGambling as api } from "./endpoints";
 
 /** The three things a break can cover. `PLATFORM` is the whole account. */
 export const EXCLUSION_TYPES = { CASINO: "CASINO", SPORTS: "SPORTS", PLATFORM: "PLATFORM" };
@@ -53,28 +39,6 @@ export const BREAK_PERIODS = [
   { value: "10 years", label: "10 Years", period: 10, unit: "YEARS" },
   { value: "permanent", label: "Permanent", period: null, unit: "PERMANENT" },
 ];
-
-const EMPTY = { selfExclusions: [], limits: [] };
-
-function read() {
-  try {
-    return { ...EMPTY, ...JSON.parse(localStorage.getItem(KEY) || "{}") };
-  } catch {
-    // A private window throws rather than answering null.
-    return { ...EMPTY };
-  }
-}
-
-function write(next) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // Nothing to do — the change still holds for this page.
-  }
-  return next;
-}
-
-const id = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 /** The end of a break that starts now, as an ISO string. */
 export function endOf(periodValue, from = Date.now()) {
@@ -112,8 +76,8 @@ export function limitReset(periodUnit, from) {
 
 /* ── Self-exclusion ──────────────────────────────────────────────────── */
 
-export function activeSelfExclusions() {
-  return read().selfExclusions;
+export async function activeSelfExclusions() {
+  return (await api.overview())?.selfExclusions ?? [];
 }
 
 /**
@@ -121,80 +85,22 @@ export function activeSelfExclusions() {
  * `selfExclusionCooldownUntilAt`, which is what marks a row as the cooldown
  * rather than the self-exclusion that may follow it.
  */
-export function createCooldown({ selfExclusionType }) {
-  const now = new Date().toISOString();
-  const until = endOf("1 day");
-  const store = read();
-  const row = {
-    id: id(),
-    selfExclusionType,
-    createdAt: now,
-    selfExclusionUntilAt: until,
-    selfExclusionCooldownUntilAt: until,
-  };
-  // Starting a cooldown replaces the one before it — the confirmation
-  // checkbox says as much.
-  write({ ...store, selfExclusions: [row, ...store.selfExclusions.filter((r) => !r.selfExclusionCooldownUntilAt)] });
-  return row;
-}
+export const createCooldown = ({ selfExclusionType }) => api.cooldown(selfExclusionType);
 
-/** Step 2 — the break itself, which has no cooldown stamp. */
-export function createSelfExclusion({ selfExclusionType, breakPeriod }) {
-  const now = new Date().toISOString();
-  const store = read();
-  const row = {
-    id: id(),
-    selfExclusionType,
-    createdAt: now,
-    selfExclusionUntilAt: endOf(breakPeriod),
-    selfExclusionCooldownUntilAt: null,
-  };
-  write({ ...store, selfExclusions: [row, ...store.selfExclusions] });
-  return row;
-}
+/** Step 2 — the break itself; the backend refuses it (`RESPONSIBLE_COOLDOWN_REQUIRED`) without a cooldown first. */
+export const createSelfExclusion = ({ selfExclusionType, breakPeriod }) => api.selfExclude(selfExclusionType, breakPeriod);
 
 /* ── Gambling limits ─────────────────────────────────────────────────── */
 
-export function responsibleLimits() {
-  // A promise, not the array: the reference's tab renders its skeleton while
-  // this is in flight, and keeping the shape a fetch will have means the
-  // component does not change when one arrives.
-  return Promise.resolve(pruneExpiredLimits());
+export async function responsibleLimits() {
+  return (await api.overview())?.limits ?? [];
 }
 
-export function enableLimit({ type, usdAmount, periodUnit }) {
-  const store = read();
-  const row = {
-    id: id(),
-    type,
-    usdAmount: String(usdAmount),
-    periodUnit,
-    period: 1,
-    progressAmount: "0",
-    createdAt: new Date().toISOString(),
-    expiredAt: null,
-  };
-  write({ ...store, limits: [row, ...store.limits] });
-  return row;
-}
+/** One live limit of each type; a second answers 409 `RESPONSIBLE_LIMIT_EXISTS`. */
+export const enableLimit = ({ type, usdAmount, periodUnit }) => api.createLimit({ type, usdAmount, periodUnit });
 
 /**
- * Removal is not immediate on the reference — it stamps `expiredAt` twelve
- * hours out and the row stays in the table, greyed, until then.
+ * Removal is not immediate — the backend stamps `expiredAt` twelve hours out
+ * and the limit keeps applying, greyed in the table, until then.
  */
-export function initiateLimitRemoval(limitId) {
-  const store = read();
-  const expiredAt = new Date(Date.now() + 12 * 3600 * 1000).toISOString();
-  const limits = store.limits.map((row) => (row.id === limitId ? { ...row, expiredAt } : row));
-  write({ ...store, limits });
-  return limits.find((row) => row.id === limitId);
-}
-
-/** Rows whose twelve hours have passed are gone; the tab drops them on read. */
-export function pruneExpiredLimits() {
-  const store = read();
-  const now = Date.now();
-  const limits = store.limits.filter((row) => !row.expiredAt || new Date(row.expiredAt) > now);
-  if (limits.length !== store.limits.length) write({ ...store, limits });
-  return limits;
-}
+export const initiateLimitRemoval = (limitId) => api.removeLimit(limitId);

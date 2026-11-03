@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { cx } from "../../lib/carousel";
+import { alertFromError } from "../../lib/alerts";
 import { useApi } from "../../lib/useResource";
 import { CoinIcon } from "../wallet/CurrencySelect";
 import TableSkeleton from "../ui/TableSkeleton";
@@ -54,8 +55,12 @@ export default function GamblingLimits() {
 
   const refetch = useCallback(() => setNonce((n) => n + 1), []);
 
-  const remove = (limitId) => {
-    initiateLimitRemoval(limitId);
+  const remove = async (limitId) => {
+    try {
+      await initiateLimitRemoval(limitId);
+    } catch (error) {
+      alertFromError(error, "The limit could not be removed. Please try again.");
+    }
     refetch();
   };
 

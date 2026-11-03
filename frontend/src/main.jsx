@@ -4,8 +4,11 @@ import './index.css'
 import './styles/shuffle-redeem-code.css'
 import App from './App.jsx'
 import { applyBranding } from './lib/siteContent.js'
+import { startSiteLive } from './lib/siteLive.js'
 
 applyBranding()
+// Owner/admin saves, live (featuresUpdated, siteConfigUpdated, contentUpdated).
+startSiteLive()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

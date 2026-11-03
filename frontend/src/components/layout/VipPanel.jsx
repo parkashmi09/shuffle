@@ -244,7 +244,9 @@ export default function VipPanel({ open, onClose }) {
                 <ProgressCard vip={vip} levels={levels} onViewProgramme={goProgramme} />
 
                 {signedIn ? (
-                  <VipRewards levels={levels} variant="sidebar" />
+                  // Only while open (the rail stays mounted closed) and for a player with rewards: an
+                  // agent's player has none, and its rakeback/bonus reads would answer 403.
+                  enabled && on("bonus") && <VipRewards levels={levels} variant="sidebar" />
                 ) : (
                   <div className="VipSidebar_signedOut">
                     <p className="VipSidebar_signedOutText">

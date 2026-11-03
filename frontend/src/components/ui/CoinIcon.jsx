@@ -1,4 +1,4 @@
-import { currencyIcon } from "../../lib/currencies";
+import { COIN_FALLBACK_ICON, currencyIcon, localCurrencyIcon, useCoins } from "../../lib/currencies";
 
 /**
  * A currency's 16px mark. The ONE implementation.
@@ -25,6 +25,7 @@ import { currencyIcon } from "../../lib/currencies";
  */
 export function CoinIcon({ code, size = 16 }) {
   const key = String(code || "").toUpperCase();
+  useCoins(); // the admin-uploaded mark replaces the local one once the list answers
   return (
     <img
       alt={key}
@@ -33,10 +34,17 @@ export function CoinIcon({ code, size = 16 }) {
       src={currencyIcon(key)}
       width={size}
       onError={(e) => {
-        // Guarded: a failing fallback must not re-enter this handler.
-        if (e.currentTarget.dataset.fallback) return;
-        e.currentTarget.dataset.fallback = "1";
-        e.currentTarget.src = "/icons/coin-outline.svg";
+        // The API mark failed → the local one; that failing too → the generic coin, once.
+        const img = e.currentTarget;
+        const local = localCurrencyIcon(key);
+        if (!img.dataset.local && img.getAttribute("src") !== local) {
+          img.dataset.local = "1";
+          img.src = local;
+          return;
+        }
+        if (img.dataset.fallback) return;
+        img.dataset.fallback = "1";
+        img.src = COIN_FALLBACK_ICON;
       }}
     />
   );

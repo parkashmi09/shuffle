@@ -118,10 +118,20 @@ export function useBanners() {
  * rather than the page length — the reference shows the catalogue size, not how
  * many tiles are up.
  */
-export function useCategory(slug, { captured, category, search, provider, sort, limit = 40 } = {}) {
+export function useCategory(slug, { captured, category, search, provider, sort, limit = 40, admin } = {}) {
   const { data, isLive, loading } = useResource(
-    `category:${slug}:${category || ""}:${search || ""}:${provider || ""}:${sort || ""}:${limit}`,
+    `category:${slug}:${category || ""}:${search || ""}:${provider || ""}:${sort || ""}:${limit}:${admin || ""}`,
     async () => {
+      // The admin's hand-picked games for this category, when it has any (`admin` is
+      // passed only while nothing is typed in the search box).
+      if (admin) {
+        const picked = (await casino.categories().catch(() => [])).find?.((c) => c.slug === admin);
+        if (picked?.active && picked.count > 0) {
+          const { data: rows, meta } = await casino.categoryGames(admin, { limit, ...(provider ? { provider } : {}) });
+          const games = toGameCards(rows);
+          if (games.length) return { games, total: meta?.pagination?.total ?? games.length };
+        }
+      }
       // A slug the catalogue cannot express — Originals, Shuffle Picks — asks
       // for nothing and keeps its capture, rather than asking for everything.
       if (!category && !search && !sort) return null;

@@ -76,6 +76,26 @@ const QUERY = {
 
 export const categoryQuery = (slug) => QUERY[slug] || {};
 
+/**
+ * This site's URL slug → the admin's lobby category (`GET /casino/games/categories`).
+ * The URLs stay the reference's; where the admin has hand-picked games for the
+ * matching category those win over the `QUERY` filter above. A slug that maps
+ * to itself is not listed; Originals and Shuffle Picks have no admin category.
+ */
+const ADMIN_SLUG = {
+  slots: "slots",
+  "live-casino": "live",
+  "table-games": "table-game",
+  "game-shows": "game-shows",
+  "latest-releases": "new",
+  crash: "crash-games",
+  blackjack: "blackjack",
+  roulette: "roulette",
+  baccarat: "baccarat",
+};
+
+export const adminCategorySlug = (slug) => ADMIN_SLUG[slug] || null;
+
 /** The captured list behind a category slug, or null for one that has none. */
 export const categoryFor = (slug) => composed[slug] || categories[slug] || null;
 

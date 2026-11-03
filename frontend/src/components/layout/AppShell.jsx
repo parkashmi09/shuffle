@@ -6,6 +6,8 @@ import Footer from "./Footer";
 import PageLoader from "./PageLoader";
 import AuthModal from "../auth/AuthModal";
 import LogoutModal from "../auth/LogoutModal";
+import ChangePasswordModal from "../settings/ChangePasswordModal";
+import ChatButtons from "./ChatButtons";
 import WeeklyRaceModal from "../casino/WeeklyRaceModal";
 import WalletModal from "../wallet/WalletModal";
 import VaultModal from "../wallet/VaultModal";
@@ -20,6 +22,9 @@ import { FavouritesProvider } from "../../lib/favourites";
 import { PoppedGameProvider } from "../../lib/poppedGame";
 import PoppedGame from "../casino/PoppedGame";
 import { useSession } from "../../lib/sessionContext";
+import { auth as authApi } from "../../lib/endpoints";
+import { GOOGLE_ERRORS, takeGoogleNonce } from "../../lib/googleAuth";
+import { alertError } from "../../lib/alerts";
 import "./AppShell.css";
 
 /**
@@ -28,6 +33,18 @@ import "./AppShell.css";
  * content, the footer and the mobile navigation. The container's state class
  * tells the reference stylesheet how wide the content column is.
  */
+/** Swap the address for `/` without a history entry, and tell the router (it listens to popstate). */
+function replaceWithHome() {
+  window.history.replaceState(null, "", "/");
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+/** The token on the reset email's link (`/reset-password?token=`), or null off that path. */
+function readResetToken() {
+  if (typeof window === "undefined" || window.location.pathname !== "/reset-password") return null;
+  return new URLSearchParams(window.location.search).get("token") || "";
+}
+
 /** Drop the modal's query params once it closes, so a reload or a repeat link does not reopen a stale one. */
 function clearModalParams() {
   const url = new URL(window.location.href);
@@ -60,7 +77,7 @@ export default function AppShell({ children }) {
 }
 
 function Shell({ children }) {
-  const { signedIn, restoring, logout } = useSession();
+  const { signedIn, restoring, logout, login, acceptSession, user, mustChangePassword } = useSession();
   // The reference opens the rail by default only on wide desktops (≥1140px).
   const [railExpanded, setRailExpanded] = useState(() => typeof window === "undefined" || window.innerWidth >= 1140);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -84,7 +101,9 @@ function Shell({ children }) {
   const navVariant = isSports ? "sports" : /^\/(vip-program|affiliate|blog|transactions|settings|shuffle-wise)(\/|$)/.test(path) ? "minimal" : "casino";
   const product = isSports ? "sports" : "casino";
   const setProduct = (p) => navigate(p === "sports" ? "/sports" : "/");
-  const [auth, setAuth] = useState(null); // null | "login" | "register"
+  // The reset link and Google's return land on the lobby with the auth modal over it — no page of their own.
+  const [resetToken] = useState(readResetToken);
+  const [auth, setAuth] = useState(() => (resetToken !== null ? "reset" : null)); // null | "login" | "register" | "reset"
   const [raceOpen, setRaceOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);
@@ -108,6 +127,32 @@ function Shell({ children }) {
   // Stable identity: the modals key effects off their close handler.
   const closeWallet = useCallback(() => { setWalletOpen(false); clearModalParams(); }, []);
   const closeVault = useCallback(() => { setVaultOpen(false); clearModalParams(); }, []);
+
+  // Keep the reset token out of the address bar and history once it is read.
+  useEffect(() => {
+    if (resetToken !== null) replaceWithHome();
+  }, [resetToken]);
+
+  /**
+   * Google's return trip (`lib/googleAuth.js`): `/login/google?code=` is traded with this tab's
+   * nonce for the session; `?error=` or a failed trade reopens the login with the reason.
+   * The URL is replaced first, so StrictMode's second run finds nothing to trade (a code is single-use).
+   */
+  useEffect(() => {
+    if (window.location.pathname !== "/login/google") return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const failed = params.get("error");
+    replaceWithHome();
+    const nonce = code && !failed ? takeGoogleNonce() : null;
+    const trade = nonce
+      ? authApi.googleExchange(code, nonce).then(acceptSession)
+      : Promise.reject(new Error(GOOGLE_ERRORS[failed] || "Google sign-in did not complete. Please try again."));
+    trade.catch((error) => {
+      alertError(error?.message || "Google sign-in did not complete. Please try again.");
+      setAuth("login");
+    });
+  }, [acceptSession]);
 
   // `?modal=wallet[&md-tab=…]`, `?modal=vault`, `?modal=auth&tab=login|register` open their modal, as on
   // the reference. A money modal asked for while signed out asks for a login first, then opens.
@@ -308,7 +353,7 @@ function Shell({ children }) {
           signed in on another tab — makes it redundant. Derived rather than
           closed from an effect, so there is no render where a login form sits
           over a signed-in page. */}
-      {auth !== null && !signedIn && <AuthModal tab={auth} onTabChange={setAuth} onClose={() => { setAuth(null); clearModalParams(); }} />}
+      {auth !== null && (!signedIn || auth === "reset") && <AuthModal tab={auth} resetToken={resetToken} onTabChange={setAuth} onClose={() => { setAuth(null); clearModalParams(); }} />}
       {raceOpen && <WeeklyRaceModal onClose={() => setRaceOpen(false)} />}
       {walletOpen && signedIn && <WalletModal onClose={closeWallet} />}
       {vaultOpen && signedIn && <VaultModal onClose={closeVault} />}
@@ -318,6 +363,19 @@ function Shell({ children }) {
       {/* Last, and outside every modal: the toast stack is `position: fixed`
           above `--z-mobile-modal`, so a message raised by a dialog is still
           readable while that dialog is closing. */}
+      {/* An agent's player on a temporary password: nothing else works until it is changed. */}
+      {signedIn && mustChangePassword && (
+        <ChangePasswordModal
+          forced
+          onClose={logout}
+          onChanged={async (password) => {
+            // The change ends every session, this one too: sign in with the new password, then start clean.
+            await login(user.name ?? user.username, password);
+            window.location.reload();
+          }}
+        />
+      )}
+      <ChatButtons />
       <Alerts />
     </div>
   );

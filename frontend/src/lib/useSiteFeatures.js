@@ -1,5 +1,7 @@
 import { useApi } from "./useResource";
 import { loadSiteFeatures } from "./siteFeatures";
+import { get } from "./api";
+import { useSiteVersion } from "./siteLive";
 
 /**
  * What this deployment offers — the operator's feature policy.
@@ -39,7 +41,28 @@ const OPEN = {
   withdrawalRoutes: () => ({ manual: true, automatic: true }),
 };
 
+/* The kit caches its one read for the page's life, so a live owner save (`featuresUpdated`,
+   lib/siteLive.js) is read here instead, into the kit's own shape (its `wrap`, kept in step). */
+const DEFAULTS = { business_model: "hybrid", deposit_mode: "both", withdrawal_mode: "both" };
+const routes = (mode) => ({ manual: mode === "manual" || mode === "both", automatic: mode === "automatic" || mode === "both" });
+function wrap(list) {
+  const byKey = new Map(list.map((f) => [f.feature, f]));
+  const policy = (key) => byKey.get(key)?.variant ?? DEFAULTS[key];
+  return {
+    list,
+    policy,
+    variant: (key) => byKey.get(key)?.variant ?? null,
+    config: (key) => byKey.get(key)?.config ?? {},
+    canSignUp: () => policy("business_model") !== "b2b",
+    depositRoutes: () => routes(policy("deposit_mode")),
+    withdrawalRoutes: () => routes(policy("withdrawal_mode")),
+  };
+}
+let fresh = null;
+const loadFresh = (v) => (fresh?.v === v ? fresh : (fresh = { v, p: get("/admin/features/public", { auth: false }).then((rows) => wrap(Array.isArray(rows) ? rows : [])) })).p;
+
 export function useSiteFeatures() {
-  const { data } = useApi("site:features", () => loadSiteFeatures({ apiBase: API_ORIGIN }));
+  const v = useSiteVersion("features");
+  const { data } = useApi(`site:features:${v}`, () => (v === 0 ? loadSiteFeatures({ apiBase: API_ORIGIN }) : loadFresh(v)));
   return data ?? OPEN;
 }

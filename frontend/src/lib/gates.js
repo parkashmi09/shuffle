@@ -1,5 +1,6 @@
 import { useSiteFeatures } from "./useSiteFeatures";
 import { usePublicSiteConfig } from "./usePublicSiteConfig";
+import { capOk, useSiteVersion } from "./siteLive";
 
 /**
  * What the owner's plan and the site admin's flags switch on — one table, as stake's `api/site.js`.
@@ -27,12 +28,32 @@ export const GATES = {
   vault: { feature: "vault" },
   notifications: { feature: "notifications" },
   kyc: { feature: "kyc" },
+  tips: { feature: "tips" },
+};
+
+/**
+ * Gate → the signed-in player's capability behind it (`/auth/me` → `capabilities`, lib/siteLive.js).
+ * An agent's player has these false and the backend refuses them (`*_NOT_FOR_AGENT_USERS`).
+ */
+const CAPABILITY = {
+  vip: "promotions",
+  promotions: "promotions",
+  bonus: "promotions",
+  affiliate: "promotions",
+  races: "promotions",
+  challenges: "promotions",
+  vault: "vault",
+  swap: "swap",
+  deposit: "deposit",
+  withdraw: "withdraw",
+  tips: "tips",
 };
 
 export function makeGate({ features, flags }) {
   const listed = features?.list?.length ? new Set(features.list.map((f) => f.feature)) : null;
   const b2b = features?.policy?.("business_model") === "b2b";
   const on = (key) => {
+    if (CAPABILITY[key] && !capOk(CAPABILITY[key])) return false;
     const gate = GATES[key];
     if (!gate) return true;
     if (gate.promo && b2b) return false;
@@ -50,5 +71,6 @@ export function makeGate({ features, flags }) {
 export function useGate() {
   const features = useSiteFeatures();
   const { flags } = usePublicSiteConfig();
+  useSiteVersion("caps"); // re-render when the player's capabilities change
   return makeGate({ features, flags });
 }

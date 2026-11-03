@@ -7,6 +7,7 @@ import Modal from "../ui/Modal";
 import { clearStoredReferral, normalizeReferralInput, readStoredReferral } from "../../lib/referralCapture";
 import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
+import { startGoogleSignIn, useGoogleEnabled } from "../../lib/googleAuth";
 
 /**
  * Login / Register modal — a 1:1 port of the reference AuthModal
@@ -58,13 +59,13 @@ function TextField({ label, name, placeholder, type = "text", inputMode, autoCom
   );
 }
 
-function PasswordField({ forgot = false, onForgot, value, onChange, error, autoComplete = "current-password" }) {
+function PasswordField({ forgot = false, onForgot, value, onChange, error, autoComplete = "current-password", label = "Password*" }) {
   const [shown, setShown] = useState(false);
   return (
     <div>
       <div className="FormControlWrapper_root">
         <label className="Label_root" htmlFor="auth-password">
-          Password*
+          {label}
         </label>
         <div className="InputWrapper_root">
           <input
@@ -95,11 +96,13 @@ function PasswordField({ forgot = false, onForgot, value, onChange, error, autoC
   );
 }
 
+/** Only Google is wired (`lib/googleAuth.js`), and drawn only while the owner's switch is on. */
 function OauthButtons() {
+  const google = useGoogleEnabled();
   return (
     <div className="OauthButtons_oauthButtonGroup">
-      {oauth.map((o) => (
-        <button key={o.id} type="button" value={o.id} aria-label={`Continue with ${o.id}`} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_secondary ButtonVariants_hasIcon">
+      {oauth.filter((o) => o.id !== "Google" || google).map((o) => (
+        <button key={o.id} type="button" value={o.id} aria-label={`Continue with ${o.id}`} onClick={o.id === "Google" ? startGoogleSignIn : undefined} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_secondary ButtonVariants_hasIcon">
           <span className="ButtonVariants_buttonContent">
             <span className="ButtonIcon_root">
               <img alt={o.id} height="16" src={o.icon} width="16" />
@@ -131,6 +134,8 @@ const rules = {
   // rule, and a floor of 8 here would only buy the user a 422 after submitting.
   password: (v) => (!v ? "Password is required" : v.length < 10 ? "Password must be at least 10 characters" : null),
   loginPassword: (v) => (!v ? "Password is required" : null),
+  // The reset schema's floor is 8 (`auth.validators` `password`), not register's 10.
+  newPassword: (v) => (!v ? "Password is required" : v.length < 8 ? "Password must be at least 8 characters" : null),
   terms: (v) => (v ? null : "You must agree to the Terms of Service and Privacy Policy"),
 };
 
@@ -198,6 +203,8 @@ function authMessage(error) {
       return "This account is locked. Contact support.";
     case "AUTH_ACCOUNT_INACTIVE":
       return "This account is not active.";
+    case "AUTH_RESET_TOKEN_INVALID":
+      return "This reset link is not valid or has expired. Request a new one.";
     case "AUTH_TWO_FACTOR_REQUIRED":
       return "Enter the 6-digit code from your authenticator app.";
     case "CONFLICT":
@@ -215,11 +222,11 @@ function authMessage(error) {
   }
 }
 
-function LoginForm({ onDone }) {
+function LoginForm({ onDone, initialNotice = null }) {
   const { login } = useSession();
   const form = useForm({ identifier: "", password: "" }, { identifier: rules.identifier, password: rules.loginPassword });
   const [status, setStatus] = useState(null);
-  const [notice, setNotice] = useState(null);
+  const [notice, setNotice] = useState(initialNotice);
   const [busy, setBusy] = useState(false);
 
   /**
@@ -303,6 +310,56 @@ function LoginForm({ onDone }) {
       </form>
       <OauthButtons />
     </div>
+  );
+}
+
+/**
+ * The second half of Forgot Password: the email links to `/reset-password?token=…`, the shell
+ * opens this modal on it (no page of its own), and the new password goes to `reset-password`.
+ */
+function ResetPasswordForm({ token, onDone }) {
+  const form = useForm({ newPassword: "" }, { newPassword: rules.newPassword });
+  const [status, setStatus] = useState(token ? null : "This reset link is not valid or has expired. Request a new one.");
+  const [busy, setBusy] = useState(false);
+
+  const onSubmit = async (e) => {
+    if (!form.submit(e) || !token) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      await authApi.resetPassword(token, form.values.newPassword);
+      onDone("Your password has been reset. Log in with the new one.");
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "VALIDATION_ERROR") {
+        const fields = error.fieldErrors();
+        form.setFieldErrors({ newPassword: fields.newPassword });
+      }
+      setStatus(authMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form id="reset-form" className="Form_root" noValidate onSubmit={onSubmit}>
+      {status && (
+        <div className="ErrorMessage_root Register_errorMessage" role="alert">
+          {status}
+        </div>
+      )}
+      <PasswordField
+        label="New Password*"
+        autoComplete="new-password"
+        value={form.values.newPassword}
+        onChange={form.set("newPassword")}
+        error={form.errors.newPassword}
+      />
+      <div className="Login_buttonGroup">
+        <button type="submit" form="reset-form" disabled={busy || !token} className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary">
+          <span className="ButtonVariants_buttonContent">{busy ? "Saving…" : "Reset Password"}</span>
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -414,7 +471,7 @@ function RegisterForm({ onDone }) {
 }
 
 /** Mount only while open (the shell does this) so the enter animation restarts each time. */
-export default function AuthModal({ open = true, tab = "login", onTabChange, onClose }) {
+export default function AuthModal({ open = true, tab = "login", onTabChange, onClose, resetToken = null }) {
   /**
    * Signup off means the Register TAB goes too, not just the header button.
    *
@@ -426,7 +483,8 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
    */
   const { canSignUp: signupAllowed } = useSiteFeatures();
   const canSignUp = signupAllowed();
-  const active = canSignUp ? tab : "login";
+  const active = tab === "reset" || canSignUp ? tab : "login";
+  const [notice, setNotice] = useState(null);
   // The enter transition and the Escape key belong to `Modal` now; the page
   // behind still has to stop scrolling while the dialog is up.
   useEffect(() => {
@@ -441,7 +499,7 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
   if (!open) return null;
 
   return (
-    <Modal onClose={onClose} label={active === "login" ? "Login" : "Register"} bodyClass="GlobalModal_authModalBody" contentClass="GlobalModal_authModalContent">
+    <Modal onClose={onClose} label={active === "login" ? "Login" : active === "reset" ? "Reset Password" : "Register"} bodyClass="GlobalModal_authModalBody" contentClass="GlobalModal_authModalContent">
       <div style={{ height: 768 }}>
         <div>
           <div className="AuthModal_desktop">
@@ -463,7 +521,7 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
                       // Register is dropped entirely on a site that does not
                       // take public signups — not disabled, which would still
                       // advertise a door that does not open.
-                      ...(canSignUp ? [["register", "Register"]] : []),
+                      ...(active === "reset" ? [["reset", "Reset Password"]] : canSignUp ? [["register", "Register"]] : []),
                       ["login", "Login"],
                     ].map(([id, label]) => (
                       <button
@@ -481,7 +539,19 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
                   </div>
                 </div>
                 <div className="LoginAndRegister_content">
-                  {active === "login" ? <LoginForm onDone={onClose} /> : <RegisterForm onDone={onClose} />}
+                  {active === "reset" ? (
+                    <ResetPasswordForm
+                      token={resetToken}
+                      onDone={(message) => {
+                        setNotice(message);
+                        onTabChange("login");
+                      }}
+                    />
+                  ) : active === "login" ? (
+                    <LoginForm onDone={onClose} initialNotice={notice} />
+                  ) : (
+                    <RegisterForm onDone={onClose} />
+                  )}
                 </div>
               </div>
             </div>
