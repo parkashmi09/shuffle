@@ -1,5 +1,6 @@
 import VipBadge from "./VipBadge";
 import { tierFor } from "./vipTiers";
+import { useBranding, withSiteName } from "../../lib/siteContent";
 
 /**
  * The card at the top of the signed-in VIP page — reference `VipPageOverview`.
@@ -33,6 +34,7 @@ import { tierFor } from "./vipTiers";
  * it is a design change, not a silent addition.
  */
 export default function VipOverview({ username, vip, levels }) {
+  const brand = useBranding();
   const tier = tierFor(vip);
   const pct = Number(vip?.progressPct ?? 0);
 
@@ -84,8 +86,10 @@ export default function VipOverview({ username, vip, levels }) {
         </div>
 
         <p className="VipPageOverview_vipPageOverviewDescription">
-          Shuffle’s VIP program is designed to suit all different types of players with an emphasis on
-          ensuring you receive the most in cumulative bonuses for every dollar you wager
+          {withSiteName(
+            "Shuffle’s VIP program is designed to suit all different types of players with an emphasis on ensuring you receive the most in cumulative bonuses for every dollar you wager",
+            brand
+          )}
         </p>
 
       </div>

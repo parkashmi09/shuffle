@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { casino, site } from "./endpoints";
-import { toBanner, toBanners, toGameCard, toGameCards, toProviderRoster } from "./adapters";
+import { toBanner, toBanners, toGameCard, toGameCards, toProviders } from "./adapters";
 import { useApi, useResource } from "./useResource";
-import { providers as staticProviders, sections as staticSections } from "../data/catalog";
-import { capturedGamesFor } from "./providerGames";
-import { providerBrands, providerOrder } from "../data/providerBrands";
+import { sections as staticSections } from "../data/catalog";
+import { providerBrands } from "../data/providerBrands";
 import { adminCategorySlug } from "./categories";
 import { useGate } from "./gates";
 
@@ -102,22 +101,13 @@ export function useLobbySection(id) {
   return captured && categoryOn(id) ? { ...captured, games: data, isLive } : null;
 }
 
-/** The provider rail and the providers page. */
+/**
+ * The provider rail and the providers page: only the studios `GET /casino/games/providers` answers
+ * (`{ rows, total }`). The bundled brand list supplies logos and names, never extra tiles.
+ */
 export function useProviders() {
-  const { data, isLive } = useResource(
-    "providers",
-    async () => {
-      const result = await casino.providers();
-      // This route answers `{rows, total}`, not a paginated envelope — the one
-      // catalogue read that does.
-      return toProviderRoster(result?.rows, staticProviders, providerBrands, providerOrder);
-    },
-    // Before the read lands, the roster alone — every studio we hold a
-    // wordmark for, with no game counts yet. The reference capture is no
-    // longer the fallback: it is a different platform's supplier list.
-    toProviderRoster([], staticProviders, providerBrands, providerOrder)
-  );
-  return { providers: data, isLive };
+  const { data, loading, error } = useApi("providers", async () => toProviders((await casino.providers())?.rows, [], providerBrands));
+  return { providers: data || [], loading, error };
 }
 
 /**
@@ -194,33 +184,20 @@ export function useCategory(slug, { captured, category, search, provider, sort, 
 }
 
 /**
- * One provider's games — the page behind a provider tile.
- *
- * `GET /casino/games/provider/:name` takes the catalogue's own provider name
- * (`hacksaw`, `pragmaticlive`), which is not always the slug in the URL: the
- * slug comes from the rail, and for a captured tile it is the reference's
- * (`pragmatic-play`). So the caller passes both and the name wins where it has
- * one. `total` is `meta.pagination.total`, the catalogue's count for that
- * studio, which is what the header reads — not the page length.
+ * One provider's games — `GET /casino/games/provider/:name`, by the catalogue's own provider name.
+ * `total` is `meta.pagination.total`. No capture stands in: a failed read is the error state.
  */
-export function useProviderGames(slug, name, { limit = 40 } = {}) {
-  const captured = useMemo(() => capturedGamesFor(slug), [slug]);
-
-  const { data, isLive, loading } = useResource(
-    // `name` is in the key because it arrives late: the rail renders the
-    // capture first ("Hacksaw Gaming") and the catalogue's own name a moment
-    // later ("hacksaw"). Without it the read would keep the first answer —
-    // which is the capture, since the catalogue knows no such provider.
-    `provider-games:${slug}:${name || ""}:${limit}`,
+export function useProviderGames(name, { limit = 40 } = {}) {
+  const { data, loading, error } = useApi(
+    `provider-games:${name || ""}:${limit}`,
     async () => {
-      const { data: rows, meta } = await casino.gamesByProvider(name || slug, { limit });
+      const { data: rows, meta } = await casino.gamesByProvider(name, { limit });
       const games = toGameCards(rows);
-      return games.length ? { games, total: meta?.pagination?.total ?? games.length } : null;
+      return { games, total: meta?.pagination?.total ?? games.length };
     },
-    { games: captured, total: captured.length }
+    { enabled: Boolean(name) }
   );
-
-  return { ...data, isLive, loading };
+  return { games: data?.games || [], total: data?.total || 0, loading, error };
 }
 
 /**

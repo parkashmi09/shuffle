@@ -3,7 +3,6 @@ import { GameCard } from "../components/casino/GameCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import { GamesToolbar, PageHeader, ShowMoreButton } from "./LatestReleasesPage";
 import { useProviderGames, useProviders } from "../lib/catalogue";
-import { capturedProvider } from "../lib/providerGames";
 
 const PAGE = 40;
 
@@ -36,13 +35,14 @@ export default function ProviderPage({ slug }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("FEATURED");
 
-  // The rail's own list — live where the catalogue has rows. It carries the
-  // provider's display name, which is also what the games route takes.
-  const { providers } = useProviders();
-  const provider = providers.find((p) => p.slug === slug) || capturedProvider(slug);
+  // The rail's own list carries the catalogue's provider name, which is what the games route takes.
+  const { providers, loading: listLoading, error: listError } = useProviders();
+  const provider = providers.find((p) => p.slug === slug) || null;
   const title = provider?.label || provider?.name || titleFromSlug(slug);
 
-  const { games = [], total = 0 } = useProviderGames(slug, provider?.name, { limit });
+  const { games, total, loading: gamesLoading, error: gamesError } = useProviderGames(provider?.name, { limit });
+  const loading = listLoading || gamesLoading;
+  const error = listError || gamesError;
 
   const filtered = games.filter((g) => g.name.toLowerCase().includes(query.trim().toLowerCase()));
   const sorted = SORTS[sort] ? SORTS[sort](filtered) : filtered;
@@ -74,7 +74,7 @@ export default function ProviderPage({ slug }) {
           </div>
           {sorted.length === 0 && (
             <p className="CardGrid_cardGridDisplayingText CardGrid_padding" style={{ textAlign: "center" }}>
-              No games found
+              {loading ? "Loading games…" : error ? "Games could not be loaded." : "No games found"}
             </p>
           )}
           {hasMore && <ShowMoreButton onClick={() => setLimit((l) => l + PAGE)} />}

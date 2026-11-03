@@ -1,6 +1,6 @@
 import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
-import { betHistory, profile as profileApi, vip as vipApi } from "../../lib/endpoints";
+import { profile as profileApi, vip as vipApi } from "../../lib/endpoints";
 import { useGate } from "../../lib/gates";
 import { tierFor } from "../vip/vipTiers";
 import { CoinIcon } from "../wallet/CurrencySelect";
@@ -12,15 +12,13 @@ import { CoinIcon } from "../wallet/CurrencySelect";
  * the address below both. `Relative_root` is what lets `VerifiedStatus_root`
  * pin its tick inside the field's right edge.
  *
- * Total wagered is the one figure with no source. `GET /casino/bet-history/stats`
- * answers `{ bets, wins, bySource }` and nothing in any of the four services
- * totals a player's stake, so it renders as zero in the display currency rather
- * than as a number this clone cannot stand behind.
+ * Total Bets and Total wagered are `GET /user/profile/stats` (`bets`, `wagered.usd`); "—" until it answers.
  */
 export default function SettingsAccount() {
   const { user } = useSession();
   const { data: me } = useApi("settings:profile", () => profileApi.get());
-  const { data: stats } = useApi("settings:bet-stats", () => betHistory.stats().catch(() => null));
+  const { data: stats } = useApi("settings:profile-stats", () => profileApi.stats());
+  const wagered = stats?.wagered?.usd != null ? `$${Number(stats.wagered.usd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
   const on = useGate();
   // `GET /user/vip`; Unranked until it answers, on a failed read, or with VIP switched off.
   const { data: vip } = useApi("vip:progress", () => vipApi.progress(), { enabled: on.ready && on("vip") });
@@ -45,12 +43,14 @@ export default function SettingsAccount() {
                 </div>
                 <div className="UserBadgeBlock_badge">
                   <h2 className="UserInfoPanel_heading">{me?.username || user?.name || "—"}</h2>
-                  <span className="VipBadge_root">
-                    <span className="VipIcon_root">
-                      <img alt="vip icon" width="16" height="16" src={tier.icon} />
+                  {on("vip") && (
+                    <span className="VipBadge_root">
+                      <span className="VipIcon_root">
+                        <img alt="vip icon" width="16" height="16" src={tier.icon} />
+                      </span>
+                      <span>{tier.label}</span>
                     </span>
-                    <span>{tier.label}</span>
-                  </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -67,7 +67,7 @@ export default function SettingsAccount() {
               <div className="StatisticsPanel_infoItem">
                 <div className="StatisticsPanel_betValueWrapper">
                   <span className="StatisticsPanel_infoTitle">Total Bets</span>
-                  <span className="StatisticsPanel_infoValue">{stats?.bets ?? 0}</span>
+                  <span className="StatisticsPanel_infoValue">{stats?.bets ?? "—"}</span>
                 </div>
               </div>
               <div className="StatisticsPanel_infoItem">
@@ -78,7 +78,7 @@ export default function SettingsAccount() {
                   <span className="StatisticsPanel_infoValue">
                     <span className="IconValue_root FormattedAmount_root">
                       <CoinIcon code="USD" />
-                      $0.00
+                      {wagered}
                     </span>
                   </span>
                 </div>
@@ -95,9 +95,11 @@ export default function SettingsAccount() {
               <input id="settings-email" readOnly className="Input_root Input_outline" value={me?.email || user?.email || ""} />
             </div>
           </div>
-            <div className="VerifiedStatus_root">
-              <img alt="tick" src="/icons/green-tick.svg" />
-            </div>
+            {me?.emailVerified === true && (
+              <div className="VerifiedStatus_root">
+                <img alt="tick" src="/icons/green-tick.svg" />
+              </div>
+            )}
           </div>
         </div>
       </form>

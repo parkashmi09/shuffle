@@ -12,6 +12,7 @@ import { buildReferralLink } from "../lib/referralCapture";
 import { campaignDisplayName, listAffiliateCampaigns } from "../lib/affiliateCampaigns";
 import CreateCampaignModal from "../components/affiliate/CreateCampaignModal";
 import { HtmlPage } from "./StaticPage";
+import { useBranding, useSiteContent, withSiteName } from "../lib/siteContent";
 import overviewHtml from "../data/affiliate-overview.html?raw";
 
 /**
@@ -72,6 +73,7 @@ function CopyButton({ value }) {
 }
 
 function Overview({ link, signups, earnings, marketingHtml }) {
+  const termsUrl = useSiteContent().support?.helpCenterUrl;
   return (
     <div className="Flex_root Flex_column Flex_lg1">
       <div className="AffiliateHero_contentWrapper">
@@ -83,9 +85,11 @@ function Overview({ link, signups, earnings, marketingHtml }) {
             Earn lifetime commission from your referrals on all their wager across our Casino and
             Sportsbook with advanced real-time campaign performance tracking. Share your link to get
             started.
-            <a href="https://help.shuffle.com/en/articles/6969004-shuffle-affiliate-program" rel="noopener noreferrer" target="_blank">
-              {" "}Terms and Conditions
-            </a>
+            {termsUrl && (
+              <a href={termsUrl} rel="noopener noreferrer" target="_blank">
+                {" "}Terms and Conditions
+              </a>
+            )}
           </p>
           <div className="AffiliateHero_formWrapper">
             <div className="TextInput_formControlWrapper AffiliateHero_inputContainer">
@@ -226,6 +230,7 @@ function Earnings({
   claimed,
   claimable,
   rows,
+  rowsState,
   onClaim,
   claiming,
   canClaim,
@@ -300,7 +305,7 @@ function Earnings({
           )}
         </table>
         {rows.length === 0 && (
-          <div className="Table_noResult"><p>No unclaimed commissions</p></div>
+          <div className="Table_noResult"><p>{rowsState}</p></div>
         )}
       </div>
 
@@ -348,6 +353,7 @@ function Earnings({
 export default function AffiliateProgramPage({ tab = "overview" }) {
   const { user, displayCurrency, rates } = useSession();
   const { affiliateEnabled, commissionPercent } = usePublicSiteConfig();
+  const brand = useBranding();
   const fiat = useFiat();
   const [claiming, setClaiming] = useState(false);
   const [claimingRewardId, setClaimingRewardId] = useState(null);
@@ -358,6 +364,17 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
   const { data: info } = useApi("affiliate:info", () => affiliateApi.referralInfo(), { enabled: affiliateEnabled });
   const { data: team } = useApi("affiliate:team", () => affiliateApi.team(), { enabled: affiliateEnabled });
   const { data: rewards } = useApi(`affiliate:rewards:${nonce}`, () => affiliateApi.rewards(), { enabled: affiliateEnabled });
+  const { data: history, loading: historyLoading, error: historyError } = useApi(
+    `affiliate:history:${nonce}`,
+    async () => {
+      const [referral, commission] = await Promise.all([
+        affiliateApi.rewardHistory({ kind: "referral", limit: 100 }),
+        affiliateApi.rewardHistory({ kind: "commission", limit: 100 }),
+      ]);
+      return { referral: referral?.rows ?? [], commission: commission?.rows ?? [] };
+    },
+    { enabled: affiliateEnabled }
+  );
   const { data: unclaimed } = useApi(`affiliate:unclaimed:${nonce}`, () => affiliateApi.unclaimed(), {
     enabled: affiliateEnabled,
   });
@@ -405,9 +422,12 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
           name: displayName,
           link: code ? buildReferralLink(origin, code, campaignId) : "",
           signups: 0,
+          commission: [],
         });
       }
     };
+    // Commission rows name the member, and each member names their campaign — that is the match.
+    const commissionOf = new Map(members.map((m) => [m.name, m.commission]));
 
     const defaultGroupKey = `default:${campaignLabel}`;
 
@@ -416,10 +436,12 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
       if (!campaignId) {
         ensureGroup(defaultGroupKey, campaignLabel, "");
         groups.get(defaultGroupKey).signups += 1;
+        groups.get(defaultGroupKey).commission.push(commissionOf.get(m.name) ?? "0");
       } else {
         const displayName = campaignDisplayName(campaignId, savedCampaigns, campaignId);
         ensureGroup(campaignId, displayName, campaignId);
         groups.get(campaignId).signups += 1;
+        groups.get(campaignId).commission.push(commissionOf.get(m.name) ?? "0");
       }
     }
 
@@ -433,10 +455,11 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
         name: campaignLabel,
         link,
         signups: signups,
+        commission: [],
       });
     }
     return [...groups.values()];
-  }, [team?.members, referralCode, campaignLabel, link, signups, savedCampaigns]);
+  }, [team?.members, members, referralCode, campaignLabel, link, signups, savedCampaigns]);
 
   const earnings = useMemo(() => {
     const wagered =
@@ -456,19 +479,19 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
     };
   }, [rewards, team?.totalWager, unclaimed?.claimedTotal, unclaimed?.total, rewardCurrency, displayCurrency, rates]);
 
+  // One row per reward (tier unlocks and commission), its amount under the column its status puts it in.
   const earningRows = useMemo(
     () =>
-      rewardCurrency
-        ? [
-            {
-              id: rewardCurrency,
-              currency: rewardCurrency,
-              claimed: unclaimed?.claimedTotal ?? "0",
-              claimable: unclaimed?.total ?? "0",
-            },
-          ]
-        : [],
-    [rewardCurrency, unclaimed?.claimedTotal, unclaimed?.total]
+      [...(history?.referral ?? []), ...(history?.commission ?? [])]
+        .filter((r) => r.status !== "void")
+        .sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")))
+        .map((r) => ({
+          id: `${r.kind}-${r.id}`,
+          currency: r.currency,
+          claimed: r.status === "claimed" ? r.amount : "0",
+          claimable: r.status === "available" ? r.amount : "0",
+        })),
+    [history]
   );
 
   const canClaim = (Number.parseFloat(unclaimed?.total ?? "0") || 0) > 0;
@@ -477,7 +500,7 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
     return (
       <section className="LayoutContainer_root AffiliateProgram_layoutContainer LayoutContainer_mobile-top-lg2 LayoutContainer_mobile-bottom-lg2 LayoutContainer_column">
         <div className="Flex_root Flex_column AffiliateProgram_root">
-          <h2 className="Heading_root Heading_h2 TitlePage_root AffiliateProgram_pageTitle">Shuffle Affiliate Program</h2>
+          <h2 className="Heading_root Heading_h2 TitlePage_root AffiliateProgram_pageTitle">{withSiteName("Shuffle Affiliate Program", brand)}</h2>
           <p className="AffiliateHero_description">The affiliate program is not available right now.</p>
         </div>
       </section>
@@ -519,7 +542,7 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
   return (
     <section className="LayoutContainer_root AffiliateProgram_layoutContainer LayoutContainer_mobile-top-lg2 LayoutContainer_mobile-bottom-lg2 LayoutContainer_column">
       <div className="Flex_root Flex_column AffiliateProgram_root">
-        <h2 className="Heading_root Heading_h2 TitlePage_root AffiliateProgram_pageTitle">Shuffle Affiliate Program</h2>
+        <h2 className="Heading_root Heading_h2 TitlePage_root AffiliateProgram_pageTitle">{withSiteName("Shuffle Affiliate Program", brand)}</h2>
 
         <div className="AffiliateProgram_tabContainer">
           <div className="Tab_root">
@@ -566,7 +589,11 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
                 name={c.name}
                 link={c.link}
                 signups={c.signups}
-                earnings={earnings.total}
+                earnings={
+                  rewards
+                    ? `${displayBalance(sumAmounts(c.commission), rewardCurrency)} ${rewardCurrency}`
+                    : "—"
+                }
                 commissionRate={commissionRate}
               />
             ))}
@@ -584,6 +611,7 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
             claimed={displayBalance(unclaimed?.claimedTotal ?? "0", rewardCurrency)}
             claimable={displayBalance(unclaimed?.total ?? "0", rewardCurrency)}
             rows={earningRows}
+            rowsState={historyLoading ? "Loading…" : historyError ? "Earnings could not be loaded." : "No earnings yet"}
             claiming={claiming}
             canClaim={canClaim}
             onClaim={claimAll}

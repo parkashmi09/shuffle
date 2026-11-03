@@ -6,6 +6,7 @@ import { ShowMoreButton } from "./LatestReleasesPage";
 import { useApi } from "../lib/useResource";
 import { challenges as challengesApi } from "../lib/endpoints";
 import { formatAmount } from "../lib/adapters";
+import { navigate } from "../lib/router";
 
 /** Challenges browse page — reference `/challenges`. */
 
@@ -16,10 +17,23 @@ const TABS = [
   { id: "mine", label: "My Completed", disabled: true },
 ];
 
+/** In-house challenge games (backend challenges.constants IN_HOUSE_GAMES) have no game page here. */
+const IN_HOUSE = new Set(["classic_dice", "limbo", "crash", "plinko", "mine", "keno", "wheel", "tower", "hilo", "roulette", "blackjack"]);
+
 function ChallengeCard({ c, index }) {
   const [ref, shown] = useReveal();
+  const href = c.game && !IN_HOUSE.has(c.game) ? `/casino/games/${encodeURIComponent(c.game)}` : null;
   return (
-    <a ref={ref} className={cx("ChallengeCard_challengeCardWrapper", "TallGameCard_reveal", shown && "TallGameCard_show")} style={{ "--card-i": index }} href="/challenges" onClick={(e) => e.preventDefault()}>
+    <a
+      ref={ref}
+      className={cx("ChallengeCard_challengeCardWrapper", "TallGameCard_reveal", shown && "TallGameCard_show")}
+      style={{ "--card-i": index }}
+      href={href || "/challenges"}
+      onClick={(e) => {
+        e.preventDefault();
+        if (href) navigate(href);
+      }}
+    >
       <span className="SkeletonPlaceholder_root SkeletonPlaceholder_imageVariant SkeletonPlaceholder_hasColor">
         {c.imageUrl && <img alt={c.gameName || c.game} className="nimg-fill" src={c.imageUrl} />}
         <div className="GameCardBorder_root" />

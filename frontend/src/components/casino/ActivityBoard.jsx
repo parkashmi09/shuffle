@@ -7,6 +7,7 @@ import { betHistory, race as raceApi } from "../../lib/endpoints";
 import { formatAmount, timeLeft, toBoardRows, toRaceRows } from "../../lib/adapters";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
+import { navigate } from "../../lib/router";
 
 /**
  * "My Bets" is the one tab that needs a session. The reference disables it
@@ -85,15 +86,28 @@ function Amount({ coin, value, className }) {
   );
 }
 
+/** Only the catalogue's games have a page here; in-house originals stay inert (see GameCarousel). */
+const gamePage = (href) => (String(href || "").startsWith("/casino/games/") ? href : null);
+
 function Row({ r, index }) {
   const lose = r.mult < 1;
+  const page = gamePage(r.game.href);
+  const open = () => page && navigate(page);
   return (
-    <tr role="button" aria-label="View detail" tabIndex={0} className="ActivityBoard_rowEnter" style={{ "--row-i": index }}>
+    <tr
+      role="button"
+      aria-label="View detail"
+      tabIndex={0}
+      className="ActivityBoard_rowEnter"
+      style={{ "--row-i": index, cursor: page ? "pointer" : undefined }}
+      onClick={open}
+      onKeyDown={(e) => e.key === "Enter" && open()}
+    >
       <td>
         <UserCell user={r.user} />
       </td>
       <td>
-        <button type="button" value={r.game.href} className="ActivityBaseTable_gameTitle">
+        <button type="button" value={r.game.href} className="ActivityBaseTable_gameTitle" onClick={open}>
           <img alt={r.game.name} height="16" src={r.game.img} width="16" />
           <span className="GameTitle_root">{r.game.name}</span>
         </button>

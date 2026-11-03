@@ -9,41 +9,11 @@
  *
  * Rows are `GET /admin/vip-branding/perks` (each perk with the cards that carry
  * it) and columns are the ladder's cards in order (`vip.levels`). Same for
- * every viewer. The literal below is the reference's schedule, drawn only when
- * those reads fail.
- *
- * The fallback rows are the reference's own, in its order, with its ticks. The first
- * label is the one place the capture and the bundle disagree: the data key is
- * `lblDailyBonus`, and the string that key resolves to is "Instant Rakeback".
- * The rendered page is what a player sees, so the rendered label is used.
+ * every viewer. A failed read shows the empty state, never a stand-in schedule.
  */
 
 import { vip } from "../../lib/endpoints";
 import { useApi } from "../../lib/useResource";
-
-const RANKS = ["Bronze", "Silver", "Gold", "Platinum", "Jade", "Sapphire", "Ruby", "Diamond"];
-
-/**
- * `from` is the first rank that gets the benefit; every rank after it does
- * too. The reference stores eight booleans per row, which is the same fact
- * written eight times — and could disagree with itself.
- */
-const BENEFITS = [
-  { label: "Instant Rakeback", from: "Bronze" },
-  { label: "Weekly Bonus", from: "Bronze" },
-  { label: "Level-Up Bonus", from: "Bronze" },
-  { label: "Rank Up Bonus", from: "Bronze" },
-  { label: "Monthly Bonus", from: "Silver" },
-  { label: "Bonus Increase", from: "Silver" },
-  { label: "VIP Host", from: "Sapphire" },
-  { label: "Invitation to Shuffle Events", from: "Ruby" },
-];
-
-/** The reference schedule in the live shape: `ranks` are columns, each row ticks a set of rank keys. */
-const FALLBACK = {
-  ranks: RANKS.map((rank) => ({ key: rank, label: rank })),
-  rows: BENEFITS.map((b) => ({ label: b.label, has: new Set(RANKS.slice(RANKS.indexOf(b.from))) })),
-};
 
 const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -58,8 +28,16 @@ async function loadTable() {
 }
 
 export default function VipBenefitsTable() {
-  const { data, error } = useApi("vip:benefits", loadTable);
-  const table = data ?? (error ? FALLBACK : null);
+  const { data: table, error } = useApi("vip:benefits", loadTable);
+  if (error || (table && !table.rows.length)) {
+    return (
+      <div className="Table_root">
+        <div className="Table_noResult">
+          <p>{error ? "The benefits could not be loaded." : "No benefits to show."}</p>
+        </div>
+      </div>
+    );
+  }
   if (!table) return <div className="Table_root" />;
   return (
     <div className="Table_root">

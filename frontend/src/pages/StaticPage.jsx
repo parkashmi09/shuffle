@@ -14,7 +14,11 @@ import affiliateHtml from "../data/affiliate.html?raw";
  * too and is now `pages/VipPage.jsx` — it needed a second, signed-in layout
  * that reads the player's standing, which a static blob cannot have.
  */
-export function HtmlPage({ html, cta = "register", onCta }) {
+/** Captured links back to the reference site lead nowhere here; keep their text, drop the anchor. */
+const stripReferenceLinks = (html) => html.replace(/<a\b[^>]*href="https:\/\/shuffle\.com[^"]*"[^>]*>([\s\S]*?)<\/a>/g, "$1");
+
+export function HtmlPage({ html: raw, cta = "register", onCta }) {
+  const html = useMemo(() => stripReferenceLinks(raw), [raw]);
   const ref = useRef(null);
   // Read through a ref: the handler is bound once per `html`, and a caller that
   // passes an inline arrow would otherwise rebind it on every render.
@@ -51,8 +55,6 @@ export function HtmlPage({ html, cta = "register", onCta }) {
       if (href.startsWith("/")) {
         e.preventDefault();
         navigate(href);
-      } else if (href.startsWith("https://shuffle.com/")) {
-        e.preventDefault();
       }
     };
     root.addEventListener("click", onClick);

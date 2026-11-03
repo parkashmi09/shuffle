@@ -23,7 +23,6 @@ const columns = [
     order: 3,
     title: "Platform",
     links: [
-      { label: "Provably Fair", href: "/provably-fair/overview" },
       { label: "Affiliate Program", href: "/affiliate", signedInHref: "/affiliate/overview" },
       { label: "Redeem Code", button: "redeem" },
       { label: "VIP Program", href: "/vip-program" },
@@ -144,16 +143,19 @@ function SelectButton({ label, options, value, onChange, children }) {
  */
 function LanguageAndOddSelectors({ className, language, setLanguage, odd, setOdd }) {
   const languages = languagesFor(usePublicSiteConfig().languages);
+  const sports = useGate()("sports");
   return (
     <div className={className}>
       <SelectButton label="language" options={languages} value={language} onChange={setLanguage}>
         <span className="Select_text">{language}</span>
       </SelectButton>
-      <SelectButton label="odds" options={odds} value={odd} onChange={setOdd}>
-        <div className="OddsFormatPreference_selectedItem">
-          Odds: <span>{odd}</span>
-        </div>
-      </SelectButton>
+      {sports && (
+        <SelectButton label="odds" options={odds} value={odd} onChange={setOdd}>
+          <div className="OddsFormatPreference_selectedItem">
+            Odds: <span>{odd}</span>
+          </div>
+        </SelectButton>
+      )}
     </div>
   );
 }
@@ -194,8 +196,7 @@ export default function Footer() {
         (l) =>
           (l.label !== "Affiliate Program" || on("affiliate")) &&
           (l.label !== "VIP Program" || on("vip")) &&
-          (l.label !== "Redeem Code" || on("bonus")) &&
-          (l.label !== "Provably Fair" || on("provablyfair"))
+          (l.label !== "Redeem Code" || on("bonus"))
       ),
     }))
     .filter((col) => col.links.length);
@@ -228,7 +229,7 @@ export default function Footer() {
         <div className="Footer_row">
           <div className="Footer_column mobile-top Footer_columnOrder0">
             <div className="Footer_brandingWrapper">
-              <a href="/" title={siteName} onClick={(e) => e.preventDefault()}>
+              <a href="/" title={siteName} onClick={(e) => { e.preventDefault(); navigate("/"); }}>
                 <div className="Footer_icon">
                   <img alt="logo" height="24" src={brand?.logoUrl || "/icons/logo.svg"} />
                 </div>

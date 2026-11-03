@@ -264,12 +264,6 @@ function Shell({ children }) {
       if (window.innerWidth < 1140) setRailExpanded(false);
       return;
     }
-    // The pinned weekly race opens its dialog rather than navigating, as on the reference.
-    if (id === "promo-race") {
-      setRaceOpen(true);
-      if (window.innerWidth < 1140) setRailExpanded(false);
-      return;
-    }
     // Only navigate using routes[id] if NavLink didn't already handle it (e.g., if it was a button without a specific href).
     if (!href && routes[id]) navigate(routes[id]);
     if (window.innerWidth < 1140) setRailExpanded(false);

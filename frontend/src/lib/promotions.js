@@ -88,12 +88,3 @@ export function matchesPromotionTab(tile, tab) {
   if (tab === "casino") return tile.segment === "casino" || !tile.href.startsWith("/sports/");
   return true;
 }
-
-export const PROMOTION_JSON_EXAMPLES = {
-  qualifyingGames: `[{"href":"/games/originals/mines","name":"Mines","img":"/games/example.webp","color":"rgb(255, 23, 89)","indicator":"250x"}]`,
-  sportEvents: `[{"label":"2026 US Open Men Singles","href":"/sports/tournament/us-open-2026?section=2026%20US%20Open%20Men%20Singles","icon":"/icons/sports/tennis.svg","sportAlt":"Tennis"}]`,
-  tournamentPanel: `{"ends":"Sep 14, 2026, 9:30 AM","endsAt":"2026-09-14T09:30:00Z","prizePool":"$10,000.00","prizeSplit":"50"}`,
-  leaderboard: `{"kind":"multiplier","columns":["Rank","User","Highest Multiplier","Prize"],"widths":["15%","30%","35%","20%"],"pages":1,"rows":[{"rank":1,"user":{"name":"player1","vip":"gold"},"score":"100x","prize":"$100"}]}`,
-  leaderboardLive: `{"kind":"wager","columns":["Rank","User","Wagered","Prize"],"widths":["15%","30%","35%","20%"],"pages":1,"rows":[],"live":{"source":"wager_leaderboard","period":"weekly","limit":50}}`,
-  tags: `["casino","sports"]`,
-};

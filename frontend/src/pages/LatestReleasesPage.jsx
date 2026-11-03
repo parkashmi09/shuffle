@@ -3,7 +3,6 @@ import { GameCard } from "../components/casino/GameCarousel";
 import ProviderCarousel from "../components/casino/ProviderCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import { navigate } from "../lib/router";
-import { providers } from "../data/catalog";
 import { adminCategorySlug, categoryFor, categoryIcon, categoryQuery } from "../lib/categories";
 import { useCategory, useProviders } from "../lib/catalogue";
 import { cx } from "../lib/carousel";
@@ -374,7 +373,7 @@ export function CategoryPage({ slug }) {
       </section>
 
       <section className="LayoutContainer_root LayoutContainer_mobile-top-md2 LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-top-lg4 LayoutContainer_tablet-bottom-md2 LayoutContainer_column">
-        <ProviderCarousel providers={rosterProviders.length ? rosterProviders : providers} />
+        <ProviderCarousel providers={rosterProviders} />
       </section>
 
       <ActivityBoard hideTabs={["race"]} />

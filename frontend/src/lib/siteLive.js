@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { io } from "socket.io-client";
 import { SOCKET_BASE } from "../exchange/services/realtime";
+import { tokens } from "./api";
 
 /**
  * Owner and site-admin saves, live, plus what the signed-in player may use.
@@ -73,6 +74,41 @@ export function startSiteLive() {
     if (!Array.isArray(scopes)) return;
     if (scopes.includes("admin:branding")) bump("branding");
     if (scopes.includes("admin:site-content")) bump("content");
+  });
+}
+
+/* ── signed-in socket events ──────────────────────────────────────────── */
+
+/** user-service legacy events (hashed names are the protocol — backend packages/socket/src/events.js). */
+export const USER_EVENTS = Object.freeze({
+  GET_ADDRESS: "396bbdcf7c16c3f3795d932b698ef78f",
+  SUBMIT_NEW_WITHDRAWL: "7c0b37955cf21c7f2f3773c1268edc08",
+});
+
+/**
+ * One player event over `/ws/user` and its ack. The push socket above is opened signed out, so a
+ * short-lived socket carries the token instead. Resolves the reply; rejects `{ message, code, details }`
+ * on a refusal (`{ status: "<msg>", error: { code } }` or `{ error: { code, message } }`).
+ */
+export function userRequest(event, payload, timeoutMs = 15_000) {
+  return new Promise((resolve, reject) => {
+    const s = io(SOCKET_BASE || undefined, { path: "/ws/user/socket.io", transports: ["websocket"], auth: { token: tokens.access() || undefined }, forceNew: true, reconnection: false });
+    const fail = (message, code, details = null) => reject(Object.assign(new Error(message), { code, details }));
+    s.on("connect_error", () => {
+      s.close();
+      fail("Could not reach the server. Please try again.", "SOCKET_UNREACHABLE");
+    });
+    s.timeout(timeoutMs).emit(event, new TextEncoder().encode(JSON.stringify(payload ?? {})), (timedOut, frame) => {
+      s.close();
+      if (timedOut) return fail("The server did not answer in time. Please try again.", "SOCKET_TIMEOUT");
+      const data = decode(frame);
+      if (!data) return fail("The server sent an unreadable reply.", "SOCKET_BAD_FRAME");
+      if (data.error || data.status === false) {
+        const message = (typeof data.status === "string" ? data.status : null) || data.error?.message || "Something went wrong. Please try again.";
+        return fail(message, data.error?.code, data.error?.details ?? null);
+      }
+      resolve(data);
+    });
   });
 }
 

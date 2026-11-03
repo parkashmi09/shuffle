@@ -111,12 +111,6 @@ export const routes = {
   affiliate: "/affiliate",
   transactions: "/transactions",
   "shuffle-wise": "/shuffle-wise/self-exclusion",
-  "promo-race": "/promotions/100000-weekly-race",
-  "promo-freak": "/promotions/freak-show",
-  "promo-level": "/promotions/level-up",
-  "promo-mines": "/promotions/mines-master",
-  "promo-vip": "/promotions/vip-hacksaw-heist",
-  "promo-chips": "/promotions/free-chips-prize-and-drops",
 };
 
 export const navIdForPath = (path) => Object.keys(routes).find((k) => routes[k] === path) || null;

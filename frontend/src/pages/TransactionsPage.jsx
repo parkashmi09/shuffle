@@ -4,7 +4,7 @@ import { navigate, usePath } from "../lib/router";
 import { useApi } from "../lib/useResource";
 import { useSession } from "../lib/sessionContext";
 import { displayFiat, resolveGame } from "../lib/adapters";
-import { betHistory, history, sportsBets, tips, wallet } from "../lib/endpoints";
+import { betHistory, funding, history, sportsBets, tips, wallet } from "../lib/endpoints";
 import { useGate } from "../lib/gates";
 import { sections } from "../data/catalog";
 import WalletSelect, { CoinIcon } from "../components/wallet/CurrencySelect";
@@ -39,11 +39,11 @@ import TableSkeleton from "../components/ui/TableSkeleton";
  */
 
 const TABS = [
-  { id: "deposits", label: "Deposits" },
-  { id: "withdrawals", label: "Withdrawals" },
+  { id: "deposits", label: "Deposits", gate: "deposit" },
+  { id: "withdrawals", label: "Withdrawals", gate: "withdraw" },
   { id: "bets", label: "Casino Bets" },
-  { id: "sports-bets", label: "Sports Bets" },
-  { id: "tip-rain", label: "Tip / Rain" },
+  { id: "sports-bets", label: "Sports Bets", gate: "sports" },
+  { id: "tip-rain", label: "Tip / Rain", gate: "tips" },
   { id: "other", label: "Other" },
 ];
 
@@ -196,6 +196,36 @@ function BetIdCell({ id }) {
   );
 }
 
+/** A fiat request still `In Queue` can be withdrawn by the player; the hold returns to the balance. */
+function CancelWithdrawal({ id, onDone }) {
+  const { refreshBalances } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const cancel = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await funding.cancelFiatWithdrawal(id);
+      refreshBalances();
+      onDone();
+    } catch (e) {
+      setError(e.message || "Could not cancel.");
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      title={error || undefined}
+      disabled={busy}
+      onClick={cancel}
+      className="ButtonVariants_root ButtonVariants_buttonHeightSmall ButtonVariants_secondary"
+    >
+      <span className="ButtonVariants_buttonContent">{busy ? "Cancelling…" : error ? "Retry cancel" : "Cancel"}</span>
+    </button>
+  );
+}
+
 /** In-house rounds carry stake and win on one row; separate BET/WIN legs do not. */
 function betMultiplier(row) {
   const stake = Number(row.amount) || 0;
@@ -295,13 +325,13 @@ const SOURCES = {
         .withdrawals({ limit, ...(coin ? { currency: coin } : {}) })
         .then((rows) => (Array.isArray(rows) ? rows : [])),
     key: (row) => `${row.method}-${row.id}`,
-    cells: (row) => [
+    cells: (row, reload) => [
       shortDate(row.date),
       row.type || row.method || "—",
       <Money amount={row.amount} coin={row.currency} />,
       shorten(row.reference || row.id),
       row.status || "—",
-      "",
+      row.method === "manual" && row.status === "in queue" ? <CancelWithdrawal id={row.id} onDone={reload} /> : "",
     ],
   },
   bets: {
@@ -376,11 +406,11 @@ export default function TransactionsPage() {
   const path = usePath();
   const { signedIn, balances } = useSession();
   const on = useGate();
-  const tabs = TABS.filter((t) => t.id !== "tip-rain" || on("tips"));
+  const tabs = TABS.filter((t) => !t.gate || on(t.gate));
   const active =
     tabs.find((t) => pathFor(t.id) === path)?.id ||
-    (path === "/transactions/deposits" ? "deposits" : null) ||
-    "deposits";
+    (path === "/transactions/deposits" && tabs.some((t) => t.id === "deposits") ? "deposits" : null) ||
+    tabs[0].id;
   const view = VIEWS[active];
   const source = SOURCES[active];
 
@@ -398,7 +428,7 @@ export default function TransactionsPage() {
     [balances]
   );
 
-  const { data, loading } = useApi(
+  const { data, loading, reload } = useApi(
     `transactions:${active}:${coin}:${pageSize}:${signedIn}`,
     async () => {
       if (!signedIn || !source) return [];
@@ -517,7 +547,7 @@ export default function TransactionsPage() {
             <tbody className="TableBody_tbody TableBody_even" data-testid="table-body">
               {rows.map((row) => (
                 <tr key={source.key(row)}>
-                  {source.cells(row).map((cell, i) => (
+                  {source.cells(row, reload).map((cell, i) => (
                     <td key={label(view.columns[i]) || i} className={columnClass(view.columns[i])}>
                       {cell}
                     </td>

@@ -6,6 +6,7 @@ import { notifications as notificationsApi } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
 import { useApi } from "../../lib/useResource";
 import WalletSelect from "../wallet/CurrencySelect";
+import { useBranding, withSiteName } from "../../lib/siteContent";
 
 /**
  * The notification rail — opened from the account menu's Notifications row.
@@ -46,6 +47,8 @@ function notifyUnreadChanged(unread) {
 
 export default function NotificationPanel({ open, filter, onFilterChange, onClose }) {
   const { signedIn } = useSession();
+  const brand = useBranding();
+  const filters = useMemo(() => FILTERS.map((f) => ({ ...f, label: withSiteName(f.label, brand) })), [brand]);
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -147,7 +150,7 @@ export default function NotificationPanel({ open, filter, onFilterChange, onClos
                   <WalletSelect
                     label="notification-filter"
                     variant="plain"
-                    options={FILTERS}
+                    options={filters}
                     value={filter}
                     onChange={onFilterChange}
                     menuMinWidth={240}

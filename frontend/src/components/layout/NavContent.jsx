@@ -292,7 +292,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
           {/* The reduced rail keeps My Bets directly under Home — on the live
               site it is there on every account page (VIP, transactions,
               settings, Shuffle Wise), where the casino categories are not. */}
-          {!casino && !sportsbook && (
+          {!casino && !sportsbook && on("sports") && (
             <NavLink id="my-bets" label="My Bets" icon="sports-bet-slip" href="/sports/my-bets" expanded={expanded} active={active === "my-bets"} onSelect={handleSelect} />
           )}
           {casino && (

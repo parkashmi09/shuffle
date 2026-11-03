@@ -5,7 +5,7 @@ import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
 import DepositTab from "./DepositTab";
 import WithdrawTab from "./WithdrawTab";
-import { BuyCryptoTab, TipTab } from "./UnbuiltTabs";
+import { TipTab } from "./UnbuiltTabs";
 import Modal from "../ui/Modal";
 
 /**
@@ -33,7 +33,6 @@ import Modal from "../ui/Modal";
 const TABS = [
   { id: "deposit", label: "Deposit" },
   { id: "withdraw", label: "Withdraw" },
-  { id: "buy-crypto", label: "Buy Crypto" },
   { id: "tip", label: "Tip" },
 ];
 
@@ -134,7 +133,6 @@ export default function WalletModal({ onClose }) {
 
       {tab === "deposit" && <DepositTab {...shared} />}
       {tab === "withdraw" && <WithdrawTab {...shared} />}
-      {tab === "buy-crypto" && <BuyCryptoTab {...shared} />}
       {tab === "tip" && <TipTab {...shared} />}
     </Modal>
   );

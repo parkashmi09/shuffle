@@ -154,9 +154,7 @@ export default function PromotionArticlePage({ path }) {
             {tags.length > 0 && (
               <div className="BlogAndPromotionArticle_tags">
                 {tags.map((tag) => (
-                  <a key={tag} href={`/blog?tag=${encodeURIComponent(tag)}`} onClick={(e) => { e.preventDefault(); navigate(`/blog?tag=${encodeURIComponent(tag)}`); }}>
-                    <div className="BlogAndPromotionArticle_tag">{tag}</div>
-                  </a>
+                  <div key={tag} className="BlogAndPromotionArticle_tag">{tag}</div>
                 ))}
               </div>
             )}

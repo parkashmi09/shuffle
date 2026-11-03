@@ -56,7 +56,7 @@ const items = [
  * the tier badge and the progress bar. The `<progress>` element and its wrapper
  * are the reference's `ProgressBarSection`, already in the captured stylesheet.
  */
-function VipCard({ name, vip }) {
+function VipCard({ name, avatar, vip }) {
   const tier = tierFor(vip);
   const pct = Number(vip?.progressPct ?? 0);
 
@@ -68,7 +68,7 @@ function VipCard({ name, vip }) {
     >
       <div className="UserMenuVipCard_name">
         <div className="Avatar_root Avatar_background">
-          <img alt="avatar" width="40" height="40" src="/icons/user-profile.svg" />
+          <img alt="avatar" width="40" height="40" src={avatar || "/icons/user-profile.svg"} />
         </div>
         <span className="UserMenuVipCard_username">{name}</span>
       </div>
@@ -281,7 +281,7 @@ export default function UserMenu({ user }) {
       */}
       <div className="ExpandMenuElement_menuWrapper">
         <div className="ExpandMenuElement_expandMenu">
-          <VipCard name={user.name} vip={vip} />
+          {on("vip") && <VipCard name={user.name} avatar={user.avatar} vip={vip} />}
           {menuItems.map((item) => (
             <MenuRow key={item.id} item={item} supportHref={supportHref} onClose={() => setOpen(false)} />
           ))}

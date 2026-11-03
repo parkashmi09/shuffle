@@ -43,6 +43,8 @@ export const auth = {
  */
 export const profile = {
   get: () => get("/user/profile"),
+  /** Lifetime play: `{ bets, wins, winRate, wagered: { usd, byCurrency } }`. */
+  stats: () => get("/user/profile/stats"),
   update: (body) => put("/user/profile", body),
   /** Needs a 6-digit code the player has already been sent. */
   changeEmail: (email, code) => post("/user/profile/change-email", { email, code }),
@@ -89,6 +91,13 @@ export const kyc = {
    * of the files `idFront`, `idBack`, `passport`.
    */
   submit: (form) => post("/user/kyc/submit", form),
+};
+
+/** KYC levels 3 and 4: `{ identity, levelsOn, levels: [{ level, label, unlocked, status, rejectionReason, submittedAt }] }`. */
+export const kycLevels = {
+  status: () => get("/user/kyc-levels"),
+  /** Multipart, the one file `document` (JPG / PNG / PDF); resend allowed only after a rejection. */
+  submit: (level, form) => post(`/user/kyc-levels/${level}`, form),
 };
 
 /** The email-verification code (6 digits) — deposits can be gated on a verified address. */
@@ -146,6 +155,10 @@ export const vip = {
    */
   levels: () =>
     get("/user/vip/levels").then((res) => (Array.isArray(res) ? res : res?.levels ?? [])),
+  /** Unpaid rank-up rewards: `{ cards: [card], totalUsd }`. */
+  rankUps: () => get("/user/vip/rank-ups"),
+  /** Pays every pending rank-up at once: `{ granted: [{ card, amount, currency, amountUsd }] }`. */
+  claimRankUps: () => post("/user/vip/rank-ups/claim"),
   /** The benefits table: `{ perks: [{ label, cards: ["bronze", …] }] }`, enabled perks only, public. */
   perks: () => get("/admin/vip-branding/perks", { auth: false }),
 };
@@ -336,6 +349,8 @@ export const affiliate = {
   /** `{ total, claimedTotal, currency, rows }` — unlocked rewards summary. */
   unclaimed: () => get("/user/affiliate/rewards/unclaimed"),
   claimAll: () => post("/user/affiliate/rewards/claim-all"),
+  /** One kind's rewards, newest first: `{ total, rows: [{ id, kind, member, amount, currency, claimed, status, createdAt }] }`; `kind` is `referral` | `commission`. */
+  rewardHistory: (query) => get("/user/affiliate/rewards/history", { query }),
   claimOne: (rewardId) => post("/user/affiliate/rewards/claim", { rewardId }),
 };
 
@@ -386,6 +401,8 @@ export const funding = {
 
   fiatWithdrawals: (query) => get("/user/withdrawals/fiat", { query }),
   createFiatWithdrawal: (body) => post("/user/withdrawals/fiat", body),
+  /** Only while `In Queue`; the held amount goes back to the balance (409 NOT_CANCELLABLE after). */
+  cancelFiatWithdrawal: (withdrawalId) => post(`/user/withdrawals/fiat/${withdrawalId}/cancel`),
 
   cryptoWithdrawals: (query) => get("/user/withdrawals/crypto", { query }),
   cryptoWithdrawalSummary: () => get("/user/withdrawals/crypto/summary"),

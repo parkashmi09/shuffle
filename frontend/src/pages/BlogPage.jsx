@@ -3,6 +3,7 @@ import { cx } from "../lib/carousel";
 import { Pagination, PromotionTile } from "./PromotionsPage";
 import { site } from "../lib/endpoints";
 import { blogListQuery, blogToTile, matchesBlogTab } from "../lib/blogs";
+import { useBranding, withSiteName } from "../lib/siteContent";
 
 const TABS = [
   { id: "all", label: "All", alt: "all", icon: "/icons/sports-leagues.svg" },
@@ -17,6 +18,7 @@ const TABS = [
 const PER_PAGE = 9;
 
 export default function BlogPage() {
+  const brand = useBranding();
   const [tab, setTab] = useState("all");
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState([]);
@@ -86,7 +88,7 @@ export default function BlogPage() {
                 <span className="Tab_icon">
                   <img alt={t.alt} src={t.icon} />
                 </span>
-                <p className="Tab_text">{t.label}</p>
+                <p className="Tab_text">{withSiteName(t.label, brand)}</p>
               </button>
             ))}
           </div>

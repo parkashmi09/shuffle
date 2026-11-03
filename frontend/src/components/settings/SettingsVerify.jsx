@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApi } from "../../lib/useResource";
-import { emailVerify, kyc as kycApi, profile as profileApi } from "../../lib/endpoints";
+import { emailVerify, kyc as kycApi, kycLevels, profile as profileApi } from "../../lib/endpoints";
+import { openExternal, useBranding, useSupportHref, withSiteName } from "../../lib/siteContent";
 import Modal from "../ui/Modal";
 import { useGate } from "../../lib/gates";
 
@@ -15,6 +16,10 @@ import { useGate } from "../../lib/gates";
  * `NotSubmitted` | `Unverified` | `Pending` | `Verified` | `Rejected`. The reference splits KYC
  * into L1 (details) and L2 (ID upload); this backend has a single submission,
  * so L1 tracks whether anything has been submitted and L2 whether it cleared.
+ *
+ * The further levels (3 Proof of Address, 4 Source of Income) are `GET /user/kyc-levels`, one card
+ * each, in order, each unlocked by the one before; `POST /user/kyc-levels/:level` takes one
+ * `document` file (multipart, JPG / PNG / PDF).
  */
 
 const COMPLETE = { color: "rgb(61, 209, 121)", label: "Completed" };
@@ -179,12 +184,53 @@ function KycModal({ onClose, onDone }) {
   );
 }
 
+/** `POST /user/kyc-levels/:level` — one document, nothing else in the body. */
+function LevelModal({ level, onClose, onDone }) {
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("document", file);
+      await kycLevels.submit(level.level, form);
+      onDone();
+    } catch (err) {
+      setError(err?.message || "That did not go through.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose} label={level.label}>
+      <h3 className="Header_root">{level.label}</h3>
+      <form className="ChangePasswordModal_root" onSubmit={submit}>
+        {field(`kyc-level-${level.level}`, "Document*", (
+          <input id={`kyc-level-${level.level}`} className="Input_root" type="file" accept="image/png,image/jpeg,application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        ))}
+        {error && <Warning>{error}</Warning>}
+        <button type="submit" disabled={busy || !file} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary ChangePasswordModal_button">
+          <span className="ButtonVariants_buttonContent">{busy ? "Submitting…" : "Submit"}</span>
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
 export default function SettingsVerify() {
   const [nonce, setNonce] = useState(0);
   const [open, setOpen] = useState(null);
   const kycOn = useGate()("kyc");
   const { data: status } = useApi(`settings:kyc:${nonce}`, () => kycApi.status().catch(() => null));
   const { data: me } = useApi(`settings:profile:${nonce}`, () => profileApi.get().catch(() => null));
+  const { data: levels } = useApi(`settings:kyc-levels:${nonce}`, () => kycLevels.status(), { enabled: kycOn });
+  const brand = useBranding();
+  const supportHref = useSupportHref();
 
   const submitted = Boolean(status?.submitted);
   const approved = status?.status === "Verified";
@@ -245,9 +291,28 @@ export default function SettingsVerify() {
             </button>
           }
         />
+        {(levels?.levels || []).map((level) => {
+          const verified = level.status === "Verified";
+          const inReview = level.status === "Pending";
+          return (
+            <VerificationCard
+              key={level.level}
+              done={verified}
+              tag={verified ? COMPLETE : inReview ? PENDING : INCOMPLETE}
+              title={`L${level.level}: ${level.label}`}
+              text={level.status === "Rejected" && level.rejectionReason ? `Rejected: ${level.rejectionReason}` : !level.unlocked ? "Complete the previous level first." : null}
+              button={
+                <button type="button" disabled={!level.unlocked || verified || inReview} onClick={() => setOpen(level)} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary VerificationCard_button">
+                  <span className="ButtonVariants_buttonContent">{verified ? "Verified" : inReview ? "In Review" : "Verify Now"}</span>
+                </button>
+              }
+            />
+          );
+        })}
         </>)}
       </div>
 
+      {open?.level && <LevelModal level={open} onClose={() => setOpen(null)} onDone={finish} />}
       {open === "email" && <EmailVerifyModal onClose={() => setOpen(null)} onDone={finish} />}
       {open === "kyc" && <KycModal onClose={() => setOpen(null)} onDone={finish} />}
 
@@ -255,11 +320,13 @@ export default function SettingsVerify() {
         <img alt="user" height="80" width="80" src="/icons/user-logout.svg" />
         <h4 className="Heading_root Heading_h4">Need Help?</h4>
         <p className="SupportChatPrompt_chatPromptSubtext">
-          Have questions or concerns regarding your Shuffle account? Our experts are here to help!
+          {withSiteName("Have questions or concerns regarding your Shuffle account? Our experts are here to help!", brand)}
         </p>
-        <button type="button" className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary">
-          <span className="ButtonVariants_buttonContent">Chat with us</span>
-        </button>
+        {supportHref && (
+          <button type="button" onClick={() => openExternal(supportHref)} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary">
+            <span className="ButtonVariants_buttonContent">Chat with us</span>
+          </button>
+        )}
       </div>
     </div>
   );

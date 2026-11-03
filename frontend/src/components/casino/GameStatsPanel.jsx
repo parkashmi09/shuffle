@@ -1,7 +1,9 @@
 import { useId, useMemo, useState } from "react";
 import { Area, AreaChart, ReferenceLine, ResponsiveContainer } from "recharts";
 import { cx } from "../../lib/carousel";
-import { betHistory } from "../../lib/endpoints";
+import { betHistory, site } from "../../lib/endpoints";
+import { navigate } from "../../lib/router";
+import { promotionHref } from "../../lib/promotions";
 import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
 import { formatAmount } from "../../lib/adapters";
@@ -80,6 +82,8 @@ function Collapse({ title, open, onToggle, children }) {
   );
 }
 
+const lastSegment = (href) => String(href || "").split(/[?#]/)[0].replace(/\/$/, "").split("/").pop();
+
 /** An amount beside its currency mark — the reference's `IconValue`. */
 function Amount({ code, value }) {
   return (
@@ -129,6 +133,18 @@ export default function GameStatsPanel({ game }) {
   const { signedIn } = useSession();
   const [statsOpen, setStatsOpen] = useState(true);
   const [promosOpen, setPromosOpen] = useState(false);
+
+  // The list carries no `qualifyingGames`, so each live promotion's detail is read — only once opened.
+  const promos = useApi(
+    `game-promos:${game.uuid}`,
+    async () => {
+      const list = await site.promotions({ limit: 100 });
+      const live = (list?.data ?? []).filter((p) => p.promoStatus !== "ended");
+      const full = await Promise.all(live.map((p) => site.promotionBySlug(p.segment, p.slug).catch(() => null)));
+      return full.filter((p) => p?.qualifyingGames?.some((g) => lastSegment(g.href) === String(game.uuid)));
+    },
+    { enabled: promosOpen }
+  );
 
   const { data } = useApi(`game-stats:${game.uuid}`, () => betHistory.mine({ limit: PAGE }), {
     enabled: signedIn,
@@ -224,12 +240,28 @@ export default function GameStatsPanel({ game }) {
         </div>
       </Collapse>
 
-      {/* Collapsed, and empty when opened: there is no per-game promotion
-          object in any of the four services to list. The section is here
-          because the reference's panel has it and it is one read away from
-          being real; it says so rather than showing nothing at all. */}
       <Collapse title="Promotions" open={promosOpen} onToggle={() => setPromosOpen((v) => !v)}>
-        <p className="LiveGameStats_note">No promotions are running on this game.</p>
+        {promos.loading ? (
+          <p className="LiveGameStats_note">Loading promotions…</p>
+        ) : promos.error ? (
+          <p className="LiveGameStats_note">Promotions could not be loaded.</p>
+        ) : promos.data?.length ? (
+          promos.data.map((p) => (
+            <p key={p.id} className="LiveGameStats_note">
+              <a
+                href={promotionHref(p.segment, p.slug)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate(promotionHref(p.segment, p.slug));
+                }}
+              >
+                {p.title}
+              </a>
+            </p>
+          ))
+        ) : (
+          <p className="LiveGameStats_note">No promotions are running on this game.</p>
+        )}
       </Collapse>
     </section>
   );

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
-import { bonus as bonusApi, rakeback as rakebackApi } from "../../lib/endpoints";
+import { bonus as bonusApi, rakeback as rakebackApi, vip as vipApi } from "../../lib/endpoints";
 import { useApi } from "../../lib/useResource";
 import { levelName } from "./vipTiers";
 
@@ -12,6 +12,7 @@ import { levelName } from "./vipTiers";
  *
  *   `GET /user/rakeback`  → `{ amount, currency, claimable, minimum, rate }`
  *   `GET /user/bonus`     → `{ currency, types: { daily, weekly, monthly } }`
+ *   `GET /user/vip/rank-ups` → `{ cards, totalUsd }` — one claim pays every pending rank-up
  *
  * ── THE REFERENCE HAS SEVEN CARD STATES; THIS PLATFORM CAN TELL FOUR ─────
  *
@@ -211,6 +212,7 @@ function RewardCard({ heading, icon, status, expiry, minVipRank, busy, error, on
 export default function VipRewards({ levels, variant = "page" }) {
   const { data: rake, reload: reloadRake } = useApi("vip:rakeback", () => rakebackApi.amount());
   const { data: bonuses, reload: reloadBonuses } = useApi("vip:bonus", () => bonusApi.overview());
+  const { data: rankUps, reload: reloadRankUps } = useApi("vip:rank-ups", () => vipApi.rankUps());
 
   /* `{ [cardId]: "busy" | "claimed" | errorMessage }` — per card, so one
      failing claim does not put the other three into an error state. */
@@ -240,7 +242,11 @@ export default function VipRewards({ levels, variant = "page" }) {
       for (const [id, state] of Object.entries(next)) {
         if (state !== "claimed") continue;
         const stillClaimable =
-          id === "rakeback" ? Boolean(rake?.claimable) : Boolean(bonuses?.types?.[id]?.claimable);
+          id === "rakeback"
+            ? Boolean(rake?.claimable)
+            : id === "rankup"
+              ? Boolean(rankUps?.cards?.length)
+              : Boolean(bonuses?.types?.[id]?.claimable);
         if (!stillClaimable) {
           delete next[id];
           changed = true;
@@ -248,7 +254,7 @@ export default function VipRewards({ levels, variant = "page" }) {
       }
       return changed ? next : c;
     });
-  }, [rake, bonuses]);
+  }, [rake, bonuses, rankUps]);
 
   const cards = useMemo(() => {
     const list = [];
@@ -290,8 +296,17 @@ export default function VipRewards({ levels, variant = "page" }) {
       });
     }
 
+    if (rankUps) {
+      list.push({
+        id: "rankup",
+        heading: "Rank Up Bonus",
+        icon: "/icons/ranks.svg",
+        status: claims.rankup === "claimed" ? STATUS.CLAIMED : rankUps.cards?.length ? STATUS.CLAIMABLE : STATUS.WAGER,
+      });
+    }
+
     return list;
-  }, [rake, bonuses, claims, levels]);
+  }, [rake, bonuses, rankUps, claims, levels]);
 
   /* Live count of enabled Claim buttons — not a fixed label. Hidden at 0 so
      a purple "0" does not read as a static decoration. */
@@ -323,8 +338,12 @@ export default function VipRewards({ levels, variant = "page" }) {
                   onClaim={() =>
                     claim(
                       card.id,
-                      card.id === "rakeback" ? () => rakebackApi.claim() : () => bonusApi.claim(card.id),
-                      card.id === "rakeback" ? reloadRake : reloadBonuses
+                      card.id === "rakeback"
+                        ? () => rakebackApi.claim()
+                        : card.id === "rankup"
+                          ? () => vipApi.claimRankUps()
+                          : () => bonusApi.claim(card.id),
+                      card.id === "rakeback" ? reloadRake : card.id === "rankup" ? reloadRankUps : reloadBonuses
                     )
                   }
                 />

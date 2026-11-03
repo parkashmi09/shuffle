@@ -19,7 +19,6 @@ import Modal from "../ui/Modal";
  * before a first bet) are the current weekly race, `GET /user/race/weekly/leaderboard`.
  */
 
-const PRIZE_ROUTE = "/promotions/100000-weekly-race";
 function useCountdown(target) {
   const end = target ? Date.parse(target) : 0;
   const [now, setNow] = useState(() => Date.now());
@@ -54,11 +53,11 @@ export default function WeeklyRaceModal({ onClose }) {
   const coin = board?.payoutCurrency || "USDT";
   const title = board ? `${formatAmount(board.payoutNetPrizePool)} ${coin} Weekly Race` : "Weekly Race";
   const me = board?.me;
-  // The admin's own race promotion when it has one; the captured article otherwise.
+  // The admin's own race promotion; without one there is no article to learn more from.
   const on = useGate();
   const { data: promos } = useApi("race:promotion", () => site.promotions({ page: 1, limit: 50 }), { enabled: on.ready && on("promotions") });
   const racePromo = (Array.isArray(promos?.data) ? promos.data : []).find((p) => p.slug && /race/i.test(`${p.slug} ${p.title}`));
-  const learnMore = racePromo ? promotionHref(racePromo.segment, racePromo.slug) : PRIZE_ROUTE;
+  const learnMore = racePromo ? promotionHref(racePromo.segment, racePromo.slug) : null;
   return (
     <Modal onClose={onClose} label={title}>
       <div className="RaceInfoModal_root">
@@ -86,13 +85,15 @@ export default function WeeklyRaceModal({ onClose }) {
             <Field icon="/icons/fiat/USD.svg" label="Total wagered" value={`$${formatAmount(me?.usdWagered ?? 0)}`} />
             <Field icon={currencyIcon(coin)} label="Current prize" value={`${formatAmount(me?.payout ?? 0)} ${coin}`} />
           </div>
-          <button
-            className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary RaceInfoModal_cta"
-            type="button"
-            onClick={() => { onClose(); navigate(learnMore); }}
-          >
-            <span className="ButtonVariants_buttonContent">Learn More</span>
-          </button>
+          {learnMore && (
+            <button
+              className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary RaceInfoModal_cta"
+              type="button"
+              onClick={() => { onClose(); navigate(learnMore); }}
+            >
+              <span className="ButtonVariants_buttonContent">Learn More</span>
+            </button>
+          )}
         </div>
       </div>
     </Modal>

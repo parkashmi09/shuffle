@@ -1,3 +1,5 @@
+import { useCoins } from "./currencies";
+
 /**
  * Which chains each asset can move on.
  *
@@ -76,3 +78,10 @@ export function networksFor(code) {
 export function networkLabel(code, network) {
   return networksFor(code).find((n) => n.value === network)?.label || network || "";
 }
+
+/** The coin's networks as the site lists them (`GET /admin/currencies/public`), else the static shape. */
+export function useNetworkOptions(coin) {
+  const row = useCoins()?.get(String(coin).toUpperCase());
+  return row?.networks?.length ? row.networks.map((n) => ({ value: n.key, label: n.name || n.key })) : networksFor(coin);
+}
+

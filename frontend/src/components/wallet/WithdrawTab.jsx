@@ -5,7 +5,8 @@ import { funding } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
 import { displayBalance, formatAmount, isFiat } from "../../lib/adapters";
 import { currencyName } from "../../lib/currencies";
-import { networkLabel, networksFor } from "../../lib/networks";
+import { networkLabel, useNetworkOptions } from "../../lib/networks";
+import { USER_EVENTS, userRequest } from "../../lib/siteLive";
 import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import WalletSelect, { CoinIcon } from "./CurrencySelect";
 import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
@@ -21,10 +22,9 @@ import { useApi } from "../../lib/useResource";
  *
  * ── WHAT THIS PLATFORM CAN ACTUALLY PAY OUT ──────────────────────────────
  *
- * Only fiat. `POST /user/withdrawals/fiat` exists and works; the crypto side
- * has `GET /user/withdrawals/crypto` for history but **no POST** — there is no
- * route to request one, so a crypto withdrawal form here would be a button
- * wired to nothing. The tab says so rather than pretending.
+ * Fiat posts `POST /user/withdrawals/fiat`. Crypto is the user socket's
+ * `SUBMIT_NEW_WITHDRAWL` (`{ wallet, amount, coin, password, chain }`), which
+ * debits the balance and queues the request for staff review.
  *
  * The validator is `.strict()` and conditional: `accountHolderName` is always
  * required, INR needs an IFSC **or** a UPI id, and every other currency needs
@@ -60,23 +60,46 @@ function requirementText(req) {
 const accountLabel = (a) =>
   a.method === "upi" ? `UPI · ${a.upiId}` : `${a.bankName || "Bank"} · ${a.accountNumberMasked || ""} · ${a.ifscCode || ""}`;
 
-/**
- * The crypto payout form.
- *
- * Complete, and deliberately not submitting: the backend serves withdrawal
- * *history* at `GET /user/withdrawals/crypto` and has **no POST** — payouts run
- * through CCPayment, which is not configured. So the screen is finished and the
- * submit says what it is waiting for rather than posting into nothing.
- *
- * Everything else behaves: the network picker, the address field, the amount
- * with its balance caption, the percentage row and the fee notice are all live
- * against the wallet, so wiring this is one `funding.createCryptoWithdrawal`
- * away once the route exists.
- */
-function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = false }) {
-  const options = networksFor(coin);
+/** The crypto payout form — `SUBMIT_NEW_WITHDRAWL` over the user socket; the backend asks for the password. */
+function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = false, onDone }) {
+  const options = useNetworkOptions(coin);
   const [network, setNetwork] = useState("");
-  const active = network || options[0]?.value || "";
+  const active = options.some((o) => o.value === network) ? network : options[0]?.value || "";
+  const label = options.find((o) => o.value === active)?.label || networkLabel(coin, active);
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const missing = !form.address.trim()
+    ? "Enter an address."
+    : !form.amount || Number(form.amount) <= 0
+      ? "Enter an amount."
+      : Number(form.amount) > Number(available)
+        ? "That is more than your balance."
+        : !password
+          ? "Enter your password."
+          : null;
+
+  const submit = async () => {
+    if (missing) return setStatus({ ok: false, message: missing });
+    setBusy(true);
+    setStatus(null);
+    try {
+      await userRequest(USER_EVENTS.SUBMIT_NEW_WITHDRAWL, {
+        coin,
+        chain: active,
+        wallet: form.address.trim(),
+        amount: form.amount,
+        password,
+      });
+      setStatus({ ok: true, message: "Withdrawal requested. It stays pending until an operator approves it." });
+      setPassword("");
+      onDone();
+    } catch (error) {
+      setStatus({ ok: false, message: WITHDRAW_REFUSALS[error?.code] || error.message || "Could not request the withdrawal." });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <>
@@ -166,24 +189,49 @@ function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = 
         */}
         <span className="NoticeMessage_root">
           <img alt="" height="16" width="16" src="/icons/exclamation.svg" />
-          <span className="NoticeMessage_text">Withdrawal Fee: —</span>
+          <span className="NoticeMessage_text">Withdrawals are reviewed by an operator before they are paid out.</span>
         </span>
         <span className="NoticeMessage_root">
           <img alt="" height="16" width="16" src="/icons/shield.svg" />
           <span className="NoticeMessage_text">
-            Your withdrawal will be processed on {networkLabel(coin, active)}.
+            Your withdrawal will be processed on {label}.
           </span>
         </span>
       </div>
 
-      {/*
-        Disabled, and therefore grey: `ButtonVariants_root:disabled` paints
-        `--btn-bg-disabled` (`--color-gray300`), which is the light slate the
-        live modal shows on an incomplete form. An earlier pass added
-        `keepEnabledStyle`, which is the variant that *suppresses* exactly that.
-      */}
-      <button type="submit" disabled className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary Withdraw_submitButton">
-        <span className="ButtonVariants_buttonContent">Withdraw</span>
+      <div className="TextInput_formControlWrapper">
+        <div className="TextInput_labelGroup">
+          <div className="LabelBlock_root TextInput_labelBlock">
+            <label className="Label_root" htmlFor="wd-password">Password*</label>
+          </div>
+        </div>
+        <div className="InputWrapper_root">
+          <input
+            id="wd-password"
+            className="Input_root"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {status && (
+        <div className="NoticeMessage_root" role={status.ok ? "status" : "alert"}>
+          <span className="NoticeMessage_text" style={{ color: status.ok ? "var(--color-success)" : "var(--color-warning)" }}>
+            {status.message}
+          </span>
+        </div>
+      )}
+
+      <button
+        type="button"
+        disabled={busy || Boolean(missing)}
+        onClick={submit}
+        className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary Withdraw_submitButton"
+      >
+        <span className="ButtonVariants_buttonContent">{busy ? "Requesting…" : "Withdraw"}</span>
       </button>
     </>
   );
@@ -347,7 +395,7 @@ export default function WithdrawTab({
   );
 
   return (
-    <form className="Withdraw_form" onSubmit={submit}>
+    <form className="Withdraw_form" onSubmit={fiat ? submit : (e) => e.preventDefault()}>
       {isFiat(coin) && (
           <div className="CurrencyNetworkSelectOptionsWrapper_root">{currencySelect}</div>
         )}
@@ -360,6 +408,10 @@ export default function WithdrawTab({
             set={set}
             setPercent={setPercent}
             hideBalance={hideBalance}
+            onDone={() => {
+              setForm((f) => ({ ...f, amount: "" }));
+              refreshBalances();
+            }}
           />
         ) : (
           <>

@@ -142,9 +142,4 @@ export const providerBrands = {
   "yellow-bat": { label: "Yellow Bat", img: "/providers/yellow-bat.png" },
 };
 
-/** Display order for the providers page: alphabetical by what a player reads. */
-export const providerOrder = Object.keys(providerBrands).sort((a, b) =>
-  providerBrands[a].label.localeCompare(providerBrands[b].label)
-);
-
 export default providerBrands;

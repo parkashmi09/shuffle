@@ -344,7 +344,7 @@ function GameFooter({ game, theatre, onTheatre, onFullscreen, playing, onPlay, l
  */
 function MoreFromProvider({ game, providers }) {
   const provider = game?.provider || null;
-  const { games } = useProviderGames(provider, provider, { limit: 24 });
+  const { games } = useProviderGames(provider, { limit: 24 });
 
   if (!provider) return null;
   const rest = (games || []).filter((g) => g.uuid !== game.uuid);

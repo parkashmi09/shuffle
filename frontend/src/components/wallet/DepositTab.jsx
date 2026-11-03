@@ -5,7 +5,8 @@ import { funding } from "../../lib/endpoints";
 import { useApi } from "../../lib/useResource";
 import { isFiat } from "../../lib/adapters";
 import { currencyName } from "../../lib/currencies";
-import { networkLabel, networksFor } from "../../lib/networks";
+import { USER_EVENTS, userRequest } from "../../lib/siteLive";
+import { networkLabel, useNetworkOptions } from "../../lib/networks";
 import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
 import WalletSelect from "./CurrencySelect";
@@ -24,11 +25,10 @@ import QrCode from "./QrCode";
  * so the tab branches on the selected currency rather than pretending one flow
  * covers both:
  *
- * - **Crypto** wants CCPayment: `GET /user/crypto/chains` for the networks and
- *   the provider for an address. Both answer `CRYPTO_PROVIDER_DISABLED` until
- *   `CCPAYMENT_*` is set, so the address and QR render behind the reference's
- *   own `Deposit_contentBlur` with the reason stated. Inventing an address
- *   would be inventing somewhere for real money to go.
+ * - **Crypto** is the address CCPayment allocated to the player, read with
+ *   `GET_ADDRESS` over the user socket. Until one is allocated the tab says
+ *   crypto deposits are not available — inventing an address would be
+ *   inventing somewhere for real money to go.
  *
  * - **Fiat** is a bank transfer: `GET /user/bank-details/:coin` publishes where
  *   to send it and `POST /user/deposits/fiat` files the claim. Both work today,
@@ -92,37 +92,20 @@ function Warning({ children }) {
 /**
  * Crypto: network, address, warning, QR — the reference's four rows, in order.
  *
- * The whole control is built whether or not a provider answers, because the
- * shape of the screen is not conditional on configuration. Networks come from
- * `GET /user/crypto/chains` when CCPayment is configured and from
- * `lib/networks.js` when it is not — those are public facts about the asset, so
- * the picker works either way.
- *
- * **The address is the one field that is never filled in from nothing.** It is
- * issued per player by the provider; a plausible-looking string here would be
- * somewhere a real deposit could go and never come back. So it renders empty
- * with the reason stated, and everything around it is finished.
+ * The address is the one allocated to this player (`GET_ADDRESS` on the user socket). It answers
+ * `{ address: null }` until the provider (CCPayment) has issued one, so that — and a refusal — is
+ * stated in words; an empty field must never look like somewhere to send money.
  */
 function CryptoDeposit({ coin, currencySelect }) {
-  const { data: chains } = useApi("wallet:chains", () => funding.chains());
-
-  /** The live list when the provider answers, the static one otherwise. */
-  const live = Array.isArray(chains) && chains.length
-    ? chains.map((c) => ({ value: c.chain || c.symbol, label: c.chainFullName || c.chain }))
-    : null;
-  const options = live || networksFor(coin);
-
+  const options = useNetworkOptions(coin);
   const [network, setNetwork] = useState("");
-  const active = network || options[0]?.value || "";
+  const active = options.some((o) => o.value === network) ? network : options[0]?.value || "";
+  const label = options.find((o) => o.value === active)?.label || networkLabel(coin, active);
 
-  /**
-   * The address, once the provider issues one.
-   *
-   * There is no route to ask for it on this deployment — `crypto/chains` and
-   * the address share the CCPayment client — so this stays empty and the field
-   * shows why. Wiring it is a one-line change here once the route exists.
-   */
-  const address = "";
+  const { data, loading, error } = useApi(`wallet:address:${coin}:${active}`, () =>
+    userRequest(USER_EVENTS.GET_ADDRESS, { coin, chain: active })
+  );
+  const address = data?.address || "";
 
   return (
     <>
@@ -133,24 +116,21 @@ function CryptoDeposit({ coin, currencySelect }) {
         <WalletSelect label="Network*" options={options} value={active} onChange={setNetwork} />
       </div>
 
-      <div className="Deposit_inputWrapper">
-        {/* `Ethereum (ERC20) Address` — the coin's name and the chosen network,
-            the way the live modal captions it. */}
-        <CopyField
-          label={`${currencyName(coin)} (${active}) Address`}
-          value={address}
-          disabled={!address}
-        />
-        {/* The reference's own line, and the only message this row carries.
-            Nothing here explains this deployment's configuration — that belongs
-            in `docs/MISSING-AND-UNWIRED.md`, not in a player's wallet. */}
-        <Warning>
-          Your deposit must be sent on the {networkLabel(coin, active)} network to be
-          processed.
-        </Warning>
-      </div>
-
-      <QrCode value={address} />
+      {loading ? (
+        <div className="Deposit_walletGeoRestrictionBlock">Loading your deposit address…</div>
+      ) : error ? (
+        <div className="Deposit_walletGeoRestrictionBlock" role="alert">{error.message}</div>
+      ) : !address ? (
+        <div className="Deposit_walletGeoRestrictionBlock">Crypto deposits are not available yet.</div>
+      ) : (
+        <>
+          <div className="Deposit_inputWrapper">
+            <CopyField label={`${currencyName(coin)} (${active}) Address`} value={address} />
+            <Warning>Your deposit must be sent on the {label} network to be processed.</Warning>
+          </div>
+          <QrCode value={address} />
+        </>
+      )}
     </>
   );
 }

@@ -1,5 +1,4 @@
 import { navigate } from "../../lib/router";
-import { cx } from "../../lib/carousel";
 import { useBranding } from "../../lib/siteContent";
 
 const CIRCUMFERENCE = 2 * Math.PI * 28;
@@ -32,25 +31,6 @@ export function CircleProgress({ progress = 0, size }) {
   );
 }
 
-const trophies = ["/icons/trophy-first.svg", "/icons/trophy-second.svg", "/icons/trophy-third.svg"];
-const ordinal = (n) => `${n}${["th", "st", "nd", "rd"][n % 100 > 10 && n % 100 < 14 ? 0 : Math.min(n % 10, 4) === 4 ? 0 : n % 10]}`;
-
-export function RankOrdinal({ rank }) {
-  const trophy = trophies[rank - 1];
-  return (
-    <div className="HomePromotionUserRank_entryRank">
-      {trophy ? (
-        <div className="Flex_root Flex_sm4">
-          <img aria-hidden="true" alt={`rank ${rank}`} height="16" src={trophy} width="16" />
-          <span className="HomePromotionUserRank_rankOrdinal">{ordinal(rank)}</span>
-        </div>
-      ) : (
-        <span className="HomePromotionUserRank_rankOrdinal">{ordinal(rank)}</span>
-      )}
-    </div>
-  );
-}
-
 export function UserCell({ user }) {
   if (!user) {
     return (
@@ -73,15 +53,6 @@ export function UserCell({ user }) {
         <span className="UserCell_username">{user.name}</span>
       </span>
     </button>
-  );
-}
-
-export function ShflAmount({ value, className, amountClass }) {
-  return (
-    <span className={cx("IconValue_root", className)}>
-      <img alt="SHFL" className="CryptoIcon_root CryptoIcon_image" height="16" src="/icons/crypto/shfl.svg" width="16" />
-      <span className={cx("FormattedAmount_root", amountClass, "formatted-amount-value")}>{value}</span>
-    </span>
   );
 }
 

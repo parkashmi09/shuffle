@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useSession } from "../../lib/sessionContext";
 import { useApi } from "../../lib/useResource";
 import { preferences as preferencesApi } from "../../lib/endpoints";
+import { useGate } from "../../lib/gates";
 import { FIAT_CODES } from "../../lib/currencies";
 import { PREF_DEFAULTS, readStoredPreferences, writeStoredPreferences } from "../../lib/playerPreferences";
 import WalletSelect from "../wallet/CurrencySelect";
@@ -24,8 +25,8 @@ import Switch from "./Switch";
  * | Promotion Notifications    | `PATCH /user/preferences`     | `pushNotifications` column                  |
  * | Streamer Mode              | `hideBalance` on server       | Masks balances in header & wallet pickers   |
  * | Hide zero balances         | localStorage + session        | Filters zero rows in header & wallet lists  |
- * | Odds Preference            | localStorage only             | Sportsbook is still capture — format unused |
- * | Private Mode               | localStorage only             | No "hide my stats" column on the backend    |
+ * | Odds Preference            | localStorage only             | Shown only with sports on                   |
+ * | Private Mode               | `PATCH /user/preferences`     | hideGamingData + showStatistics off (profile counts) + showBetsPublicly off (named on feeds/races) |
  */
 
 const ODDS = [
@@ -40,6 +41,10 @@ const SERVER_FIELDS = {
   promotionNotifications: "pushNotifications",
   streamerMode: "hideBalance",
 };
+
+/** Private Mode is three columns; either stats switch already hides the profile counts server-side. */
+const privateBody = (on) => ({ hideGamingData: on, showStatistics: !on, showBetsPublicly: !on });
+const isPrivate = (stored) => stored.hideGamingData === true || stored.showStatistics === false;
 
 /** A heading, its description, and the switch that owns them. */
 function SwitchRow({ checked, onChange, heading, description, disabled = false }) {
@@ -72,6 +77,7 @@ export default function SettingsPreferences() {
   // `stored` is the answer from before the write.
   const [touched, setTouched] = useState(() => []);
   const { data: stored } = useApi("settings:preferences", () => preferencesApi.get().catch(() => null));
+  const on = useGate();
 
   const prefs = useMemo(() => {
     const merged = { ...PREF_DEFAULTS, ...local, fiatView, hideZeroBalances, streamerMode: hideBalance };
@@ -83,6 +89,7 @@ export default function SettingsPreferences() {
       }
       if (!touched.includes(key)) merged[key] = Boolean(stored[field]);
     }
+    if (!touched.includes("privateMode")) merged.privateMode = isPrivate(stored);
     return merged;
   }, [local, stored, touched, fiatView, hideZeroBalances, hideBalance]);
 
@@ -92,10 +99,12 @@ export default function SettingsPreferences() {
       for (const [key, field] of Object.entries(SERVER_FIELDS)) {
         if (key in patch) body[field] = patch[key];
       }
-      const server = Object.keys(SERVER_FIELDS).filter((key) => key in patch);
+      if ("privateMode" in patch) Object.assign(body, privateBody(Boolean(patch.privateMode)));
+      const server = [...Object.keys(SERVER_FIELDS), "privateMode"].filter((key) => key in patch);
       if (server.length) {
         setTouched((current) => [...new Set([...current, ...server])]);
-        preferencesApi.update(body).catch(() => {});
+        // A refused write drops back to the server's value rather than showing a switch that did not save.
+        preferencesApi.update(body).catch(() => setTouched((current) => current.filter((k) => !server.includes(k))));
       }
 
       if ("streamerMode" in patch) setHideBalance(Boolean(patch.streamerMode));
@@ -145,6 +154,7 @@ export default function SettingsPreferences() {
             </div>
           </div>
 
+          {on("sports") && (
           <div className="ReferenceContainer_root">
             <div className="ReferenceContainer_content">
               <h5 className="Heading_root Heading_h5 Preferences_heading">Odds Preference</h5>
@@ -159,6 +169,7 @@ export default function SettingsPreferences() {
               />
             </div>
           </div>
+          )}
 
           <SwitchRow
             checked={prefs.privateMode}

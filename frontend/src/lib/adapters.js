@@ -140,45 +140,6 @@ export const toProvider = (row, staticProviders = [], brands = {}) => {
 export const toProviders = (rows, staticProviders, brands) =>
   Array.isArray(rows) ? rows.map((r) => toProvider(r, staticProviders, brands)) : [];
 
-/**
- * The providers page: the whole roster, not only what has games today.
- *
- * `gis_providers` holds the studios the catalogue has ROWS for — fourteen of
- * them. The brand list holds every studio we have a wordmark for, which is the
- * roster the operator actually carries. Showing only the first makes the page
- * look like a platform with fourteen suppliers.
- *
- * So both, in that order: a studio with games keeps its live row — its own
- * `name` key and its game `total` — and every other brand follows it as a tile
- * with `total: 0`. `order` decides the tail's sequence; the live ones lead
- * because they are the ones a player can act on.
- *
- * A tail tile still links to its provider page. That page reads the catalogue
- * for its slug and finds nothing, which is the honest answer — the studio is on
- * the roster and its games are not loaded yet.
- */
-export const toProviderRoster = (rows, staticProviders, brands = {}, order = []) => {
-  const live = toProviders(rows, staticProviders, brands);
-  const claimed = new Set(live.map((p) => p.slug));
-
-  const keys = order.length ? order : Object.keys(brands);
-  const rest = keys
-    .filter((key) => !claimed.has(key))
-    .map((key) => ({
-      slug: key,
-      // The catalogue key it WOULD be queried by, which for a studio with no
-      // rows is simply its own. Nothing here invents a name it does not have.
-      name: key,
-      label: brands[key].label,
-      img: brands[key].img,
-      total: 0,
-      /** Artwork only — nothing to filter a game list by. */
-      hasGames: false,
-    }));
-
-  return [...live, ...rest];
-};
-
 /** `banners` row → a hero slide. `image` is a filename the binary route serves. */
 /** A `GET /admin/banners` row: `{ type, title, cta: {label, href} | null, url }`, `url` an API path. */
 export const toBanner = (row) => ({
@@ -230,7 +191,10 @@ export const toBoardRow = (row, knownGames) => {
     // an index would reorder rows as new bets land at the top.
     key: row.reference ?? `${row.game}-${row.at}`,
     user: null,
-    game: resolveGame(row.game, knownGames),
+    // A provider round (the player's own history) names its catalogue uuid, which is the game page.
+    game: row.game_uid
+      ? { ...resolveGame(row.game_title || row.game, knownGames), href: `/casino/games/${row.game_uid}` }
+      : resolveGame(row.game, knownGames),
     coin: (row.currency || "usdt").toLowerCase(),
     bet: amount.toFixed(8),
     // Payout ÷ stake. A zero stake cannot produce a ratio, so it stays 0.
