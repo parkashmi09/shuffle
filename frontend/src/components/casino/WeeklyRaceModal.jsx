@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
-import { race as raceApi } from "../../lib/endpoints";
+import { race as raceApi, site } from "../../lib/endpoints";
+import { promotionHref } from "../../lib/promotions";
+import { useGate } from "../../lib/gates";
 import { useApi } from "../../lib/useResource";
 import { formatAmount } from "../../lib/adapters";
 import { currencyIcon } from "../../lib/currencies";
@@ -52,6 +54,11 @@ export default function WeeklyRaceModal({ onClose }) {
   const coin = board?.payoutCurrency || "USDT";
   const title = board ? `${formatAmount(board.payoutNetPrizePool)} ${coin} Weekly Race` : "Weekly Race";
   const me = board?.me;
+  // The admin's own race promotion when it has one; the captured article otherwise.
+  const on = useGate();
+  const { data: promos } = useApi("race:promotion", () => site.promotions({ page: 1, limit: 50 }), { enabled: on.ready && on("promotions") });
+  const racePromo = (Array.isArray(promos?.data) ? promos.data : []).find((p) => p.slug && /race/i.test(`${p.slug} ${p.title}`));
+  const learnMore = racePromo ? promotionHref(racePromo.segment, racePromo.slug) : PRIZE_ROUTE;
   return (
     <Modal onClose={onClose} label={title}>
       <div className="RaceInfoModal_root">
@@ -82,7 +89,7 @@ export default function WeeklyRaceModal({ onClose }) {
           <button
             className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary RaceInfoModal_cta"
             type="button"
-            onClick={() => { onClose(); navigate(PRIZE_ROUTE); }}
+            onClick={() => { onClose(); navigate(learnMore); }}
           >
             <span className="ButtonVariants_buttonContent">Learn More</span>
           </button>

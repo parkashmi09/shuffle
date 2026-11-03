@@ -2,7 +2,7 @@ import NavContent, { SearchButton } from "./NavContent";
 import { openSearch } from "../../lib/router";
 import { cx } from "../../lib/carousel";
 import { ProductTabs } from "./Sidebar";
-import { useBrandExtras } from "../../lib/siteContent";
+import { openExternal, useBrandExtras, useSupportHref } from "../../lib/siteContent";
 import { useGate } from "../../lib/gates";
 
 const items = [
@@ -21,8 +21,9 @@ export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, pr
   const closeMenu = menuOpen ? onToggleMenu : undefined;
   const sportsLabel = useBrandExtras()?.sportsbook?.tabName;
   const on = useGate();
+  const supportHref = useSupportHref();
   // Rewards is the VIP programme: gone for an agent's player (and when the owner/admin turns VIP off).
-  const shown = items.filter((it) => it.id !== "rewards" || on("vip")).map((it) => (it.id === "sports" && sportsLabel ? { ...it, label: sportsLabel } : it));
+  const shown = items.filter((it) => (it.id !== "rewards" || on("vip")) && (it.id !== "sports" || on("sports"))).map((it) => (it.id === "sports" && sportsLabel ? { ...it, label: sportsLabel } : it));
   const searchFromBar = () => { openSearch(); closeMenu?.(); };
   const item = (it) => {
     const body = (
@@ -34,7 +35,12 @@ export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, pr
       </div>
     );
     return it.button ? (
-      <button className="MobileNavItem_button" type="button" onClick={it.id === "menu" ? onToggleMenu : it.id === "search" ? searchFromBar : undefined}>
+      <button
+        className="MobileNavItem_button"
+        type="button"
+        disabled={it.id === "chat" && !supportHref}
+        onClick={it.id === "menu" ? onToggleMenu : it.id === "search" ? searchFromBar : () => openExternal(supportHref)}
+      >
         {body}
       </button>
     ) : (

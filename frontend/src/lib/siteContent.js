@@ -79,6 +79,18 @@ export const withSiteName = (html, brand) => (brand?.siteName ? html.replace(/\b
 
 export const useSiteContent = () => useApi(`site:content:${useSiteVersion("content")}`, loadSiteContent).data || {};
 
+/** Live Support's target: the admin's live-chat link, else the owner's WhatsApp / Telegram button; null = nothing to open. */
+export function useSupportHref() {
+  const { support } = useSiteContent();
+  const extras = useBrandExtras();
+  return support?.liveChatUrl || extras?.whatsapp || extras?.telegram || null;
+}
+
+export const openExternal = (href) => window.open(href, "_blank", "noopener,noreferrer");
+
+/** A site-content page (`pages.items`) by slug, or null. */
+export const findPage = (content, slug) => (content?.pages?.items || []).find((p) => p.slug === slug && p.body) || null;
+
 function meta(attr, key, content) {
   if (!content) return;
   let tag = document.querySelector(`meta[${attr}="${key}"]`);

@@ -7,11 +7,11 @@ import { useState, useEffect, useMemo } from "react";
 
 import { cx } from "../../lib/carousel";
 import { navigate, openSearch } from "../../lib/router";
-import { casino as casinoApi, site } from "../../lib/endpoints";
-import { adminCategorySlug } from "../../lib/categories";
-import { useApi } from "../../lib/useResource";
+import { site } from "../../lib/endpoints";
+import { useCategoryOn } from "../../lib/catalogue";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
+import { openExternal, useSupportHref } from "../../lib/siteContent";
 import { useSharedSportsTree } from "../../exchange/hooks/exchange/sharedSportsTree";
 import { sportTabsOf } from "../../exchange/pages/Exchange/sportTabs";
 
@@ -209,15 +209,16 @@ function ExpandableGroup({ expanded, icon, label, links, active, onSelect, open,
 /** The scrolling part of the navigation: token card + all links. */
 /** `variant="minimal"` is the reduced list the reference shows on non-casino routes such as the lottery. */
 export default function NavContent({ expanded, active, onSelect, mobile = false, variant = "casino" }) {
-  const casino = variant === "casino";
+  const on = useGate();
+  const supportHref = useSupportHref();
+  const casino = variant === "casino" && on("casino");
   const sportsbook = variant === "sports";
-  const minimal = !casino && !sportsbook;
+  const minimal = variant !== "casino" && !sportsbook;
   const [promosOpen, setPromosOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   // The account group only exists for a signed-in visitor, so the rail reads
   // the session directly rather than having it threaded through two shells.
   const { signedIn } = useSession();
-  const on = useGate();
   const liveSports = useLiveSports(sportsbook && on("sports"));
   /** The admin's sidebar promotions — `[]` until answered and on a failed read; nothing invented. */
   const [sidebarPromos, setSidebarPromos] = useState(null);
@@ -241,12 +242,9 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   }, [promosOn]);
 
   const promoLinks = sidebarPromos ?? [];
-  // A category the admin switched off (`active: false` on `/casino/games/categories`) leaves the rail; URLs stay as they are.
-  const { data: adminCategories } = useApi("casino:categories", () => casinoApi.categories(), { enabled: casino });
-  const shownCasinoLinks = casinoLinks.filter((l) => {
-    const slug = adminCategorySlug(l.id);
-    return !slug || !Array.isArray(adminCategories) || adminCategories.find((c) => c.slug === slug)?.active !== false;
-  });
+  // A category the admin switched off (its flag, or `active: false` on `/casino/games/categories`) leaves the rail; URLs stay as they are.
+  const categoryOn = useCategoryOn();
+  const shownCasinoLinks = casinoLinks.filter((l) => categoryOn(l.id));
   // Footer link ids are gate keys (`vip`, `blog`, `affiliate`).
   const siteFooterLinks = footerLinks.filter((l) => on(l.id));
   const accountLinks = profileLinks.filter((l) => l.action !== "vault" || on("vault"));
@@ -369,7 +367,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
           {signedIn && (
             <NavLink id="shuffle-wise" label="Shuffle Wise" icon="shuffle-wise" href="/shuffle-wise/self-exclusion" expanded={expanded} active={active === "shuffle-wise"} onSelect={handleSelect} />
           )}
-          <NavLink id="support" label="Live Support" icon="live-support" expanded={expanded} as="button" onSelect={() => {}} />
+          <NavLink id="support" label="Live Support" icon="live-support" expanded={expanded} as="button" disabled={!supportHref} onSelect={() => openExternal(supportHref)} />
         </div>
       </div>
     </div>

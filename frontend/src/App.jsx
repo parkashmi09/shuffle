@@ -23,6 +23,7 @@ import { hasCategory } from "./lib/categories";
 import { navigate, usePath } from "./lib/router";
 import { useSession } from "./lib/sessionContext";
 import { useGate } from "./lib/gates";
+import { findPage, useSiteContent } from "./lib/siteContent";
 
 const pages = {
   "/": CasinoHome,
@@ -39,9 +40,12 @@ const pages = {
 };
 
 /** Dynamic routes: promotion articles under `/promotions/<slug>` and `/sports/promotions/<slug>`. */
-function renderPage(path) {
+function renderPage(path, content) {
   const Static = pages[path];
   if (Static) return <Static />;
+  // Policy pages are the site admin's (Site content → pages); an unsaved slug falls through to the lobby.
+  const info = findPage(content, path.match(/^\/info\/([^/]+)$/)?.[1]);
+  if (info) return <BlogArticlePage key={info.slug} page={info} />;
   // SHFL token, airdrop and lottery are the reference's own product: no platform API behind them.
   if (/^\/(token|airdrop|lottery)$/.test(path)) return <Redirect to="/" />;
   if (/^\/(sports\/)?promotions\/[^/]+$/.test(path)) return <PromotionArticlePage path={path} />;
@@ -147,9 +151,10 @@ const ROUTE_GATES = [
 export default function App() {
   const path = usePath();
   const on = useGate();
+  const content = useSiteContent();
   const gate = ROUTE_GATES.find(([re]) => re.test(path))?.[1];
   // A page the owner or the site admin switched off is the lobby, like any unknown path.
   return (
-    <AppShell>{gate && !on(gate) ? <CasinoHome /> : renderPage(path)}</AppShell>
+    <AppShell>{gate && !on(gate) ? <CasinoHome /> : renderPage(path, content)}</AppShell>
   );
 }

@@ -5,6 +5,7 @@ import { useApi } from "../../lib/useResource";
 import { CoinIcon } from "../wallet/CurrencySelect";
 import TableSkeleton from "../ui/TableSkeleton";
 import SupportChatPrompt from "../ui/SupportChatPrompt";
+import { useSiteContent } from "../../lib/siteContent";
 import SetGamblingLimitModal from "./SetGamblingLimitModal";
 import { LIMIT_TYPES, initiateLimitRemoval, limitReset, responsibleLimits } from "../../lib/shuffleWise";
 
@@ -49,6 +50,7 @@ const HEADERS = ["Type", "Limit", "Reset Period", "Progress", "Action"];
 
 export default function GamblingLimits() {
   const [nonce, setNonce] = useState(0);
+  const helpCenterUrl = useSiteContent().support?.helpCenterUrl;
   const [open, setOpen] = useState(false);
   const { data, loading } = useApi(`shuffle-wise:limits:${nonce}`, () => responsibleLimits());
   const limits = data || [];
@@ -152,7 +154,7 @@ export default function GamblingLimits() {
               target="_blank"
               className="TextLink_root"
               rel="noreferrer"
-              href="https://help.shuffle.com/en/articles/10071185-how-shuffle-s-gambling-limits-work"
+              href={helpCenterUrl || "https://help.shuffle.com/en/articles/10071185-how-shuffle-s-gambling-limits-work"}
             >
               Learn More
             </a>

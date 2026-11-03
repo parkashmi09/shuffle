@@ -4,7 +4,8 @@ import { navigate, usePath } from "../lib/router";
 import { useApi } from "../lib/useResource";
 import { useSession } from "../lib/sessionContext";
 import { displayFiat, resolveGame } from "../lib/adapters";
-import { betHistory, history, sportsBets, wallet } from "../lib/endpoints";
+import { betHistory, history, sportsBets, tips, wallet } from "../lib/endpoints";
+import { useGate } from "../lib/gates";
 import { sections } from "../data/catalog";
 import WalletSelect, { CoinIcon } from "../components/wallet/CurrencySelect";
 import TableSkeleton from "../components/ui/TableSkeleton";
@@ -32,11 +33,9 @@ import TableSkeleton from "../components/ui/TableSkeleton";
  *
  * ── WHAT EACH TAB READS ──────────────────────────────────────────────────
  *
- * Five of the six have a real endpoint behind them. Tip / Rain does not —
- * there is no tipping module in any of the four services
- * (`docs/MISSING-AND-UNWIRED.md` §4) — so it renders the reference's own empty
- * state rather than a fabricated list. A tab whose service is down (sports-bets
- * when `sports-service` is not running) does the same.
+ * Each has a real endpoint behind it; Tip / Rain is `GET /user/tip/history` (tips only —
+ * there is no rain module) and follows the owner's `tips` plan. A tab whose service is
+ * down (sports-bets when `sports-service` is not running) renders the empty state.
  */
 
 const TABS = [
@@ -337,7 +336,18 @@ const SOURCES = {
       shorten(String(row.id)),
     ],
   },
-  "tip-rain": null,
+  "tip-rain": {
+    // The route has no currency filter, so the coin narrows the page client-side.
+    fetch: ({ limit, coin }) =>
+      tips.history({ limit }).then((r) => (r?.rows ?? []).filter((row) => !coin || String(row.currency).toUpperCase() === coin)),
+    key: (row) => row.id,
+    cells: (row) => [
+      row.direction === "sent" ? "Tip sent" : "Tip received",
+      row.counterparty?.name || "—",
+      shortDate(row.createdAt),
+      <Money amount={row.amount} coin={row.currency} />,
+    ],
+  },
   other: {
     fetch: ({ limit, coin }) =>
       wallet
@@ -365,8 +375,10 @@ function sportsPayout(row) {
 export default function TransactionsPage() {
   const path = usePath();
   const { signedIn, balances } = useSession();
+  const on = useGate();
+  const tabs = TABS.filter((t) => t.id !== "tip-rain" || on("tips"));
   const active =
-    TABS.find((t) => pathFor(t.id) === path)?.id ||
+    tabs.find((t) => pathFor(t.id) === path)?.id ||
     (path === "/transactions/deposits" ? "deposits" : null) ||
     "deposits";
   const view = VIEWS[active];
@@ -427,7 +439,7 @@ export default function TransactionsPage() {
       <div className="Flex_root Flex_md2 Transactions_transactionViewTabsWrapper">
         <div className="Tab_root">
           <div className="Tab_tabsContainer" role="tablist">
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"

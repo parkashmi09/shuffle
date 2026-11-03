@@ -1,21 +1,23 @@
 import { cx } from "../../lib/carousel";
+import { useCategoryOn } from "../../lib/catalogue";
 
 const tabs = [
   { id: "LOBBY", label: "Lobby", icon: "/icons/home.svg" },
-  { id: "ORIGINALS", label: "Originals", icon: "/icons/original.svg" },
-  { id: "SLOTS", label: "Slots", icon: "/icons/slots.svg" },
-  { id: "LIVE_CASINO", label: "Live Casino", icon: "/icons/casino.svg" },
-  { id: "TABLE_GAMES", label: "Table Games", icon: "/icons/table-games.svg" },
+  { id: "ORIGINALS", slug: "originals", label: "Originals", icon: "/icons/original.svg" },
+  { id: "SLOTS", slug: "slots", label: "Slots", icon: "/icons/slots.svg" },
+  { id: "LIVE_CASINO", slug: "live-casino", label: "Live Casino", icon: "/icons/casino.svg" },
+  { id: "TABLE_GAMES", slug: "table-games", label: "Table Games", icon: "/icons/table-games.svg" },
 ];
 
 /** Category tab strip + search box — reference `Home_wrapper`. */
 export default function CategoryTabs({ active, onChange, query = "", onQuery }) {
+  const categoryOn = useCategoryOn();
   return (
     <section className="LayoutContainer_root LayoutContainer_mobile-top-sm1 LayoutContainer_mobile-bottom-lg1 LayoutContainer_column">
       <div className="Home_wrapper">
         <div className="Tab_root">
           <div className="Tab_tabsContainer" role="tablist">
-            {tabs.map((t) => (
+            {tabs.filter((t) => !t.slug || categoryOn(t.slug)).map((t) => (
               <button
                 key={t.id}
                 aria-selected={active === t.id}

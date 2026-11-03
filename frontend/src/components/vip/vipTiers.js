@@ -40,6 +40,15 @@ export const TIERS = {
   diamond: { label: "Diamond", icon: "/images/vip/diamond.svg" },
 };
 
+/**
+ * The admin's own badge (Admin → VIP branding), which `/user/vip` and `/user/vip/levels` carry as
+ * `badgeUrl`; the built-in art when none is uploaded. Only the platform's own badge path is drawn.
+ */
+const badgeIcon = (band, fallback) =>
+  /^\/api\/v1\/admin\/vip-branding\/badges\/[A-Za-z0-9_-]+\/image(\?v=[\w.-]+)?$/.test(band?.badgeUrl || "")
+    ? `${(import.meta.env.VITE_API_BASE || "").replace(/\/api\/v1\/?$/, "")}${band.badgeUrl}`
+    : fallback;
+
 /** Level 0 — signed up, has not wagered the ladder's first 500. */
 export const UNRANKED = { label: "Unranked", icon: "/images/vip/unranked.svg" };
 
@@ -51,9 +60,9 @@ export const UNRANKED = { label: "Unranked", icon: "/images/vip/unranked.svg" };
  * as an accordion header, where the levels are listed underneath it.
  */
 export function tierFor(vip) {
-  if (!vip || !vip.level) return UNRANKED;
+  if (!vip || !vip.level) return { ...UNRANKED, icon: badgeIcon(vip, UNRANKED.icon) };
   const tier = TIERS[vip.card] || UNRANKED;
-  return { label: vip.name || tier.label, icon: tier.icon };
+  return { label: vip.name || tier.label, icon: badgeIcon(vip, tier.icon) };
 }
 
 /**
@@ -73,7 +82,7 @@ export function groupByTier(levels) {
       continue;
     }
     const tier = TIERS[band.card] || UNRANKED;
-    groups.push({ card: band.card, label: tier.label, icon: tier.icon, levels: [band] });
+    groups.push({ card: band.card, label: tier.label, icon: badgeIcon(band, tier.icon), levels: [band] });
   }
   return groups;
 }

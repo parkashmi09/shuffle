@@ -1,10 +1,12 @@
 import { navigate } from "../../lib/router";
 import { cx } from "../../lib/carousel";
+import { useBranding } from "../../lib/siteContent";
 
 const CIRCUMFERENCE = 2 * Math.PI * 28;
 
 /** Ring progress indicator with the Shuffle mark inside. */
 export function CircleProgress({ progress = 0, size }) {
+  const brand = useBranding();
   const offset = CIRCUMFERENCE * (1 - progress);
   return (
     <div className="CircleProgress_root" style={size ? { width: size, height: size } : undefined}>
@@ -24,7 +26,7 @@ export function CircleProgress({ progress = 0, size }) {
         />
       </svg>
       <div className="CircleProgress_inner">
-        <img alt="" height="24" src="/icons/shuffle-logo.svg" width="24" />
+        <img alt="" height="24" src={brand?.markUrl || "/icons/shuffle-logo.svg"} width="24" />
       </div>
     </div>
   );

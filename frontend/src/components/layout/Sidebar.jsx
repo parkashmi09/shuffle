@@ -2,6 +2,7 @@ import NavContent, { SearchButton } from "./NavContent";
 import { cx } from "../../lib/carousel";
 import "./Sidebar.css";
 import { useBrandExtras } from "../../lib/siteContent";
+import { useGate } from "../../lib/gates";
 
 /**
  * Desktop navigation rail — a 1:1 port of the reference DesktopNavigation
@@ -11,6 +12,7 @@ import { useBrandExtras } from "../../lib/siteContent";
 export function ProductTabs({ expanded, product, onProductChange }) {
   // The owner's name for the sports tab (owner panel → Branding → Sportsbook).
   const sportsLabel = useBrandExtras()?.sportsbook?.tabName || "Sports";
+  const on = useGate();
   if (expanded) {
     return (
       <div className="NavigationTab_root DesktopNavigation_showTabs">
@@ -18,7 +20,7 @@ export function ProductTabs({ expanded, product, onProductChange }) {
           {[
             ["casino", "Casino", "/"],
             ["sports", sportsLabel, "/sports?section=featured"],
-          ].map(([key, label, href]) => (
+          ].filter(([key]) => on(key)).map(([key, label, href]) => (
             <a
               key={key}
               className={product === key ? "NavigationTab_active" : ""}
@@ -35,17 +37,18 @@ export function ProductTabs({ expanded, product, onProductChange }) {
 
   return (
     <div className="NavigationTab_mobileContainer">
-      <a className={product === "casino" ? "NavigationTab_active" : ""} href="/" onClick={(e) => { e.preventDefault(); onProductChange("casino"); }}>
+      {on("casino") && <a className={product === "casino" ? "NavigationTab_active" : ""} href="/" onClick={(e) => { e.preventDefault(); onProductChange("casino"); }}>
         <img alt="casino" src="/icons/dice.svg" />
-      </a>
-      <a className={product === "sports" ? "NavigationTab_active" : ""} href="/sports?section=featured" onClick={(e) => { e.preventDefault(); onProductChange("sports"); }}>
+      </a>}
+      {on("sports") && <a className={product === "sports" ? "NavigationTab_active" : ""} href="/sports?section=featured" onClick={(e) => { e.preventDefault(); onProductChange("sports"); }}>
         <img alt={sportsLabel} src="/icons/sports/tennis.svg" />
-      </a>
+      </a>}
     </div>
   );
 }
 
 export default function Sidebar({ expanded, active, product, onProductChange, onToggle, onSelect, onClose, variant }) {
+  const on = useGate();
   return (
     <>
       <button type="button" className={cx("rail-scrim", expanded && "is-visible")} onClick={onClose} tabIndex={-1} aria-hidden="true" />
@@ -59,12 +62,12 @@ export default function Sidebar({ expanded, active, product, onProductChange, on
             <ProductTabs expanded product={product} onProductChange={onProductChange} />
           ) : (
             <div className="NavigationTab_mobileContainer DesktopNavigation_hideTabs" aria-hidden="true">
-              <a className={product === "casino" ? "NavigationTab_active" : ""} href="/" tabIndex={-1}>
+              {on("casino") && <a className={product === "casino" ? "NavigationTab_active" : ""} href="/" tabIndex={-1}>
                 <img alt="" src="/icons/dice.svg" />
-              </a>
-              <a className={product === "sports" ? "NavigationTab_active" : ""} href="/sports" tabIndex={-1}>
+              </a>}
+              {on("sports") && <a className={product === "sports" ? "NavigationTab_active" : ""} href="/sports" tabIndex={-1}>
                 <img alt="" src="/icons/sports/tennis.svg" />
-              </a>
+              </a>}
             </div>
           )}
         </div>

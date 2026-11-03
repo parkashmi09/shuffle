@@ -1,6 +1,8 @@
 import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
-import { betHistory, profile as profileApi } from "../../lib/endpoints";
+import { betHistory, profile as profileApi, vip as vipApi } from "../../lib/endpoints";
+import { useGate } from "../../lib/gates";
+import { tierFor } from "../vip/vipTiers";
 import { CoinIcon } from "../wallet/CurrencySelect";
 
 /**
@@ -19,6 +21,10 @@ export default function SettingsAccount() {
   const { user } = useSession();
   const { data: me } = useApi("settings:profile", () => profileApi.get());
   const { data: stats } = useApi("settings:bet-stats", () => betHistory.stats().catch(() => null));
+  const on = useGate();
+  // `GET /user/vip`; Unranked until it answers, on a failed read, or with VIP switched off.
+  const { data: vip } = useApi("vip:progress", () => vipApi.progress(), { enabled: on.ready && on("vip") });
+  const tier = tierFor(vip);
 
   const joined = me?.joinedAt ? new Date(me.joinedAt) : null;
   // `9.8.2026` — the reference writes the join date dot-separated, day first.
@@ -41,9 +47,9 @@ export default function SettingsAccount() {
                   <h2 className="UserInfoPanel_heading">{me?.username || user?.name || "—"}</h2>
                   <span className="VipBadge_root">
                     <span className="VipIcon_root">
-                      <img alt="vip icon" width="16" height="16" src="/images/vip/unranked.svg" />
+                      <img alt="vip icon" width="16" height="16" src={tier.icon} />
                     </span>
-                    <span>Unranked</span>
+                    <span>{tier.label}</span>
                   </span>
                 </div>
               </div>

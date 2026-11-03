@@ -416,6 +416,8 @@ export const responsibleGambling = {
  */
 export const tips = {
   send: (body) => post("/user/tip/send", body),
+  /** `{ rows: [{ id, direction: sent | received, counterparty: { id, name }, currency, amount, note, createdAt }], total }`; `limit` ≤ 100. */
+  history: (query) => get("/user/tip/history", { query }),
 };
 
 /**

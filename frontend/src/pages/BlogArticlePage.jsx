@@ -7,13 +7,17 @@ import ArticleBody from "../components/content/ArticleBody";
 import { PromotionTile } from "./PromotionsPage";
 import { cx } from "../lib/carousel";
 
-export default function BlogArticlePage({ slug }) {
-  const [post, setPost] = useState(null);
+/** `page` (`{ title, body }`, a site-content page under `/info/<slug>`) is drawn in the same layout without a read. */
+export default function BlogArticlePage({ slug, page }) {
+  const [fetched, setPost] = useState(null);
   const [related, setRelated] = useState([]);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [fetching, setLoading] = useState(true);
+  const post = page ? { title: page.title } : fetched;
+  const loading = !page && fetching;
 
   useEffect(() => {
+    if (page) return undefined;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -41,15 +45,15 @@ export default function BlogArticlePage({ slug }) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, page]);
 
   const bodyHtml = useMemo(() => {
-    if (!post) return "";
-    return normalizeBlogHtml(post.description, {
-      category: post.category,
-      subheading: post.subheading,
+    if (!fetched || page) return "";
+    return normalizeBlogHtml(fetched.description, {
+      category: fetched.category,
+      subheading: fetched.subheading,
     });
-  }, [post]);
+  }, [fetched, page]);
 
   if (loading) {
     return (
@@ -88,7 +92,7 @@ export default function BlogArticlePage({ slug }) {
                 <img alt="arrow left" src="/icons/arrow-left.svg" />
               </button>
               <ul className="BreadcrumbList_list">
-                <li className="BreadcrumbItem_root BlogAndPromotionArticle_hiddenOnMobile">
+                {!page && <li className="BreadcrumbItem_root BlogAndPromotionArticle_hiddenOnMobile">
                   <div className="BreadcrumbItem_name">
                     <span className="BreadcrumbItem_text">
                       <a
@@ -103,8 +107,8 @@ export default function BlogArticlePage({ slug }) {
                       </a>
                     </span>
                   </div>
-                </li>
-                <li className="BreadcrumbSeparator_separator BlogAndPromotionArticle_hiddenOnMobile" />
+                </li>}
+                {!page && <li className="BreadcrumbSeparator_separator BlogAndPromotionArticle_hiddenOnMobile" />}
                 <li className="BreadcrumbItem_root BreadcrumbItem_active">
                   <div className="BreadcrumbItem_name">
                     <span className="BreadcrumbItem_text">{post.title}</span>
@@ -131,7 +135,11 @@ export default function BlogArticlePage({ slug }) {
               <h1 className="Heading_root Heading_h1 BlogAndPromotionArticle_heading">{post.title}</h1>
               {date && <p className="PromotionsInfoDate_root">{date}</p>}
             </div>
-            {bodyHtml ? <ArticleBody html={bodyHtml} /> : (
+            {page ? (
+              <div className="RichText_richTextBlock">
+                <p className="RichText_paragraph" style={{ whiteSpace: "pre-line" }}>{page.body}</p>
+              </div>
+            ) : bodyHtml ? <ArticleBody html={bodyHtml} /> : (
               <div className="RichText_richTextBlock">
                 <p className="RichText_paragraph">This article has no content yet.</p>
               </div>

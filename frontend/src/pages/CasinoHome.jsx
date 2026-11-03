@@ -7,7 +7,9 @@ import ProviderCarousel from "../components/casino/ProviderCarousel";
 import TournamentsCarousel from "../components/casino/TournamentsCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import SeoArticle from "../components/casino/SeoArticle";
-import { categoryQuery } from "../lib/categories";
+import { adminCategorySlug, categoryQuery } from "../lib/categories";
+import { useGate } from "../lib/gates";
+import { usePublicSiteConfig } from "../lib/usePublicSiteConfig";
 import { useBanners, useCategory, useLobbySection, useProviders } from "../lib/catalogue";
 
 
@@ -50,6 +52,7 @@ function HomeCategoryTab({ slug, title, icon, href }) {
   const { games, total, isLive } = useCategory(slug, {
     captured: [],
     ...categoryQuery(slug),
+    admin: adminCategorySlug(slug),
     limit: count,
   });
 
@@ -101,7 +104,11 @@ export default function CasinoHome() {
 
   // Each of these reads its route and keeps the capture when the table is
   // empty — see `lib/catalogue.js`. The lobby renders identically either way.
-  const { banners } = useBanners("home");
+  const { banners } = useBanners();
+  const on = useGate();
+  // The site admin's home-section switches; unset or unanswered = shown.
+  const { flags } = usePublicSiteConfig();
+  const shown = (key) => flags?.[key] !== false;
   const { providers } = useProviders();
   const slots = useLobbySection("slots");
   const liveCasino = useLobbySection("live-casino");
@@ -112,7 +119,7 @@ export default function CasinoHome() {
 
   return (
     <>
-      <HeroBanners banners={banners} />
+      {on("banners") && <HeroBanners banners={banners} />}
       <CategoryTabs active={tab} onChange={setTab} query={query} onQuery={setQuery} />
 
       <section className="LayoutContainer_root LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-0 LayoutContainer_column">
@@ -125,19 +132,21 @@ export default function CasinoHome() {
             <div className="HomeTabLobby_homeTabLobbyWrapper">
               {/* No View all card on this row — removed on request. */}
               <GameCarousel section={shuffleGames} viewAll={false} />
-              <GameCarousel section={slots} />
-              <GameCarousel section={liveCasino} />
+              {shown("home_popularslots") && <GameCarousel section={slots} />}
+              {shown("home_livecasino") && <GameCarousel section={liveCasino} />}
               <ProviderCarousel providers={providers} />
               <GameCarousel section={gameShows} />
               <GameCarousel section={shufflePicks} />
               <GameCarousel section={latestReleases} />
-              <TournamentsCarousel />
+              {shown("home_promocards") && <TournamentsCarousel />}
             </div>
           )}
         </div>
       </section>
 
-      <ActivityBoard />
+      {(shown("home_latestwins") || shown("home_leaderboard")) && (
+        <ActivityBoard hideTabs={[...(shown("home_latestwins") ? [] : ["latest-bets", "high-roller-bets"]), ...(shown("home_leaderboard") ? [] : ["race"])]} />
+      )}
       <SeoArticle />
     </>
   );

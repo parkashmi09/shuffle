@@ -67,39 +67,6 @@ function launchableFor(balances) {
   return held.length ? held : LAUNCH_CURRENCIES;
 }
 
-/**
- * Fun Play — present, and disabled.
- *
- * The reference pairs Real Play with a demo session against play money.
- * jsGames v2 has no demo mode: `/launch` takes a real `user_id` and a real
- * `credit_amount` and hands back a session that settles to the real wallet, so
- * there is no request this button could send.
- *
- * It is drawn rather than dropped because the pair IS the layout — one button
- * alone is visibly not the reference — and it is disabled with the reason on
- * it rather than quietly wired to the real-money launch, which would take a
- * player's actual balance when they asked for play money. It goes live the day
- * the provider gives us a demo endpoint and nothing else here changes.
- */
-function FunPlayButton({ className }) {
-  return (
-    <button
-      type="button"
-      disabled
-      title="This provider does not offer a demo session for its games."
-      className={cx(
-        "ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_secondary ButtonVariants_keepEnabledStyle ButtonVariants_hasIcon",
-        className
-      )}
-    >
-      <span className="ButtonVariants_buttonContent">
-        <img alt="smile" height="16" src="/icons/smile-face.svg" width="16" />
-        Fun Play
-      </span>
-    </button>
-  );
-}
-
 /** The overlay card: pick a currency, then open the game. */
 function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error, options, balances, hideBalance = false }) {
   const [open, setOpen] = useState(false);
@@ -221,7 +188,6 @@ function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error,
                   {launching ? "Starting…" : "Real Play"}
                 </span>
               </button>
-              <FunPlayButton className="ProviderGameOverlay_playOptionButton" />
             </>
           ) : (
             <>
@@ -295,10 +261,6 @@ function ToolbarButton({ alt, src, label, onClick, active, disabled, id }) {
  *     button groups off the ends of the bar;
  *   - the game's name and studio are NOT in the bar at all.
  *
- * Fun is `disabled` on the reference too, with `keepEnabledStyle` so it still
- * looks like a control rather than a dead one. That is exactly the treatment
- * this clone needs for it, and for the same reason: see `FunPlayButton`.
- *
  * The statistics button is left out — every other control here does something,
  * and no service exposes per-game stats to put behind it.
  */
@@ -361,19 +323,6 @@ function GameFooter({ game, theatre, onTheatre, onFullscreen, playing, onPlay, l
                 <img alt="play" height="16" src="/icons/play-no-outline.svg" width="16" />
               </span>
               Real
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled
-            title="This provider does not offer a demo session for its games."
-            className="ButtonVariants_root ButtonVariants_buttonHeightXSmall ButtonVariants_tertiary ButtonVariants_keepEnabledStyle ButtonVariants_hasIcon ProviderGamesFooter_button"
-          >
-            <span className="ButtonVariants_buttonContent ProviderGamesFooter_gameSelectBg">
-              <span className="ButtonIcon_root">
-                <img alt="smile" height="16" src="/icons/smile-face.svg" width="16" />
-              </span>
-              Fun
             </span>
           </button>
         </div>

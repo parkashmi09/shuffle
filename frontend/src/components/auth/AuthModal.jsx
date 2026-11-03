@@ -8,6 +8,8 @@ import { clearStoredReferral, normalizeReferralInput, readStoredReferral } from 
 import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
 import { startGoogleSignIn, useGoogleEnabled } from "../../lib/googleAuth";
+import { useBranding } from "../../lib/siteContent";
+import { useBanners } from "../../lib/catalogue";
 
 /**
  * Login / Register modal — a 1:1 port of the reference AuthModal
@@ -485,6 +487,9 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
   const canSignUp = signupAllowed();
   const active = tab === "reset" || canSignUp ? tab : "login";
   const [notice, setNotice] = useState(null);
+  const brand = useBranding();
+  // Banners → placement `auth` replaces the panel artwork.
+  const { auth: authBanner } = useBanners();
   // The enter transition and the Escape key belong to `Modal` now; the page
   // behind still has to stop scrolling while the dialog is up.
   useEffect(() => {
@@ -504,8 +509,8 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
         <div>
           <div className="AuthModal_desktop">
             <div className="AuthModal_authModalLeft">
-              <img className="AuthModal_backgroundImage" alt="auth-backdrop" src="/images/login-panel.png" />
-              <img className="AuthModal_logo" alt="logo" src="/icons/logo.svg" />
+              <img className="AuthModal_backgroundImage" alt="auth-backdrop" src={authBanner?.img || "/images/login-panel.png"} />
+              <img className="AuthModal_logo" alt="logo" src={brand?.logoUrl || "/icons/logo.svg"} />
               <p className="AuthModal_terms">
                 By accessing the site, I attest that I am at least 18 years old and have read the&nbsp;
                 <a target="_blank" href="/info/terms">

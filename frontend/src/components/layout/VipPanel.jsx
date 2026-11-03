@@ -269,7 +269,7 @@ export default function VipPanel({ open, onClose }) {
           </div>
 
           {/* Above the footer and outside the scroller, as the reference pins it. */}
-          {signedIn && <RedeemFold />}
+          {signedIn && on("bonus") && <RedeemFold />}
 
           <div className="RightSidebar_rightSidebarFooter VipSidebar_footer">
             <a

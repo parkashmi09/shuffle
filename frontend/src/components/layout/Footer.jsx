@@ -3,15 +3,18 @@ import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
-import { useBranding, useSiteContent } from "../../lib/siteContent";
+import { openExternal, useBranding, useSiteContent, useSupportHref } from "../../lib/siteContent";
 import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
+import { useApi } from "../../lib/useResource";
+import { preferences as preferencesApi } from "../../lib/endpoints";
+import { alertFromError } from "../../lib/alerts";
 
 const columns = [
   {
     order: 2,
     title: "Support",
     links: [
-      { label: "Live Support", button: true },
+      { label: "Live Support", button: "support" },
       { label: "Help Center", external: true }, // href from site content `support.helpCenterUrl`
       { label: "Game Responsibly", href: "https://www.begambleaware.org/", external: true },
     ],
@@ -22,7 +25,7 @@ const columns = [
     links: [
       { label: "Provably Fair", href: "/provably-fair/overview" },
       { label: "Affiliate Program", href: "/affiliate", signedInHref: "/affiliate/overview" },
-      { label: "Redeem Code", button: true },
+      { label: "Redeem Code", button: "redeem" },
       { label: "VIP Program", href: "/vip-program" },
     ],
   },
@@ -55,6 +58,8 @@ const LANGUAGES = [
   ["en-IN", "English (India)"], ["hi", "हिन्दी"], ["ar", "العربية"], ["cs", "Čeština"], ["fil", "Filipino"],
   ["fa", "فارسی"], ["fi", "Suomi"], ["th", "ไทย"],
 ];
+const languageCode = (label) => LANGUAGES.find(([, l]) => l === label)?.[0] ?? null;
+const languageLabel = (code) => LANGUAGES.find(([c]) => c && c === code)?.[1] ?? null;
 const languagesFor = (allowed) => LANGUAGES.filter(([code]) => !allowed || (code && allowed.includes(code))).map(([, label]) => label);
 const odds = ["Decimal", "Fractional", "American", "Indonesian", "Hong Kong", "Malaysian"];
 
@@ -186,12 +191,36 @@ export default function Footer() {
     .map((col) => ({
       ...col,
       links: col.links.filter(
-        (l) => (l.label !== "Affiliate Program" || on("affiliate")) && (l.label !== "VIP Program" || on("vip"))
+        (l) =>
+          (l.label !== "Affiliate Program" || on("affiliate")) &&
+          (l.label !== "VIP Program" || on("vip")) &&
+          (l.label !== "Redeem Code" || on("bonus")) &&
+          (l.label !== "Provably Fair" || on("provablyfair"))
       ),
     }))
     .filter((col) => col.links.length);
-  const [language, setLanguage] = useState("English");
+  const supportHref = useSupportHref();
+  // A signed-in player's language is their account's (`/user/preferences`); the odds format has no column there.
+  const { data: prefs } = useApi(`footer:preferences:${signedIn}`, () => preferencesApi.get(), { enabled: signedIn });
+  const [picked, setPicked] = useState(null);
+  const language = picked ?? languageLabel(prefs?.language) ?? "English";
+  const setLanguage = (label) => {
+    const previous = language;
+    setPicked(label);
+    const code = languageCode(label);
+    if (signedIn && code) {
+      preferencesApi.update({ language: code }).catch((e) => {
+        setPicked(previous);
+        alertFromError(e, "Could not save your language.");
+      });
+    }
+  };
   const [odd, setOdd] = useState("Decimal");
+  const onButton = (kind) => {
+    if (kind === "support") openExternal(supportHref);
+    else if (signedIn) window.dispatchEvent(new CustomEvent("shuffle:redeem-code"));
+    else window.dispatchEvent(new CustomEvent("shuffle:auth", { detail: "login" }));
+  };
 
   return (
     <footer className="Footer_footerWrapper">
@@ -216,7 +245,9 @@ export default function Footer() {
                   return (
                     <li key={l.label} className="Footer_menuItem">
                       {l.button ? (
-                        <button type="button">{l.label}</button>
+                        <button type="button" disabled={l.button === "support" && !supportHref} onClick={() => onButton(l.button)}>
+                          {l.label}
+                        </button>
                       ) : (
                         <a
                           href={href}
@@ -276,11 +307,11 @@ export default function Footer() {
           <div className="Footer_bottomRight">
             <span className="Footer_copyrightText">{legal?.copyright || `© ${new Date().getFullYear()} ${siteName} | All Rights Reserved`}</span>
             <div className="Footer_bottomRightIcons">
-              <a href="https://cert.cga.cw/" rel="noopener noreferrer" target="_blank">
-                <img alt="CGA Verified Certificate Seal" src="/images/cga-seal.png" width="51" height="32" />
+              <a href={legal?.licenseUrl || "https://cert.cga.cw/"} rel="noopener noreferrer" target="_blank" title={legal?.licenseText || undefined}>
+                <img alt={legal?.licenseText || "CGA Verified Certificate Seal"} src="/images/cga-seal.png" width="51" height="32" />
               </a>
-              <a className="Footer_iconLink" href="https://www.begambleaware.org" rel="noopener noreferrer" target="_blank">
-                <img alt="18 plus" loading="lazy" src="/icons/eighteen-plus.svg" />
+              <a className="Footer_iconLink" href="https://www.begambleaware.org" rel="noopener noreferrer" target="_blank" title={legal?.ageNotice || undefined}>
+                <img alt={legal?.ageNotice || "18 plus"} loading="lazy" src="/icons/eighteen-plus.svg" />
               </a>
             </div>
           </div>

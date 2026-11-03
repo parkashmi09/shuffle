@@ -6,6 +6,7 @@ import { useApi } from "../../../lib/useResource";
 import { vip as vipApi } from "../../../lib/endpoints";
 import VipBadge from "../../vip/VipBadge";
 import { tierFor } from "../../vip/vipTiers";
+import { openExternal, useSupportHref } from "../../../lib/siteContent";
 
 /**
  * The account button and its dropdown — reference `Header/UserMenu/*`.
@@ -87,7 +88,7 @@ function VipCard({ name, vip }) {
   );
 }
 
-function MenuRow({ item, onClose }) {
+function MenuRow({ item, onClose, supportHref }) {
   // Wallet opens a modal rather than going anywhere.
   if (item.id === "wallet") {
     return (
@@ -137,6 +138,24 @@ function MenuRow({ item, onClose }) {
         onClick={() => {
           onClose();
           window.dispatchEvent(new CustomEvent("shuffle:notifications"));
+        }}
+      >
+        <span className="ExpandMenuElement_menuIcon">
+          <img alt="" height="16" width="16" src={item.icon} />
+        </span>
+        {item.label}
+      </button>
+    );
+  }
+
+  if (item.id === "support" && supportHref) {
+    return (
+      <button
+        type="button"
+        className="ExpandMenuElement_menuItem"
+        onClick={() => {
+          onClose();
+          openExternal(supportHref);
         }}
       >
         <span className="ExpandMenuElement_menuIcon">
@@ -213,7 +232,8 @@ function MenuRow({ item, onClose }) {
 export default function UserMenu({ user }) {
   // Item ids that are gate keys (vip, vault, affiliate, notifications) follow the owner/admin switches.
   const on = useGate();
-  const menuItems = items.filter((i) => on(i.id));
+  const menuItems = items.filter((i) => on(i.id === "redeem" ? "bonus" : i.id));
+  const supportHref = useSupportHref();
   const [open, setOpen] = useState(false);
   const root = useRef(null);
 
@@ -263,7 +283,7 @@ export default function UserMenu({ user }) {
         <div className="ExpandMenuElement_expandMenu">
           <VipCard name={user.name} vip={vip} />
           {menuItems.map((item) => (
-            <MenuRow key={item.id} item={item} onClose={() => setOpen(false)} />
+            <MenuRow key={item.id} item={item} supportHref={supportHref} onClose={() => setOpen(false)} />
           ))}
           <button
             type="button"

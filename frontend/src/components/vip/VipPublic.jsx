@@ -1,5 +1,7 @@
 import VipBenefitsTable from "./VipBenefitsTable";
 import VipFaqs from "./VipFaqs";
+import { useBranding, useSiteContent, withSiteName } from "../../lib/siteContent";
+import { useBanners } from "../../lib/catalogue";
 
 /**
  * The signed-out VIP page — reference `VipPagePublic`.
@@ -86,20 +88,30 @@ function Section({ title, children }) {
 
 export default function VipPublic() {
   const openAuth = () => window.dispatchEvent(new CustomEvent("shuffle:auth", { detail: "login" }));
+  const brand = useBranding();
+  const named = (t) => (t ? withSiteName(t, brand) : t);
+  const { vip } = useSiteContent();
+  const { vip: heroBanner } = useBanners();
+  // The site admin's benefits replace the four built-in cards; the artwork cycles through the built-in images.
+  const advantages = vip?.benefits?.length
+    ? vip.benefits.map((b, i) => ({ ...ADVANTAGES[i % ADVANTAGES.length], title: b.title, text: b.text }))
+    : ADVANTAGES;
 
   return (
     <div className="VipPagePublic_root">
       <div className="VipPagePublic_vipPagePublicHero">
         <div className="VipPagePublic_vipPagePublicHeroImage">
-          <img src="/images/banners/vip-hero-banner.png" alt="banner" />
+          <img src={heroBanner?.img || "/images/banners/vip-hero-banner.png"} alt={heroBanner?.alt || "banner"} />
         </div>
         <div className="Flex_root Flex_column VipPagePublic_vipContentArea">
           <div>
-            <h1 className="Heading_root Heading_h1 VipPagePublic_heading">Enjoy a premium VIP experience</h1>
+            <h1 className="Heading_root Heading_h1 VipPagePublic_heading">{vip?.title || "Enjoy a premium VIP experience"}</h1>
           </div>
           <p className="VipPagePublic_subHeading">
-            Shuffle’s VIP program is designed to suit all different types of players with an emphasis on ensuring
-            you receive the most in cumulative bonuses for every dollar you wager.
+            {vip?.subtitle ||
+              named(
+                "Shuffle’s VIP program is designed to suit all different types of players with an emphasis on ensuring you receive the most in cumulative bonuses for every dollar you wager."
+              )}
           </p>
           <div className="VipPagePublic_vipPagePublicButtons">
             <button
@@ -124,9 +136,9 @@ export default function VipPublic() {
               </div>
               <h4 className="Heading_root Heading_h4">{step.title}</h4>
               <p>
-                {step.before} <span>{step.highlight}</span>
+                {step.before} <span>{named(step.highlight)}</span>
                 {step.middle}
-                {step.highlight2 && <span>{step.highlight2}</span>}
+                {step.highlight2 && <span>{brand?.siteName || step.highlight2}</span>}
                 {step.after}
               </p>
             </div>
@@ -138,13 +150,13 @@ export default function VipPublic() {
 
       <Section title="The advantages">
         <div className="Advantages_grid">
-          {ADVANTAGES.map((a) => (
+          {advantages.map((a) => (
             <div key={a.title} className="Advantages_card">
               <div className="Advantages_cardImage">
                 <img src={a.img} alt={a.alt} />
               </div>
               <h4 className="Heading_root Heading_h4">{a.title}</h4>
-              <p>{a.text}</p>
+              <p style={{ whiteSpace: "pre-line" }}>{named(a.text)}</p>
             </div>
           ))}
         </div>

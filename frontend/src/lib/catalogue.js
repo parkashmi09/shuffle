@@ -1,10 +1,40 @@
 import { useMemo } from "react";
 import { casino, site } from "./endpoints";
-import { toBanners, toGameCard, toGameCards, toProviderRoster } from "./adapters";
+import { toBanner, toBanners, toGameCard, toGameCards, toProviderRoster } from "./adapters";
 import { useApi, useResource } from "./useResource";
 import { providers as staticProviders, sections as staticSections } from "../data/catalog";
 import { capturedGamesFor } from "./providerGames";
 import { providerBrands, providerOrder } from "../data/providerBrands";
+import { adminCategorySlug } from "./categories";
+import { useGate } from "./gates";
+
+/** The site admin's category flag behind a lobby slug (`/admin/site-config/public`). */
+const SLUG_FLAG = { originals: "originals", "shuffle-games": "originals", slots: "slotsgames", "live-casino": "livegames" };
+
+/**
+ * Whether a lobby slug is on: its site-admin flag, and the admin's lobby category
+ * (`GET /casino/games/categories`) not switched `active: false`. Unanswered reads are on.
+ */
+export function useCategoryOn() {
+  const on = useGate();
+  const { data: cats } = useApi("casino:categories", () => casino.categories());
+  return (slug) => {
+    if (SLUG_FLAG[slug] && !on(SLUG_FLAG[slug])) return false;
+    const admin = adminCategorySlug(slug);
+    return !admin || !Array.isArray(cats) || cats.find((c) => c.slug === admin)?.active !== false;
+  };
+}
+
+/** The admin's hand-picked games for a lobby slug, or null when its category is off or empty. */
+async function adminCategoryCards(slug, limit) {
+  const admin = adminCategorySlug(slug);
+  if (!admin) return null;
+  const picked = (await casino.categories().catch(() => [])).find?.((c) => c.slug === admin);
+  if (!picked?.active || !(picked.count > 0)) return null;
+  const { data: rows } = await casino.categoryGames(admin, { limit });
+  const games = toGameCards(rows);
+  return games.length ? games : null;
+}
 
 /**
  * The casino catalogue, read from the backend where it has rows and from the
@@ -52,10 +82,13 @@ const ROW_QUERY = {
 export function useLobbySection(id) {
   const captured = useMemo(() => staticSections.find((s) => s.id === id) || null, [id]);
   const collection = ROW_COLLECTION[id];
+  const categoryOn = useCategoryOn();
 
   const { data, isLive } = useResource(
     `lobby:${id}`,
     async () => {
+      const picked = await adminCategoryCards(id, 30);
+      if (picked) return picked;
       const { data: rows } = collection
         ? await casino.collection(collection, { limit: 30 })
         : await casino.games({ limit: 30, ...ROW_QUERY[id] });
@@ -66,7 +99,7 @@ export function useLobbySection(id) {
 
   // The heading, icon and "view all" link are the capture's either way — they
   // are page furniture, not catalogue data.
-  return captured ? { ...captured, games: data, isLive } : null;
+  return captured && categoryOn(id) ? { ...captured, games: data, isLive } : null;
 }
 
 /** The provider rail and the providers page. */
@@ -87,15 +120,24 @@ export function useProviders() {
   return { providers: data, isLive };
 }
 
-/** Home hero slides — the admin's active banners (agent placements excluded). Empty when none are uploaded. */
+/**
+ * The admin's active banners by placement `type` (agent placements excluded). `vip` and `auth`
+ * (Banners → Other) are the VIP page hero and the auth modal's artwork; every other placement
+ * is a home hero slide. Each is empty / null when unset, and the caller keeps its own art.
+ */
 export function useBanners() {
   const { data, isLive } = useResource(
     "banners",
-    async () => toBanners((await site.banners()).filter((b) => b.mode !== "agent" && b.url)),
+    async () => (await site.banners()).filter((b) => b.mode !== "agent" && b.url),
     []
   );
-  return { banners: data, isLive };
+  const one = (type) => {
+    const row = data.find((b) => b.type === type);
+    return row ? toBanner(row) : null;
+  };
+  return { banners: toBanners(data.filter((b) => !SLOT_TYPES.includes(b.type))), vip: one("vip"), auth: one("auth"), isLive };
 }
+const SLOT_TYPES = ["vip", "auth"];
 
 /**
  * A category browse page.

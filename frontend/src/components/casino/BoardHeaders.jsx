@@ -10,7 +10,9 @@ function LargeIconText({ icon, alt, label, coin, value, children }) {
       <div className="LargeIconText_body">
         <p className="LargeIconText_text">{label}</p>
         <div className="LargeIconText_content">
-          {coin && <img alt={coin.toUpperCase()} className="CryptoIcon_root CryptoIcon_image" height="16" src={`/icons/crypto/${coin}.svg`} width="16" />}
+          {coin && (
+            <img alt={coin.toUpperCase()} className="CryptoIcon_root CryptoIcon_image" height="16" src={`/icons/crypto/${coin}.svg`} width="16" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          )}
           <h4 className="LargeIconText_amount">
             <span>{value}</span>
           </h4>
@@ -21,11 +23,11 @@ function LargeIconText({ icon, alt, label, coin, value, children }) {
   );
 }
 
-export function RaceHeader({ prize = "$100,000", remaining = "19h 11m 3s" }) {
+export function RaceHeader({ prize = "$100,000", remaining = "19h 11m 3s", coin = "btc" }) {
   return (
     <div className="Race_raceContainer">
       <div className="Race_icon">
-        <LargeIconText icon="/icons/cash.svg" alt="cash" label="Total Prize" coin="btc" value={prize} />
+        <LargeIconText icon="/icons/cash.svg" alt="cash" label="Total Prize" coin={coin} value={prize} />
       </div>
       <div className="Race_icon">
         <LargeIconText icon="/icons/race.svg" alt="race" label="Time remaining" value={remaining}>

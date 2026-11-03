@@ -2,6 +2,7 @@ import { CarouselHeader, SwipeTrack } from "../ui/Carousel";
 import { cx, useCarousel } from "../../lib/carousel";
 import { useReveal } from "../../lib/useReveal";
 import { navigate } from "../../lib/router";
+import { useBranding } from "../../lib/siteContent";
 
 /**
  * Whether a tile's href has a screen behind it.
@@ -111,6 +112,7 @@ export function GameCard({ game, index = 0, indicator, hidden = false, className
 }
 
 function ViewAllCard({ href }) {
+  const brand = useBranding();
   return (
     <a href={href} onClick={(e) => { e.preventDefault(); navigate(href); }}>
       <div className="ViewAllCard_root">
@@ -123,7 +125,7 @@ function ViewAllCard({ href }) {
               <p className="ViewAllCard_viewAllText">View all</p>
             </div>
             <div className="ViewAllCard_viewAllCenter">
-              <img alt="logo" loading="lazy" src="/icons/shuffle-logo-tall.svg" />
+              <img alt={brand?.siteName || "logo"} loading="lazy" src={brand?.markUrl || "/icons/shuffle-logo-tall.svg"} />
             </div>
             <div className="Flex_root ViewAllCard_star">
               <img alt="star" loading="lazy" src="/icons/logo-star.svg" />

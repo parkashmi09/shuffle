@@ -1,4 +1,5 @@
 import Accordion from "./Accordion";
+import { useBranding, useSiteContent, withSiteName } from "../../lib/siteContent";
 
 /**
  * "Frequently Asked Questions" — three accordions, each a list of Q&A pairs.
@@ -116,11 +117,13 @@ const FAQS = [
 ];
 
 function Faq({ question, answer }) {
+  const brand = useBranding();
+  const named = (t) => (t ? withSiteName(t, brand) : t);
   return (
     <div className="Flex_root Flex_column">
-      <div className="Faqs_vipPagePublicFaqsQuestion">{question}</div>
-      <div className="Faqs_vipPagePublicFaqsAnswer">
-        {answer.text}
+      <div className="Faqs_vipPagePublicFaqsQuestion">{named(question)}</div>
+      <div className="Faqs_vipPagePublicFaqsAnswer" style={answer.multiline ? { whiteSpace: "pre-line" } : undefined}>
+        {named(answer.text)}
         {answer.list && (
           <ul className="Faqs_vipPagePublicFaqsList">
             {answer.list.map((item) => (
@@ -128,16 +131,21 @@ function Faq({ question, answer }) {
             ))}
           </ul>
         )}
-        {answer.after}
+        {named(answer.after)}
       </div>
     </div>
   );
 }
 
 export default function VipFaqs() {
+  // The site admin's FAQ (Site content → VIP) replaces the built-in groups when saved.
+  const faq = useSiteContent().vip?.faq;
+  const groups = faq?.length
+    ? [{ header: "General", items: faq.map((f) => ({ q: f.q, a: { text: f.a, multiline: true } })) }]
+    : FAQS;
   return (
     <>
-      {FAQS.map((group) => (
+      {groups.map((group) => (
         <Accordion key={group.header} header={group.header}>
           <div className="Flex_root Flex_column Flex_sm4">
             {group.items.map((item) => (

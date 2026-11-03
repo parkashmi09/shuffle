@@ -25,6 +25,8 @@ import { useSession } from "../../lib/sessionContext";
 import { auth as authApi } from "../../lib/endpoints";
 import { GOOGLE_ERRORS, takeGoogleNonce } from "../../lib/googleAuth";
 import { alertError } from "../../lib/alerts";
+import { useGate } from "../../lib/gates";
+import { openExternal, useSupportHref } from "../../lib/siteContent";
 import "./AppShell.css";
 
 /**
@@ -83,6 +85,8 @@ function Shell({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const path = usePath();
   const search = useSearch();
+  const supportHref = useSupportHref();
+  const vaultOn = useGate()("vault");
 
   useEffect(() => {
     captureReferralFromSearch(search);
@@ -164,11 +168,11 @@ function Shell({ children }) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- the URL is the source of truth for which modal is open
       if (!signedIn) setAuth("login");
       else if (modal === "wallet") setWalletOpen(true);
-      else setVaultOpen(true);
+      else if (vaultOn) setVaultOpen(true);
     } else if (modal === "auth" && !signedIn) {
       setAuth(params.get("tab") === "register" ? "register" : "login");
     }
-  }, [search, signedIn, restoring]);
+  }, [search, signedIn, restoring, vaultOn]);
 
   useEffect(() => {
     const floating = (railExpanded && window.innerWidth < 1140 && window.innerWidth >= 768) || (menuOpen && window.innerWidth < 768);
@@ -304,15 +308,15 @@ function Shell({ children }) {
         </div>
 
         {/* Floating live-support launcher (desktop only, as in the reference) */}
-        <div className="LiveChat_supportButtonWrapper">
-          <button className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primaryRound ButtonVariants_hasIcon" type="button" aria-label="Live support">
+        {supportHref && <div className="LiveChat_supportButtonWrapper">
+          <button className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primaryRound ButtonVariants_hasIcon" type="button" aria-label="Live support" onClick={() => openExternal(supportHref)}>
             <span className="ButtonVariants_buttonContent">
               <span className="ButtonIcon_root">
                 <img alt="headphone" src="/icons/headphone.svg" />
               </span>
             </span>
           </button>
-        </div>
+        </div>}
 
         <MobileNav
           menuOpen={menuOpen}

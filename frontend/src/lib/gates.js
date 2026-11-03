@@ -14,6 +14,10 @@ import { capOk, useSiteVersion } from "./siteLive";
  */
 export const GATES = {
   casino: { flag: "casino" },
+  originals: { flag: "originals" },
+  slotsgames: { flag: "slotsgames" },
+  livegames: { flag: "livegames" },
+  provablyfair: { flag: "provablyfair" },
   // shuffle's /sports is the native exchange only (no third-party book iframe here).
   sports: { flag: "sports", anyOf: ["sportsexchange"] },
   lottery: { flag: "lotto" },

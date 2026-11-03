@@ -55,12 +55,12 @@ function StandingRow({ r, index, kind }) {
         )}
       </td>
       <td>
-        {/* A live leaderboard row has no prize: the platform has no prize-table
-            module, so the column is left empty rather than given a made-up
-            figure. The captured rows still carry theirs. */}
+        {/* `payout` / `payoutCurrency` from the race leaderboard; a row with no payout is left empty. */}
         {r.prize == null ? null : kind === "race" ? (
           <span className="IconValue_root FormattedAmount_root Race_racePrizeText">
-            <img alt="BTC" className="CryptoIcon_root CryptoIcon_image" height="16" src="/icons/crypto/btc.svg" width="16" />
+            {r.coin && (
+              <img alt={r.coin.toUpperCase()} className="CryptoIcon_root CryptoIcon_image" height="16" src={`/icons/crypto/${r.coin}.svg`} width="16" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+            )}
             {r.prize}
           </span>
         ) : (
@@ -129,7 +129,10 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
   // Signing out while "My Bets" is open leaves a tab the session no longer
   // allows. Derived from the session rather than corrected by an effect, so
   // there is no render showing a signed-out player somebody's bet history.
-  const active = !signedIn && selected === "my-bets" ? "latest-bets" : selected;
+  const shownTabs = tabs.filter((t) => !hideTabs.includes(t.id) && (t.id !== "race" || on("races")));
+  const wanted = !signedIn && selected === "my-bets" ? "latest-bets" : selected;
+  // A tab switched off (home section flags) hands over to the first one still open.
+  const active = shownTabs.some((t) => t.id === wanted && !t.disabled) ? wanted : shownTabs.find((t) => !t.disabled)?.id ?? wanted;
   const setActive = setSelected;
 
   const isFeed = active === "latest-bets" || active === "high-roller-bets" || active === "my-bets";
@@ -209,6 +212,7 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
           header: (
             <RaceHeader
               prize={live.raceInfo ? `${formatAmount(live.raceInfo.payoutNetPrizePool)} ${live.raceInfo.payoutCurrency || ""}` : "—"}
+              coin={String(live.raceInfo?.payoutCurrency || "").toLowerCase() || null}
               remaining={live.raceInfo ? timeLeft(live.raceInfo.endsAt) || "—" : "—"}
             />
           ),
@@ -271,7 +275,7 @@ export default function ActivityBoard({ visible = true, initialTab = "latest-bet
           <div className="Flex_root Flex_column Flex_md2 ActivityBoard_actionPanel">
             <div className="Tab_root">
               <div className="Tab_tabsContainer" role="tablist">
-                {tabs.filter((t) => !hideTabs.includes(t.id) && (t.id !== "race" || on("races"))).map((t) => (
+                {shownTabs.map((t) => (
                   <button
                     key={t.id}
                     type="button"

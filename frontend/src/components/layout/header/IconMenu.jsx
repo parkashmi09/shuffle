@@ -10,14 +10,14 @@
  * the live DOM does.
  *
  * The bets button opens the exchange's My Bets; VIP opens the right-hand rail
- * (`layout/VipPanel.jsx`). Chat has no backend
- * module at all (`docs/FRONTEND-BACKEND-INTEGRATION.md` §4.4), so it alone is
- * rendered and inert. `keepEnabledStyle` is the variant the stylesheet provides for that
+ * (`layout/VipPanel.jsx`). There is no in-site chat, so Chat opens Live Support
+ * (`useSupportHref`) and is inert when the site has no support link. `keepEnabledStyle` is the variant the stylesheet provides for that
  * case: it holds the enabled background on a `:disabled` button, so an unbuilt
  * destination still matches the others instead of greying out.
  */
 import { navigate } from "../../../lib/router";
 import { useGate } from "../../../lib/gates";
+import { openExternal, useSupportHref } from "../../../lib/siteContent";
 
 /** The count bubble — the rail's own `Counter`, which the reference reuses here. */
 function Badge({ count }) {
@@ -55,6 +55,7 @@ function IconButton({ icon, alt, label, badge, onClick, disabled = false }) {
 
 export default function IconMenu() {
   const on = useGate();
+  const supportHref = useSupportHref();
   return (
     <div className="Flex_root Flex_sm5 IconMenu_root">
       <div className="IconMenu_menuWrapper">
@@ -69,7 +70,7 @@ export default function IconMenu() {
             onClick={() => window.dispatchEvent(new CustomEvent("shuffle:vip"))}
           />
         )}
-        <IconButton icon="/icons/chat.svg" alt="chat" label="Chat" disabled />
+        <IconButton icon="/icons/chat.svg" alt="chat" label="Chat" disabled={!supportHref} onClick={() => openExternal(supportHref)} />
       </div>
     </div>
   );

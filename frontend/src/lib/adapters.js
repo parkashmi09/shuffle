@@ -120,8 +120,10 @@ export const toProvider = (row, staticProviders = [], brands = {}) => {
   return {
     slug,
     name: row.name,
-    label: brand?.label || known?.name || row.name,
-    img: brand?.img || known?.img || "/icons/logo-star.svg",
+    label: row.displayName || brand?.label || known?.name || row.name,
+    // The site admin's uploaded logo (`/casino/games/providers/:name/logo`) wins over the bundled wordmark.
+    img: (/^\/api\/v1\/casino\/games\/providers\/[^/]+\/logo/.test(row.logoUrl || "") && `${API_BASE.replace(/\/api\/v1\/?$/, "")}${row.logoUrl}`) ||
+      brand?.img || known?.img || "/icons/logo-star.svg",
     total: row.total ?? null,
     /**
      * This studio has rows in the catalogue.
