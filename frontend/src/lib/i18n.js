@@ -26,11 +26,13 @@ export const LANGUAGES = [
 const ENGLISH = "en";
 const KEY = "shuffle.language";
 const FILES = import.meta.glob("../i18n/*.json");
-const ATTRS = ["placeholder", "title", "aria-label"];
+const ATTRS = ["placeholder", "title", "aria-label", "alt"];
+const BRAND = /\bShuffle\b/g; // the reference brand in captured copy and in the dictionaries
 const SKIP = "script,style,textarea,.notranslate";
 
 let current = ENGLISH;
 let dictionary = null;
+let siteName = null; // the owner's site name; replaces BRAND after translation, so dictionary keys still match
 let observer = null;
 const listeners = new Set();
 const texts = new WeakMap(); // text node → { source, shown }
@@ -39,7 +41,8 @@ const attrs = new WeakMap(); // element → { [attribute]: { source, shown } }
 const translated = (source) => {
   const key = source.trim();
   const hit = key && dictionary && Object.hasOwn(dictionary, key) ? dictionary[key] : null;
-  return hit ? source.replace(key, () => hit) : source;
+  const out = hit ? source.replace(key, () => hit) : source;
+  return siteName ? out.replace(BRAND, () => siteName) : out;
 };
 
 function doText(node) {
@@ -95,13 +98,25 @@ async function apply(code) {
   }
   if (code !== current) return; // a newer pick won while this one loaded
   dictionary = next;
+  refresh();
+}
+
+function refresh() {
   doTree(document.body);
-  // English has nothing to swap, so it pays for no observer on the live feeds.
-  if (next && !observer) observe();
-  if (!next && observer) {
+  // Unbranded English has nothing to swap, so it pays for no observer on the live feeds.
+  const needed = Boolean(dictionary || siteName);
+  if (needed && !observer) observe();
+  if (!needed && observer) {
     observer.disconnect();
     observer = null;
   }
+}
+
+/** The owner's site name (null = unbranded, the copy keeps "Shuffle"); set by applyBranding. */
+export function setSiteName(name) {
+  if ((name || null) === siteName) return;
+  siteName = name || null;
+  refresh();
 }
 
 const known = (code) => LANGUAGES.some((l) => l.code === code);

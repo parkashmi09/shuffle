@@ -1,4 +1,4 @@
-import { openExternal, useBranding, useSupportHref, withSiteName } from "../../lib/siteContent";
+import { openExternal, useSupportHref } from "../../lib/siteContent";
 
 /**
  * The "Need Help?" card — reference `SupportChatPrompt`.
@@ -10,13 +10,12 @@ import { openExternal, useBranding, useSupportHref, withSiteName } from "../../l
  */
 export default function SupportChatPrompt() {
   const href = useSupportHref();
-  const brand = useBranding();
   return (
     <div className="SupportChatPrompt_root">
       <img alt="user" height="80" width="80" src="/icons/user-logout.svg" />
       <h4 className="Heading_root Heading_h4">Need Help?</h4>
       <p className="SupportChatPrompt_chatPromptSubtext">
-        {withSiteName("Have questions or concerns regarding your Shuffle account? Our experts are here to help!", brand)}
+        {"Have questions or concerns regarding your Shuffle account? Our experts are here to help!"}
       </p>
       <button
         type="button"

@@ -9,9 +9,14 @@ Project skills:
 - `shuffle-qa` (`.claude/skills/shuffle-qa`) — sync check (`scripts/sync-check.sh`), admin/owner on/off → public route
   (`scripts/toggles.mjs`), browser crawl, sidebar → frontend matrix, money loop.
 
-Site-sync rule: `backend/`, `admin/` and `owner-panel/` are shared with main-server and the other six sites — don't edit
-them here; change them through the `site-sync` / `hash-sync` flows. `frontend/` is shuffle's own app (React + Vite);
-fix site issues there (`npm run lint && npm run build`).
+What is whose:
+- `frontend/` — shuffle's own player app (React + Vite). Fix site issues there (`npm run lint && npm run build`).
+- `admin/` — shuffle's own, isolated site admin (Next.js). Edit it here directly; it is no longer synced from
+  the other sites.
+- `backend/` and `owner-panel/` — shared with main-server and the other sites: don't edit them here; change them
+  through the `site-sync` / `hash-sync` flows.
+
+Reference only: `D:\CFZ\Sites\hash-game-exchange` — read it, never edit, commit, push or merge there (pull is fine).
 
 Other agents commit to this repo at the same time: commit with explicit paths only, never `git add -A`.
-Never print or commit credentials from `backend/.env` or `owner-panel/.env.local`.
+Never print or commit credentials from `backend/.env`, `frontend/.env` or `owner-panel/.env.local`.

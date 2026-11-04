@@ -43,6 +43,10 @@ import { marketLabel } from '../marketLabel'; // stake: hash keeps it in Wallet/
 import { markMatchGone, reviveMatch } from '../../../services/exchange/deadMatches';
 import CricketScorecard from '../../../components/exchange/CricketScorecard';
 import CricketScoreEmbed from '../../../components/exchange/CricketScoreEmbed';
+import { DialogShell } from '../../../components/exchange/stakeKit';
+import { IconTv } from '../../../components/exchange/icons';
+import { getLiveTvAccess } from '../../../services/liveTv';
+import { useGate } from '../../../../lib/gates';
 
 const SPORTS_STREAM_BASE = import.meta.env.VITE_SPORTS_STREAM_BASE || '';
 const SCORECARD_BASE = import.meta.env.VITE_SCORECARD_BASE || '';
@@ -129,6 +133,8 @@ export default function ExchangeMatchPage({ sid, gmid }) {
   const [stakeError, setStakeError] = React.useState(null);
   const [score, setScore] = React.useState({ key: null, url: null });
   const [showTv, setShowTv] = React.useState(false);
+  const [tvRefusal, setTvRefusal] = React.useState(null); // { message, reason } from /user/live-tv/access
+  const canDeposit = useGate()('deposit'); // an agent's player has no deposit rail
   const [coveredFor, setCoveredFor] = React.useState(null);
   // Read once per mount; `iplay` flips a live match on its own, this covers a late iplay.
   const [mountedAt] = React.useState(() => Date.now());
@@ -165,6 +171,33 @@ export default function ExchangeMatchPage({ sid, gmid }) {
   const scoreCovered = isCricket || gtvNow || coveredFor === gmid;
   const hasTv = signedIn && Number(match?.tv) > 0 && Boolean(SPORTS_STREAM_BASE);
   const tvOn = hasTv && showTv;
+
+  /* Live TV is the site's to give: asked on every switch-on, and every 5 minutes while it plays
+     (a balance spent or the hours passing turn it off, with the reason). No answer = no stream. */
+  const toggleTv = React.useCallback(async (next) => {
+    if (!next) {
+      setShowTv(false);
+      return;
+    }
+    try {
+      const access = await getLiveTvAccess();
+      if (access?.allowed) setShowTv(true);
+      else setTvRefusal({ message: access?.message || 'Live TV is not available right now.', reason: access?.reason });
+    } catch {
+      setTvRefusal({ message: 'Live TV is not available right now. Please try again.' });
+    }
+  }, []);
+  React.useEffect(() => {
+    if (!tvOn) return undefined;
+    const timer = setInterval(async () => {
+      const access = await getLiveTvAccess().catch(() => null);
+      if (access && !access.allowed) {
+        setShowTv(false);
+        setTvRefusal({ message: access.message || 'Live TV is not available right now.', reason: access.reason });
+      }
+    }, 5 * 60_000);
+    return () => clearInterval(timer);
+  }, [tvOn]);
   const matchStarted = Boolean(match?.iplay) || (() => {
     const t = new Date(match?.stime || '').getTime();
     return !Number.isNaN(t) && t <= mountedAt;
@@ -354,7 +387,7 @@ export default function ExchangeMatchPage({ sid, gmid }) {
       onBack={() => navigate(SPORTS_BASE)}
       tvAvailable={hasTv}
       showTv={tvOn}
-      onToggleTv={setShowTv}
+      onToggleTv={toggleTv}
       scoreSlot={
         isTournament ? null : cricketSocket || tvOn || scoreUrl ? (
           <>
@@ -523,6 +556,33 @@ export default function ExchangeMatchPage({ sid, gmid }) {
           onClose={() => setStakeModal(false)}
           onSave={saveStakes}
         />
+      )}
+
+      {tvRefusal && (
+        <DialogShell title="Live TV" onClose={() => setTvRefusal(null)}>
+          <div className="pb-4 pt-2">
+            <IconTv className="mx-auto mb-4 h-10 w-10 fill-warning" />
+            <p className="text-center text-sm text-secondary">{tvRefusal.message}</p>
+            <div className="mt-5 flex gap-2">
+              {/* LOW_BALANCE / LOW_BALANCE_INACTIVE: a recharge fixes it. */}
+              {String(tvRefusal.reason || '').startsWith('LOW_BALANCE') && canDeposit && (
+                <button
+                  type="button"
+                  className="button button-brand button-m flex-1 text-sm"
+                  onClick={() => {
+                    setTvRefusal(null);
+                    window.dispatchEvent(new CustomEvent('shuffle:wallet'));
+                  }}
+                >
+                  Deposit
+                </button>
+              )}
+              <button type="button" className="button button-second button-m flex-1 text-sm" onClick={() => setTvRefusal(null)}>
+                OK
+              </button>
+            </div>
+          </div>
+        </DialogShell>
       )}
     </div>
   );

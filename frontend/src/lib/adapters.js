@@ -171,10 +171,9 @@ export function resolveGame(code, known = []) {
 /**
  * A bet row → a board row.
  *
- * The public ticker names nobody — `liveFeed` selects `gid, amount, profit,
- * coin, created, game` and no user column, deliberately (the legacy route it
- * replaces answered `SELECT * FROM bets`). So `user` is null and `UserCell`
- * renders its anonymous state, which is a case it already handles.
+ * `player` is the name the backend chose to show — already masked server-side for
+ * a player who hides their name. A row without one (the player's own history)
+ * renders `UserCell`'s anonymous state.
  *
  * `multiplier` is not stored: the row carries stake and profit, so it is
  * derived. `profit` is signed — a loss is negative and equals `-amount`, which
@@ -190,7 +189,7 @@ export const toBoardRow = (row, knownGames) => {
     // `reference` is the bet id and unique, which is what the list key wants —
     // an index would reorder rows as new bets land at the top.
     key: row.reference ?? `${row.game}-${row.at}`,
-    user: null,
+    user: row.player ? { name: row.player, vip: null } : null,
     // A provider round (the player's own history) names its catalogue uuid, which is the game page.
     game: row.game_uid
       ? { ...resolveGame(row.game_title || row.game, knownGames), href: `/casino/games/${row.game_uid}` }

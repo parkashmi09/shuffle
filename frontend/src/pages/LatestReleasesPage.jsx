@@ -6,7 +6,6 @@ import { navigate } from "../lib/router";
 import { adminCategorySlug, categoryFor, categoryIcon, categoryQuery } from "../lib/categories";
 import { useCategory, useProviders } from "../lib/catalogue";
 import { cx } from "../lib/carousel";
-import { useBranding, withSiteName } from "../lib/siteContent";
 import useMediaQuery from "../lib/useMediaQuery";
 import { FilterSelect, SortSelect } from "../components/ui/SelectMenu";
 
@@ -55,10 +54,9 @@ export function PageHeader({ title, icon, desktopOnly = false, capitalize = true
 
 export function SeoArticle({ html }) {
   const [open, setOpen] = useState(false);
-  const brand = useBranding();
   const start = html.indexOf('<div class="RichText_richTextBlock');
   const end = html.indexOf('<div class="ShowMoreOverlayButton_wrapper">');
-  const inner = withSiteName(html.slice(start, end > 0 ? end : undefined), brand);
+  const inner = html.slice(start, end > 0 ? end : undefined);
   return (
     <section className="LayoutContainer_root LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-lg4 LayoutContainer_column">
       <div className={cx("SEOArticle_articleContent", open && "SEOArticle_showMore")}>

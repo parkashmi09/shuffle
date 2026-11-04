@@ -36,7 +36,7 @@ export const SITE_UI: Record<string, UiSupport> = {
   chat: { status: 'absent', why: 'The header Chat button is disabled; there is no chat screen.' },
   club_membership: { status: 'absent', why: 'No club screens in this UI.' },
   analytics: { status: 'absent', why: 'This UI does not load a Google tag.' },
-  live_tv: { status: 'absent', why: 'The match page Live Stream switch is cosmetic; no stream is played.' }
+  live_tv: { status: 'toggle', variant: 'gated', surfaces: 'the TV button on a sports match (minimum balance and inactive hours under Settings)' }
 }
 
 export const uiSupport = (feature: string): UiSupport | null => SITE_UI[feature] ?? null
