@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cx } from "../lib/carousel";
 import { navigate } from "../lib/router";
 import { useApi } from "../lib/useResource";
@@ -13,6 +13,7 @@ import { campaignDisplayName, listAffiliateCampaigns } from "../lib/affiliateCam
 import CreateCampaignModal from "../components/affiliate/CreateCampaignModal";
 import { HtmlPage } from "./StaticPage";
 import { useSiteContent } from "../lib/siteContent";
+import { useSiteVersion } from "../lib/siteLive";
 import overviewHtml from "../data/affiliate-overview.html?raw";
 
 /**
@@ -322,7 +323,7 @@ function Earnings({
             </thead>
             <tbody>
               {rewardLines.map((r) => (
-                <tr key={r.id}>
+                <tr key={`${r.kind}-${r.id}`}>
                   <td>{r.member || "—"}</td>
                   <td>{r.tier ?? "—"}</td>
                   <td className="Earnings_amount">
@@ -332,11 +333,11 @@ function Earnings({
                     <button
                       type="button"
                       className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary"
-                      disabled={claiming || claimingRewardId === r.id}
-                      onClick={() => onClaimOne(r.id)}
+                      disabled={claiming || claimingRewardId === `${r.kind}-${r.id}`}
+                      onClick={() => onClaimOne(r.id, r.kind)}
                     >
                       <span className="ButtonVariants_buttonContent">
-                        {claimingRewardId === r.id ? "Claiming…" : "Claim"}
+                        {claimingRewardId === `${r.kind}-${r.id}` ? "Claiming…" : "Claim"}
                       </span>
                     </button>
                   </td>
@@ -360,11 +361,26 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
   const [createCampaignOpen, setCreateCampaignOpen] = useState(false);
   const [campaignNonce, setCampaignNonce] = useState(0);
 
-  const { data: info } = useApi("affiliate:info", () => affiliateApi.referralInfo(), { enabled: affiliateEnabled });
-  const { data: team } = useApi("affiliate:team", () => affiliateApi.team(), { enabled: affiliateEnabled });
-  const { data: rewards } = useApi(`affiliate:rewards:${nonce}`, () => affiliateApi.rewards(), { enabled: affiliateEnabled });
+  // Live without a reload: an `affiliate_*` push, the tab coming back, and a 30s poll while visible.
+  // useApi keeps the data on screen while a changed key re-reads, so none of these flash a loading state.
+  const pushed = useSiteVersion("affiliate");
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const refresh = () => document.visibilityState === "visible" && setTick((t) => t + 1);
+    const id = setInterval(refresh, 30_000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
+  const rev = `${nonce}:${pushed}:${tick}`;
+
+  const { data: info } = useApi(`affiliate:info:${rev}`, () => affiliateApi.referralInfo(), { enabled: affiliateEnabled });
+  const { data: team } = useApi(`affiliate:team:${rev}`, () => affiliateApi.team(), { enabled: affiliateEnabled });
+  const { data: rewards } = useApi(`affiliate:rewards:${rev}`, () => affiliateApi.rewards(), { enabled: affiliateEnabled });
   const { data: history, loading: historyLoading, error: historyError } = useApi(
-    `affiliate:history:${nonce}`,
+    `affiliate:history:${rev}`,
     async () => {
       const [referral, commission] = await Promise.all([
         affiliateApi.rewardHistory({ kind: "referral", limit: 100 }),
@@ -374,7 +390,7 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
     },
     { enabled: affiliateEnabled }
   );
-  const { data: unclaimed } = useApi(`affiliate:unclaimed:${nonce}`, () => affiliateApi.unclaimed(), {
+  const { data: unclaimed } = useApi(`affiliate:unclaimed:${rev}`, () => affiliateApi.unclaimed(), {
     enabled: affiliateEnabled,
   });
 
@@ -518,10 +534,11 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
     }
   };
 
-  const claimOne = async (rewardId) => {
-    setClaimingRewardId(rewardId);
+  // Ids repeat across tier and commission rewards, so the claim names its kind.
+  const claimOne = async (rewardId, kind) => {
+    setClaimingRewardId(`${kind}-${rewardId}`);
     try {
-      await affiliateApi.claimOne(rewardId);
+      await affiliateApi.claimOne(rewardId, kind);
       setNonce((n) => n + 1);
     } catch {
       /* keep row visible for retry */
