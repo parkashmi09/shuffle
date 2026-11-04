@@ -341,3 +341,8 @@
 @media (min-width: 768px) {
   .magic-container.no-side-opened .Transactions_root { padding-top: var(--spacing-lg2); }
 }
+
+/* Pages under the table (the Promotions page's Pagination). */
+.Transactions_pagination {
+  margin-top: var(--spacing-md2);
+}

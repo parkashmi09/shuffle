@@ -53,10 +53,14 @@ const CAPABILITY = {
   tips: "tips",
 };
 
+const WALLET_TABS = ["deposit", "withdraw", "tips"];
+
 export function makeGate({ features, flags }) {
   const listed = features?.list?.length ? new Set(features.list.map((f) => f.feature)) : null;
   const b2b = features?.policy?.("business_model") === "b2b";
   const on = (key) => {
+    // The wallet exists while any of its tabs does — an agent's player has none, so no wallet at all.
+    if (key === "wallet") return WALLET_TABS.some(on);
     if (CAPABILITY[key] && !capOk(CAPABILITY[key])) return false;
     const gate = GATES[key];
     if (!gate) return true;

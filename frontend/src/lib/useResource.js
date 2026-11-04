@@ -56,9 +56,9 @@ export function useResource(key, fetcher, fallback) {
         );
       } catch (error) {
         if (cancelled || error?.name === "AbortError") return;
-        // A refusal is not a reason to blank the page. The capture stays and
-        // the error is exposed for anything that wants to say so.
-        setState({ data: spare, loading: false, error, isLive: false });
+        // A refusal is not a reason to blank the page. The capture stays (or the
+        // live data already on screen, for a refetch) and the error is exposed.
+        setState((s) => (s.isLive ? { ...s, loading: false, error } : { data: spare, loading: false, error, isLive: false }));
       }
     })();
 
@@ -68,8 +68,32 @@ export function useResource(key, fetcher, fallback) {
   }, [key, nonce, ref]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  useRefetchOnFocus(reload);
 
   return { ...state, reload };
+}
+
+/**
+ * Re-read when the player comes back to the tab or window, so an admin change
+ * (games, banners, content) shows without a page refresh.
+ * shortcut: focus-only, no push or polling; add a socket event if changes must appear on an untouched open tab.
+ */
+function useRefetchOnFocus(reload) {
+  useEffect(() => {
+    let last = Date.now();
+    const onShow = () => {
+      // Switching tabs fires both `focus` and `visibilitychange`: one refetch, not two.
+      if (document.visibilityState !== "visible" || Date.now() - last < 2000) return;
+      last = Date.now();
+      reload();
+    };
+    window.addEventListener("focus", onShow);
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      window.removeEventListener("focus", onShow);
+      document.removeEventListener("visibilitychange", onShow);
+    };
+  }, [reload]);
 }
 
 /**

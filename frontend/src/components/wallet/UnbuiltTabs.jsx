@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
-import { displayBalance } from "../../lib/adapters";
+import { displayBalance, displayFiat } from "../../lib/adapters";
 import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import { currencyOptions } from "../../lib/walletOptions";
 import { ApiError } from "../../lib/api";
@@ -52,7 +52,8 @@ export function TipTab({
     [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin]
   );
   const available = balances?.[coin] ?? "0";
-  const ready = username.trim() && /^\d+(\.\d{1,8})?$/.test(amount.trim()) && Number(amount) > 0;
+  const ready =
+    username.trim() && /^\d+(\.\d{1,8})?$/.test(amount.trim()) && Number(amount) > 0 && Number(amount) <= Number(available);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -102,8 +103,13 @@ export function TipTab({
         <div className="CurrencyInput_formControlWrapper">
           <div className="LabelBlock_root CurrencyInputRawLabel_labelBlock">
             <p className="CurrencyInputRawLabel_labelLeft"><span>Amount*</span></p>
+            {/* The typed amount's value, as the reference's CurrencyInput shows it; the coin's balance is in the Currency picker. */}
             <p className="CurrencyInputRawLabel_labelRight">
-              {hideBalance ? MASKED_AMOUNT : `${displayBalance(available, coin)} ${coin}`}
+              {hideBalance
+                ? MASKED_AMOUNT
+                : fiatView && rates
+                  ? displayFiat(Number(amount) || 0, coin, displayCurrency, rates)
+                  : `${displayBalance(Number(amount) || 0, coin)} ${coin}`}
             </p>
           </div>
           {/* The icon is a sibling of the input's wrapper, not of the input:

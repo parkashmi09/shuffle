@@ -247,7 +247,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   const shownCasinoLinks = casinoLinks.filter((l) => categoryOn(l.id));
   // Footer link ids are gate keys (`vip`, `blog`, `affiliate`).
   const siteFooterLinks = footerLinks.filter((l) => on(l.id));
-  const accountLinks = profileLinks.filter((l) => l.action !== "vault" || on("vault"));
+  const accountLinks = profileLinks.filter((l) => !["vault", "wallet"].includes(l.action) || on(l.action));
   // The two sport directories behave as one accordion: opening either closes the
   // other, so only one long list is ever pushed into the rail at a time.
   const [openDirectory, setOpenDirectory] = useState(null);

@@ -24,6 +24,13 @@ import { CoinIcon } from "../ui/CoinIcon";
  */
 export { CoinIcon };
 
+/** An option's mark: a coin (`icon`, a currency code) or a picture (`iconSrc`) — either, in both variants. */
+function Mark({ option }) {
+  if (option?.icon) return <CoinIcon code={option.icon} />;
+  if (option?.iconSrc) return <img alt="" height="16" width="16" src={option.iconSrc} />;
+  return null;
+}
+
 /**
  * A styled dropdown over a native `<select>`.
  *
@@ -182,18 +189,18 @@ export default function WalletSelect({
         <span className="Select_item">
           {plain ? (
             <>
-              {selected?.iconSrc && (
+              {(selected?.icon || selected?.iconSrc) && (
                 <span className="Select_selectOptionIcon">
-                  <img alt="" height="16" width="16" src={selected.iconSrc} />
+                  <Mark option={selected} />
                 </span>
               )}
               <span className="Select_text">{selected?.label}</span>
             </>
           ) : (
             <>
-              {selected?.icon && (
+              {(selected?.icon || selected?.iconSrc) && (
                 <span className="Select_selectOptionIcon">
-                  <CoinIcon code={selected.icon} />
+                  <Mark option={selected} />
                 </span>
               )}
               <span className="Select_text">
@@ -233,9 +240,9 @@ export default function WalletSelect({
               >
                 {plain ? (
                   <>
-                    {o.iconSrc && (
+                    {(o.icon || o.iconSrc) && (
                       <span className="Select_selectOptionIcon">
-                        <img alt="" height="16" width="16" src={o.iconSrc} />
+                        <Mark option={o} />
                       </span>
                     )}
                     <span className="Select_text">{o.label}</span>
@@ -243,7 +250,7 @@ export default function WalletSelect({
                 ) : (
                   <span className="CurrencySelect_wrapper">
                     <span className="IconValue_root">
-                      {o.icon && <CoinIcon code={o.icon} />}
+                      <Mark option={o} />
                       <span>{o.label}</span>
                     </span>
                     {o.right && <span className="CurrencySelect_currencySelectBalance">{o.right}</span>}

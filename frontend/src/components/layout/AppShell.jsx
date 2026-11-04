@@ -26,6 +26,7 @@ import { auth as authApi } from "../../lib/endpoints";
 import { GOOGLE_ERRORS, takeGoogleNonce } from "../../lib/googleAuth";
 import { alertError } from "../../lib/alerts";
 import { useGate } from "../../lib/gates";
+import { useLanguageGuard } from "../../lib/i18n";
 import { openExternal, useSupportHref } from "../../lib/siteContent";
 import "./AppShell.css";
 
@@ -86,7 +87,11 @@ function Shell({ children }) {
   const path = usePath();
   const search = useSearch();
   const supportHref = useSupportHref();
-  const vaultOn = useGate()("vault");
+  const gate = useGate();
+  useLanguageGuard(); // off a language the owner switched off
+
+  const vaultOn = gate("vault");
+  const walletOn = gate("wallet");
 
   useEffect(() => {
     captureReferralFromSearch(search);
@@ -353,7 +358,7 @@ function Shell({ children }) {
           over a signed-in page. */}
       {auth !== null && (!signedIn || auth === "reset") && <AuthModal tab={auth} resetToken={resetToken} onTabChange={setAuth} onClose={() => { setAuth(null); clearModalParams(); }} />}
       {raceOpen && <WeeklyRaceModal onClose={() => setRaceOpen(false)} />}
-      {walletOpen && signedIn && <WalletModal onClose={closeWallet} />}
+      {walletOpen && signedIn && walletOn && <WalletModal onClose={closeWallet} />}
       {vaultOpen && signedIn && <VaultModal onClose={closeVault} />}
       {redeemCodeOpen && signedIn && <RedeemCodeModal onClose={() => setRedeemCodeOpen(false)} />}
       {logoutOpen && signedIn && <LogoutModal onClose={() => setLogoutOpen(false)} onConfirm={async () => { await logout(); setLogoutOpen(false); }} />}

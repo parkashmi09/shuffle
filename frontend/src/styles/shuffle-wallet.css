@@ -717,6 +717,17 @@ ul.WalletSelect_portal {
   overflow-y: auto;
 }
 
+/* A row is mark + label (+ balance): spaced like the closed trigger (`Select_item`), left-aligned. */
+ul.WalletSelect_portal .ActivityBoard_selectOption {
+  gap: var(--spacing-sm4);
+  justify-content: flex-start;
+  text-align: left;
+}
+
+ul.WalletSelect_portal .CurrencySelect_wrapper {
+  flex: 1 1 auto;
+}
+
 /*
  * The disclaimer's own leading.
  *

@@ -4,10 +4,10 @@ import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
 import { openExternal, useBranding, useSiteContent, useSupportHref } from "../../lib/siteContent";
-import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
 import { useApi } from "../../lib/useResource";
 import { preferences as preferencesApi } from "../../lib/endpoints";
 import { alertFromError } from "../../lib/alerts";
+import { LANGUAGES, setLanguage as setI18nLanguage, useAllowedLanguages, useLanguage } from "../../lib/i18n";
 
 const columns = [
   {
@@ -48,18 +48,9 @@ const columns = [
   },
 ];
 
-/* [backend code (site-config SITE_LANGUAGES), label]. The owner's Languages list hides the rest; the
-   ones with no backend code (null) show only until the list has answered. */
-const LANGUAGES = [
-  ["en", "English"], ["fr", "Français"], ["zh", "中文"], ["es", "Español"], ["pt", "Português"], ["ko", "한국어"],
-  ["ja", "日本語"], [null, "Deutsch"], [null, "Magyar"], ["tr", "Türkçe"], ["ru", "Pусский"], ["vi", "Tiếng Việt"],
-  ["sr", "Srbija"], [null, "Polski"], ["id", "Indonesian"], [null, "Norsk"], [null, "Italiano"],
-  ["en-IN", "English (India)"], ["hi", "हिन्दी"], ["ar", "العربية"], ["cs", "Čeština"], ["fil", "Filipino"],
-  ["fa", "فارسی"], ["fi", "Suomi"], ["th", "ไทย"],
-];
-const languageCode = (label) => LANGUAGES.find(([, l]) => l === label)?.[0] ?? null;
-const languageLabel = (code) => LANGUAGES.find(([c]) => c && c === code)?.[1] ?? null;
-const languagesFor = (allowed) => LANGUAGES.filter(([code]) => !allowed || (code && allowed.includes(code))).map(([, label]) => label);
+/* Only languages with a translation file (lib/i18n.js), narrowed by the owner's Languages list. */
+const languageCode = (label) => LANGUAGES.find((l) => l.label === label)?.code ?? null;
+const languageLabel = (code) => LANGUAGES.find((l) => l.code === code)?.label ?? null;
 const odds = ["Decimal", "Fractional", "American", "Indonesian", "Hong Kong", "Malaysian"];
 
 /**
@@ -142,7 +133,7 @@ function SelectButton({ label, options, value, onChange, children }) {
  * copies drive the same preference, so the state lives in `Footer`.
  */
 function LanguageAndOddSelectors({ className, language, setLanguage, odd, setOdd }) {
-  const languages = languagesFor(usePublicSiteConfig().languages);
+  const languages = useAllowedLanguages().map((l) => l.label);
   const sports = useGate()("sports");
   return (
     <div className={className}>
@@ -203,15 +194,20 @@ export default function Footer() {
   const supportHref = useSupportHref();
   // A signed-in player's language is their account's (`/user/preferences`); the odds format has no column there.
   const { data: prefs } = useApi(`footer:preferences:${signedIn}`, () => preferencesApi.get(), { enabled: signedIn });
-  const [picked, setPicked] = useState(null);
-  const language = picked ?? languageLabel(prefs?.language) ?? "English";
+  const current = useLanguage();
+  const language = languageLabel(current) ?? "English";
+  // The account's language follows the player to this device (ignored when it has no translation file).
+  useEffect(() => {
+    if (prefs?.language) setI18nLanguage(prefs.language);
+  }, [prefs?.language]);
   const setLanguage = (label) => {
-    const previous = language;
-    setPicked(label);
     const code = languageCode(label);
-    if (signedIn && code) {
+    if (!code) return;
+    const previous = current;
+    setI18nLanguage(code);
+    if (signedIn) {
       preferencesApi.update({ language: code }).catch((e) => {
-        setPicked(previous);
+        setI18nLanguage(previous);
         alertFromError(e, "Could not save your language.");
       });
     }
