@@ -361,7 +361,7 @@ export const affiliate = {
   claimAll: () => post("/user/affiliate/rewards/claim-all"),
   /** One kind's rewards, newest first: `{ total, rows: [{ id, kind, member, amount, currency, claimed, status, createdAt }] }`; `kind` is `referral` | `commission`. */
   rewardHistory: (query) => get("/user/affiliate/rewards/history", { query }),
-  claimOne: (rewardId) => post("/user/affiliate/rewards/claim", { rewardId }),
+  claimOne: (rewardId, kind) => post("/user/affiliate/rewards/claim", { rewardId, kind }),
 };
 
 export const rates = {

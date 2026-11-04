@@ -7,6 +7,10 @@ import { applyBranding } from './lib/siteContent.js'
 import { startSiteLive } from './lib/siteLive.js'
 import { startI18n } from './lib/i18n.js'
 
+// The backend's share link is `/referal/<code>`: land on the lobby with the register modal open and the code captured.
+const referal = window.location.pathname.match(/^\/referal\/([^/]+)\/?$/)
+if (referal) window.history.replaceState(null, '', `/?r=${referal[1]}&modal=auth&tab=register`)
+
 applyBranding()
 // The player's language (lib/i18n.js), before the first render.
 startI18n()
