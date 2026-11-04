@@ -3,6 +3,7 @@ import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
+import { capOk } from "../../lib/siteLive";
 import DepositTab from "./DepositTab";
 import WithdrawTab from "./WithdrawTab";
 import { TipTab } from "./UnbuiltTabs";
@@ -84,7 +85,8 @@ export default function WalletModal({ onClose }) {
   useEffect(() => {
     const url = new URL(window.location.href);
     url.searchParams.set("modal", "wallet");
-    url.searchParams.set("md-tab", tab);
+    if (tab) url.searchParams.set("md-tab", tab);
+    else url.searchParams.delete("md-tab");
     window.history.replaceState(null, "", url);
   }, [tab]);
 
@@ -108,7 +110,7 @@ export default function WalletModal({ onClose }) {
 
   return (
     <Modal onClose={onClose} label="Wallet" bodyClass="GlobalModal_walletModalBody">
-      <div className="WalletModal_tabsGap">
+      {tabs.length > 0 && <div className="WalletModal_tabsGap">
         <div className="TabViewOutline_root">
           <div className="TabViewOutline_tabOutlineWrapper" role="tablist">
             {tabs.map((t) => (
@@ -129,8 +131,19 @@ export default function WalletModal({ onClose }) {
             ))}
           </div>
         </div>
-      </div>
+      </div>}
 
+      {/* An agent's player has every tab gated off: say why rather than show a blank modal. */}
+      {!tab && (
+        <div className="RightSidebarEmptyState_emptyStateContainer">
+          <h3 className="RightSidebarEmptyState_title">{capOk("deposit") ? "Wallet unavailable" : "Wallet managed by your agent"}</h3>
+          <p className="RightSidebarEmptyState_description">
+            {capOk("deposit")
+              ? "Deposits and withdrawals are not available right now."
+              : "Deposits and withdrawals are not available for your account. Contact your agent to add funds or cash out."}
+          </p>
+        </div>
+      )}
       {tab === "deposit" && <DepositTab {...shared} />}
       {tab === "withdraw" && <WithdrawTab {...shared} />}
       {tab === "tip" && <TipTab {...shared} />}

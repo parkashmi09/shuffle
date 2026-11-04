@@ -44,9 +44,12 @@
   --color-button_bright: var(--ds-color-base-neutral);
   --color-input: var(--ds-color-base-neutral);
   --color-input_bright: var(--ds-color-surface-lowest);
-  --color-success: var(--ds-color-positive-on-surface);
-  --color-error: var(--ds-color-critical-on-surface);
-  --color-warning: var(--ds-color-caution-on-surface);
+  /* Literal, = shuffle-tokens.css. Tailwind emits @theme names on :root, and the scope below maps
+     --ds-color-positive/critical/caution back onto these: a var() here made a cycle that left
+     --color-success/error/warning empty site-wide (the VIP Claim button lost its green). */
+  --color-success: #3dd179;
+  --color-error: #f1323e;
+  --color-warning: #ff774a;
   --color-alw_white: #ffffff;
   --color-alw_dark: #10161a;
   --color-only: var(--ds-color-on-surface);

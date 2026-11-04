@@ -9,6 +9,7 @@ import { useGate } from "../lib/gates";
 import { sections } from "../data/catalog";
 import WalletSelect, { CoinIcon } from "../components/wallet/CurrencySelect";
 import TableSkeleton from "../components/ui/TableSkeleton";
+import { Pagination } from "./PromotionsPage";
 
 /**
  * `/transactions` — reference `pages/transactions/[tab]`.
@@ -306,9 +307,9 @@ const SOURCES = {
    * currency, because fiat-only rows have no rail to name.
    */
   deposits: {
-    fetch: ({ limit, coin }) =>
+    fetch: ({ limit, offset, coin }) =>
       history
-        .deposits({ limit, ...(coin ? { currency: coin } : {}) })
+        .deposits({ limit, offset, ...(coin ? { currency: coin } : {}) })
         .then((rows) => (Array.isArray(rows) ? rows : [])),
     key: (row) => `${row.method}-${row.id}`,
     cells: (row) => [
@@ -320,9 +321,9 @@ const SOURCES = {
     ],
   },
   withdrawals: {
-    fetch: ({ limit, coin }) =>
+    fetch: ({ limit, offset, coin }) =>
       history
-        .withdrawals({ limit, ...(coin ? { currency: coin } : {}) })
+        .withdrawals({ limit, offset, ...(coin ? { currency: coin } : {}) })
         .then((rows) => (Array.isArray(rows) ? rows : [])),
     key: (row) => `${row.method}-${row.id}`,
     cells: (row, reload) => [
@@ -336,13 +337,9 @@ const SOURCES = {
   },
   bets: {
     // Player history is `.strict()` on the casino route — `currency` is not a
-    // valid query key and would 422. Filter client-side after the page fetch.
-    fetch: ({ limit, coin }) =>
-      betHistory.mine({ limit, page: 1 }).then((r) => {
-        const rows = r?.data ?? [];
-        if (!coin) return rows;
-        return rows.filter((row) => String(row.currency_code || "").toUpperCase() === coin);
-      }),
+    // valid query key and would 422. Filtered client-side after the page fetch (`match`).
+    fetch: ({ limit, page }) => betHistory.mine({ limit, page }).then((r) => r?.data ?? []),
+    match: (row, coin) => String(row.currency_code || "").toUpperCase() === coin,
     key: (row) => row.transaction_id || row.round_id || row.id,
     cells: (row) => [
       <BetGameCell title={row.game_title || row.gameName || row.game} knownGames={KNOWN_GAMES} />,
@@ -353,7 +350,7 @@ const SOURCES = {
     ],
   },
   "sports-bets": {
-    fetch: ({ limit }) => sportsBets.mine({ limit }).then((r) => r?.data ?? []),
+    fetch: ({ limit, page }) => sportsBets.mine({ limit, page }).then((r) => r?.data ?? []),
     key: (row) => row.id,
     // Raw `sports_bets` columns — see `sportsPayout` for the missing payout column.
     cells: (row) => [
@@ -368,8 +365,8 @@ const SOURCES = {
   },
   "tip-rain": {
     // The route has no currency filter, so the coin narrows the page client-side.
-    fetch: ({ limit, coin }) =>
-      tips.history({ limit }).then((r) => (r?.rows ?? []).filter((row) => !coin || String(row.currency).toUpperCase() === coin)),
+    fetch: ({ limit, offset }) => tips.history({ limit, offset }).then((r) => r?.rows ?? []),
+    match: (row, coin) => String(row.currency).toUpperCase() === coin,
     key: (row) => row.id,
     cells: (row) => [
       row.direction === "sent" ? "Tip sent" : "Tip received",
@@ -379,9 +376,9 @@ const SOURCES = {
     ],
   },
   other: {
-    fetch: ({ limit, coin }) =>
+    fetch: ({ limit, offset, coin }) =>
       wallet
-        .ledger({ limit, ...(coin ? { currency: coin } : {}) })
+        .ledger({ limit, offset, ...(coin ? { currency: coin } : {}) })
         .then((r) => (r?.data ?? []).map(mapLedgerRow)),
     key: (row) => row.id,
     cells: (row) => [
@@ -417,6 +414,11 @@ export default function TransactionsPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [coin, setCoin] = useState("ALL");
   const [pageSize, setPageSize] = useState("10");
+  // The page belongs to one tab / coin / size: changing any of them starts again at page 1.
+  const filterKey = `${active}:${coin}:${pageSize}`;
+  const [paging, setPaging] = useState({ key: filterKey, page: 1 });
+  const page = paging.key === filterKey ? paging.page : 1;
+  const setPage = (next) => setPaging({ key: filterKey, page: next });
 
   // `ALL Coins` first, then the wallet's own currencies — the same list the
   // live filter offers, built from what this wallet actually holds.
@@ -429,16 +431,21 @@ export default function TransactionsPage() {
   );
 
   const { data, loading, reload } = useApi(
-    `transactions:${active}:${coin}:${pageSize}:${signedIn}`,
+    `transactions:${filterKey}:${page}:${signedIn}`,
     async () => {
-      if (!signedIn || !source) return [];
+      if (!signedIn || !source) return { rows: [], full: false };
       const limit = Number(pageSize);
+      const pick = coin === "ALL" ? null : coin;
       // A service that is down must leave the table empty, not break the page.
-      return source.fetch({ limit, coin: coin === "ALL" ? null : coin }).catch(() => []);
+      const raw = await source.fetch({ limit, offset: (page - 1) * limit, page, coin: pick }).catch(() => []);
+      const list = Array.isArray(raw) ? raw : [];
+      // shortcut: "a full page means there may be more" — no totals from these routes; an exact multiple shows one empty last page.
+      return { rows: pick && source.match ? list.filter((row) => source.match(row, pick)) : list, full: list.length >= limit };
     }
   );
 
-  const rows = data || [];
+  const rows = data?.rows || [];
+  const lastPage = data?.full ? page + 1 : page;
 
   return (
     <section className="LayoutContainer_root LayoutContainer_mobile-top-lg1 LayoutContainer_mobile-bottom-lg1 LayoutContainer_tablet-top-lg2 LayoutContainer_tablet-bottom-lg2 LayoutContainer_column Transactions_root">
@@ -520,7 +527,6 @@ export default function TransactionsPage() {
                 options={coinOptions}
                 value={coin}
                 onChange={setCoin}
-                variant={coin === "ALL" ? "plain" : "currency"}
               />
             </div>
             <div className="TransactionFilterOptions_filterOptions">
@@ -563,6 +569,8 @@ export default function TransactionsPage() {
           </div>
         )}
       </div>
+
+      {lastPage > 1 && <Pagination page={page} total={lastPage} onChange={setPage} className="Transactions_pagination" />}
     </section>
   );
 }

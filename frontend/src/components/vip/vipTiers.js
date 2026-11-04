@@ -38,6 +38,8 @@ export const TIERS = {
   ruby: { label: "Ruby", icon: "/images/vip/ruby.svg" },
   opal: { label: "Opal", icon: "/images/vip/opal.svg" },
   diamond: { label: "Diamond", icon: "/images/vip/diamond.svg" },
+  // The platform ladder's top tier (Eternal I–X); no art of its own, so the reference's top mark.
+  eternal: { label: "Eternal", icon: "/images/vip/opal.svg" },
 };
 
 /**

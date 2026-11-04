@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { ApiError } from "../../lib/api";
 import { funding } from "../../lib/endpoints";
@@ -11,6 +11,9 @@ import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
 import WalletSelect from "./CurrencySelect";
 import QrCode from "./QrCode";
+
+/** The fiat the operator publishes bank details for — the manual deposit rail. */
+const MANUAL_COIN = "INR";
 
 /**
  * The Deposit tab — reference `Deposit`.
@@ -324,6 +327,17 @@ export default function DepositTab({
     if (options.some((option) => option.value === coin)) return;
     onCoinChange?.(options[0].value);
   }, [options, coin, onCoinChange]);
+
+  /*
+   * Open on the manual (bank transfer) deposit rather than a crypto coin with no address yet.
+   * shortcut: INR is the one fiat with bank details here; pick from published accounts if another fiat gets them.
+   */
+  const openedOnManual = useRef(false);
+  useEffect(() => {
+    if (openedOnManual.current || !manual || !options.length) return;
+    openedOnManual.current = true;
+    if (!isFiat(coin) && options.some((o) => o.value === MANUAL_COIN)) onCoinChange?.(MANUAL_COIN);
+  }, [manual, options, coin, onCoinChange]);
 
   // Built once and handed to whichever branch renders, so both share the single
   // grid the reference uses rather than each opening its own.

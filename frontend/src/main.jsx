@@ -5,8 +5,11 @@ import './styles/shuffle-redeem-code.css'
 import App from './App.jsx'
 import { applyBranding } from './lib/siteContent.js'
 import { startSiteLive } from './lib/siteLive.js'
+import { startI18n } from './lib/i18n.js'
 
 applyBranding()
+// The player's language (lib/i18n.js), before the first render.
+startI18n()
 // Owner/admin saves, live (featuresUpdated, siteConfigUpdated, contentUpdated).
 startSiteLive()
 

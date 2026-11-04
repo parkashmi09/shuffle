@@ -27,6 +27,7 @@ import { useBranding } from "../../lib/siteContent";
 import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
+import { useGate } from "../../lib/gates";
 import BalanceSelect from "./header/BalanceSelect";
 import IconMenu from "./header/IconMenu";
 import UserMenu from "./header/UserMenu";
@@ -83,6 +84,7 @@ function SignedInActions() {
     hideZeroBalances,
     hideBalance,
   } = useSession();
+  const walletOn = useGate()("wallet");
 
   return (
     <>
@@ -103,7 +105,7 @@ function SignedInActions() {
             hideBalance={hideBalance}
             loading={loadingBalances}
           >
-            <WalletButton onClick={() => window.dispatchEvent(new CustomEvent("shuffle:wallet"))} />
+            {walletOn && <WalletButton onClick={() => window.dispatchEvent(new CustomEvent("shuffle:wallet"))} />}
           </BalanceSelect>
         </div>
       </div>
