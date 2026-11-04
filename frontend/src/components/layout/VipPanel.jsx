@@ -11,7 +11,6 @@ import { useGate } from "../../lib/gates";
 import VipBadge from "../vip/VipBadge";
 import VipRewards from "../vip/VipRewards";
 import { tierFor } from "../vip/vipTiers";
-import { useBranding, withSiteName } from "../../lib/siteContent";
 
 /**
  * The VIP rail — opened from the crown in the header's `IconMenu`.
@@ -172,7 +171,6 @@ function RedeemFold() {
 
 export default function VipPanel({ open, onClose }) {
   const { signedIn, restoring } = useSession();
-  const brand = useBranding();
 
   /**
    * Read only while the panel is actually showing. `useApi` derives its
@@ -282,7 +280,7 @@ export default function VipPanel({ open, onClose }) {
                 goProgramme();
               }}
             >
-              {withSiteName("Learn more about the Shuffle VIP program", brand)}
+              {"Learn more about the Shuffle VIP program"}
             </a>
           </div>
         </section>

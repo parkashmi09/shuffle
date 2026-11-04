@@ -1,6 +1,6 @@
 import VipBenefitsTable from "./VipBenefitsTable";
 import VipFaqs from "./VipFaqs";
-import { useBranding, useSiteContent, withSiteName } from "../../lib/siteContent";
+import { useBranding, useSiteContent } from "../../lib/siteContent";
 import { useBanners } from "../../lib/catalogue";
 
 /**
@@ -89,7 +89,6 @@ function Section({ title, children }) {
 export default function VipPublic() {
   const openAuth = () => window.dispatchEvent(new CustomEvent("shuffle:auth", { detail: "login" }));
   const brand = useBranding();
-  const named = (t) => (t ? withSiteName(t, brand) : t);
   const { vip } = useSiteContent();
   const { vip: heroBanner } = useBanners();
   // The site admin's benefits replace the four built-in cards; the artwork cycles through the built-in images.
@@ -109,9 +108,7 @@ export default function VipPublic() {
           </div>
           <p className="VipPagePublic_subHeading">
             {vip?.subtitle ||
-              named(
-                "Shuffle’s VIP program is designed to suit all different types of players with an emphasis on ensuring you receive the most in cumulative bonuses for every dollar you wager."
-              )}
+              "Shuffle’s VIP program is designed to suit all different types of players with an emphasis on ensuring you receive the most in cumulative bonuses for every dollar you wager."}
           </p>
           <div className="VipPagePublic_vipPagePublicButtons">
             <button
@@ -136,7 +133,7 @@ export default function VipPublic() {
               </div>
               <h4 className="Heading_root Heading_h4">{step.title}</h4>
               <p>
-                {step.before} <span>{named(step.highlight)}</span>
+                {step.before} <span>{step.highlight}</span>
                 {step.middle}
                 {step.highlight2 && <span>{brand?.siteName || step.highlight2}</span>}
                 {step.after}
@@ -156,7 +153,7 @@ export default function VipPublic() {
                 <img src={a.img} alt={a.alt} />
               </div>
               <h4 className="Heading_root Heading_h4">{a.title}</h4>
-              <p style={{ whiteSpace: "pre-line" }}>{named(a.text)}</p>
+              <p style={{ whiteSpace: "pre-line" }}>{a.text}</p>
             </div>
           ))}
         </div>

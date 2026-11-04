@@ -3,6 +3,7 @@ import { injectAffiliateCommission } from "../lib/affiliateMarketingHtml";
 import { navigate } from "../lib/router";
 import { useSession } from "../lib/sessionContext";
 import { usePublicSiteConfig } from "../lib/usePublicSiteConfig";
+import { useSiteContent, withSupportEmail } from "../lib/siteContent";
 import affiliateHtml from "../data/affiliate.html?raw";
 
 /**
@@ -18,7 +19,8 @@ import affiliateHtml from "../data/affiliate.html?raw";
 const stripReferenceLinks = (html) => html.replace(/<a\b[^>]*href="https:\/\/shuffle\.com[^"]*"[^>]*>([\s\S]*?)<\/a>/g, "$1");
 
 export function HtmlPage({ html: raw, cta = "register", onCta }) {
-  const html = useMemo(() => stripReferenceLinks(raw), [raw]);
+  const content = useSiteContent();
+  const html = useMemo(() => withSupportEmail(stripReferenceLinks(raw), content), [raw, content]);
   const ref = useRef(null);
   // Read through a ref: the handler is bound once per `html`, and a caller that
   // passes an inline arrow would otherwise rebind it on every render.

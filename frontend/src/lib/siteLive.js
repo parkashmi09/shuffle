@@ -27,7 +27,7 @@ import { tokens } from "./api";
  * localStorage so a reload is gated before `/auth/me` answers.
  */
 
-const versions = { features: 0, flags: 0, branding: 0, content: 0, caps: 0 };
+const versions = { features: 0, flags: 0, branding: 0, content: 0, caps: 0, kyc: 0 };
 const listeners = new Set();
 const resets = { features: [], flags: [], branding: [], content: [] };
 
@@ -63,7 +63,8 @@ let socket = null;
 export function startSiteLive() {
   if (socket || typeof window === "undefined") return;
   try {
-    socket = io(SOCKET_BASE || undefined, { path: "/ws/user/socket.io", transports: ["websocket"], reconnection: true });
+    // The token (re-read on every connect) puts a signed-in socket in the player's room, so their own pushes arrive.
+    socket = io(SOCKET_BASE || undefined, { path: "/ws/user/socket.io", transports: ["websocket"], reconnection: true, auth: (cb) => cb({ token: tokens.access() || undefined }) });
   } catch {
     return;
   }
@@ -75,6 +76,15 @@ export function startSiteLive() {
     if (scopes.includes("admin:branding")) bump("branding");
     if (scopes.includes("admin:site-content")) bump("content");
   });
+  // An admin's KYC review (`{ notification: { kind: "kyc_approved" | "kyc_rejected" } }`) re-reads every KYC gate.
+  socket.on("notificationsUnread", (frame) => {
+    if (String(decode(frame)?.notification?.kind ?? "").startsWith("kyc_")) bump("kyc");
+  });
+}
+
+/** Sign-in / sign-out: reconnect so the socket joins (or leaves) the player's room. */
+export function rebindSiteLive() {
+  socket?.disconnect().connect();
 }
 
 /* ── signed-in socket events ──────────────────────────────────────────── */

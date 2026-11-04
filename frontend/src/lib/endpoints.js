@@ -32,6 +32,10 @@ export const auth = {
   changePassword: (body) => post("/user/auth/change-password", body),
   sessions: () => get("/user/auth/sessions"),
   revokeSession: (sessionId) => del(`/user/auth/sessions/${sessionId}`),
+  /** Idle logout heartbeat while the player interacts (≤ 1 a minute): `{ recorded }`. */
+  activity: () => post("/user/auth/activity"),
+  /** `{ signedOut, nextCheckAt? }` — no `nextCheckAt` and not signed out means idle logout is off. */
+  idleCheck: () => post("/user/auth/idle-check"),
 };
 
 /**
@@ -253,6 +257,12 @@ export const jsGames = {
 export const race = {
   /** `{ endsAt, payoutNetPrizePool, payoutCurrency, leaderboard: [{ rank, name, points, usdWagered, payout }], me }`. */
   leaderboard: (type = "weekly") => get(`/user/race/${type}/leaderboard`),
+  /** `GET /user/race` — `[{ type, enabled, configured, ... }]` for daily / weekly / monthly. */
+  configs: () => get("/user/race"),
+  /** The caller's prizes, newest first — `[{ id, type, rank, amount, currency, claimed, raceEndsAt }]`. */
+  rewards: (query) => get("/user/race/rewards", { query }),
+  /** Pays one prize into the wallet; the route takes no body. */
+  claim: (rewardId) => post(`/user/race/rewards/${rewardId}/claim`),
 };
 
 /** `GET /casino/challenges` — `{ active, completed }`, each `{ id, game, gameName, imageUrl, minMultiplier, minBetUsd, prizeUsd, winners, winnersFound, winnerNames }`. */

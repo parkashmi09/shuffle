@@ -12,7 +12,7 @@ import { buildReferralLink } from "../lib/referralCapture";
 import { campaignDisplayName, listAffiliateCampaigns } from "../lib/affiliateCampaigns";
 import CreateCampaignModal from "../components/affiliate/CreateCampaignModal";
 import { HtmlPage } from "./StaticPage";
-import { useBranding, useSiteContent, withSiteName } from "../lib/siteContent";
+import { useSiteContent } from "../lib/siteContent";
 import overviewHtml from "../data/affiliate-overview.html?raw";
 
 /**
@@ -353,7 +353,6 @@ function Earnings({
 export default function AffiliateProgramPage({ tab = "overview" }) {
   const { user, displayCurrency, rates } = useSession();
   const { affiliateEnabled, commissionPercent } = usePublicSiteConfig();
-  const brand = useBranding();
   const fiat = useFiat();
   const [claiming, setClaiming] = useState(false);
   const [claimingRewardId, setClaimingRewardId] = useState(null);
@@ -500,7 +499,7 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
     return (
       <section className="LayoutContainer_root AffiliateProgram_layoutContainer LayoutContainer_mobile-top-lg2 LayoutContainer_mobile-bottom-lg2 LayoutContainer_column">
         <div className="Flex_root Flex_column AffiliateProgram_root">
-          <h2 className="Heading_root Heading_h2 TitlePage_root AffiliateProgram_pageTitle">{withSiteName("Shuffle Affiliate Program", brand)}</h2>
+          <h2 className="Heading_root Heading_h2 TitlePage_root AffiliateProgram_pageTitle">{"Shuffle Affiliate Program"}</h2>
           <p className="AffiliateHero_description">The affiliate program is not available right now.</p>
         </div>
       </section>
@@ -542,7 +541,7 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
   return (
     <section className="LayoutContainer_root AffiliateProgram_layoutContainer LayoutContainer_mobile-top-lg2 LayoutContainer_mobile-bottom-lg2 LayoutContainer_column">
       <div className="Flex_root Flex_column AffiliateProgram_root">
-        <h2 className="Heading_root Heading_h2 TitlePage_root AffiliateProgram_pageTitle">{withSiteName("Shuffle Affiliate Program", brand)}</h2>
+        <h2 className="Heading_root Heading_h2 TitlePage_root AffiliateProgram_pageTitle">{"Shuffle Affiliate Program"}</h2>
 
         <div className="AffiliateProgram_tabContainer">
           <div className="Tab_root">

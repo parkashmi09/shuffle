@@ -1,6 +1,7 @@
 import { useApi } from "./useResource";
 import { site } from "./endpoints";
 import { onBump, useSiteVersion } from "./siteLive";
+import { setSiteName } from "./i18n";
 
 /**
  * The owner's branding (`GET /admin/branding/public`) and the site admin's
@@ -74,8 +75,9 @@ onBump("content", () => {
 export const useBranding = () => useApi(`site:branding:${useSiteVersion("branding")}`, loadBranding).data;
 /** `{ whatsapp, telegram, sportsbook: { tabName, gameUid } }` — see `cleanExtras`. */
 export const useBrandExtras = () => useApi(`site:brand-extras:${useSiteVersion("branding")}`, loadBrandExtras).data;
-/** Captured copy names the reference brand; the owner's site name replaces it (unbranded keeps the copy). */
-export const withSiteName = (html, brand) => (brand?.siteName ? html.replace(/\bShuffle\b/g, () => brand.siteName) : html);
+/** The admin's support email in place of the reference's addresses in captured HTML (unset keeps the copy). */
+export const withSupportEmail = (html, content) =>
+  content?.support?.email ? html.replace(/[\w.+-]+@shuffle\.com/g, () => content.support.email) : html;
 
 export const useSiteContent = () => useApi(`site:content:${useSiteVersion("content")}`, loadSiteContent).data || {};
 
@@ -105,7 +107,10 @@ function meta(attr, key, content) {
 /** Title, description, keywords, theme colour, Open Graph and favicon from the owner's branding. */
 export async function applyBranding() {
   const b = await loadBranding();
-  if (!b || typeof document === "undefined") return;
+  if (typeof document === "undefined") return;
+  // Every "Shuffle" in the page (text, alt/title/aria-label/placeholder) reads the site name: lib/i18n.js.
+  setSiteName(b?.siteName);
+  if (!b) return;
   document.title = b.title || b.siteName;
   meta("name", "description", b.description);
   meta("name", "keywords", b.keywords.join(", "));

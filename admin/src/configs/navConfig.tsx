@@ -379,7 +379,7 @@ export const navItems: NavItem[] = [
     groupIcon: 'Trophy',
     collapsible: true,
     items: [
-      { icon: 'ChartColumn', label: 'Market Analysis', href: '/exchange/market-analysis', ownerFlag: 'sportsexchange', permission: 'sports:read' },
+      { icon: 'ChartColumn', label: 'Market Analysis', href: '/exchange/market-analysis', ownerFlag: 'sportsexchange', permission: 'reports:read' },
       { icon: 'Radio', label: 'Current Bets', href: '/exchange/reports/current-bets', ownerFlag: 'sportsexchange', permission: 'reports:read' },
       { icon: 'RotateCw', label: 'Turn Over', href: '/exchange/reports/turnover', ownerFlag: 'sportsexchange', permission: 'reports:read' },
 

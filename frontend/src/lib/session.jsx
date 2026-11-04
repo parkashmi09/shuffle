@@ -8,7 +8,7 @@ import {
   site as siteApi,
   wallet as walletApi,
 } from "./endpoints";
-import { setPlayerCapabilities } from "./siteLive";
+import { rebindSiteLive, setPlayerCapabilities } from "./siteLive";
 import {
   clearStoredReferral,
   normalizeReferralInput,
@@ -19,6 +19,7 @@ import { primaryBalance } from "./adapters";
 import { readStoredPreferences, writeStoredPreferences } from "./playerPreferences";
 import { SessionContext } from "./sessionContext";
 import { pushLogin, pushLogout } from './onesignal.js';
+import { alertWarning } from "./alerts";
 
 /**
  * Who is signed in, and what their wallet says.
@@ -144,6 +145,7 @@ export function SessionProvider({ children }) {
     // Untie this browser from the player, so a shared machine stops receiving their pushes.
     pushLogout();
     tokens.clear();
+    rebindSiteLive();
     setPlayerCapabilities(null);
     setState(SIGNED_OUT);
   }, []);
@@ -262,9 +264,62 @@ export function SessionProvider({ children }) {
     };
   }, [state.status, pendingPassword]);
 
+  /**
+   * Idle logout (backend `POST /user/auth/activity` + `/idle-check`, window `idle_logout_minutes`).
+   *
+   * `/idle-check` doubles as the on/off probe: no `nextCheckAt` and not signed out means the
+   * feature is off, so no heartbeat is sent. While on, real input on a visible tab sends at most
+   * one heartbeat a minute, and the check re-runs at each `nextCheckAt` the backend names.
+   */
+  const signedInId = state.status === "authenticated" ? state.user?.id : null;
+  useEffect(() => {
+    if (!signedInId || pendingPassword) return undefined;
+    let stopped = false;
+    let on = false;
+    let lastBeat = 0;
+    let timer = null;
+
+    const check = async () => {
+      clearTimeout(timer);
+      try {
+        const r = await authApi.idleCheck();
+        if (stopped) return;
+        if (r?.signedOut) {
+          signOutLocal();
+          alertWarning("You were signed out after a period of inactivity.");
+          return;
+        }
+        on = Boolean(r?.nextCheckAt);
+        // +1s so the window has passed on the server's clock too.
+        if (on) timer = setTimeout(check, Math.max(new Date(r.nextCheckAt) - Date.now(), 0) + 1000);
+      } catch {
+        /* a 401 is handled by the api layer; anything else waits for the next activity */
+      }
+    };
+
+    const beat = () => {
+      if (!on || document.visibilityState !== "visible" || Date.now() - lastBeat < 60_000) return;
+      lastBeat = Date.now();
+      // A session the sweep already ended answers `recorded: false`: check now rather than at the timer.
+      authApi.activity().then((r) => !stopped && r?.recorded === false && check(), () => {});
+    };
+
+    const events = ["pointerdown", "keydown", "scroll", "wheel", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, beat, { passive: true, capture: true }));
+    document.addEventListener("visibilitychange", beat);
+    check();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, beat, { capture: true }));
+      document.removeEventListener("visibilitychange", beat);
+    };
+  }, [signedInId, pendingPassword, signOutLocal]);
+
   /** A session obtained elsewhere (Google's `/login/google` exchange) — stored as `login` stores one. */
   const acceptSession = useCallback(async (session) => {
     tokens.set(session);
+    rebindSiteLive();
     pushLogin(session.user?.id);
     // The login reply has no capabilities; `/auth/me` does (and answers on a temporary password).
     let user = session.user;

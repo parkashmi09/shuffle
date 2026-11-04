@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { cx } from "../../lib/carousel";
 import article from "../../data/seo-article.html?raw";
-import { useBranding, withSiteName } from "../../lib/siteContent";
+import { useSiteContent, withSupportEmail } from "../../lib/siteContent";
 
 // The saved article carries its own wrapper + show-more button; keep only the rich-text block.
 const inner = (() => {
@@ -13,12 +13,12 @@ const inner = (() => {
 /** Collapsible SEO copy under the lobby — reference `SEOArticle`. */
 export default function SeoArticle() {
   const [open, setOpen] = useState(false);
-  const brand = useBranding();
+  const content = useSiteContent();
 
   return (
     <section className="LayoutContainer_root LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-lg4 LayoutContainer_column SEOArticle_section">
       <div className={cx("SEOArticle_articleContent", open && "SEOArticle_showMore")}>
-        <div dangerouslySetInnerHTML={{ __html: withSiteName(inner, brand) }} />
+        <div dangerouslySetInnerHTML={{ __html: withSupportEmail(inner, content) }} />
         {open ? (
           <div>
             <button

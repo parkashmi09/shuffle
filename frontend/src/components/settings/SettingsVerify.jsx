@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useApi } from "../../lib/useResource";
 import { emailVerify, kyc as kycApi, kycLevels, profile as profileApi } from "../../lib/endpoints";
-import { openExternal, useBranding, useSupportHref, withSiteName } from "../../lib/siteContent";
+import { openExternal, useSupportHref } from "../../lib/siteContent";
 import Modal from "../ui/Modal";
 import { useGate } from "../../lib/gates";
+import { useSiteVersion } from "../../lib/siteLive";
 
 /**
  * Settings → Verify — reference `VerificationCard` + `SupportChatPrompt`.
@@ -226,10 +227,10 @@ export default function SettingsVerify() {
   const [nonce, setNonce] = useState(0);
   const [open, setOpen] = useState(null);
   const kycOn = useGate()("kyc");
-  const { data: status } = useApi(`settings:kyc:${nonce}`, () => kycApi.status().catch(() => null));
+  const kycV = useSiteVersion("kyc");
+  const { data: status } = useApi(`settings:kyc:${nonce}:${kycV}`, () => kycApi.status().catch(() => null));
   const { data: me } = useApi(`settings:profile:${nonce}`, () => profileApi.get().catch(() => null));
-  const { data: levels } = useApi(`settings:kyc-levels:${nonce}`, () => kycLevels.status(), { enabled: kycOn });
-  const brand = useBranding();
+  const { data: levels } = useApi(`settings:kyc-levels:${nonce}:${kycV}`, () => kycLevels.status(), { enabled: kycOn });
   const supportHref = useSupportHref();
 
   const submitted = Boolean(status?.submitted);
@@ -320,7 +321,7 @@ export default function SettingsVerify() {
         <img alt="user" height="80" width="80" src="/icons/user-logout.svg" />
         <h4 className="Heading_root Heading_h4">Need Help?</h4>
         <p className="SupportChatPrompt_chatPromptSubtext">
-          {withSiteName("Have questions or concerns regarding your Shuffle account? Our experts are here to help!", brand)}
+          {"Have questions or concerns regarding your Shuffle account? Our experts are here to help!"}
         </p>
         {supportHref && (
           <button type="button" onClick={() => openExternal(supportHref)} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary">

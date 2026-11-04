@@ -1,5 +1,5 @@
 import Accordion from "./Accordion";
-import { useBranding, useSiteContent, withSiteName } from "../../lib/siteContent";
+import { useSiteContent } from "../../lib/siteContent";
 
 /**
  * "Frequently Asked Questions" — three accordions, each a list of Q&A pairs.
@@ -117,13 +117,11 @@ const FAQS = [
 ];
 
 function Faq({ question, answer }) {
-  const brand = useBranding();
-  const named = (t) => (t ? withSiteName(t, brand) : t);
   return (
     <div className="Flex_root Flex_column">
-      <div className="Faqs_vipPagePublicFaqsQuestion">{named(question)}</div>
+      <div className="Faqs_vipPagePublicFaqsQuestion">{question}</div>
       <div className="Faqs_vipPagePublicFaqsAnswer" style={answer.multiline ? { whiteSpace: "pre-line" } : undefined}>
-        {named(answer.text)}
+        {answer.text}
         {answer.list && (
           <ul className="Faqs_vipPagePublicFaqsList">
             {answer.list.map((item) => (
@@ -131,7 +129,7 @@ function Faq({ question, answer }) {
             ))}
           </ul>
         )}
-        {named(answer.after)}
+        {answer.after}
       </div>
     </div>
   );

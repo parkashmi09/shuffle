@@ -32,7 +32,7 @@ function ErrorMessage({ children }) {
   ) : null;
 }
 
-function TextField({ label, name, placeholder, type = "text", inputMode, autoComplete, value, onChange, error }) {
+function TextField({ label, name, placeholder, type = "text", inputMode, autoComplete, autoFocus, value, onChange, error }) {
   return (
     <div className="TextInput_formControlWrapper">
       <div className="TextInput_labelGroup">
@@ -51,6 +51,7 @@ function TextField({ label, name, placeholder, type = "text", inputMode, autoCom
           type={type}
           inputMode={inputMode}
           autoComplete={autoComplete}
+          autoFocus={autoFocus}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-invalid={!!error}
@@ -209,6 +210,8 @@ function authMessage(error) {
       return "This reset link is not valid or has expired. Request a new one.";
     case "AUTH_TWO_FACTOR_REQUIRED":
       return "Enter the 6-digit code from your authenticator app.";
+    case "AUTH_TWO_FACTOR_INVALID":
+      return "The two-factor code is incorrect";
     case "CONFLICT":
       // The unique constraint names the column it tripped on.
       return error.details?.fields?.includes("email")
@@ -230,6 +233,9 @@ function LoginForm({ onDone, initialNotice = null }) {
   const [status, setStatus] = useState(null);
   const [notice, setNotice] = useState(initialNotice);
   const [busy, setBusy] = useState(false);
+  // 2FA step: `AUTH_TWO_FACTOR_REQUIRED` keeps identifier/password and asks for the code, resent as `twoFactorCode`.
+  const [twoFactor, setTwoFactor] = useState(false);
+  const [code, setCode] = useState("");
 
   /**
    * Begin a password reset.
@@ -265,14 +271,24 @@ function LoginForm({ onDone, initialNotice = null }) {
       setStatus(null);
       return;
     }
+    if (twoFactor && code.length !== 6) {
+      setStatus("Enter the 6-digit code from your authenticator app.");
+      return;
+    }
     setBusy(true);
     setStatus(null);
     setNotice(null);
     try {
-      await login(form.values.identifier, form.values.password);
+      await login(form.values.identifier, form.values.password, twoFactor ? { twoFactorCode: code } : undefined);
       // The modal closes on success; the header re-renders from the session.
       onDone();
     } catch (error) {
+      if (error instanceof ApiError && error.code === "AUTH_TWO_FACTOR_REQUIRED" && !twoFactor) {
+        setTwoFactor(true);
+        setCode("");
+        setNotice("Enter the 6-digit code from your authenticator app.");
+        return;
+      }
       if (error instanceof ApiError && error.code === "VALIDATION_ERROR") form.setFieldErrors(error.fieldErrors());
       setStatus(authMessage(error));
     } finally {
@@ -293,24 +309,56 @@ function LoginForm({ onDone, initialNotice = null }) {
             {notice}
           </div>
         )}
-        <TextField
-          label="Email or Username*"
-          name="username"
-          placeholder="Enter Email or Username"
-          autoComplete="username"
-          value={form.values.identifier}
-          onChange={form.set("identifier")}
-          error={form.errors.identifier}
-        />
-        <PasswordField forgot onForgot={onForgot} value={form.values.password} onChange={form.set("password")} error={form.errors.password} />
+        {twoFactor ? (
+          <TextField
+            label="Authentication Code*"
+            name="twoFactorCode"
+            placeholder="6-digit code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            value={code}
+            // Paste-friendly: keep only digits ("123 456" pastes as 123456).
+            onChange={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
+          />
+        ) : (
+          <>
+            <TextField
+              label="Email or Username*"
+              name="username"
+              placeholder="Enter Email or Username"
+              autoComplete="username"
+              value={form.values.identifier}
+              onChange={form.set("identifier")}
+              error={form.errors.identifier}
+            />
+            <PasswordField forgot onForgot={onForgot} value={form.values.password} onChange={form.set("password")} error={form.errors.password} />
+          </>
+        )}
         <div className="Login_buttonGroup">
           <button type="submit" form="login-form" disabled={busy} className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary">
-            <span className="ButtonVariants_buttonContent">{busy ? "Logging in…" : "Login"}</span>
+            <span className="ButtonVariants_buttonContent">{busy ? (twoFactor ? "Verifying…" : "Logging in…") : twoFactor ? "Verify" : "Login"}</span>
           </button>
-          <div className="Login_textNote">Or continue with</div>
+          {twoFactor ? (
+            <button
+              type="button"
+              className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_secondary"
+              disabled={busy}
+              onClick={() => {
+                setTwoFactor(false);
+                setCode("");
+                setStatus(null);
+                setNotice(null);
+              }}
+            >
+              <span className="ButtonVariants_buttonContent">Back</span>
+            </button>
+          ) : (
+            <div className="Login_textNote">Or continue with</div>
+          )}
         </div>
       </form>
-      <OauthButtons />
+      {!twoFactor && <OauthButtons />}
     </div>
   );
 }

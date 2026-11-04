@@ -6,7 +6,7 @@ import { useSession } from "../../lib/sessionContext";
 import { displayBalance, formatAmount, isFiat } from "../../lib/adapters";
 import { currencyName } from "../../lib/currencies";
 import { networkLabel, useNetworkOptions } from "../../lib/networks";
-import { USER_EVENTS, userRequest } from "../../lib/siteLive";
+import { USER_EVENTS, userRequest, useSiteVersion } from "../../lib/siteLive";
 import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import WalletSelect, { CoinIcon } from "./CurrencySelect";
 import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
@@ -61,7 +61,7 @@ const accountLabel = (a) =>
   a.method === "upi" ? `UPI · ${a.upiId}` : `${a.bankName || "Bank"} · ${a.accountNumberMasked || ""} · ${a.ifscCode || ""}`;
 
 /** The crypto payout form — `SUBMIT_NEW_WITHDRAWL` over the user socket; the backend asks for the password. */
-function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = false, onDone }) {
+function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = false, onDone, gate, gateBlocked, forfeitBonus, onRefusal }) {
   const options = useNetworkOptions(coin);
   const [network, setNetwork] = useState("");
   const active = options.some((o) => o.value === network) ? network : options[0]?.value || "";
@@ -90,11 +90,13 @@ function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = 
         wallet: form.address.trim(),
         amount: form.amount,
         password,
+        ...(forfeitBonus ? { forfeitBonus: true } : {}),
       });
       setStatus({ ok: true, message: "Withdrawal requested. It stays pending until an operator approves it." });
       setPassword("");
       onDone();
     } catch (error) {
+      if (error?.code === "BONUS_FORFEIT_REQUIRED") onRefusal();
       setStatus({ ok: false, message: WITHDRAW_REFUSALS[error?.code] || error.message || "Could not request the withdrawal." });
     } finally {
       setBusy(false);
@@ -217,6 +219,8 @@ function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = 
         </div>
       </div>
 
+      {gate}
+
       {status && (
         <div className="NoticeMessage_root" role={status.ok ? "status" : "alert"}>
           <span className="NoticeMessage_text" style={{ color: status.ok ? "var(--color-success)" : "var(--color-warning)" }}>
@@ -227,7 +231,7 @@ function CryptoWithdraw({ coin, available, form, set, setPercent, hideBalance = 
 
       <button
         type="button"
-        disabled={busy || Boolean(missing)}
+        disabled={busy || Boolean(missing) || gateBlocked}
         onClick={submit}
         className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary Withdraw_submitButton"
       >
@@ -298,13 +302,49 @@ export default function WithdrawTab({
 
   const fiat = isFiat(coin);
   const { data: accounts } = useApi(`wallet:bank-accounts:${nonce}`, () => funding.bankAccounts(), { enabled: fiat });
-  const { data: requirements } = useApi(`wallet:wd-req:${coin}:${nonce}`, () => funding.withdrawRequirements(coin), { enabled: fiat });
+  // Both rails run the same gate (`requirements.assertMet`), so crypto reads it too.
+  const kycV = useSiteVersion("kyc");
+  const { data: requirements } = useApi(`wallet:wd-req:${coin}:${nonce}:${kycV}`, () => funding.withdrawRequirements(coin));
   /** "" = the default saved account, "new" = type one in. */
   const [accountChoice, setAccountChoice] = useState("");
   const saved = Array.isArray(accounts) ? accounts : [];
   const account = accountChoice === "new" ? null : saved.find((a) => a.id === accountChoice) || saved.find((a) => a.isDefault) || saved[0] || null;
   const [forfeitBonus, setForfeitBonus] = useState(false);
-  const blocked = requirements && requirements.ok === false ? requirementText(requirements) : null;
+  // Wagering owed only on a bonus does not block: the player forfeits the bonus with the withdrawal
+  // (`remainingAfterForfeit` is what would still block after it — 0 = bonus only).
+  const bonusOnlyWager = Boolean(requirements?.bonusForfeitAllowed) && Number(requirements?.wager?.remainingAfterForfeit) <= 0;
+  const blockers = (requirements?.missing || []).filter((m) => !(m === "wager" && bonusOnlyWager));
+  const onlyBonus = Boolean(requirements?.missing?.length) && blockers.length === 0;
+  const blocked = requirements?.ok === false && !onlyBonus ? requirementText({ ...requirements, missing: blockers }) : null;
+  const needsForfeit = Boolean(requirements?.bonusForfeitRequired && requirements?.bonusForfeitAllowed);
+  const lostBonus = (requirements?.wager?.bonus?.bonuses || []).map((b) => `${formatAmount(b.amount)} ${b.currency}`).join(", ");
+  const cap = requirements?.cap;
+  const daily = requirements?.dailyLimit;
+  const gate = (
+    <>
+      {cap?.enabled && cap.remaining != null && (
+        <span className="NoticeMessage_text">Withdrawal cap: {formatAmount(cap.remaining)} {cap.currency} left to withdraw.</span>
+      )}
+      {daily?.enabled && daily.remaining != null && (
+        <span className="NoticeMessage_text">
+          Daily limit: {formatAmount(daily.remaining)} of {formatAmount(daily.limit)} {daily.currency} left today.
+        </span>
+      )}
+      {blocked && (
+        <div className="NoticeMessage_root" role="alert">
+          <span className="NoticeMessage_text" style={{ color: "var(--color-warning)" }}>{blocked}</span>
+        </div>
+      )}
+      {needsForfeit && (
+        <label className="NoticeMessage_text">
+          <input type="checkbox" checked={forfeitBonus} onChange={(e) => setForfeitBonus(e.target.checked)} /> I forfeit my active
+          bonus{lostBonus ? ` (${lostBonus})` : ""} with this withdrawal
+          {onlyBonus ? " — its wagering is the only thing left to complete" : ""}. The bonus and its winnings are removed.
+        </label>
+      )}
+    </>
+  );
+  const gateBlocked = Boolean(blocked) || (needsForfeit && !forfeitBonus);
 
   /** The same rule the backend's `superRefine` applies, checked before the request. */
   const missing = (() => {
@@ -408,9 +448,14 @@ export default function WithdrawTab({
             set={set}
             setPercent={setPercent}
             hideBalance={hideBalance}
+            gate={gate}
+            gateBlocked={gateBlocked}
+            forfeitBonus={forfeitBonus}
+            onRefusal={() => setNonce((n) => n + 1)}
             onDone={() => {
               setForm((f) => ({ ...f, amount: "" }));
               refreshBalances();
+              setNonce((n) => n + 1);
             }}
           />
         ) : (
@@ -492,18 +537,7 @@ export default function WithdrawTab({
               Withdrawals are reviewed by an operator before they are paid out.
             </span>
 
-            {blocked && (
-              <div className="NoticeMessage_root" role="alert">
-                <span className="NoticeMessage_text" style={{ color: "var(--color-warning)" }}>{blocked}</span>
-              </div>
-            )}
-
-            {requirements?.bonusForfeitRequired && requirements?.bonusForfeitAllowed && (
-              <label className="NoticeMessage_text">
-                <input type="checkbox" checked={forfeitBonus} onChange={(e) => setForfeitBonus(e.target.checked)} /> I forfeit my
-                active bonus with this withdrawal
-              </label>
-            )}
+            {gate}
 
             {status && (
               <div className="NoticeMessage_root" role={status.ok ? "status" : "alert"}>
@@ -518,7 +552,7 @@ export default function WithdrawTab({
 
             <button
               type="submit"
-              disabled={busy || Boolean(missing) || Boolean(blocked) || (requirements?.bonusForfeitRequired && !forfeitBonus)}
+              disabled={busy || Boolean(missing) || gateBlocked}
               className={cx("ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary")}
             >
               <span className="ButtonVariants_buttonContent">{busy ? "Requesting…" : "Withdraw"}</span>

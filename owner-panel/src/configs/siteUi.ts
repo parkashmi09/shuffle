@@ -32,7 +32,7 @@ export const SITE_UI: Record<string, UiSupport> = {
   raffles: { status: 'absent', why: 'No raffle screen; /lottery is the token lottery page, not a raffle.' },
   vault: { status: 'toggle', variant: 'term_lock', surfaces: 'Vault modal from the user menu, with lock-period picker' },
   swap: { status: 'absent', why: 'The wallet has Deposit, Withdraw, Buy Crypto and Tip tabs; no Swap screen.' },
-  tips: { status: 'absent', why: 'The wallet Tip tab is a layout only; it calls no tip API.' },
+  tips: { status: 'toggle', variant: 'peer_to_peer', surfaces: 'wallet Tip tab (POST /user/tip/send)' },
   notifications: { status: 'toggle', variant: 'side_panel', surfaces: 'right-side notification panel with filter chips and unread count' },
   kyc: { status: 'toggle', variant: 'status_card', surfaces: '/settings/verify status cards (L1 details, L2 ID)' },
   gift_cards: { status: 'absent', why: 'No gift-card screen; the redeem modal redeems bonus codes (Bonus).' },
@@ -47,7 +47,7 @@ export const SITE_UI: Record<string, UiSupport> = {
   chat: { status: 'absent', why: 'The header Chat button is disabled; there is no chat screen.' },
   club_membership: { status: 'absent', why: 'No club screens in this UI.' },
   analytics: { status: 'absent', why: 'This UI does not load a Google tag.' },
-  live_tv: { status: 'absent', why: 'The match page Live Stream switch is cosmetic; no stream is played.' }
+  live_tv: { status: 'toggle', variant: 'gated', surfaces: 'the TV button on a sports match (minimum balance and inactive hours under Settings)' }
 }
 
 /** Owner options that do nothing in this UI (their page does not exist here). Hidden, value kept. */
