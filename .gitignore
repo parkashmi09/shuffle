@@ -16,3 +16,6 @@ backend/data/
 # local runs
 frontend/buildlog.txt
 .claude/theme-shots/
+
+# i18n script output
+frontend/scripts/i18n-missing*.json
