@@ -30,9 +30,11 @@ export default function BlogPage() {
       setLoading(true);
       setError(null);
       try {
-        const needsClientFilter = tab === "howTo" || tab === "other" || tab === "all";
-        const limit = needsClientFilter && tab !== "all" ? 100 : PER_PAGE;
-        const { data, meta } = await site.blogs(blogListQuery(tab, page, limit));
+        // "All" and the single-category tabs page on the server; "How to" and "Other" are not an API
+        // category, so they read the newest 100 once and page that client-side.
+        const needsClientFilter = tab === "howTo" || tab === "other";
+        const limit = needsClientFilter ? 100 : PER_PAGE;
+        const { data, meta } = await site.blogs(blogListQuery(tab, needsClientFilter ? 1 : page, limit));
         if (cancelled) return;
         const list = Array.isArray(data) ? data : [];
         const filtered = needsClientFilter ? list.filter((p) => matchesBlogTab(p, tab)) : list;
@@ -56,7 +58,8 @@ export default function BlogPage() {
   const tiles = useMemo(() => rows.map(blogToTile), [rows]);
   const featured = tab === "all" && page === 1 ? tiles[0] : null;
   const rest = tab === "all" && page === 1 ? tiles.slice(1) : tiles;
-  const list = rest.slice(0, PER_PAGE);
+  const from = tab === "howTo" || tab === "other" ? (page - 1) * PER_PAGE : 0;
+  const list = rest.slice(from, from + PER_PAGE);
 
   const scrollTop = () => document.querySelector("#pageContent")?.scrollTo(0, 0);
 

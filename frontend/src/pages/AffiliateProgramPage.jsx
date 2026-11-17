@@ -377,7 +377,8 @@ export default function AffiliateProgramPage({ tab = "overview" }) {
   const rev = `${nonce}:${pushed}:${tick}`;
 
   const { data: info } = useApi(`affiliate:info:${rev}`, () => affiliateApi.referralInfo(), { enabled: affiliateEnabled });
-  const { data: team } = useApi(`affiliate:team:${rev}`, () => affiliateApi.team(), { enabled: affiliateEnabled });
+  // shortcut: the Referred Users table has no pager, so read the route's max (200) rather than its default 50; add a pager past 200 referrals.
+  const { data: team } = useApi(`affiliate:team:${rev}`, () => affiliateApi.team({ limit: 200 }), { enabled: affiliateEnabled });
   const { data: rewards } = useApi(`affiliate:rewards:${rev}`, () => affiliateApi.rewards(), { enabled: affiliateEnabled });
   const { data: history, loading: historyLoading, error: historyError } = useApi(
     `affiliate:history:${rev}`,

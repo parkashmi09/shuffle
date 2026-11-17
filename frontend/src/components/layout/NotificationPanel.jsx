@@ -5,6 +5,7 @@ import { ApiError } from "../../lib/api";
 import { notifications as notificationsApi } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
 import { useApi } from "../../lib/useResource";
+import { useSiteVersion } from "../../lib/siteLive";
 import WalletSelect from "../wallet/CurrencySelect";
 
 /**
@@ -51,9 +52,10 @@ export default function NotificationPanel({ open, filter, onFilterChange, onClos
   const [refreshKey, setRefreshKey] = useState(0);
 
   const enabled = Boolean(signedIn && open);
+  const pushed = useSiteVersion("notifications");
 
   const { data: inbox, loading, error } = useApi(
-    enabled ? `notifications:inbox:${refreshKey}` : "notifications:inbox:off",
+    enabled ? `notifications:inbox:${refreshKey}:${pushed}` : "notifications:inbox:off",
     () => notificationsApi.list({ limit: 50, offset: 0 }),
     { enabled }
   );
