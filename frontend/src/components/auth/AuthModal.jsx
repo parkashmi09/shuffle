@@ -10,6 +10,8 @@ import { useSiteFeatures } from "../../lib/useSiteFeatures";
 import { startGoogleSignIn, useGoogleEnabled } from "../../lib/googleAuth";
 import { useBranding } from "../../lib/siteContent";
 import { useBanners } from "../../lib/catalogue";
+import { navigate } from "../../lib/router";
+import { underAgentBase } from "../../lib/agentBase";
 
 /**
  * Login / Register modal — a 1:1 port of the reference AuthModal
@@ -227,9 +229,38 @@ function authMessage(error) {
   }
 }
 
+/** The agent site's one-tap throwaway account, while the owner's `demo_login` switch is on. */
+function DemoLoginButton({ busy, setBusy, onDone, onError }) {
+  const { demoLogin } = useSession();
+  const { flags } = usePublicSiteConfig();
+  if (flags?.demo_login === false) return null;
+  const start = async () => {
+    setBusy(true);
+    onError(null);
+    try {
+      await demoLogin();
+      onDone();
+      navigate("/");
+    } catch (error) {
+      onError(authMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button type="button" disabled={busy} onClick={start} className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_secondary">
+      <span className="ButtonVariants_buttonContent">Demo Login</span>
+    </button>
+  );
+}
+
 function LoginForm({ onDone, initialNotice = null }) {
   const { login } = useSession();
-  const form = useForm({ identifier: "", password: "" }, { identifier: rules.identifier, password: rules.loginPassword });
+  const agentSite = underAgentBase();
+  const form = useForm(
+    { identifier: "", password: "" },
+    { identifier: agentSite ? (v) => (v.trim() ? null : "Username is required") : rules.identifier, password: rules.loginPassword }
+  );
   const [status, setStatus] = useState(null);
   const [notice, setNotice] = useState(initialNotice);
   const [busy, setBusy] = useState(false);
@@ -324,15 +355,15 @@ function LoginForm({ onDone, initialNotice = null }) {
         ) : (
           <>
             <TextField
-              label="Email or Username*"
+              label={agentSite ? "Username" : "Email or Username*"}
               name="username"
-              placeholder="Enter Email or Username"
+              placeholder={agentSite ? "Enter Username" : "Enter Email or Username"}
               autoComplete="username"
               value={form.values.identifier}
               onChange={form.set("identifier")}
               error={form.errors.identifier}
             />
-            <PasswordField forgot onForgot={onForgot} value={form.values.password} onChange={form.set("password")} error={form.errors.password} />
+            <PasswordField forgot={!agentSite} onForgot={onForgot} value={form.values.password} onChange={form.set("password")} error={form.errors.password} />
           </>
         )}
         <div className="Login_buttonGroup">
@@ -353,12 +384,14 @@ function LoginForm({ onDone, initialNotice = null }) {
             >
               <span className="ButtonVariants_buttonContent">Back</span>
             </button>
+          ) : agentSite ? (
+            <DemoLoginButton busy={busy} setBusy={setBusy} onDone={onDone} onError={setStatus} />
           ) : (
             <div className="Login_textNote">Or continue with</div>
           )}
         </div>
       </form>
-      {!twoFactor && <OauthButtons />}
+      {!twoFactor && !agentSite && <OauthButtons />}
     </div>
   );
 }
@@ -532,8 +565,10 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
    * would leave every other entry point opening a form the backend refuses.
    */
   const { canSignUp: signupAllowed } = useSiteFeatures();
-  const canSignUp = signupAllowed();
-  const active = tab === "reset" || canSignUp ? tab : "login";
+  // The agent site signs in and nothing else: no sign-up and no password reset, whatever asked.
+  const agentSite = underAgentBase();
+  const canSignUp = signupAllowed() && !agentSite;
+  const active = !agentSite && (tab === "reset" || canSignUp) ? tab : "login";
   const [notice, setNotice] = useState(null);
   const brand = useBranding();
   // Banners → placement `auth` replaces the panel artwork.

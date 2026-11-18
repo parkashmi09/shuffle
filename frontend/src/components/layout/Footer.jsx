@@ -187,7 +187,8 @@ export default function Footer() {
         (l) =>
           (l.label !== "Affiliate Program" || on("affiliate")) &&
           (l.label !== "VIP Program" || on("vip")) &&
-          (l.label !== "Redeem Code" || on("bonus"))
+          (l.label !== "Redeem Code" || on("bonus")) &&
+          (l.label !== "Live Support" || on("support"))
       ),
     }))
     .filter((col) => col.links.length);

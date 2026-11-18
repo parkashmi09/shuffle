@@ -6,6 +6,7 @@ import { sections as staticSections } from "../data/catalog";
 import { providerBrands } from "../data/providerBrands";
 import { adminCategorySlug } from "./categories";
 import { useGate } from "./gates";
+import { underAgentBase } from "./agentBase";
 
 /** The site admin's category flag behind a lobby slug (`/admin/site-config/public`). */
 const SLUG_FLAG = { originals: "originals", "shuffle-games": "originals", slots: "slotsgames", "live-casino": "livegames" };
@@ -116,18 +117,38 @@ export function useProviders() {
  * is a home hero slide. Each is empty / null when unset, and the caller keeps its own art.
  */
 export function useBanners() {
+  const agentSite = underAgentBase();
   const { data, isLive } = useResource(
-    "banners",
-    async () => (await site.banners()).filter((b) => b.mode !== "agent" && b.url),
+    agentSite ? "banners:agent" : "banners",
+    async () => {
+      if (!agentSite) return (await site.banners()).filter((b) => b.mode !== "agent" && b.url);
+      // The auth and VIP art stays the site's; the carousel reads agent mode's own rows.
+      const [rows, agentRows] = await Promise.all([site.banners().catch(() => []), site.banners({ mode: "agent" }).catch(() => [])]);
+      return [...rows.filter((b) => b.mode !== "agent"), ...agentRows].filter((b) => b.url);
+    },
     []
   );
   const one = (type) => {
     const row = data.find((b) => b.type === type);
     return row ? toBanner(row) : null;
   };
-  return { banners: toBanners(data.filter((b) => !SLOT_TYPES.includes(b.type))), vip: one("vip"), auth: one("auth"), isLive };
+  const agentSlides = data
+    .filter((b) => AGENT_SLIDE.test(b.type))
+    .sort((a, b) => Number(a.type.slice(13)) - Number(b.type.slice(13)));
+  const banners = agentSite
+    ? agentSlides.length ? toBanners(agentSlides) : AGENT_DEFAULT_SLIDES
+    : toBanners(data.filter((b) => !SLOT_TYPES.includes(b.type)));
+  return { banners, vip: one("vip"), auth: one("auth"), isLive };
 }
 const SLOT_TYPES = ["vip", "auth"];
+const AGENT_SLIDE = /^agent-slider-\d+$/;
+/** /agent's carousel until the admin uploads `agent-slider-<n>` rows: game banners, never a promotion. */
+const AGENT_DEFAULT_SLIDES = [
+  ["1", "/sports", "Cricket, football & more"],
+  ["2", "/casino/categories/originals", "Crash games"],
+  ["3", "/sports", "Back your team"],
+  ["4", "/casino/categories/slots", "Slots & live casino"],
+].map(([n, href, alt]) => ({ img: `/brand/agent/slide-${n}.webp`, href, alt }));
 
 /**
  * A category browse page.

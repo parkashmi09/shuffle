@@ -1,5 +1,6 @@
 import { cx } from "../lib/carousel";
 import { navigate, usePath } from "../lib/router";
+import { useGate } from "../lib/gates";
 import SettingsAccount from "../components/settings/SettingsAccount";
 import SettingsVerify from "../components/settings/SettingsVerify";
 import SettingsSecurity from "../components/settings/SettingsSecurity";
@@ -28,9 +29,13 @@ const TABS = [
   { id: "ignored-users", label: "Ignored Users", View: SettingsIgnoredUsers },
 ];
 
+/** An agent's player reads their account and changes their password; the rest is their agent's. */
+const AGENT_TABS = TABS.filter((t) => t.id === "account" || t.id === "security");
+
 export default function SettingsPage() {
   const path = usePath();
-  const active = TABS.find((t) => path === `/settings/${t.id}`) || TABS[0];
+  const tabs = useGate().agentPlayer ? AGENT_TABS : TABS;
+  const active = tabs.find((t) => path === `/settings/${t.id}`) || tabs[0];
   const View = active.View;
 
   return (
@@ -41,7 +46,7 @@ export default function SettingsPage() {
         <div className="ScrollableTab_root">
           <div className="Tab_root">
             <div className="Tab_tabsContainer" role="tablist">
-              {TABS.map((tab) => (
+              {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"

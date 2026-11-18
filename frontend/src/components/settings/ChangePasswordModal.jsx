@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { auth as authApi } from "../../lib/endpoints";
 import Modal from "../ui/Modal";
+import { underAgentBase } from "../../lib/agentBase";
 
 /**
  * Settings → Security → Change Password — reference `ChangePasswordModal`.
@@ -97,7 +98,7 @@ export default function ChangePasswordModal({ onClose, forced = false, onChanged
       ) : (
         <form className="ChangePasswordModal_root" onSubmit={submit}>
           <PasswordField label="Current Password*" name="password" placeholder="Enter Your Password" value={current} onChange={setCurrent}>
-            {!forced && <button type="button" className="PasswordInput_forgotPasswordText">Forgot Password?</button>}
+            {!forced && !underAgentBase() && <button type="button" className="PasswordInput_forgotPasswordText">Forgot Password?</button>}
           </PasswordField>
           <PasswordField label="New Password" name="newPassword" placeholder="Enter New Password" value={next} onChange={setNext} />
           <PasswordField label="Confirm New Password" name="confirmNewPassword" placeholder="Confirm New Password" value={confirm} onChange={setConfirm} />

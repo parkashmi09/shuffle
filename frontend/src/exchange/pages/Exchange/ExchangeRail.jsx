@@ -9,6 +9,7 @@ import { saveStakeButtons } from '../../services/exchange';
 import { BET_TOAST } from '../../utils/exchange';
 import { useSession } from '../../lib/sessionContext';
 import { stakeLabel } from './model';
+import { useGate } from '../../../lib/gates';
 /* stake: the `.sports-rail*` geometry is ported into styles/shuffle-exchange.css (hash imports
    pages/Sports/Sports.css). */
 
@@ -34,7 +35,7 @@ function tipFrom(e, label) {
  */
 export default function ExchangeRail() {
   const { pathname } = useLocation();
-  // stake: no demo-account gate here (hash hides Statement for one via `routeOn`).
+  const on = useGate(); // a demo account has no Statement
   const [tip, setTip] = React.useState(null);
   const tipProps = (label) => ({
     onMouseEnter: (e) => setTip(tipFrom(e, label)),
@@ -46,7 +47,7 @@ export default function ExchangeRail() {
   return (
     <div className="sports-rail">
       <div className="sports-rail-scroll hide-scroll">
-        {NAV.map((item) => {
+        {NAV.filter((item) => item.to !== '/sports/statement' || on('statement')).map((item) => {
           const active = item.end ? pathname === item.to || pathname === `${item.to}/` : pathname.startsWith(item.to);
           return (
             <Link

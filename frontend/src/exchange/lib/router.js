@@ -4,12 +4,14 @@
  * App and the exchange views re-read together. Every `/sports...` path renders the same page in
  * App, so moving between exchange screens never remounts the shell.
  */
+import { appPath, underAgentBase } from '../../lib/agentBase';
+
 export { usePath, useSearch } from '../../lib/router';
 
 export function navigate(to, { replace = false, scroll = true } = {}) {
   const url = new URL(to, window.location.origin);
-  const next = url.pathname + url.search;
-  if (window.location.pathname + window.location.search === next) return;
+  const next = (underAgentBase() ? appPath(url.pathname) : url.pathname) + url.search;
+  if (appPath() + window.location.search === next) return;
   window.history[replace ? 'replaceState' : 'pushState'](null, '', next);
   window.dispatchEvent(new PopStateEvent('popstate'));
   if (scroll) document.querySelector('#pageContent')?.scrollTo(0, 0);

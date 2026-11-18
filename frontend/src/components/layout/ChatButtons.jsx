@@ -1,5 +1,7 @@
 import "./ChatButtons.css";
 import { useBrandExtras } from "../../lib/siteContent";
+import { useGate } from "../../lib/gates";
+import { underAgentBase } from "../../lib/agentBase";
 
 /**
  * The floating chat buttons: WhatsApp (owner panel → Branding, or the site admin's number) and
@@ -7,6 +9,8 @@ import { useBrandExtras } from "../../lib/siteContent";
  */
 export default function ChatButtons() {
   const extras = useBrandExtras();
+  const { agentPlayer } = useGate();
+  if (agentPlayer || underAgentBase()) return null;
   if (!extras?.whatsapp && !extras?.telegram) return null;
 
   return (

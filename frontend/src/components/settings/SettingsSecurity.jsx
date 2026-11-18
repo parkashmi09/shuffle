@@ -2,6 +2,7 @@ import { useState } from "react";
 import { cx } from "../../lib/carousel";
 import { useApi } from "../../lib/useResource";
 import { twoFactor as twoFactorApi } from "../../lib/endpoints";
+import { useGate } from "../../lib/gates";
 import ChangePasswordModal from "./ChangePasswordModal";
 import Modal from "../ui/Modal";
 import Switch from "./Switch";
@@ -28,7 +29,9 @@ const PROVIDERS = [
 
 export default function SettingsSecurity() {
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const { data: totp, reload } = useApi("settings:2fa", () => twoFactorApi.status().catch(() => null));
+  // An agent's player has Change Password and nothing else here.
+  const { agentPlayer } = useGate();
+  const { data: totp, reload } = useApi("settings:2fa", () => twoFactorApi.status().catch(() => null), { enabled: !agentPlayer });
   const enabled = Boolean(totp?.isEnabled);
   // `setup` holds `{ qrCode, secret }` while enabling; `disabling` asks for the code + password.
   const [setup, setSetup] = useState(null);
@@ -81,6 +84,7 @@ export default function SettingsSecurity() {
         </button>
       </form>
 
+      {!agentPlayer && <>
       <form className="Panel_panelWrapper" onSubmit={(event) => event.preventDefault()}>
         <h2 className="Panel_panelHeading">Two-Factor Authentication</h2>
         <p className="TwoFactorAuthentication_descriptionText">
@@ -154,6 +158,7 @@ export default function SettingsSecurity() {
           </div>
         </form>
       </div>
+      </>}
 
       {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} />}
     </div>

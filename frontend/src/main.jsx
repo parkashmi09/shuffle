@@ -6,6 +6,9 @@ import App from './App.jsx'
 import { applyBranding } from './lib/siteContent.js'
 import { startSiteLive } from './lib/siteLive.js'
 import { startI18n } from './lib/i18n.js'
+import { installAgentHistory } from './lib/agentBase.js'
+
+installAgentHistory()
 
 // The backend's share link is `/referal/<code>`: land on the lobby with the register modal open and the code captured.
 const referal = window.location.pathname.match(/^\/referal\/([^/]+)\/?$/)

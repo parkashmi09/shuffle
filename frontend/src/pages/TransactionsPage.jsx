@@ -48,6 +48,9 @@ const TABS = [
   { id: "other", label: "Other" },
 ];
 
+/** An agent's player has no deposits or withdrawals of their own: one statement of the ledger. */
+const AGENT_TABS = [{ id: "other", label: "Statement" }];
+
 /** Deposits is the bare `/transactions`; the rest carry their id. */
 const pathFor = (id) => (id === "deposits" ? "/transactions" : `/transactions/${id}`);
 
@@ -403,7 +406,7 @@ export default function TransactionsPage() {
   const path = usePath();
   const { signedIn, balances } = useSession();
   const on = useGate();
-  const tabs = TABS.filter((t) => !t.gate || on(t.gate));
+  const tabs = on.agentPlayer ? AGENT_TABS : TABS.filter((t) => !t.gate || on(t.gate));
   const active =
     tabs.find((t) => pathFor(t.id) === path)?.id ||
     (path === "/transactions/deposits" && tabs.some((t) => t.id === "deposits") ? "deposits" : null) ||

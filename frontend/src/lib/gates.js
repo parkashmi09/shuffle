@@ -1,6 +1,6 @@
 import { useSiteFeatures } from "./useSiteFeatures";
 import { usePublicSiteConfig } from "./usePublicSiteConfig";
-import { capOk, useSiteVersion } from "./siteLive";
+import { capOk, isAgentPlayer, isDemoPlayer, useSiteVersion } from "./siteLive";
 
 /**
  * What the owner's plan and the site admin's flags switch on — one table, as stake's `api/site.js`.
@@ -55,10 +55,16 @@ const CAPABILITY = {
 
 const WALLET_TABS = ["deposit", "withdraw", "tips"];
 
+/* Never for an agent's player / a demo account, whatever the owner has on. `fullSettings` is every settings tab but Account and Security. */
+const AGENT_PLAYER_OFF = new Set(["blog", "kyc", "wise", "fullSettings"]);
+const DEMO_OFF = new Set(["tips", "notifications", "transactions", "settings", "fullSettings", "wise", "statement", "support"]);
+
 export function makeGate({ features, flags }) {
   const listed = features?.list?.length ? new Set(features.list.map((f) => f.feature)) : null;
   const b2b = features?.policy?.("business_model") === "b2b";
   const on = (key) => {
+    if (AGENT_PLAYER_OFF.has(key) && isAgentPlayer()) return false;
+    if (DEMO_OFF.has(key) && isDemoPlayer()) return false;
     // The wallet exists while any of its tabs does — an agent's player has none, so no wallet at all.
     if (key === "wallet") return WALLET_TABS.some(on);
     if (CAPABILITY[key] && !capOk(CAPABILITY[key])) return false;
@@ -72,6 +78,8 @@ export function makeGate({ features, flags }) {
   };
   /** Both reads answered — a caller that would REQUEST a gated route waits for this, so an owner-off feature is never asked for. */
   on.ready = Array.isArray(features?.list) && flags != null;
+  on.agentPlayer = isAgentPlayer();
+  on.demo = isDemoPlayer();
   return on;
 }
 
