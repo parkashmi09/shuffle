@@ -9,6 +9,18 @@ import { preferences as preferencesApi } from "../../lib/endpoints";
 import { alertFromError } from "../../lib/alerts";
 import { LANGUAGES, setLanguage as setI18nLanguage, useAllowedLanguages, useLanguage } from "../../lib/i18n";
 
+/** A footer link's address → the gate behind it; the admin's saved columns carry no fixed labels. */
+const HREF_GATES = [
+  [/^\/(sports\/)?promotions(\/|$)/, "promotions"],
+  [/^\/vip(-program)?(\/|$)/, "vip"],
+  [/^\/affiliate(\/|$)/, "affiliate"],
+  [/^\/challenges(\/|$)/, "challenges"],
+  [/^\/(races?|raffles?)(\/|$)/, "races"],
+  [/shuffle-wise/i, "wise"],
+  [/blog/i, "blog"], // also an external blog site
+  [/redeem|gift|bonus/i, "bonus"],
+];
+
 const columns = [
   {
     order: 2,
@@ -188,7 +200,8 @@ export default function Footer() {
           (l.label !== "Affiliate Program" || on("affiliate")) &&
           (l.label !== "VIP Program" || on("vip")) &&
           (l.label !== "Redeem Code" || on("bonus")) &&
-          (l.label !== "Live Support" || on("support"))
+          (l.label !== "Live Support" || on("support")) &&
+          !(on.agentPlayer && HREF_GATES.some(([re, gate]) => re.test(l.href || "") && !on(gate)))
       ),
     }))
     .filter((col) => col.links.length);

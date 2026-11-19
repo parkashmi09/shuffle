@@ -2,6 +2,7 @@ import { useState } from "react";
 import { cx } from "../../lib/carousel";
 import article from "../../data/seo-article.html?raw";
 import { useSiteContent, withSupportEmail } from "../../lib/siteContent";
+import { useGate } from "../../lib/gates";
 
 // The saved article carries its own wrapper + show-more button; keep only the rich-text block.
 const inner = (() => {
@@ -14,6 +15,9 @@ const inner = (() => {
 export default function SeoArticle() {
   const [open, setOpen] = useState(false);
   const content = useSiteContent();
+  // Bonuses, races, VIP, deposits: none of it exists on the agent site.
+  const { agentPlayer } = useGate();
+  if (agentPlayer) return null;
 
   return (
     <section className="LayoutContainer_root LayoutContainer_mobile-bottom-md2 LayoutContainer_tablet-bottom-lg4 LayoutContainer_column SEOArticle_section">
