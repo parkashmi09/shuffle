@@ -1,7 +1,6 @@
 import NavContent, { SearchButton } from "./NavContent";
 import { cx } from "../../lib/carousel";
 import "./Sidebar.css";
-import { useBrandExtras } from "../../lib/siteContent";
 import { useGate } from "../../lib/gates";
 
 /**
@@ -10,8 +9,6 @@ import { useGate } from "../../lib/gates";
  */
 
 export function ProductTabs({ expanded, product, onProductChange }) {
-  // The owner's name for the sports tab (owner panel → Branding → Sportsbook).
-  const sportsLabel = useBrandExtras()?.sportsbook?.tabName || "Sports";
   const on = useGate();
   if (expanded) {
     return (
@@ -19,7 +16,7 @@ export function ProductTabs({ expanded, product, onProductChange }) {
         <div className="NavigationTab_container">
           {[
             ["casino", "Casino", "/"],
-            ["sports", sportsLabel, "/sports?section=featured"],
+            ["sports", "Sports", "/sports?section=featured"],
           ].filter(([key]) => on(key)).map(([key, label, href]) => (
             <a
               key={key}
@@ -41,7 +38,7 @@ export function ProductTabs({ expanded, product, onProductChange }) {
         <img alt="casino" src="/icons/dice.svg" />
       </a>}
       {on("sports") && <a className={product === "sports" ? "NavigationTab_active" : ""} href="/sports?section=featured" onClick={(e) => { e.preventDefault(); onProductChange("sports"); }}>
-        <img alt={sportsLabel} src="/icons/sports/tennis.svg" />
+        <img alt="sports" src="/icons/sports/tennis.svg" />
       </a>}
     </div>
   );

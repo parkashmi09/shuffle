@@ -27,6 +27,7 @@ import { GOOGLE_ERRORS, takeGoogleNonce } from "../../lib/googleAuth";
 import { alertError } from "../../lib/alerts";
 import { useGate } from "../../lib/gates";
 import { useLanguageGuard } from "../../lib/i18n";
+import { useVipRankUps } from "../../lib/useVipRankUps";
 import { agentBaseTarget, agentPlayerCaps, underAgentBase } from "../../lib/agentBase";
 import { openExternal, useSupportHref } from "../../lib/siteContent";
 import "./AppShell.css";
@@ -90,6 +91,7 @@ function Shell({ children }) {
   const supportHref = useSupportHref();
   const gate = useGate();
   useLanguageGuard(); // off a language the owner switched off
+  useVipRankUps();
 
   // An agent's player lives under /agent, everyone else outside it. Waits for `/auth/me`: the login
   // answer has no capabilities, and a guess here would send the player to the wrong side.

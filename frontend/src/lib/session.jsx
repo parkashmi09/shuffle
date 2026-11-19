@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, setAuthLostHandler, tokens } from "./api";
 import {
   auth as authApi,
@@ -144,6 +144,20 @@ export function SessionProvider({ children }) {
       .then((c) => typeof c?.defaultCurrency === "string" && setDefaultCurrency(c.defaultCurrency.toUpperCase()))
       .catch(() => {});
   }, []);
+
+  // The page opens signed out while a session restores, so only a real sign-out forgets the coin.
+  const wasSignedIn = useRef(false);
+  useEffect(() => {
+    if (state.status === "authenticated") wasSignedIn.current = true;
+    if (state.status !== "anonymous" || !wasSignedIn.current) return;
+    wasSignedIn.current = false;
+    setPreferred(null);
+    try {
+      localStorage.removeItem(CURRENCY_KEY);
+    } catch {
+      /* private mode — nothing was stored */
+    }
+  }, [state.status]);
 
   const signOutLocal = useCallback(() => {
     // Untie this browser from the player, so a shared machine stops receiving their pushes.

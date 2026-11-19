@@ -2,7 +2,7 @@ import NavContent, { SearchButton } from "./NavContent";
 import { openSearch } from "../../lib/router";
 import { cx } from "../../lib/carousel";
 import { ProductTabs } from "./Sidebar";
-import { openExternal, useBrandExtras, useSupportHref } from "../../lib/siteContent";
+import { openExternal, useSupportHref } from "../../lib/siteContent";
 import { useGate } from "../../lib/gates";
 
 const items = [
@@ -19,11 +19,10 @@ const items = [
  */
 export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, product, onProductChange, variant }) {
   const closeMenu = menuOpen ? onToggleMenu : undefined;
-  const sportsLabel = useBrandExtras()?.sportsbook?.tabName;
   const on = useGate();
   const supportHref = useSupportHref();
   // Rewards is the VIP programme: gone for an agent's player (and when the owner/admin turns VIP off).
-  const shown = items.filter((it) => (it.id !== "rewards" || on("vip")) && (it.id !== "sports" || on("sports")) && (it.id !== "chat" || on("support"))).map((it) => (it.id === "sports" && sportsLabel ? { ...it, label: sportsLabel } : it));
+  const shown = items.filter((it) => (it.id !== "rewards" || on("vip")) && (it.id !== "sports" || on("sports")) && (it.id !== "chat" || on("support")));
   const searchFromBar = () => { openSearch(); closeMenu?.(); };
   const item = (it) => {
     const body = (

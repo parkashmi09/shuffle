@@ -3,6 +3,7 @@ import { Component, Suspense, lazy, useEffect } from "react";
 import ExchangeLobby from "../exchange/pages/Exchange/Lobby";
 import ExchangeMyBets from "../exchange/pages/Exchange/MyBets";
 import ExchangeStatement from "../exchange/pages/Exchange/Statement";
+import SportsInrDialog from "../exchange/pages/Exchange/SportsInrDialog";
 import { exchangeTabOf } from "../exchange/pages/Exchange/model";
 import { openSignIn } from "../exchange/components/exchange/stakeGlue";
 import { BET_PLACED_EVENT } from "../exchange/services/exchange/bets";
@@ -54,8 +55,18 @@ function AccountRoute({ page: Page }) {
  * `/sports` → lobby (`?sport=`), `/sports/live` → In-Play, `/sports/<sport>` → that sport's board,
  * `/sports/match/<sid>/<gmid>` (lazy), `/sports/my-bets`, `/sports/statement`; anything else is the lobby.
  * App only routes here when the owner's `sportsexchange` is on (`lib/gates.js`).
+ * A non-INR header wallet is asked to switch to INR on every one of them (`SportsInrDialog`).
  */
 export default function SportsPage() {
+  return (
+    <>
+      <ExchangeRoutes />
+      <SportsInrDialog />
+    </>
+  );
+}
+
+function ExchangeRoutes() {
   const path = usePath().replace(/\/+$/, "") || "/";
   const { refreshBalances, signedIn } = useSession();
 

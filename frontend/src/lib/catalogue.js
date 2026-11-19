@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { casino, site } from "./endpoints";
+import { casino, jsGames, site } from "./endpoints";
 import { toBanner, toBanners, toGameCard, toGameCards, toProviders } from "./adapters";
 import { useApi, useResource } from "./useResource";
 import { sections as staticSections } from "../data/catalog";
@@ -70,9 +70,22 @@ const ROW_COLLECTION = {
   slots: "popular-slots",
   "live-casino": "live-casino",
 };
+/** An Original as a lobby tile: its page is `/casino/originals/<game_code>`. */
+export const originalCard = (row) => ({
+  uuid: null,
+  code: row.game_code,
+  name: row.name,
+  img: row.image || "/icons/original.svg",
+  href: `/casino/originals/${encodeURIComponent(row.game_code)}`,
+  color: "#7B3FE4",
+  provider: null,
+});
+
+/** The admin's Originals (on, in order) as tiles; [] while Originals are off or not synced. */
+const originalCards = () => jsGames.originals().then((rows) => (Array.isArray(rows) ? rows.map(originalCard) : []), () => []);
+
 /** Rows with no curated collection read the catalogue itself — see `categoryQuery`. */
 const ROW_QUERY = {
-  "shuffle-games": { category: "originals" },
   "game-shows": { category: "game-shows" },
   "shuffle-picks": { sort: "popular" },
   "latest-releases": { sort: "newest" },
@@ -87,6 +100,8 @@ export function useLobbySection(id) {
   const { data, isLive } = useResource(
     `lobby:${id}`,
     async () => {
+      // The Originals row is the admin's Originals list and nothing else (admin → Originals → Games).
+      if (id === "shuffle-games") return originalCards();
       const picked = await adminCategoryCards(id, 30);
       if (picked) return picked;
       const { data: rows } = collection
@@ -175,6 +190,11 @@ export function useCategory(slug, { captured, category, search, provider, sort, 
   const { data, isLive, loading } = useResource(
     `category:${slug}:${category || ""}:${search || ""}:${provider || ""}:${sort || ""}:${limit}:${admin || ""}`,
     async () => {
+      if (slug === "originals") {
+        const needle = (search || "").toLowerCase();
+        const games = (await originalCards()).filter((g) => !needle || g.name.toLowerCase().includes(needle));
+        return games.length ? { games, total: games.length } : null;
+      }
       // The admin's hand-picked games for this category, when it has any (`admin` is
       // passed only while nothing is typed in the search box).
       if (admin) {
@@ -235,8 +255,16 @@ export function useProviderGames(name, { limit = 40 } = {}) {
  */
 export function useGame(uuid) {
   const { data, loading, error } = useApi(`game:${uuid}`, () => casino.game(uuid), { enabled: Boolean(uuid) });
-  const game = useMemo(() => (data ? { ...toGameCard(data), type: data.type ?? null } : null), [data]);
+  const game = useMemo(() => (data ? { ...toGameCard(data), type: data.type ?? null, launchCurrencies: data.launchCurrencies ?? null } : null), [data]);
   return { game, loading, error };
+}
+
+/** One Original, by `game_code`, from the admin's list. A code that is not on it is the not-found state. */
+export function useOriginal(code) {
+  const { data, loading, error } = useApi("originals:list", () => jsGames.originals(), { enabled: Boolean(code) });
+  const row = Array.isArray(data) ? data.find((g) => g.game_code === code) : null;
+  const game = useMemo(() => (row ? originalCard(row) : null), [row]);
+  return { game, loading, error: error || (Array.isArray(data) && !row ? new Error("Game not found") : null) };
 }
 
 /**

@@ -28,7 +28,7 @@ import { agentPlayerCaps, underAgentBase } from "./agentBase";
  * localStorage so a reload is gated before `/auth/me` answers.
  */
 
-const versions = { features: 0, flags: 0, branding: 0, content: 0, caps: 0, kyc: 0, affiliate: 0, notifications: 0 };
+const versions = { features: 0, flags: 0, branding: 0, content: 0, caps: 0, kyc: 0, affiliate: 0, notifications: 0, vip: 0 };
 const listeners = new Set();
 const resets = { features: [], flags: [], branding: [], content: [] };
 
@@ -78,13 +78,14 @@ export function startSiteLive() {
     if (scopes.includes("admin:site-content")) bump("content");
   });
   // An admin's KYC review (`{ notification: { kind: "kyc_approved" | "kyc_rejected" } }`) re-reads every KYC gate.
-  // `affiliate_reward` / `affiliate_commission` re-read the affiliate dashboard.
+  // `affiliate_reward` / `affiliate_commission` re-read the affiliate dashboard; `vip_rank_up` claims the reward (useVipRankUps).
   // Every push also re-reads an open notifications panel.
   socket.on("notificationsUnread", (frame) => {
     bump("notifications");
     const kind = String(decode(frame)?.notification?.kind ?? "");
     if (kind.startsWith("kyc_")) bump("kyc");
     if (kind.startsWith("affiliate_")) bump("affiliate");
+    if (kind === "vip_rank_up") bump("vip");
   });
 }
 

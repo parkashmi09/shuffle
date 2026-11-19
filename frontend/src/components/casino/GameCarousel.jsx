@@ -8,11 +8,11 @@ import { hrefInBase } from "../../lib/agentBase";
 /**
  * Whether a tile's href has a screen behind it.
  *
- * `/casino/games/<uuid>` is the catalogue's own route and the only one
- * `GamePage` serves. See the note on the card's `onClick` for what the other
- * hrefs are and why they are left alone.
+ * `/casino/games/<uuid>` (the catalogue) and `/casino/originals/<code>` (the
+ * Original Games aggregator) are the routes `GamePage` serves. See the note on
+ * the card's `onClick` for what the other hrefs are and why they are left alone.
  */
-const playable = (href) => String(href || "").startsWith("/casino/games/");
+const playable = (href) => /^\/casino\/(games|originals)\//.test(String(href || ""));
 
 export function GameCard({ game, index = 0, indicator, hidden = false, className }) {
   const [ref, shown] = useReveal();

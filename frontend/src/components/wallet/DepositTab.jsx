@@ -7,8 +7,9 @@ import { isFiat } from "../../lib/adapters";
 import { currencyName } from "../../lib/currencies";
 import { USER_EVENTS, userRequest } from "../../lib/siteLive";
 import { networkLabel, useNetworkOptions } from "../../lib/networks";
-import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
+import { currencyOptions, fetchAutoRails, optionsForRoutes, shownRail } from "../../lib/walletOptions";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
+import { useSession } from "../../lib/sessionContext";
 import WalletSelect from "./CurrencySelect";
 import QrCode from "./QrCode";
 
@@ -35,7 +36,8 @@ const MANUAL_COIN = "INR";
  *
  * - **Fiat** is a bank transfer: `GET /user/bank-details/:coin` publishes where
  *   to send it and `POST /user/deposits/fiat` files the claim. Both work today,
- *   so that path is fully wired.
+ *   so that path is fully wired. Where the automatic gateway (F2Pay) takes the
+ *   coin, its hosted payment (`AutoDeposit`) is offered beside it.
  */
 
 /** The bank row the fiat flow shows, with a copy button — same shape as the crypto address. */
@@ -284,6 +286,71 @@ function FiatDeposit({ coin }) {
   );
 }
 
+/* The gateway's method codes as a player reads them; any other code shows as the gateway sends it. */
+const METHOD_LABELS = { UpiMixed: "UPI", PI_USDT_TRX: "USDT · TRC20" };
+const NO_METHODS = [];
+
+/** The automatic deposit: pick the gateway's method, enter the amount, pay on its page. Its signed callback credits the wallet. */
+function AutoDeposit({ coin, methods }) {
+  const [picked, setPicked] = useState(methods[0].method);
+  const method = methods.find((row) => row.method === picked) ?? methods[0];
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (!(Number(amount) > 0)) return setError("Enter the amount to deposit.");
+    setBusy(true);
+    try {
+      const order = await funding.createDepositOrder({ provider: "f2pay", currency: coin, amount, method: method.method });
+      if (!/^https?:\/\//i.test(order?.redirectUrl ?? "")) throw new Error("The payment page did not open. Please try again.");
+      // Stays busy: the page is leaving for the gateway, which sends the player back when paid.
+      window.location.assign(order.redirectUrl);
+    } catch (err) {
+      setError(err.message || "Could not start the deposit.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="Deposit_inputWrapper">
+        <Warning>Enter the amount and pay on the payment page that opens. Your balance is credited automatically once the payment is confirmed.</Warning>
+        {methods.length > 1 && (
+          <WalletSelect
+            label="Pay with"
+            options={methods.map((row) => ({ value: row.method, label: METHOD_LABELS[row.method] ?? row.method }))}
+            value={method.method}
+            onChange={setPicked}
+          />
+        )}
+        <div className="TextInput_formControlWrapper">
+          <div className="TextInput_labelGroup">
+            <div className="LabelBlock_root TextInput_labelBlock">
+              <label className="Label_root" htmlFor="deposit-auto-amount">Amount*</label>
+            </div>
+          </div>
+          <div className="InputWrapper_root">
+            <input id="deposit-auto-amount" className="Input_root" inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="NoticeMessage_root" role="alert">
+          <span className="NoticeMessage_text" style={{ color: "var(--color-warning)" }}>{error}</span>
+        </div>
+      )}
+
+      <button type="button" disabled={busy || !amount} className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary" onClick={submit}>
+        <span className="ButtonVariants_buttonContent">{busy ? "Opening…" : "Deposit"}</span>
+      </button>
+    </>
+  );
+}
+
 export default function DepositTab({
   coin,
   onCoinChange,
@@ -298,7 +365,16 @@ export default function DepositTab({
   /* Which funding rails this site offers. `both` is the default and leaves
      the list exactly as it was — see `optionsForRoutes`. */
   const { depositRoutes } = useSiteFeatures();
-  const { manual, automatic } = depositRoutes();
+  const { manual: manualMode, automatic } = depositRoutes();
+  // The site admin's Manual deposit switch (`/auth/me` capabilities) closes the bank-transfer form too.
+  const { user } = useSession();
+  const manual = manualMode && user?.capabilities?.manualDeposit !== false;
+  const { data: rails } = useApi("wallet:auto-rails", fetchAutoRails, { enabled: automatic });
+  const autoMethods = (automatic && rails?.methods) || NO_METHODS;
+  const coinMethods = autoMethods.filter((row) => String(row.currency).toUpperCase() === coin);
+  const autoInr = autoMethods.some((row) => String(row.currency).toUpperCase() === MANUAL_COIN);
+  const [pickedRail, setPickedRail] = useState("manual");
+  const rail = shownRail({ manual, auto: coinMethods.length > 0, picked: pickedRail });
 
   const options = useMemo(
     () =>
@@ -311,9 +387,10 @@ export default function DepositTab({
           hideBalance,
           keep: coin,
         }),
-        { manual, automatic }
+        { manual, automatic },
+        autoMethods.map((row) => String(row.currency).toUpperCase())
       ),
-    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin, manual, automatic]
+    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin, manual, automatic, autoMethods]
   );
 
   /*
@@ -334,10 +411,10 @@ export default function DepositTab({
    */
   const openedOnManual = useRef(false);
   useEffect(() => {
-    if (openedOnManual.current || !manual || !options.length) return;
+    if (openedOnManual.current || !(manual || autoInr) || !options.length) return;
     openedOnManual.current = true;
     if (!isFiat(coin) && options.some((o) => o.value === MANUAL_COIN)) onCoinChange?.(MANUAL_COIN);
-  }, [manual, options, coin, onCoinChange]);
+  }, [manual, autoInr, options, coin, onCoinChange]);
 
   // Built once and handed to whichever branch renders, so both share the single
   // grid the reference uses rather than each opening its own.
@@ -350,7 +427,17 @@ export default function DepositTab({
       {isFiat(coin) ? (
         <>
           <div className="CurrencyNetworkSelectOptionsWrapper_root">{currencySelect}</div>
-          <FiatDeposit coin={coin} />
+          {manual && coinMethods.length > 0 && (
+            <WalletSelect
+              label="Deposit type"
+              options={[{ value: "manual", label: "Manual" }, { value: "auto", label: "Automatic" }]}
+              value={rail}
+              onChange={setPickedRail}
+            />
+          )}
+          {rail === "auto" && <AutoDeposit key={coin} coin={coin} methods={coinMethods} />}
+          {rail === "manual" && <FiatDeposit coin={coin} />}
+          {!rail && <div className="Deposit_walletGeoRestrictionBlock">{coin} deposits are not available on this site.</div>}
         </>
       ) : (
         <CryptoDeposit coin={coin} currencySelect={currencySelect} />

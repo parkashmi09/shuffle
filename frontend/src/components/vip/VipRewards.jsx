@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
-import { bonus as bonusApi, rakeback as rakebackApi, vip as vipApi } from "../../lib/endpoints";
+import { bonus as bonusApi, bonusBalance as bonusBalanceApi, lossBonus as lossBonusApi, rakeback as rakebackApi, vip as vipApi } from "../../lib/endpoints";
 import { useApi } from "../../lib/useResource";
+import { useSession } from "../../lib/sessionContext";
 import { levelName } from "./vipTiers";
 
 /**
@@ -13,6 +14,8 @@ import { levelName } from "./vipTiers";
  *   `GET /user/rakeback`  → `{ amount, currency, claimable, minimum, rate }`
  *   `GET /user/bonus`     → `{ currency, types: { daily, weekly, monthly } }`
  *   `GET /user/vip/rank-ups` → `{ cards, totalUsd }` — one claim pays every pending rank-up
+ *   `GET /user/bonus-balance` → locked deposit bonuses; a gradual one's unlocked part is claimable
+ *   `GET /user/loss-bonus`    → the loss bonus (Welcome Shield) and its `state`
  *
  * ── THE REFERENCE HAS SEVEN CARD STATES; THIS PLATFORM CAN TELL FOUR ─────
  *
@@ -213,6 +216,9 @@ export default function VipRewards({ levels, variant = "page" }) {
   const { data: rake, reload: reloadRake } = useApi("vip:rakeback", () => rakebackApi.amount());
   const { data: bonuses, reload: reloadBonuses } = useApi("vip:bonus", () => bonusApi.overview());
   const { data: rankUps, reload: reloadRankUps } = useApi("vip:rank-ups", () => vipApi.rankUps());
+  const { data: held, reload: reloadHeld } = useApi("vip:bonus-balance", () => bonusBalanceApi.get());
+  const { data: loss, reload: reloadLoss } = useApi("vip:loss-bonus", () => lossBonusApi.get());
+  const { refreshBalances } = useSession();
 
   /* `{ [cardId]: "busy" | "claimed" | errorMessage }` — per card, so one
      failing claim does not put the other three into an error state. */
@@ -224,10 +230,14 @@ export default function VipRewards({ levels, variant = "page" }) {
       await call();
       setClaims((c) => ({ ...c, [id]: "claimed" }));
       reload();
+      refreshBalances?.();
     } catch (error) {
       setClaims((c) => ({ ...c, [id]: error?.message || "Claim failed" }));
     }
-  }, []);
+  }, [refreshBalances]);
+
+  const lockedBonuses = Array.isArray(held?.active) ? held.active : [];
+  const unlockedReady = lockedBonuses.some((b) => b.unlockMode === "gradual" && Number(b.claimable) > 0);
 
   /*
    * `claimed` is only a flash for the click. Once the re-fetch says that
@@ -246,7 +256,11 @@ export default function VipRewards({ levels, variant = "page" }) {
             ? Boolean(rake?.claimable)
             : id === "rankup"
               ? Boolean(rankUps?.cards?.length)
-              : Boolean(bonuses?.types?.[id]?.claimable);
+              : id === "deposit-bonus"
+                ? unlockedReady
+                : id === "loss-bonus"
+                  ? loss?.state === "claimable"
+                  : Boolean(bonuses?.types?.[id]?.claimable);
         if (!stillClaimable) {
           delete next[id];
           changed = true;
@@ -254,7 +268,7 @@ export default function VipRewards({ levels, variant = "page" }) {
       }
       return changed ? next : c;
     });
-  }, [rake, bonuses, rankUps]);
+  }, [rake, bonuses, rankUps, unlockedReady, loss]);
 
   const cards = useMemo(() => {
     const list = [];
@@ -305,8 +319,27 @@ export default function VipRewards({ levels, variant = "page" }) {
       });
     }
 
+    if (lockedBonuses.length) {
+      list.push({
+        id: "deposit-bonus",
+        heading: "Deposit Bonus",
+        icon: "/icons/lock-token.svg",
+        status: claims["deposit-bonus"] === "claimed" ? STATUS.CLAIMED : unlockedReady ? STATUS.CLAIMABLE : STATUS.WAGER,
+      });
+    }
+
+    if (loss?.enabled) {
+      list.push({
+        id: "loss-bonus",
+        heading: loss.welcome ? "Welcome Shield" : "Loss Bonus",
+        icon: "/icons/shield.svg",
+        expiry: loss.state === "claimable" ? expiresIn(loss.claimExpiresAt) : null,
+        status: claims["loss-bonus"] === "claimed" || loss.state === "claimed" ? STATUS.CLAIMED : loss.state === "claimable" ? STATUS.CLAIMABLE : STATUS.WAGER,
+      });
+    }
+
     return list;
-  }, [rake, bonuses, rankUps, claims, levels]);
+  }, [rake, bonuses, rankUps, claims, levels, lockedBonuses.length, unlockedReady, loss]);
 
   /* Live count of enabled Claim buttons — not a fixed label. Hidden at 0 so
      a purple "0" does not read as a static decoration. */
@@ -342,8 +375,12 @@ export default function VipRewards({ levels, variant = "page" }) {
                         ? () => rakebackApi.claim()
                         : card.id === "rankup"
                           ? () => vipApi.claimRankUps()
-                          : () => bonusApi.claim(card.id),
-                      card.id === "rakeback" ? reloadRake : card.id === "rankup" ? reloadRankUps : reloadBonuses
+                          : card.id === "deposit-bonus"
+                            ? () => bonusBalanceApi.claim()
+                            : card.id === "loss-bonus"
+                              ? () => lossBonusApi.claim()
+                              : () => bonusApi.claim(card.id),
+                      { rakeback: reloadRake, rankup: reloadRankUps, "deposit-bonus": reloadHeld, "loss-bonus": reloadLoss }[card.id] ?? reloadBonuses
                     )
                   }
                 />
