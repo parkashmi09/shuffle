@@ -293,10 +293,6 @@ const isFancyBet = (bet) =>
   String(bet.gameType || '').toUpperCase() === 'FAN'
   || ['yes', 'no'].includes(String(bet.side || '').toLowerCase());
 
-const isPercentBet = (bet) =>
-  String(bet.gameType || '').toUpperCase() === 'BM'
-  || String(bet.marketType || '').toLowerCase() === 'tied match';
-
 /** betMappers.js:54-75 — null while unsettled. */
 export function betProfit(bet) {
   const result = String(bet.resultStatus || '').toLowerCase();
@@ -311,8 +307,6 @@ export function betProfit(bet) {
 
   if (result === 'won' || result === 'win') {
     if (isFancyBet(bet)) return isBack ? (stake * rate) / 100 : stake;
-    // Bookmaker / Tied Match prices are percent (78 = 0.78 profit per 1), as the server settles them.
-    if (isPercentBet(bet)) return isBack ? (stake * odds) / 100 : stake;
     return isBack ? stake * (odds - 1) : stake;
   }
   if (result === 'lost' || result === 'loss') {
