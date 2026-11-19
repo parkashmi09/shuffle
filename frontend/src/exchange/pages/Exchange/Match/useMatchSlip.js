@@ -91,7 +91,7 @@ function isEditedSlip(slip) {
 
 /** Profit / liability the slip prints — TENEXCH calcPL + displayProfit everywhere: a LAY wins the
  *  stake and risks stake × (odds − 1) (Addaplay printed the liability as the profit too), line
- *  pays evens, oddeven / a horse racecard print 0. Market type as TENEXCH
+ *  pays evens, session rows / oddeven / a horse racecard print 0. Market type as TENEXCH
  *  classifyMarket reads it (gtype first), so every match1 market prices as a percent. */
 export function slipFigures(slip, stake, odds) {
   if (!slip) return { profit: 0, liability: 0 };
@@ -104,7 +104,8 @@ export function slipFigures(slip, stake, odds) {
   const zero = showsZeroProfit(bv.mname, mt, bv.gtype, { isHorseRacing: horse });
   // Session fancy (YES 55 @ 100): `odds` is the run line; it pays on the rate, bv.size.
   // YES wins stake x size/100 and risks the stake, NO the other way round (server placeBet).
-  // Normal / Ball By Ball / Over By Over print this real profit too (QA 2026-11-01; it was a fixed 0).
+  // The PROFIT shown is TENEXCH's: a fixed 0 on Normal / Ball By Ball / Over By Over (user,
+  // 2026-10-21, overriding c6aab7ae); the liability stays the real amount the server blocks.
   if (g === 'fancy' && slip.kind !== 'line' && Number(bv.size) > 0) {
     const atRate = Math.round(stakeNum * Number(bv.size)) / 100;
     const yes = bv.betType === 'yes' || bv.betType === 'back';

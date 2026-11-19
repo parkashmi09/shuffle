@@ -79,9 +79,19 @@ export function calcProfit(stake, odds, betType, marketType) {
   return calcPL(stake, odds, betType, marketType).profit;
 }
 
-// Slips that print a FIXED `Profit: 0` instead of a computed figure: horse racecard and odd/even.
-// Normal / Ball By Ball / Over By Over used to be here too; they now print the real figure
-// (QA 2026-11-01: a Yes @100 slip showed Profit 0 for a bet that pays the stake).
+// Slips that print a FIXED `Profit: 0` instead of a computed figure.
+//
+// The reference never puts a number in that cell for these markets — the run
+// ladder in the Run Amount modal is where their P&L is laid out, per run. Held
+// here (not as an inline regex in the hook) so it is one rule with one test.
+// Matched on the market NAME first, falling back to the type, which is the
+// order the slip itself resolves them in.
+//
+// khado was in this list and is not any more (user, 2026-09-13): its slip shows
+// a real figure, computed off the run LINE like any other fancy row, so it
+// moves as the − / + step the line. Verified against the reference slip — see
+// the note at `displayProfit` in usePlaceBetPanel.
+const ZERO_PROFIT_RE = /normal|ball by ball|over by over/;
 
 // Odd/Even joins them, but keyed on GTYPE, not on the name. Its rows are named
 // after the session ("1st inn 1 over run odd even") while the market's mname is
@@ -101,7 +111,8 @@ export function calcProfit(stake, odds, betType, marketType) {
    football market, so neither can be told from gtype or mname. */
 export const showsZeroProfit = (mname, marketType, gtype, { isHorseRacing = false } = {}) =>
   isHorseRacing
-  || isOddEvenGtype(gtype);
+  || isOddEvenGtype(gtype)
+  || ZERO_PROFIT_RE.test(String(mname || marketType || '').toLowerCase());
 
 // ─── market family ──────────────────────────────────────────────────────────
 // Single source of truth for "which kind of market is this". New market types
