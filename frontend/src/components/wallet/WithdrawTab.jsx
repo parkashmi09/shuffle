@@ -9,7 +9,7 @@ import { networkLabel, useNetworkOptions } from "../../lib/networks";
 import { USER_EVENTS, userRequest, useSiteVersion } from "../../lib/siteLive";
 import { MASKED_AMOUNT } from "../../lib/playerPreferences";
 import WalletSelect, { CoinIcon } from "./CurrencySelect";
-import { currencyOptions, optionsForRoutes } from "../../lib/walletOptions";
+import { AUTO_PAYOUT, currencyOptions, fetchAutoRails, optionsForRoutes, shownRail } from "../../lib/walletOptions";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
 import { useApi } from "../../lib/useResource";
 
@@ -30,6 +30,9 @@ import { useApi } from "../../lib/useResource";
  * required, INR needs an IFSC **or** a UPI id, and every other currency needs
  * bank name, account number and IFSC together. That is mirrored in the form so
  * a player is told before the request rather than by a 422 after it.
+ *
+ * Where the automatic gateway (F2Pay) pays the coin out, `POST /user/payments/withdrawals`
+ * (BANK_INR: `account_name`, `account_number`, `bank_code`) is offered beside the reviewed form.
  */
 
 const PERCENTAGES = [25, 50, 75];
@@ -56,6 +59,18 @@ function requirementText(req) {
   );
   return parts.join(" ") || "Withdrawals are not available on this account yet.";
 }
+
+const AUTO_LABELS = { account_name: "Account holder name", account_number: "Account number", bank_code: "IFSC code" };
+const NO_PAYOUT = [];
+
+/** A refused payout's own sentence, plus which field the server named (422 INVALID_PAYOUT_DETAILS). */
+const payoutError = (err) => {
+  const fields = err?.details?.fields;
+  const named = Array.isArray(fields)
+    ? fields[0]?.message
+    : Object.entries(fields ?? {}).map(([key, why]) => `${AUTO_LABELS[key] ?? key} ${why}`).join("; ");
+  return named ? `${err.message}: ${named}` : err?.message || "Could not request the withdrawal.";
+};
 
 const accountLabel = (a) =>
   a.method === "upi" ? `UPI · ${a.upiId}` : `${a.bankName || "Bank"} · ${a.accountNumberMasked || ""} · ${a.ifscCode || ""}`;
@@ -252,11 +267,16 @@ export default function WithdrawTab({
   hideBalance = false,
   onWithdrawalHistory,
 }) {
-  const { refreshBalances } = useSession();
+  const { refreshBalances, user } = useSession();
   /* Payout rails this site runs — the withdrawal half of the same policy the
-     deposit tab reads. `both` leaves the list untouched. */
+     deposit tab reads. `both` leaves the list untouched. The site admin's Manual
+     withdrawal switch (`/auth/me` capabilities) closes the reviewed bank form too. */
   const { withdrawalRoutes } = useSiteFeatures();
-  const { manual, automatic } = withdrawalRoutes();
+  const { manual: manualMode, automatic } = withdrawalRoutes();
+  const manual = manualMode && user?.capabilities?.manualWithdraw !== false;
+  // As hash: the gateway's payout currencies decide the automatic rail, whatever `withdrawal_mode` says.
+  const { data: rails } = useApi("wallet:auto-rails", fetchAutoRails);
+  const payout = rails?.payout || NO_PAYOUT;
 
   const options = useMemo(
     () =>
@@ -269,9 +289,10 @@ export default function WithdrawTab({
           hideBalance,
           keep: coin,
         }),
-        { manual, automatic }
+        { manual, automatic },
+        payout
       ),
-    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin, manual, automatic]
+    [balances, displayCurrency, rates, fiatView, hideZeroBalances, hideBalance, coin, manual, automatic, payout]
   );
 
   /* A currency whose payout rail is off must not stay selected — same reason
@@ -301,6 +322,9 @@ export default function WithdrawTab({
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const fiat = isFiat(coin);
+  const [pickedRail, setPickedRail] = useState("manual");
+  const rail = shownRail({ manual, auto: fiat && payout.includes(coin), picked: pickedRail });
+  const autoRail = fiat && rail === "auto";
   const { data: accounts } = useApi(`wallet:bank-accounts:${nonce}`, () => funding.bankAccounts(), { enabled: fiat });
   // Both rails run the same gate (`requirements.assertMet`), so crypto reads it too.
   const kycV = useSiteVersion("kyc");
@@ -350,6 +374,11 @@ export default function WithdrawTab({
   const missing = (() => {
     if (!form.amount || Number(form.amount) <= 0) return "Enter an amount.";
     if (Number(form.amount) > Number(available)) return "That is more than your balance.";
+    if (autoRail) {
+      if (Number(form.amount) < AUTO_PAYOUT.min || Number(form.amount) > AUTO_PAYOUT.max) return `Amount must be between 100 and 30,000 ${coin}.`;
+      if (!form.accountHolderName.trim() || !form.accountNumber.trim() || !form.ifscCode.trim()) return "Account holder name, account number and IFSC code are required.";
+      return null;
+    }
     if (account) return null;
     if (!form.accountHolderName.trim()) return "The account holder name is required.";
     if (coin === "INR") {
@@ -377,6 +406,27 @@ export default function WithdrawTab({
     }
     setBusy(true);
     setStatus(null);
+    if (autoRail) {
+      try {
+        await funding.createWithdrawalOrder({
+          provider: "f2pay",
+          currency: coin,
+          amount: form.amount,
+          details: { account_name: form.accountHolderName.trim(), account_number: form.accountNumber.trim(), bank_code: form.ifscCode.trim() },
+          ...(forfeitBonus ? { forfeitBonus: true } : {}),
+        });
+        setStatus({ ok: true, message: `${form.amount} ${coin} is on its way to your bank account. If the bank payout fails, the amount comes back to your balance automatically.` });
+        setForm((f) => ({ ...f, amount: "", accountHolderName: "", accountNumber: "", ifscCode: "" }));
+        refreshBalances();
+        setNonce((n) => n + 1);
+      } catch (error) {
+        if (error?.code === "BONUS_FORFEIT_REQUIRED") setNonce((n) => n + 1);
+        setStatus({ ok: false, message: WITHDRAW_REFUSALS[error?.code] || payoutError(error) });
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
       // `.strict()` — an empty optional string is still an unexpected value to
       // send, so only the filled fields go.
@@ -459,9 +509,28 @@ export default function WithdrawTab({
             }}
           />
         ) : (
-          <>
+          !rail ? (
+            <div className="NoticeMessage_root" role="alert">
+              <span className="NoticeMessage_text">Bank withdrawals are not available right now.</span>
+            </div>
+          ) : <>
             <div className="Withdraw_inputWrapper">
-              {saved.length > 0 && (
+              {manual && payout.includes(coin) && (
+                <WalletSelect
+                  label="Withdraw type"
+                  options={[{ value: "manual", label: "Manual" }, { value: "auto", label: "Automatic" }]}
+                  value={rail}
+                  onChange={setPickedRail}
+                />
+              )}
+              {autoRail && (
+                <>
+                  {field("wd-auto-holder", "Account holder name*", "accountHolderName", "As it appears on the account")}
+                  {field("wd-auto-account", "Account number*", "accountNumber", "")}
+                  {field("wd-auto-ifsc", "IFSC code*", "ifscCode", "e.g. SBIN0001234")}
+                </>
+              )}
+              {!autoRail && saved.length > 0 && (
                 <WalletSelect
                   label="Payout account"
                   options={[
@@ -472,8 +541,8 @@ export default function WithdrawTab({
                   onChange={setAccountChoice}
                 />
               )}
-              {!account && field("wd-holder", "Account holder name*", "accountHolderName", "As it appears on the account")}
-              {account ? null : coin === "INR"
+              {!autoRail && !account && field("wd-holder", "Account holder name*", "accountHolderName", "As it appears on the account")}
+              {autoRail || account ? null : coin === "INR"
                 ? (
                   <>
                     {field("wd-upi", "UPI id", "upiId", "name@bank")}
@@ -534,7 +603,9 @@ export default function WithdrawTab({
                 fee configuration for fiat payouts, so the row states the terms
                 it can actually stand behind. */}
             <span className="NoticeMessage_text">
-              Withdrawals are reviewed by an operator before they are paid out.
+              {autoRail
+                ? `Paid straight to your bank account, no review. Min ${AUTO_PAYOUT.min} · Max 30,000 ${coin}.`
+                : "Withdrawals are reviewed by an operator before they are paid out."}
             </span>
 
             {gate}

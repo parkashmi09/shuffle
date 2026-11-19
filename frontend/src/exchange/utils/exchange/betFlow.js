@@ -218,7 +218,7 @@ export function buildPlaceRequest({ bv, odds, stake, isEdited = false, selectedO
       client_ref: clientRef,
       selected_odds: Number(selectedOdds ?? bv?.odds) || oddsNum,
       edited: !!isEdited,
-      live_tracked: isBookieFavourMarket(marketType) || bv?.gtype === 'match' || bv?.gtype === 'match1',
+      live_tracked: isBookieFavourMarket(marketType) || bv?.gtype === 'match',
       own_line: namesOwnLine(bv?.gtype, marketType, bv?.mname),
       line_market: isLine,
       runner_name: team || bv?.nat || bv?.fancy_name || '',

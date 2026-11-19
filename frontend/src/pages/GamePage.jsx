@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useGame, useProviderGames, useProviders } from "../lib/catalogue";
+import { useGame, useOriginal, useProviderGames, useProviders } from "../lib/catalogue";
 import { jsGames } from "../lib/endpoints";
+import { LOBBY_LAUNCH_CURRENCIES, ORIGINAL_LAUNCH_CURRENCIES, launchCurrencies, launchCurrency } from "../lib/gameCurrency";
 import { useSession } from "../lib/sessionContext";
 import { useFavourites } from "../lib/favouritesContext";
 import { usePoppedGame } from "../lib/poppedGameContext";
@@ -47,25 +48,34 @@ import GameStatsPanel from "../components/casino/GameStatsPanel";
  */
 
 /**
- * The currencies `POST /casino/js-games/v2/launch` will accept — the backend's
- * own `V2_CURRENCIES` map.
- *
- * Only INR actually opens a game today: the operator account upstream is
- * INR-only and the other two come back `Game launch failed (10004)` on every
- * game tested. They are still listed, because "Balance In" is a wallet choice
- * and hiding a currency the player holds makes the control look broken — which
- * is what a one-option list did. A launch that the provider refuses says so in
- * the overlay.
+ * The header's wallet cannot settle this game (hash's rule: the selected wallet or no launch). Says so,
+ * with one button per held wallet that can; nothing switches the coin for the player.
  */
-const LAUNCH_CURRENCIES = ["INR", "USDT", "USD"];
-
-/** Which of those the player actually holds a wallet entry for. */
-function launchableFor(balances) {
-  if (!balances) return LAUNCH_CURRENCIES;
-  const held = LAUNCH_CURRENCIES.filter((c) => c in balances);
-  // An account with none of the three still needs something to launch with,
-  // and INR is the one the operator is configured for.
-  return held.length ? held : LAUNCH_CURRENCIES;
+function CurrencyPrompt({ currency, choices, onPick }) {
+  return (
+    <div className="GameOverlayShell_shell ProviderGameOverlay_shell">
+      <div className="Flex_root Flex_column Flex_md2 ProviderGameOverlay_gameOverlayCard">
+        <p className="ProviderGameOverlay_paragraph" role="alert">
+          {String(currency ?? "").toUpperCase()} isn&apos;t supported for this game right now. Please choose another currency to
+          continue playing.
+        </p>
+        {choices.length > 0 && (
+          <div className="Flex_root Flex_md2 ProviderGameOverlay_buttonGroup">
+            {choices.map((code) => (
+              <button
+                key={code}
+                type="button"
+                className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary ProviderGameOverlay_playOptionButton"
+                onClick={() => onPick(code)}
+              >
+                <span className="ButtonVariants_buttonContent">Use {code}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 /** The overlay card: pick a currency, then open the game. */
@@ -406,9 +416,12 @@ function GameNotFound() {
   );
 }
 
-export default function GamePage({ uuid }) {
-  const { game, loading, error: readError } = useGame(uuid);
-  const { signedIn, restoring, refreshBalances, balances, currency: walletCurrency, hideBalance } = useSession();
+export default function GamePage({ uuid, originalCode }) {
+  // `originalCode`: an Original from the Original Games aggregator, on this same screen.
+  const catalogueGame = useGame(originalCode ? null : uuid);
+  const originalGame = useOriginal(originalCode);
+  const { game, loading, error: readError } = originalCode ? originalGame : catalogueGame;
+  const { signedIn, restoring, refreshBalances, balances, currency: walletCurrency, setCurrency, hideBalance } = useSession();
   const { providers } = useProviders();
   /**
    * The star in the control bar.
@@ -422,22 +435,13 @@ export default function GamePage({ uuid }) {
   const favourites = useFavourites();
   const dock = usePoppedGame();
 
-  // /agent plays in INR alone.
-  const options = useMemo(() => (underAgentBase() ? ["INR"] : launchableFor(balances)), [balances]);
-  /**
-   * Which currency the overlay opens on.
-   *
-   * The wallet's own preferred code when it is one the provider will take,
-   * otherwise the first the player holds. Held as state so picking one sticks,
-   * and corrected once — not on every render — if the wallet arrives after the
-   * first paint naming something else.
-   */
-  const [chosen, setChosen] = useState(null);
-  const currency = chosen && options.includes(chosen)
-    ? chosen
-    : options.includes(walletCurrency)
-      ? walletCurrency
-      : options[0];
+  const route = originalCode ? ORIGINAL_LAUNCH_CURRENCIES : LOBBY_LAUNCH_CURRENCIES;
+  // The held wallets this game can settle (/agent plays in INR alone); the header's coin is the one it launches in, or none.
+  const options = useMemo(
+    () => (underAgentBase() ? ["INR"] : launchCurrencies(game, route).filter((c) => !balances || balances[c] !== undefined)),
+    [game, route, balances]
+  );
+  const currency = launchCurrency(game, walletCurrency, route);
   const [session, setSession] = useState(null); // { gameLaunchUrl, sessionToken }
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState(null);
@@ -489,10 +493,11 @@ export default function GamePage({ uuid }) {
   }, [game, active, dock]);
 
   const play = useCallback(async () => {
+    if (!currency) return;
     setLaunching(true);
     setLaunchError(null);
     try {
-      const data = await jsGames.launch(uuid, currency);
+      const data = originalCode ? await jsGames.launchOriginal(originalCode, currency) : await jsGames.launch(uuid, currency);
       if (!data?.gameLaunchUrl) throw new Error("The provider did not return a game to open.");
       setSession(data);
       // The launch debits nothing, but the provider is told the balance it may
@@ -503,7 +508,7 @@ export default function GamePage({ uuid }) {
     } finally {
       setLaunching(false);
     }
-  }, [uuid, currency, refreshBalances]);
+  }, [uuid, originalCode, currency, refreshBalances]);
 
   if (readError && !loading) return <GameNotFound />;
 
@@ -524,11 +529,14 @@ export default function GamePage({ uuid }) {
                 it down for the frame where a stored token is still being
                 checked — otherwise a returning player is shown Register
                 before being shown Real Play. */}
-            {!active && !restoring && (
+            {!active && !restoring && signedIn && game && balances && !currency && (
+              <CurrencyPrompt currency={walletCurrency} choices={options} onPick={setCurrency} />
+            )}
+            {!active && !restoring && !(signedIn && game && balances && !currency) && (
               <GameOverlay
                 signedIn={signedIn}
-                currency={currency}
-                onCurrency={setChosen}
+                currency={currency ?? options[0]}
+                onCurrency={setCurrency}
                 onPlay={play}
                 launching={launching}
                 error={launchError}

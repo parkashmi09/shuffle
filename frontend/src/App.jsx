@@ -88,6 +88,9 @@ function renderPage(path, content) {
   // a second game starts its own launch rather than reusing the first's state.
   const gameUuid = path.match(/^\/casino\/games\/([^/]+)$/)?.[1];
   if (gameUuid) return <GamePage key={gameUuid} uuid={gameUuid} />;
+  // An Original (admin → Originals → Games) opens on the same game screen.
+  const originalCode = path.match(/^\/casino\/originals\/([^/]+)$/)?.[1];
+  if (originalCode) return <GamePage key={originalCode} originalCode={decodeURIComponent(originalCode)} />;
   return <CasinoHome />;
 }
 

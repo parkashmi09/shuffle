@@ -120,7 +120,8 @@ export const twoFactor = {
   status: () => get("/user/2fa/status"),
   /** Begins setup — answers `{ qrCode, secret }`; `qrCode` is a data: URL. */
   begin: () => post("/user/2fa/enable"),
-  confirm: (code) => post("/user/2fa/setup-verify", { code }),
+  /** The account password is required to enrol an authenticator. */
+  confirm: (code, password) => post("/user/2fa/setup-verify", { code, password }),
   disable: (code, password) => post("/user/2fa/disable", { code, password }),
 };
 
@@ -188,6 +189,19 @@ export const bonus = {
   claim: (type) => post(`/user/bonus/claim/${type}`),
 };
 
+/** Locked deposit bonus: `{ active: [{ id, unlockMode: "gradual" | "rollover", amount, currency, claimable, locked, remaining, progress }] }`. */
+export const bonusBalance = {
+  get: () => get("/user/bonus-balance"),
+  /** Moves what the gradual bonuses have unlocked to cash: `{ claimed: [{ bonusId, amount, currency }] }`. */
+  claim: () => post("/user/bonus-balance/claim"),
+};
+
+/** `{ enabled, welcome, percent, maxBonus, wagerMultiplier, currency, netLoss, bonus, state, period, claimExpiresAt }`. */
+export const lossBonus = {
+  get: () => get("/user/loss-bonus"),
+  claim: () => post("/user/loss-bonus/claim"),
+};
+
 export const rakeback = {
   /** `{ amount, currency, claimable, minimum, rate }`. */
   amount: () => get("/user/rakeback"),
@@ -225,35 +239,27 @@ export const casino = {
 };
 
 /**
- * Opening a provider game — jsGames v2 (`gamesv2.ibitplay.com`).
- *
- * ── WHAT THE BACKEND DOES WITH THIS ──────────────────────────────────────
- *
- * `POST /casino/js-games/v2/launch` takes the game and the currency and
- * NOTHING ELSE that identifies a player: the user id comes from the bearer
- * token, and the credit the provider is told about comes from that player's
- * real balance. The legacy route took `user_id` in the body, so anyone could
- * open a session as anyone.
- *
- * It answers `{ gameLaunchUrl, sessionToken }`. The URL is the provider's own
- * — Spribe, Evolution and the rest each host their own client — and it is what
- * goes in the iframe. The token is the session the provider quotes back on
- * every bet callback, and the backend has already written it to
- * `game_sessions` by the time this resolves.
- *
- * `gameUid` is the catalogue's `uuid`: `gisgamesnew.uuid` IS the provider's
- * `game_uid` for all 1,980 rows, so the uuid in the page URL is the launch key
- * and no second lookup is needed.
+ * Opening a game. The player comes from the bearer token, never the body.
  *
  * ── CURRENCY ─────────────────────────────────────────────────────────────
  *
- * The backend accepts `INR`, `USDT` and `USD`. Only INR currently launches:
- * the operator account is INR-only upstream and the other two come back
- * `Game launch failed`. See `LAUNCH_CURRENCIES` in `GamePage`.
+ * The game launches in the header's wallet when the route and the row allow it
+ * (`lib/gameCurrency.js`); otherwise the page asks the player for another.
  */
 export const jsGames = {
-  launch: (gameUid, currencyCode, language) =>
-    post("/casino/js-games/v2/launch", { gameUid, currencyCode, ...(language ? { language } : {}) }),
+  /**
+   * Any lobby game — `POST /casino/games/launch` with the catalogue `uuid` (the one `/casino/games`
+   * returns): the row's aggregator picks the route. Answers `{ gameLaunchUrl, via }`.
+   */
+  launch: (gameUuid, currencyCode, language) =>
+    post("/casino/games/launch", { gameUuid, currencyCode, ...(language ? { language } : {}) }),
+  /**
+   * The Originals — the Original Games aggregator: the games the admin has on, in the admin's order
+   * (`[{ game_code, name, image }]`, empty while Originals are off), and a launch
+   * (`{ gameLaunchUrl, sessionId, mode }`, `mode` demo on sandbox keys).
+   */
+  originals: () => get("/casino/original-games/games", { auth: false }),
+  launchOriginal: (gameCode, currencyCode) => post("/casino/original-games/launch", { gameCode, currencyCode }),
   /** The caller's own rounds at this provider. */
   history: () => get("/casino/js-games/v2/history"),
 };
@@ -418,6 +424,13 @@ export const funding = {
   createFiatWithdrawal: (body) => post("/user/withdrawals/fiat", body),
   /** Only while `In Queue`; the held amount goes back to the balance (409 NOT_CANCELLABLE after). */
   cancelFiatWithdrawal: (withdrawalId) => post(`/user/withdrawals/fiat/${withdrawalId}/cancel`),
+
+  /** The automatic gateway's offer — `/methods/f2pay` answers `{ methods: [{ method, currency }], payout: ["INR"] }`. */
+  paymentMethods: (provider) => get(`/user/payments/methods/${provider}`),
+  /** `{ provider, currency, amount, method }` → `{ reference, redirectUrl }`; the gateway's callback credits the wallet. */
+  createDepositOrder: (body) => post("/user/payments/deposits", body),
+  /** `{ provider, currency, amount, details: { account_name, account_number, bank_code }, forfeitBonus? }`; held now, settled or refunded by the callback. */
+  createWithdrawalOrder: (body) => post("/user/payments/withdrawals", body),
 
   cryptoWithdrawals: (query) => get("/user/withdrawals/crypto", { query }),
   cryptoWithdrawalSummary: () => get("/user/withdrawals/crypto/summary"),

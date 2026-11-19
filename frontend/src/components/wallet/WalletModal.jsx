@@ -4,6 +4,7 @@ import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
 import { capOk } from "../../lib/siteLive";
+import { keepsWithdrawTab } from "../../lib/walletOptions";
 import DepositTab from "./DepositTab";
 import WithdrawTab from "./WithdrawTab";
 import { TipTab } from "./UnbuiltTabs";
@@ -52,11 +53,13 @@ export default function WalletModal({ onClose }) {
     fiatView,
     hideZeroBalances,
     hideBalance,
+    user,
   } = useSession();
   /* An agent's player has no deposit, withdrawal or tips (their agent funds and pays them): those tabs go. */
   const on = useGate();
   const GATE = { deposit: "deposit", withdraw: "withdraw", tip: "tips" };
-  const tabs = TABS.filter((t) => !GATE[t.id] || on(GATE[t.id]));
+  const withdrawLocked = keepsWithdrawTab(user);
+  const tabs = TABS.filter((t) => !GATE[t.id] || on(GATE[t.id]) || (t.id === "withdraw" && withdrawLocked));
   const [picked, setTab] = useState(tabFromUrl);
   const tab = tabs.some((t) => t.id === picked) ? picked : (tabs[0]?.id ?? null);
   /**
@@ -145,7 +148,12 @@ export default function WalletModal({ onClose }) {
         </div>
       )}
       {tab === "deposit" && <DepositTab {...shared} />}
-      {tab === "withdraw" && <WithdrawTab {...shared} />}
+      {tab === "withdraw" && withdrawLocked && (
+        <div className="NoticeMessage_root" role="alert">
+          <span className="NoticeMessage_text" style={{ color: "var(--color-warning)" }}>Withdrawals are blocked on this account. Contact support.</span>
+        </div>
+      )}
+      {tab === "withdraw" && !withdrawLocked && <WithdrawTab {...shared} />}
       {tab === "tip" && <TipTab {...shared} />}
     </Modal>
   );

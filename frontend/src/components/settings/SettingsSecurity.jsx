@@ -65,7 +65,7 @@ export default function SettingsSecurity() {
   const onConfirm = (event) => {
     event.preventDefault();
     run(async () => {
-      if (setup) await twoFactorApi.confirm(code.trim());
+      if (setup) await twoFactorApi.confirm(code.trim(), password);
       else await twoFactorApi.disable(code.trim(), password);
       done();
     });
@@ -123,21 +123,19 @@ export default function SettingsSecurity() {
                 <input id="totp-code" className="Input_root" inputMode="numeric" maxLength={6} placeholder="000000" value={code} onChange={(e) => setCode(e.target.value)} />
               </div>
             </div>
-            {!setup && (
-              <div className="FormControlWrapper_root">
-                <label className="Label_root" htmlFor="totp-password">Password*</label>
-                <div className="InputWrapper_root">
-                  <input id="totp-password" type="password" className="Input_root" value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
+            <div className="FormControlWrapper_root">
+              <label className="Label_root" htmlFor="totp-password">Password*</label>
+              <div className="InputWrapper_root">
+                <input id="totp-password" type="password" autoComplete="current-password" className="Input_root" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-            )}
+            </div>
             {error && (
               <div className="WarningMessage_container">
                 <img alt="warning" className="WarningMessage_icon" src="/icons/exclamation.svg" />
                 <span className="WarningMessage_content">{error}</span>
               </div>
             )}
-            <button type="submit" disabled={busy || code.trim().length !== 6 || (!setup && !password)} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary ChangePasswordModal_button">
+            <button type="submit" disabled={busy || code.trim().length !== 6 || !password} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary ChangePasswordModal_button">
               <span className="ButtonVariants_buttonContent">{setup ? "Enable" : "Disable"}</span>
             </button>
           </form>

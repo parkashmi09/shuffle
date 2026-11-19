@@ -64,8 +64,7 @@ const QUERY = {
   "live-casino": { category: "live" },
   "table-games": { category: "table" },
   crash: { category: "crash" },
-  // The catalogue's own answer for these — `originals` is empty until in-house games are catalogued.
-  originals: { category: "originals" },
+  // `originals` is the Original Games aggregator's list (`useCategory`), not a catalogue query.
   "game-shows": { category: "game-shows" },
   "shuffle-picks": { sort: "popular" },
   "latest-releases": { sort: "newest" },
