@@ -6,6 +6,7 @@ import { navigate } from "../../lib/router";
 import { promotionHref } from "../../lib/promotions";
 import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
+import { useGate } from "../../lib/gates";
 import { formatAmount } from "../../lib/adapters";
 
 /**
@@ -133,6 +134,7 @@ export default function GameStatsPanel({ game }) {
   const { signedIn } = useSession();
   const [statsOpen, setStatsOpen] = useState(true);
   const [promosOpen, setPromosOpen] = useState(false);
+  const promotionsOn = useGate()("promotions");
 
   // The list carries no `qualifyingGames`, so each live promotion's detail is read — only once opened.
   const promos = useApi(
@@ -143,7 +145,7 @@ export default function GameStatsPanel({ game }) {
       const full = await Promise.all(live.map((p) => site.promotionBySlug(p.segment, p.slug).catch(() => null)));
       return full.filter((p) => p?.qualifyingGames?.some((g) => lastSegment(g.href) === String(game.uuid)));
     },
-    { enabled: promosOpen }
+    { enabled: promosOpen && promotionsOn }
   );
 
   const { data } = useApi(`game-stats:${game.uuid}`, () => betHistory.mine({ limit: PAGE }), {
@@ -240,7 +242,7 @@ export default function GameStatsPanel({ game }) {
         </div>
       </Collapse>
 
-      <Collapse title="Promotions" open={promosOpen} onToggle={() => setPromosOpen((v) => !v)}>
+      {promotionsOn && <Collapse title="Promotions" open={promosOpen} onToggle={() => setPromosOpen((v) => !v)}>
         {promos.loading ? (
           <p className="LiveGameStats_note">Loading promotions…</p>
         ) : promos.error ? (
@@ -262,7 +264,7 @@ export default function GameStatsPanel({ game }) {
         ) : (
           <p className="LiveGameStats_note">No promotions are running on this game.</p>
         )}
-      </Collapse>
+      </Collapse>}
     </section>
   );
 }

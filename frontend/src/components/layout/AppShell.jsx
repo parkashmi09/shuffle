@@ -359,7 +359,8 @@ function Shell({ children }) {
 
       {/* Also rendered signed out — where it pitches the programme instead of
           reporting a rank. Same dock; the three never open together. */}
-      <VipPanel open={vipOpen} onClose={() => setRightRail(null)} />
+      {/* Mounted only where VIP is on: closed, it still carries VIP links in the page. */}
+      {gate("vip") && <VipPanel open={vipOpen} onClose={() => setRightRail(null)} />}
 
       {/* A session arriving while the modal is open — restored from storage, or
           signed in on another tab — makes it redundant. Derived rather than

@@ -3,6 +3,7 @@ import { GameCard } from "../components/casino/GameCarousel";
 import ProviderCarousel from "../components/casino/ProviderCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import { navigate } from "../lib/router";
+import { useGate } from "../lib/gates";
 import { adminCategorySlug, categoryFor, categoryIcon, categoryQuery } from "../lib/categories";
 import { useCategory, useProviders } from "../lib/catalogue";
 import { cx } from "../lib/carousel";
@@ -54,6 +55,8 @@ export function PageHeader({ title, icon, desktopOnly = false, capitalize = true
 
 export function SeoArticle({ html }) {
   const [open, setOpen] = useState(false);
+  const { agentPlayer } = useGate();
+  if (agentPlayer) return null;
   const start = html.indexOf('<div class="RichText_richTextBlock');
   const end = html.indexOf('<div class="ShowMoreOverlayButton_wrapper">');
   const inner = html.slice(start, end > 0 ? end : undefined);
