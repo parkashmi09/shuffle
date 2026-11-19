@@ -28,6 +28,7 @@ import { navigate } from "../../lib/router";
 import { useSession } from "../../lib/sessionContext";
 import { useSiteFeatures } from "../../lib/useSiteFeatures";
 import { useGate } from "../../lib/gates";
+import { underAgentBase } from "../../lib/agentBase";
 import BalanceSelect from "./header/BalanceSelect";
 import IconMenu from "./header/IconMenu";
 import UserMenu from "./header/UserMenu";
@@ -121,7 +122,7 @@ function SignedInActions() {
 
 function SignedOutActions({ onAuth }) {
   const { canSignUp: allowed } = useSiteFeatures();
-  const canSignUp = allowed();
+  const canSignUp = allowed() && !underAgentBase();
 
   return (
     <div className="HeaderWalletActions_navMenu">

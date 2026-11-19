@@ -23,7 +23,7 @@ export default function MobileNav({ menuOpen, onToggleMenu, active, onSelect, pr
   const on = useGate();
   const supportHref = useSupportHref();
   // Rewards is the VIP programme: gone for an agent's player (and when the owner/admin turns VIP off).
-  const shown = items.filter((it) => (it.id !== "rewards" || on("vip")) && (it.id !== "sports" || on("sports"))).map((it) => (it.id === "sports" && sportsLabel ? { ...it, label: sportsLabel } : it));
+  const shown = items.filter((it) => (it.id !== "rewards" || on("vip")) && (it.id !== "sports" || on("sports")) && (it.id !== "chat" || on("support"))).map((it) => (it.id === "sports" && sportsLabel ? { ...it, label: sportsLabel } : it));
   const searchFromBar = () => { openSearch(); closeMenu?.(); };
   const item = (it) => {
     const body = (

@@ -24,6 +24,7 @@ import { navigate, usePath } from "./lib/router";
 import { useSession } from "./lib/sessionContext";
 import { useGate } from "./lib/gates";
 import { findPage, useSiteContent } from "./lib/siteContent";
+import { underAgentBase } from "./lib/agentBase";
 
 const pages = {
   "/": CasinoHome,
@@ -137,8 +138,25 @@ function AffiliateProgram({ tab }) {
   return signedIn ? <AffiliateProgramPage tab={tab} /> : <AffiliatePage />;
 }
 
+/** Closed on /agent whatever the gates say: no password recovery, sign-up or social return there. */
+const AGENT_CLOSED = /^\/(reset-password|forgot-password|forgot|recover|login\/google|register|signup|sign-up|referal)(\/|$)/i;
+
+/** A closed page under /agent: the agent home, with the old address (and any token in it) gone. */
+function AgentHome() {
+  useEffect(() => {
+    window.history.replaceState(null, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, []);
+  return null;
+}
+
 /** Path prefix → the owner/admin gate that must be open for it (`lib/gates.js`). First match wins. */
 const ROUTE_GATES = [
+  [/^\/settings\/(verify|preferences|sessions|ignored-users)$/, "fullSettings"],
+  [/^\/settings(\/|$)/, "settings"],
+  [/^\/transactions(\/|$)/, "transactions"],
+  [/^\/shuffle-wise(\/|$)/, "wise"],
+  [/^\/sports\/statement$/, "statement"],
   [/^\/vip-program$/, "vip"],
   [/^\/blog(\/|$)/, "blog"],
   [/^\/affiliate(\/|$)/, "affiliate"],
@@ -153,8 +171,10 @@ export default function App() {
   const on = useGate();
   const content = useSiteContent();
   const gate = ROUTE_GATES.find(([re]) => re.test(path))?.[1];
+  const closed = gate && !on(gate);
+  if (underAgentBase() && (closed || AGENT_CLOSED.test(path))) return <AppShell><AgentHome /></AppShell>;
   // A page the owner or the site admin switched off is the lobby, like any unknown path.
   return (
-    <AppShell>{gate && !on(gate) ? <CasinoHome /> : renderPage(path, content)}</AppShell>
+    <AppShell>{closed ? <CasinoHome /> : renderPage(path, content)}</AppShell>
   );
 }

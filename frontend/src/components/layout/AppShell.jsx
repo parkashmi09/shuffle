@@ -27,6 +27,7 @@ import { GOOGLE_ERRORS, takeGoogleNonce } from "../../lib/googleAuth";
 import { alertError } from "../../lib/alerts";
 import { useGate } from "../../lib/gates";
 import { useLanguageGuard } from "../../lib/i18n";
+import { agentBaseTarget, agentPlayerCaps, underAgentBase } from "../../lib/agentBase";
 import { openExternal, useSupportHref } from "../../lib/siteContent";
 import "./AppShell.css";
 
@@ -89,6 +90,14 @@ function Shell({ children }) {
   const supportHref = useSupportHref();
   const gate = useGate();
   useLanguageGuard(); // off a language the owner switched off
+
+  // An agent's player lives under /agent, everyone else outside it. Waits for `/auth/me`: the login
+  // answer has no capabilities, and a guess here would send the player to the wrong side.
+  const caps = user?.capabilities;
+  const agentMove = !restoring && caps?.vault !== undefined ? agentBaseTarget(window.location, agentPlayerCaps(caps)) : null;
+  useEffect(() => {
+    if (agentMove) window.location.replace(agentMove);
+  }, [agentMove]);
 
   const vaultOn = gate("vault");
   const walletOn = gate("wallet");
@@ -333,7 +342,7 @@ function Shell({ children }) {
         `NotificationPanel` for why that is what makes it slide. Signed out
         there is nothing to show, so it is not rendered at all.
       */}
-      {signedIn && (
+      {signedIn && !gate.demo && (
         <NotificationPanel
           open={notificationsOpen}
           filter={notificationFilter}
@@ -356,7 +365,7 @@ function Shell({ children }) {
           signed in on another tab — makes it redundant. Derived rather than
           closed from an effect, so there is no render where a login form sits
           over a signed-in page. */}
-      {auth !== null && (!signedIn || auth === "reset") && <AuthModal tab={auth} resetToken={resetToken} onTabChange={setAuth} onClose={() => { setAuth(null); clearModalParams(); }} />}
+      {auth !== null && (!signedIn || (auth === "reset" && !underAgentBase())) && <AuthModal tab={auth} resetToken={resetToken} onTabChange={setAuth} onClose={() => { setAuth(null); clearModalParams(); }} />}
       {raceOpen && <WeeklyRaceModal onClose={() => setRaceOpen(false)} />}
       {walletOpen && signedIn && walletOn && <WalletModal onClose={closeWallet} />}
       {vaultOpen && signedIn && <VaultModal onClose={closeVault} />}

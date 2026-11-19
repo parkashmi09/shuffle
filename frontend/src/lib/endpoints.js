@@ -10,6 +10,7 @@
  * way the gateway expects rather than grouped by our own idea of a feature.
  */
 import { del, get, patch, post, put } from "./api";
+import { underAgentBase } from "./agentBase";
 
 /** One request per page load, shared by every caller; a failure is not kept, so the next caller retries. */
 const once = (fn) => {
@@ -18,7 +19,11 @@ const once = (fn) => {
 };
 
 export const auth = {
-  login: (identifier, password, extra) => post("/user/auth/login", { identifier, password, ...extra }, { auth: false }),
+  // `site`: each side signs in its own players, an agent's on /agent and a direct player on the main site.
+  login: (identifier, password, extra) =>
+    post("/user/auth/login", { identifier, password, site: underAgentBase() ? "agent" : "direct", ...extra }, { auth: false }),
+  /** The /agent sign-in form's Demo Login: a throwaway account and its session. No body. */
+  demoLogin: () => post("/user/auth/demo-login", undefined, { auth: false }),
   register: (body) => post("/user/auth/register", body, { auth: false }),
   me: () => get("/user/auth/me"),
   logout: (refreshToken) => post("/user/auth/logout", refreshToken ? { refreshToken } : {}),
@@ -298,7 +303,7 @@ export const site = {
   /** The site admin's copy, `{ footer?, social?, support?, legal?, home?, pages?, vip? }` — only saved sections. */
   content: () => get("/admin/site-content/public", { auth: false }),
   /** Every active slide, in slide order — `[{ type, title, subtitle, cta, sortOrder, url }]`. */
-  banners: () => get("/admin/banners", { auth: false }),
+  banners: (query) => get("/admin/banners", { query, auth: false }),
   blogs: (query) => get("/admin/blogs", { query, auth: false, withMeta: true }),
   blogBySlug: (slug) => get(`/admin/blogs/slug/${slug}`, { auth: false }),
   promotions: (query) => get("/admin/promotions", { query, auth: false, withMeta: true }),

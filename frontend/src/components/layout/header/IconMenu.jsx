@@ -70,7 +70,7 @@ export default function IconMenu() {
             onClick={() => window.dispatchEvent(new CustomEvent("shuffle:vip"))}
           />
         )}
-        <IconButton icon="/icons/chat.svg" alt="chat" label="Chat" disabled={!supportHref} onClick={() => openExternal(supportHref)} />
+        {on("support") && <IconButton icon="/icons/chat.svg" alt="chat" label="Chat" disabled={!supportHref} onClick={() => openExternal(supportHref)} />}
       </div>
     </div>
   );

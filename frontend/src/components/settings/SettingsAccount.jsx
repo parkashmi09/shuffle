@@ -17,9 +17,9 @@ import { CoinIcon } from "../wallet/CurrencySelect";
 export default function SettingsAccount() {
   const { user } = useSession();
   const { data: me } = useApi("settings:profile", () => profileApi.get());
-  const { data: stats } = useApi("settings:profile-stats", () => profileApi.stats());
-  const wagered = stats?.wagered?.usd != null ? `$${Number(stats.wagered.usd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
   const on = useGate();
+  const { data: stats } = useApi("settings:profile-stats", () => profileApi.stats(), { enabled: !on.agentPlayer });
+  const wagered = stats?.wagered?.usd != null ? `$${Number(stats.wagered.usd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
   // `GET /user/vip`; Unranked until it answers, on a failed read, or with VIP switched off.
   const { data: vip } = useApi("vip:progress", () => vipApi.progress(), { enabled: on.ready && on("vip") });
   const tier = tierFor(vip);
@@ -27,6 +27,29 @@ export default function SettingsAccount() {
   const joined = me?.joinedAt ? new Date(me.joinedAt) : null;
   // `9.8.2026` — the reference writes the join date dot-separated, day first.
   const joinDate = joined ? `${joined.getDate()}.${joined.getMonth() + 1}.${joined.getFullYear()}` : "—";
+
+  // The agent keeps an agent's player's details: their name and id, to read.
+  if (on.agentPlayer) {
+    return (
+      <div className="Flex_root Flex_column Flex_lg3">
+        <form className="Panel_panelWrapper" onSubmit={(event) => event.preventDefault()}>
+          <h2 className="Panel_panelHeading">User Information</h2>
+          <div className="FormControlWrapper_root">
+            <label className="Label_root" htmlFor="settings-username">Username</label>
+            <div className="InputWrapper_root">
+              <input id="settings-username" readOnly className="Input_root Input_outline" value={me?.username || user?.name || ""} />
+            </div>
+          </div>
+          <div className="FormControlWrapper_root">
+            <label className="Label_root" htmlFor="settings-user-id">User ID</label>
+            <div className="InputWrapper_root">
+              <input id="settings-user-id" readOnly className="Input_root Input_outline" value={user?.id ?? ""} />
+            </div>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="Flex_root Flex_column Flex_lg3">

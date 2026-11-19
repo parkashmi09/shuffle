@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { io } from "socket.io-client";
 import { SOCKET_BASE } from "../exchange/services/realtime";
 import { tokens } from "./api";
+import { agentPlayerCaps, underAgentBase } from "./agentBase";
 
 /**
  * Owner and site-admin saves, live, plus what the signed-in player may use.
@@ -132,6 +133,7 @@ export function userRequest(event, payload, timeoutMs = 15_000) {
 const CAPS_KEY = "shuffle.playerCapabilities";
 // Cleared on sign-out (session.jsx), so what is stored is the current player's.
 let caps = (() => {
+  if (!tokens.access()) return null;
   try {
     return JSON.parse(localStorage.getItem(CAPS_KEY) ?? "null");
   } catch {
@@ -153,5 +155,14 @@ export function setPlayerCapabilities(next) {
   bump("caps");
 }
 
-/** `false` only when the player's capability says so; signed out / unknown is on. */
-export const capOk = (name) => caps?.[name] !== false;
+/* /agent is only for an agent's players, so even signed out it shows what they get. */
+const AGENT_SITE_OFF = new Set(["deposit", "withdraw", "swap", "vault", "promotions", "tips"]);
+
+/** `false` when the player's capability says so or /agent closes it; signed out / unknown is on elsewhere. */
+export const capOk = (name) => !(underAgentBase() && AGENT_SITE_OFF.has(name)) && caps?.[name] !== false;
+
+/** An agent's player: signed in with their own capabilities, or anyone signed out on /agent. */
+export const isAgentPlayer = () => agentPlayerCaps(caps);
+
+/** The Demo Login's throwaway account (`/auth/me` `demo`). */
+export const isDemoPlayer = () => caps?.demo === true;

@@ -9,6 +9,7 @@ import { displayBalance } from "../lib/adapters";
 import { MASKED_AMOUNT } from "../lib/playerPreferences";
 import { cx } from "../lib/carousel";
 import { navigate } from "../lib/router";
+import { underAgentBase } from "../lib/agentBase";
 import GameCarousel from "../components/casino/GameCarousel";
 import ProviderCarousel from "../components/casino/ProviderCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
@@ -191,6 +192,7 @@ function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error,
             </>
           ) : (
             <>
+              {!underAgentBase() && (
               <button
                 type="button"
                 className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary ButtonVariants_hasIcon ProviderGameOverlay_playOptionButton"
@@ -201,9 +203,10 @@ function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error,
                   Register
                 </span>
               </button>
+              )}
               <button
                 type="button"
-                className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_secondary ProviderGameOverlay_playOptionButton"
+                className={cx("ButtonVariants_root ButtonVariants_buttonHeightMedium ProviderGameOverlay_playOptionButton", underAgentBase() ? "ButtonVariants_primary" : "ButtonVariants_secondary")}
                 onClick={() => window.dispatchEvent(new CustomEvent("shuffle:auth", { detail: "login" }))}
               >
                 <span className="ButtonVariants_buttonContent">Login</span>
@@ -419,7 +422,8 @@ export default function GamePage({ uuid }) {
   const favourites = useFavourites();
   const dock = usePoppedGame();
 
-  const options = useMemo(() => launchableFor(balances), [balances]);
+  // /agent plays in INR alone.
+  const options = useMemo(() => (underAgentBase() ? ["INR"] : launchableFor(balances)), [balances]);
   /**
    * Which currency the overlay opens on.
    *

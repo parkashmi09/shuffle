@@ -2,6 +2,7 @@ import { useApi } from "./useResource";
 import { site } from "./endpoints";
 import { onBump, useSiteVersion } from "./siteLive";
 import { setSiteName } from "./i18n";
+import { underAgentBase } from "./agentBase";
 
 /**
  * The owner's branding (`GET /admin/branding/public`) and the site admin's
@@ -85,6 +86,8 @@ export const useSiteContent = () => useApi(`site:content:${useSiteVersion("conte
 export function useSupportHref() {
   const { support } = useSiteContent();
   const extras = useBrandExtras();
+  // /agent has no WhatsApp or Telegram: only the admin's own live chat.
+  if (underAgentBase()) return support?.liveChatUrl || null;
   return support?.liveChatUrl || extras?.whatsapp || extras?.telegram || null;
 }
 

@@ -3,6 +3,7 @@ import { cx, useCarousel } from "../../lib/carousel";
 import { useReveal } from "../../lib/useReveal";
 import { navigate } from "../../lib/router";
 import { useBranding } from "../../lib/siteContent";
+import { hrefInBase } from "../../lib/agentBase";
 
 /**
  * Whether a tile's href has a screen behind it.
@@ -61,7 +62,7 @@ export function GameCard({ game, index = 0, indicator, hidden = false, className
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (playable(game.href)) window.open(game.href, "_blank", "noopener,width=1280,height=800");
+            if (playable(game.href)) window.open(hrefInBase(game.href), "_blank", "noopener,width=1280,height=800");
           }}
         >
           <img alt="pop up" height="16" src="/icons/game-popup.svg" width="16" />

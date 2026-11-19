@@ -247,7 +247,12 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   const shownCasinoLinks = casinoLinks.filter((l) => categoryOn(l.id));
   // Footer link ids are gate keys (`vip`, `blog`, `affiliate`).
   const siteFooterLinks = footerLinks.filter((l) => on(l.id));
-  const accountLinks = profileLinks.filter((l) => !["vault", "wallet"].includes(l.action) || on(l.action));
+  const accountLinks = profileLinks.filter(
+    (l) =>
+      (!["vault", "wallet"].includes(l.action) || on(l.action)) &&
+      (l.id !== "profile-transactions" || on("transactions")) &&
+      (l.id !== "profile-settings" || on("settings"))
+  );
   // The two sport directories behave as one accordion: opening either closes the
   // other, so only one long list is ever pushed into the rail at a time.
   const [openDirectory, setOpenDirectory] = useState(null);
@@ -266,7 +271,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
   // On account-wide routes the reference keeps Profile inside the same
   // `NavigationLineBreakWrapper` as Promotions; a second wrapper stacked
   // right below it draws two hairlines where the live rail draws one.
-  const profileGroup = signedIn ? (
+  const profileGroup = signedIn && accountLinks.length ? (
     <ExpandableGroup
       expanded={expanded}
       icon="profile"
@@ -336,7 +341,7 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
           {/* Between Providers and VIP, exactly where the live rail puts it —
               and inside a `NavigationLineBreakWrapper`, which is what draws the
               hairline above the group. Same wrapper the sport directories use. */}
-          {signedIn && !minimal && (
+          {profileGroup && !minimal && (
             <div className={cx("NavigationLineBreakWrapper_root", expanded && "NavigationLineBreakWrapper_expanded")}>
               {profileGroup}
             </div>
@@ -364,10 +369,10 @@ export default function NavContent({ expanded, active, onSelect, mobile = false,
               onSelect={handleSelect}
             />
           ))}
-          {signedIn && (
+          {signedIn && on("wise") && (
             <NavLink id="shuffle-wise" label="Shuffle Wise" icon="shuffle-wise" href="/shuffle-wise/self-exclusion" expanded={expanded} active={active === "shuffle-wise"} onSelect={handleSelect} />
           )}
-          <NavLink id="support" label="Live Support" icon="live-support" expanded={expanded} as="button" disabled={!supportHref} onSelect={() => openExternal(supportHref)} />
+          {on("support") && <NavLink id="support" label="Live Support" icon="live-support" expanded={expanded} as="button" disabled={!supportHref} onSelect={() => openExternal(supportHref)} />}
         </div>
       </div>
     </div>

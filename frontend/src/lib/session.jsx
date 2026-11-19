@@ -9,6 +9,7 @@ import {
   wallet as walletApi,
 } from "./endpoints";
 import { rebindSiteLive, setPlayerCapabilities } from "./siteLive";
+import { agentPlayerCaps } from "./agentBase";
 import {
   clearStoredReferral,
   normalizeReferralInput,
@@ -55,6 +56,9 @@ const CURRENCY_KEY = "shuffle.currency";
  */
 const DISPLAY_KEY = "shuffle.displayCurrency";
 const DEFAULT_DISPLAY = "INR";
+
+/** `/auth/me` capabilities, carrying the demo account's own flag for the gates. */
+const capabilitiesOf = (user) => (user?.demo === true && user.capabilities ? { ...user.capabilities, demo: true } : user?.capabilities);
 
 const readStored = (key) => {
   try {
@@ -180,7 +184,7 @@ export function SessionProvider({ children }) {
         // PASSWORD_CHANGE_REQUIRED), and carries `mustChangePassword` and `capabilities`.
         const user = await authApi.me();
         if (cancelled) return;
-        setPlayerCapabilities(user?.capabilities);
+        setPlayerCapabilities(capabilitiesOf(user));
         // A reload restoring the session — tie the push subscription to the player again.
         pushLogin(user?.id);
         setState({ user, balances: null, status: "authenticated" });
@@ -191,6 +195,7 @@ export function SessionProvider({ children }) {
         // down, say — is not proof the session is invalid, but there is no user
         // object to render either way.
         if (!(error instanceof ApiError) || error.status === 401) tokens.clear();
+        setPlayerCapabilities(null);
         setState(SIGNED_OUT);
       }
     })();
@@ -329,7 +334,7 @@ export function SessionProvider({ children }) {
     } catch {
       /* keep the login reply: the gates stay open and the routes still refuse */
     }
-    setPlayerCapabilities(user?.capabilities);
+    setPlayerCapabilities(capabilitiesOf(user));
     setState({ user, balances: null, status: "authenticated" });
     return session;
   }, []);
@@ -338,6 +343,8 @@ export function SessionProvider({ children }) {
     async (identifier, password, extra) => acceptSession(await authApi.login(identifier, password, extra)),
     [acceptSession]
   );
+
+  const demoLogin = useCallback(async () => acceptSession(await authApi.demoLogin()), [acceptSession]);
 
   /**
    * Register, then sign in.
@@ -377,12 +384,26 @@ export function SessionProvider({ children }) {
     signOutLocal();
   }, [signOutLocal]);
 
+  /* A demo account ends with its time (backend `demo_expires_at`). */
+  const demoEndsAt = state.user?.demo === true ? state.user.demoExpiresAt : null;
+  useEffect(() => {
+    if (!demoEndsAt) return undefined;
+    const timer = setTimeout(() => {
+      alertWarning("Your demo session has ended.");
+      logout();
+    }, Math.max(0, new Date(demoEndsAt).getTime() - Date.now()));
+    return () => clearTimeout(timer);
+  }, [demoEndsAt, logout]);
+
   const value = useMemo(() => {
-    const balances = state.balances;
+    // An agent's player runs on INR alone: the wallet, the coin list and the display all say so.
+    const inrOnly = agentPlayerCaps(state.user?.capabilities, false);
+    const balances = inrOnly && state.balances ? { INR: state.balances.INR ?? "0" } : state.balances;
     // A stored preference wins only if the wallet still carries that code;
     // otherwise fall back to whatever the account actually holds most of.
-    const currency =
-      preferred && balances && preferred in balances ? preferred : primaryBalance(balances, defaultCurrency || undefined).currency;
+    const currency = inrOnly
+      ? "INR"
+      : preferred && balances && preferred in balances ? preferred : primaryBalance(balances, defaultCurrency || undefined).currency;
 
     return {
       user: state.user,
@@ -395,7 +416,7 @@ export function SessionProvider({ children }) {
       loadingBalances: state.status === "authenticated" && !balances,
       currency,
       setCurrency: chooseCurrency,
-      displayCurrency,
+      displayCurrency: inrOnly ? "INR" : displayCurrency,
       setDisplayCurrency: chooseDisplayCurrency,
       fiatView,
       setFiatView,
@@ -406,6 +427,7 @@ export function SessionProvider({ children }) {
       setHideBalance,
       rates,
       login,
+      demoLogin,
       acceptSession,
       register,
       logout,
@@ -428,6 +450,7 @@ export function SessionProvider({ children }) {
     hideBalance,
     rates,
     login,
+    demoLogin,
     acceptSession,
     register,
     logout,

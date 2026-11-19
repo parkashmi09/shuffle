@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
+import { appPath, underAgentBase } from "./agentBase";
 
 /** Minimal history-based router: `usePath()` / `useSearch()` + `navigate(url)`. */
 const listeners = new Set();
-const readPath = () => window.location.pathname;
+const readPath = () => appPath();
 const readSearch = () => window.location.search;
 
 export function navigate(to) {
   const url = new URL(to, window.location.origin);
-  const next = url.pathname + url.search;
+  // Under /agent the app speaks unprefixed paths; `installAgentHistory` adds the base back on write.
+  const next = (underAgentBase() ? appPath(url.pathname) : url.pathname) + url.search;
   if (readPath() + readSearch() === next) return;
   window.history.pushState(null, "", next);
   listeners.forEach((l) => l());
