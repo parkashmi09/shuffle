@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSession } from "../../lib/sessionContext";
 import { useApi } from "../../lib/useResource";
-import { preferences as preferencesApi } from "../../lib/endpoints";
+import { preferences as preferencesApi, tips as tipsApi } from "../../lib/endpoints";
 import { useGate } from "../../lib/gates";
 import { FIAT_CODES } from "../../lib/currencies";
 import { PREF_DEFAULTS, readStoredPreferences, writeStoredPreferences } from "../../lib/playerPreferences";
@@ -26,6 +26,7 @@ import Switch from "./Switch";
  * | Streamer Mode              | `hideBalance` on server       | Masks balances in header & wallet pickers   |
  * | Hide zero balances         | localStorage + session        | Filters zero rows in header & wallet lists  |
  * | Odds Preference            | localStorage only             | Shown only with sports on                   |
+ * | Accept tips                | `PATCH /user/tip/settings`    | Off = hidden from tip lookup, tips refused (owner `tips` on) |
  * | Private Mode               | `PATCH /user/preferences`     | hideGamingData + showStatistics off (profile counts) + showBetsPublicly off (named on feeds/races) |
  */
 
@@ -56,6 +57,32 @@ function SwitchRow({ checked, onChange, heading, description, disabled = false }
         <p>{description}</p>
       </div>
     </div>
+  );
+}
+
+/** Whether other players can find and tip this one — `GET/PATCH /user/tip/settings`. Hidden until read. */
+function TipPrivacyRow() {
+  const { data, reload } = useApi("settings:tip-settings", () => tipsApi.settings());
+  const [pending, setPending] = useState(null);
+  const [saved, setSaved] = useState(null);
+  if (!data) return null;
+  const checked = pending ?? saved ?? Boolean(data.enabled);
+  const onChange = (next) => {
+    setPending(next);
+    // A refused write drops back to the server's value.
+    tipsApi.setReceiving(next).then(() => setSaved(next), () => setSaved(null)).finally(() => {
+      setPending(null);
+      reload();
+    });
+  };
+  return (
+    <SwitchRow
+      checked={checked}
+      onChange={onChange}
+      disabled={pending != null}
+      heading="Accept Tips"
+      description="Other players can find you by username and send you tips"
+    />
   );
 }
 
@@ -177,6 +204,8 @@ export default function SettingsPreferences() {
             heading="Private Mode"
             description="Other users won't be able to view your wins, losses and wagered statistics"
           />
+
+          {on.ready && on("tips") && <TipPrivacyRow />}
 
           <SwitchRow
             checked={prefs.emailMarketing}

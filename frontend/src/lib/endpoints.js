@@ -55,8 +55,21 @@ export const profile = {
   /** Lifetime play: `{ bets, wins, winRate, wagered: { usd, byCurrency } }`. */
   stats: () => get("/user/profile/stats"),
   update: (body) => put("/user/profile", body),
-  /** Needs a 6-digit code the player has already been sent. */
-  changeEmail: (email, code) => post("/user/profile/change-email", { email, code }),
+  /** `code` is the one `emailOtp.request(newEmail, "change-email")` sent to the NEW address; `password` is the current one. */
+  changeEmail: (email, code, password) => post("/user/profile/change-email", { email, code, password }),
+  /** One of the site admin's avatars by id; 403 `AVATAR_LOCKED` above the player's VIP level. Answers the profile. */
+  setAvatar: (avatarId) => post("/user/profile/avatar", { avatarId }),
+  /** Enabled avatars, `[{ id, url, minLevel, sort }]` — `url` is the gateway's `/api/v1/...` path. Public. */
+  avatars: () => get("/admin/avatars/public", { auth: false }),
+};
+
+/** Public email codes (6 digits). `purpose`: `change-email` sends to the address given. */
+export const emailOtp = {
+  request: (email, purpose) => post("/user/email/otp", { email, purpose }, { auth: false }),
+  /** Lost authenticator: mails a code to the account behind `identifier` (always `{ requested: true }`). */
+  twoFactorReset: (identifier) => post("/user/email/2fa/reset", { identifier }, { auth: false }),
+  /** Turns 2FA off for that account: `{ reset: true }`. */
+  twoFactorResetConfirm: (identifier, code) => post("/user/email/2fa/reset/confirm", { identifier, code }, { auth: false }),
 };
 
 /**
@@ -344,6 +357,41 @@ export const vault = {
   lockOptions: () => get("/user/vault/lock-options"),
   transferIn: (body) => post("/user/vault/transfer-in", body),
   transferOut: (body) => post("/user/vault/transfer-out", body),
+  /** Paid interest, newest first: raw `{ id, coin, deposit_id, interest, rate, createdAt }` rows. */
+  interest: (query) => get("/user/vault/interest", { query }),
+  /** Moves in and out: raw `{ id, coin, amount, type, deposit_id, createdAt }` rows. */
+  transactions: (query) => get("/user/vault/transactions", { query }),
+};
+
+/**
+ * The wallet modal's Swap tab (owner `swap` plan; agent players are refused).
+ * `estimate` answers `{ feePercentage, feeAmount, amountAfterFee, converted }`; `swap` the same plus
+ * `newBalances`. `history` is raw `swap_history` rows (`from_currency`, `to_amount`, `created_at` …).
+ */
+export const swap = {
+  estimate: (fromCurrency, toCurrency, amount) => get("/user/swap/estimate", { query: { fromCurrency, toCurrency, amount } }),
+  run: (fromCurrency, toCurrency, amount) => post("/user/swap", { fromCurrency, toCurrency, amount }),
+  history: (query) => get("/user/swap/history", { query }),
+};
+
+/**
+ * Settings → Security's address book. `list` answers `{ whitelistOnly, addresses: [{ id, label,
+ * currency, network, address, memo, createdAt }] }`; `enforce(true)` refuses on an empty list.
+ */
+export const withdrawWhitelist = {
+  list: () => get("/user/withdrawals/whitelist"),
+  add: (body) => post("/user/withdrawals/whitelist", body),
+  remove: (id) => del(`/user/withdrawals/whitelist/${id}`),
+  enforce: (enabled) => put("/user/withdrawals/whitelist/enforcement", { enabled }),
+};
+
+/**
+ * The deposit rollover. `progress`: `{ multiplier, target, wagered, remaining, met, locked }` (USD);
+ * `tasks`: `{ tasks: [{ id, label, target, wagered, remaining, status, locked, since }] }`.
+ */
+export const wager = {
+  progress: () => get("/user/wager/progress"),
+  tasks: () => get("/user/wager/tasks"),
 };
 
 /**
@@ -434,6 +482,12 @@ export const funding = {
 
   cryptoWithdrawals: (query) => get("/user/withdrawals/crypto", { query }),
   cryptoWithdrawalSummary: () => get("/user/withdrawals/crypto/summary"),
+
+  /** Gateway orders, newest first: `[{ provider, flow, reference, amount, currency, status, rawStatus, createdAt }]`; `flow` `payin` | `payout`. */
+  orders: (query) => get("/user/payments/orders", { query }),
+  /** Asks the provider again; reported, never applied — answers the order plus `providerView`. */
+  refreshOrder: (provider, reference) =>
+    post(`/user/payments/orders/${provider}/${encodeURIComponent(reference)}/refresh`),
 };
 
 /**
@@ -463,6 +517,11 @@ export const tips = {
   send: (body) => post("/user/tip/send", body),
   /** `{ rows: [{ id, direction: sent | received, counterparty: { id, name }, currency, amount, note, createdAt }], total }`; `limit` ≤ 100. */
   history: (query) => get("/user/tip/history", { query }),
+  /** Recipient lookup: players whose name starts with `q` and who accept tips, `[{ id, name }]`. */
+  users: (q) => get("/user/tip/users", { query: { q } }),
+  /** `{ enabled, limits }` — `enabled` is whether this player accepts tips. */
+  settings: () => get("/user/tip/settings"),
+  setReceiving: (enabled) => patch("/user/tip/settings", { enabled }),
 };
 
 /**
@@ -488,4 +547,10 @@ export const history = {
   withdrawals: (query) => get("/user/history/withdrawals", { query }),
   /** Both lists in one call, for a statement view. */
   combined: (query) => get("/user/history", { query }),
+  /** Staff top-ups and take-backs: `{ id, amount, direction: credit | debit | unknown, transferType, note, createdAt }` (no currency). */
+  transfers: (query) => get("/user/history/transfers", { query }),
+  /** Per-currency sums, `[{ currency, count, total }]`, every status. */
+  cryptoStats: () => get("/user/history/crypto/stats"),
+  fiatStats: () => get("/user/history/fiat/stats"),
+  withdrawalStats: () => get("/user/history/withdrawals/stats"),
 };

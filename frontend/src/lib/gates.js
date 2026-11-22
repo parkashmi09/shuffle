@@ -33,6 +33,7 @@ export const GATES = {
   notifications: { feature: "notifications" },
   kyc: { feature: "kyc" },
   tips: { feature: "tips" },
+  swap: { feature: "swap" },
 };
 
 /**
@@ -53,7 +54,7 @@ const CAPABILITY = {
   tips: "tips",
 };
 
-const WALLET_TABS = ["deposit", "withdraw", "tips"];
+const WALLET_TABS = ["deposit", "withdraw", "swap", "tips"];
 
 /* Never for an agent's player / a demo account, whatever the owner has on. `fullSettings` is every settings tab but Account and Security. */
 const AGENT_PLAYER_OFF = new Set(["blog", "kyc", "wise", "fullSettings"]);

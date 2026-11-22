@@ -8,6 +8,7 @@ import { keepsWithdrawTab } from "../../lib/walletOptions";
 import DepositTab from "./DepositTab";
 import WithdrawTab from "./WithdrawTab";
 import { TipTab } from "./UnbuiltTabs";
+import { SwapTab } from "./SwapTab";
 import Modal from "../ui/Modal";
 
 /**
@@ -35,6 +36,7 @@ import Modal from "../ui/Modal";
 const TABS = [
   { id: "deposit", label: "Deposit" },
   { id: "withdraw", label: "Withdraw" },
+  { id: "swap", label: "Swap" },
   { id: "tip", label: "Tip" },
 ];
 
@@ -57,7 +59,7 @@ export default function WalletModal({ onClose }) {
   } = useSession();
   /* An agent's player has no deposit, withdrawal or tips (their agent funds and pays them): those tabs go. */
   const on = useGate();
-  const GATE = { deposit: "deposit", withdraw: "withdraw", tip: "tips" };
+  const GATE = { deposit: "deposit", withdraw: "withdraw", swap: "swap", tip: "tips" };
   const withdrawLocked = keepsWithdrawTab(user);
   const tabs = TABS.filter((t) => !GATE[t.id] || on(GATE[t.id]) || (t.id === "withdraw" && withdrawLocked));
   const [picked, setTab] = useState(tabFromUrl);
@@ -154,6 +156,7 @@ export default function WalletModal({ onClose }) {
         </div>
       )}
       {tab === "withdraw" && !withdrawLocked && <WithdrawTab {...shared} />}
+      {tab === "swap" && <SwapTab {...shared} />}
       {tab === "tip" && <TipTab {...shared} />}
     </Modal>
   );

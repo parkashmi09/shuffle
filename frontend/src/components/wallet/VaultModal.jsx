@@ -75,6 +75,31 @@ function VaultHoverInfo({ text }) {
   );
 }
 
+/** Interest paid and moves in/out, five each, newest first (`/user/vault/interest`, `/transactions`). */
+function VaultActivity({ nonce }) {
+  const { data: interest } = useApi(`vault:interest:${nonce}`, () => vaultApi.interest({ limit: 5 }));
+  const { data: moves } = useApi(`vault:transactions:${nonce}`, () => vaultApi.transactions({ limit: 5 }));
+  const day = (v) => (v ? new Date(v).toLocaleDateString() : "");
+  const lists = [
+    { title: "Interest earned", rows: (interest ?? []).map((r) => ({ id: r.id, left: `+${displayBalance(r.interest, r.coin)} ${r.coin}`, when: r.createdAt })) },
+    {
+      title: "Vault transactions",
+      rows: (moves ?? []).map((r) => ({ id: r.id, left: `${String(r.type ?? "").replace(/[_-]/g, " ")} ${displayBalance(r.amount, r.coin)} ${r.coin}`, when: r.createdAt })),
+    },
+  ].filter((l) => l.rows.length);
+  return lists.map((l) => (
+    <div key={l.title} className="MiniList_root">
+      <h5 className="MiniList_heading">{l.title}</h5>
+      {l.rows.map((r) => (
+        <div key={r.id} className="MiniList_row">
+          <span>{r.left}</span>
+          <span className="MiniList_meta">{day(r.when)}</span>
+        </div>
+      ))}
+    </div>
+  ));
+}
+
 export default function VaultModal({ onClose }) {
   const { balances, currency: headerCurrency, displayCurrency, rates, refreshBalances, fiatView, hideZeroBalances, hideBalance } =
     useSession();
@@ -427,6 +452,8 @@ export default function VaultModal({ onClose }) {
             </span>
           </button>
         </div>
+
+        {!hideBalance && <VaultActivity nonce={nonce} />}
       </form>
     </Modal>
   );

@@ -739,3 +739,77 @@ ul.WalletSelect_portal .CurrencySelect_wrapper {
 .BuyCryptoDisclaimer_disclaimer {
   line-height: normal;
 }
+
+/* ── MiniList ───────────────────────────────────────────────────────────────
+ * A compact label/value list on the panel colours: the swap quote and recent
+ * swaps, vault activity, saved withdrawal addresses, pending gateway orders,
+ * rollover progress and transaction totals all share it.
+ */
+.MiniList_root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm2);
+  padding: var(--spacing-sm4) var(--spacing-md1);
+  border-radius: var(--radius-md);
+  background: var(--color-gray800);
+  color: var(--color-gray200);
+  font-size: var(--text-lg);
+}
+
+.MiniList_heading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+.MiniList_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm4);
+  min-width: 0;
+}
+
+.MiniList_row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.MiniList_meta {
+  color: var(--color-gray400);
+  white-space: nowrap;
+}
+
+.MiniList_bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-gray700);
+  overflow: hidden;
+}
+
+.MiniList_bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.MiniList_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--spacing-sm4);
+}
+
+.MiniList_option {
+  padding: var(--spacing-sm2) 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.MiniList_option:hover {
+  color: var(--color-white);
+}

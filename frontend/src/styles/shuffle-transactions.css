@@ -346,3 +346,8 @@
 .Transactions_pagination {
   margin-top: var(--spacing-md2);
 }
+
+/* The totals and pending-orders strips above the table (MiniList, shuffle-wallet.css). */
+.Transactions_totals {
+  margin-bottom: var(--spacing-md2);
+}
