@@ -47,7 +47,8 @@ export const SITE_UI: Record<string, UiSupport> = {
   chat: { status: 'absent', why: 'The header Chat button is disabled; there is no chat screen.' },
   club_membership: { status: 'absent', why: 'No club screens in this UI.' },
   analytics: { status: 'absent', why: 'This UI does not load a Google tag.' },
-  live_tv: { status: 'toggle', variant: 'gated', surfaces: 'the TV button on a sports match (minimum balance and inactive hours under Settings)' }
+  live_tv: { status: 'toggle', variant: 'gated', surfaces: 'the TV button on a sports match (minimum balance and inactive hours under Settings)' },
+  bonus_centre: { status: 'absent', why: 'No bonus centre block in this UI.' }
 }
 
 /** Owner options that do nothing in this UI (their page does not exist here). Hidden, value kept. */
