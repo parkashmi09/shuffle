@@ -7,6 +7,7 @@ import { tierFor } from "../vip/vipTiers";
 import { CoinIcon } from "../wallet/CurrencySelect";
 import { AvatarPickerModal, ChangeEmailModal } from "./ProfileEditors";
 import { avatarSrc } from "../../lib/adapters";
+import MedalStrip from "./MedalStrip";
 
 /**
  * Settings → Account — reference `UserInfoPanel` + `StatisticsPanel`.
@@ -136,6 +137,8 @@ export default function SettingsAccount() {
           </div>
         </div>
       </form>
+      {/* Medals sit with quests under the owner's Challenges switch (and so never for an agent's player). */}
+      {on("challenges") && <MedalStrip />}
       {editing === "avatar" && <AvatarPickerModal current={me?.avatar} onClose={() => setEditing(null)} onSaved={saved} />}
       {editing === "email" && <ChangeEmailModal onClose={() => setEditing(null)} onSaved={saved} />}
     </div>
