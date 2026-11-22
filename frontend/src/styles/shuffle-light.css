@@ -1,0 +1,52 @@
+/* Light theme — only when the owner's `theme_mode` policy is `switch` and the player picked it
+   (lib/themeMode.js sets `data-theme="light"` on <html>). The site is drawn from the gray scale
+   and `--color-white` text, so flipping those tokens is the whole theme; accent purples and the
+   state colours stay as they are. Primary buttons keep their literal white label. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-mainBackground: #f3f4f8;
+  --color-grayScaleBlack: #f3f4f8;
+  --color-black900: #eceef3;
+  --color-black: #e6e8ef;
+  --color-chineseBlack: #eceef3;
+  --color-eerieBlack: #e6e8ef;
+  --color-gray900: #ffffff;
+  --color-gray800: #f2f3f7;
+  --color-gray700: #e4e7ee;
+  --color-gray600: #d7dbe4;
+  --color-gray500: #b9bfcc;
+  --color-gray400: #6e7585;
+  --color-gray300: #575e6e;
+  --color-gray200: #3b4150;
+  --color-gray100: #1e2129;
+  --color-white: #12141a;
+  --color-white100: #12141a;
+  --color-gray900-overlay: rgba(243, 244, 248, 0.7);
+  --color-overlay: rgba(18, 20, 26, 0.35);
+
+  --bg-base: #f3f4f8;
+  --bg-sunken: #eceef3;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f4f5f9;
+  --bg-surface-3: #eceef3;
+  --bg-hover: #e2e5ec;
+  --overlay: rgba(18, 20, 26, 0.35);
+
+  --border: #e4e7ee;
+  --border-strong: #d7dbe4;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+
+  --text: #12141a;
+  --text-secondary: #5d6575;
+  --text-muted: #8a90a0;
+  --text-inverse: #ffffff;
+
+  --btn-tertiary: #e4e7ee;
+  --btn-tertiary-hover: #d7dbe4;
+  --btn-tertiary-active: #b9bfcc;
+
+  --shadow-sm: 0 1px 2px rgba(18, 20, 26, 0.08);
+  --shadow-md: 0 4px 12px rgba(18, 20, 26, 0.1);
+  --shadow-lg: 0 12px 32px rgba(18, 20, 26, 0.14);
+}

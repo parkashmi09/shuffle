@@ -17,6 +17,9 @@ import SpinWheelModal from "../rewards/SpinWheelModal";
 import NotificationPanel from "./NotificationPanel";
 import VipPanel from "./VipPanel";
 import Alerts from "../ui/Alerts";
+import RegionNotice from "./RegionNotice";
+import { useApplyTheme } from "../../lib/themeMode";
+import { useAnalytics } from "../../lib/analytics";
 import { navIdForPath, navigate, routes, usePath, useSearch } from "../../lib/router";
 import { captureReferralFromSearch } from "../../lib/referralCapture";
 import { SessionProvider } from "../../lib/session";
@@ -94,6 +97,8 @@ function Shell({ children }) {
   const gate = useGate();
   useLanguageGuard(); // off a language the owner switched off
   useVipRankUps();
+  useApplyTheme(); // owner `theme_mode` + the player's pick
+  useAnalytics(); // owner `analytics` tag, when on
 
   // An agent's player lives under /agent, everyone else outside it. Waits for `/auth/me`: the login
   // answer has no capabilities, and a guess here would send the player to the wrong side.
@@ -320,6 +325,7 @@ function Shell({ children }) {
       }`}>
         <TopBar onAuth={setAuth} />
         <div id="pageContent" className="CasinoLayout_pageContent">
+          <RegionNotice />
           <div className="CasinoLayout_mainContent">
             <PageLoader>{children}</PageLoader>
           </div>

@@ -46,7 +46,7 @@ export const SITE_UI: Record<string, UiSupport> = {
   spin_wheel: { status: 'toggle', variant: 'inline_wheel', surfaces: 'Spin Wheel dialog from the user menu: wheel, eligibility, spin (deposit-bonus code), your spins' },
   chat: { status: 'absent', why: 'The header Chat button is disabled; there is no chat screen.' },
   club_membership: { status: 'absent', why: 'No club screens in this UI.' },
-  analytics: { status: 'absent', why: 'This UI does not load a Google tag.' },
+  analytics: { status: 'toggle', variant: 'gtm', surfaces: 'Google Tag Manager container (the owner-set containerId) loaded on every player page when on' },
   live_tv: { status: 'toggle', variant: 'gated', surfaces: 'the TV button on a sports match (minimum balance and inactive hours under Settings)' },
   bonus_centre: { status: 'toggle', variant: 'block', surfaces: 'Bonus Centre block on /vip-program: my codes, bonus history, bonus games, events (needs Bonus on)' }
 }

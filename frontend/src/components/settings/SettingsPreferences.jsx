@@ -7,6 +7,7 @@ import { FIAT_CODES } from "../../lib/currencies";
 import { PREF_DEFAULTS, readStoredPreferences, writeStoredPreferences } from "../../lib/playerPreferences";
 import WalletSelect from "../wallet/CurrencySelect";
 import Switch from "./Switch";
+import { useThemeMode } from "../../lib/themeMode";
 
 /**
  * Settings → Preferences — reference `Preferences`.
@@ -27,6 +28,7 @@ import Switch from "./Switch";
  * | Hide zero balances         | localStorage + session        | Filters zero rows in header & wallet lists  |
  * | Odds Preference            | localStorage only             | Shown only with sports on                   |
  * | Accept tips                | `PATCH /user/tip/settings`    | Off = hidden from tip lookup, tips refused (owner `tips` on) |
+ * | Light Theme                | localStorage only             | Shown only when the owner's `theme_mode` is `switch` |
  * | Private Mode               | `PATCH /user/preferences`     | hideGamingData + showStatistics off (profile counts) + showBetsPublicly off (named on feeds/races) |
  */
 
@@ -105,6 +107,7 @@ export default function SettingsPreferences() {
   const [touched, setTouched] = useState(() => []);
   const { data: stored } = useApi("settings:preferences", () => preferencesApi.get().catch(() => null));
   const on = useGate();
+  const theme = useThemeMode();
 
   const prefs = useMemo(() => {
     const merged = { ...PREF_DEFAULTS, ...local, fiatView, hideZeroBalances, streamerMode: hideBalance };
@@ -196,6 +199,15 @@ export default function SettingsPreferences() {
               />
             </div>
           </div>
+          )}
+
+          {theme.allowed && (
+            <SwitchRow
+              checked={theme.light}
+              onChange={theme.setLight}
+              heading="Light Theme"
+              description="Use the light colour theme on this device"
+            />
           )}
 
           <SwitchRow

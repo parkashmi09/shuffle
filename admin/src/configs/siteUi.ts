@@ -21,7 +21,7 @@ export const SITE_UI: Record<string, UiSupport> = {
   raffles: { status: 'toggle', variant: 'ticket_raffle', surfaces: 'Raffle dialog from the user menu: weekly draw countdown, prize pool, my tickets, free ticket claim, last draw winners' },
   vault: { status: 'toggle', variant: 'term_lock', surfaces: 'Vault modal from the user menu, with lock-period picker, interest earned and vault transactions' },
   swap: { status: 'toggle', variant: 'wallet_tab', surfaces: 'wallet Swap tab: server-quoted fee, swap, last 8 swaps' },
-  tips: { status: 'absent', why: 'The wallet Tip tab is a layout only; it calls no tip API.' },
+  tips: { status: 'toggle', variant: 'peer_to_peer', surfaces: 'wallet Tip tab with username lookup (POST /user/tip/send), Accept Tips switch in Settings → Preferences' },
   notifications: { status: 'toggle', variant: 'side_panel', surfaces: 'right-side notification panel with filter chips and unread count' },
   kyc: { status: 'toggle', variant: 'status_card', surfaces: '/settings/verify status cards (L1 details, L2 ID)' },
   gift_cards: { status: 'toggle', variant: 'claim_cards', surfaces: 'Gift Cards tab of the redeem dialog (user menu): activate, deposit/wager progress, claim, claimed history' },
@@ -35,7 +35,7 @@ export const SITE_UI: Record<string, UiSupport> = {
   spin_wheel: { status: 'toggle', variant: 'inline_wheel', surfaces: 'Spin Wheel dialog from the user menu: wheel, eligibility, spin (deposit-bonus code), your spins' },
   chat: { status: 'absent', why: 'The header Chat button is disabled; there is no chat screen.' },
   club_membership: { status: 'absent', why: 'No club screens in this UI.' },
-  analytics: { status: 'absent', why: 'This UI does not load a Google tag.' },
+  analytics: { status: 'toggle', variant: 'gtm', surfaces: 'Google Tag Manager container (the owner-set containerId) loaded on every player page when on' },
   live_tv: { status: 'toggle', variant: 'gated', surfaces: 'the TV button on a sports match (minimum balance and inactive hours under Settings)' },
   bonus_centre: { status: 'toggle', variant: 'block', surfaces: 'Bonus Centre block on /vip-program: my codes, bonus history, bonus games, events (needs Bonus on)' }
 }

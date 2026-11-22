@@ -360,6 +360,11 @@ export const betHistory = {
   stats: () => get("/casino/bet-history/stats"),
 };
 
+/** `GET /user/region`, public: `{ restricted, mode: off|notice|block, areaCode, ip, rayId }`. */
+export const region = {
+  visitor: () => get("/user/region", { auth: false }),
+};
+
 export const site = {
   /** The feature flags every browser needs, signed in or not. */
   config: once(() => get("/admin/site-config/public", { auth: false })),
