@@ -71,7 +71,7 @@ function renderPage(path, content) {
   if (wiseTab) return <ShuffleWise key={wiseTab[1]} />;
   const settingsTab = path.match(/^\/settings\/(account|verify|security|preferences|sessions|ignored-users)$/);
   if (settingsTab) return <Settings key={settingsTab[1]} />;
-  const txTab = path.match(/^\/transactions(?:\/(deposits|withdrawals|bets|sports-bets|tip-rain|other))?$/);
+  const txTab = path.match(/^\/transactions(?:\/(deposits|withdrawals|bets|sports-bets|tip-rain|transfers|other))?$/);
   if (txTab) return <MyGames><TransactionsPage key={txTab[1] || "deposits"} /></MyGames>;
   // The signed-in affiliate dashboard. `/affiliate` itself stays the marketing
   // page the reference serves to everyone; these four are the account menu's.

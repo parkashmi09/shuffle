@@ -55,7 +55,7 @@ export default function WithdrawalWhitelist() {
 
   return (
     <div className="LinkedAccountsPanel_passwordAndSecurityLinkedAccountsPanel">
-      <form className="Panel_panelWrapper" onSubmit={add}>
+      <form className="Panel_panelWrapper Flex_root Flex_column Flex_md2" onSubmit={add}>
         <h2 className="Panel_panelHeading">Withdrawal Whitelist</h2>
         <p className="TwoFactorAuthentication_descriptionText">
           Save the addresses you withdraw to. With whitelist-only on, crypto withdrawals can go to these addresses only.

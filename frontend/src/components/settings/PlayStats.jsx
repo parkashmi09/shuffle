@@ -38,39 +38,41 @@ export default function PlayStats() {
   return (
     <div className="Panel_panelWrapper">
       <h2 className="Panel_panelHeading">Your Stats</h2>
-      <section className="StatisticsPanel_root">
-        <div className="StatisticsPanel_statisticsInfo">
-          <Figure title="Casino bets (lifetime)" value={lifeError ? "Unavailable" : num(life?.bets)} />
-          <Figure title="Casino wins (lifetime)" value={lifeError ? "Unavailable" : num(life?.wins)} />
-        </div>
-      </section>
+      <div className="Flex_root Flex_column Flex_md2">
+        <section className="StatisticsPanel_root">
+          <div className="StatisticsPanel_statisticsInfo">
+            <Figure title="Casino bets (lifetime)" value={lifeError ? "Unavailable" : num(life?.bets)} />
+            <Figure title="Casino wins (lifetime)" value={lifeError ? "Unavailable" : num(life?.wins)} />
+          </div>
+        </section>
 
-      <div className="Tab_root">
-        <div className="Tab_tabsContainer" role="tablist">
-          {PERIODS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              role="tab"
-              aria-selected={period === p.id}
-              className={cx("Tab_tab", period === p.id && "Tab_active")}
-              disabled={period === p.id}
-              onClick={() => setPeriod(p.id)}
-            >
-              <p className="Tab_text">{p.label}</p>
-            </button>
-          ))}
+        <div className="Tab_root">
+          <div className="Tab_tabsContainer" role="tablist">
+            {PERIODS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="tab"
+                aria-selected={period === p.id}
+                className={cx("Tab_tab", period === p.id && "Tab_active")}
+                disabled={period === p.id}
+                onClick={() => setPeriod(p.id)}
+              >
+                <p className="Tab_text">{p.label}</p>
+              </button>
+            ))}
+          </div>
         </div>
+
+        <section className="StatisticsPanel_root" aria-busy={loading}>
+          <div className="StatisticsPanel_statisticsInfo">
+            <Figure title="Your rank" value={rank} />
+            <Figure title="Bets" value={loading || error ? "—" : num(me?.bets)} />
+            <Figure title="Wagered" value={loading || error ? "—" : num(me?.wagered)} />
+            <Figure title="Won" value={loading || error ? "—" : num(me?.won)} />
+          </div>
+        </section>
       </div>
-
-      <section className="StatisticsPanel_root" aria-busy={loading}>
-        <div className="StatisticsPanel_statisticsInfo">
-          <Figure title="Your rank" value={rank} />
-          <Figure title="Bets" value={loading || error ? "—" : num(me?.bets)} />
-          <Figure title="Wagered" value={loading || error ? "—" : num(me?.wagered)} />
-          <Figure title="Won" value={loading || error ? "—" : num(me?.won)} />
-        </div>
-      </section>
     </div>
   );
 }

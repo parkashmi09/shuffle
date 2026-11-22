@@ -387,7 +387,7 @@ function Shell({ children }) {
       {raceOpen && <WeeklyRaceModal onClose={() => setRaceOpen(false)} />}
       {walletOpen && signedIn && walletOn && <WalletModal onClose={closeWallet} />}
       {vaultOpen && signedIn && <VaultModal onClose={closeVault} />}
-      {redeemCodeOpen && signedIn && <RedeemCodeModal onClose={() => setRedeemCodeOpen(false)} />}
+      {redeemCodeOpen && signedIn && (gate("bonus") || gate("giftcards")) && <RedeemCodeModal onClose={() => setRedeemCodeOpen(false)} />}
       {rewardModal === "raffle" && signedIn && gate("raffles") && <RaffleModal onClose={() => setRewardModal(null)} />}
       {rewardModal === "spin" && signedIn && gate("spinwheel") && <SpinWheelModal onClose={() => setRewardModal(null)} />}
       {logoutOpen && signedIn && <LogoutModal onClose={() => setLogoutOpen(false)} onConfirm={async () => { await logout(); setLogoutOpen(false); }} />}

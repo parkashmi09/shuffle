@@ -31,6 +31,13 @@
   margin-bottom: var(--spacing-lg1);
 }
 
+/* With Swap on there are four tabs; on a phone they share the width instead of scrolling Tip off. */
+@media (max-width: 767px) {
+  .WalletModal_tabsGap .TabViewOutline_tabOutline {
+    padding: 0 var(--spacing-sm2);
+  }
+}
+
 .WalletModal_walletRestrictedBannerWrapper {
   display: flex;
   flex-direction: column;
@@ -780,6 +787,10 @@ ul.WalletSelect_portal .CurrencySelect_wrapper {
   color: var(--color-gray400);
   white-space: nowrap;
 }
+
+/* A long value under the label (a saved address) wraps, and the row's action keeps its size. */
+.MiniList_row > span:first-child .MiniList_meta { white-space: normal; }
+.MiniList_row > button { flex: none; width: auto; }
 
 .MiniList_bar {
   height: 6px;
