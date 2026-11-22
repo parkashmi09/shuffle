@@ -24,6 +24,7 @@
 @import "./styles/shuffle-settings.css";
 @import "./styles/shuffle-wise.css";
 @import "./styles/shuffle-alerts.css";
+@import "./styles/shuffle-rewards.css";
 @import "./styles/tokens.css";
 /* Last, so its `max-width` corrections win over the captured stylesheets they
    correct. Nothing in it applies above the breakpoints it declares. */

@@ -92,7 +92,7 @@ export const preferences = {
  * `POST /user/bonus/redeem` takes the code a player typed and credits the
  * bonus currency, answering `{ code, amount, currency, newBalance }`. It is
  * NOT `gift-cards`: those are claimed by numeric id from a list the operator
- * issued, which is a different product with no screen here.
+ * issued, which is a different product (`giftCards`, the dialog's Gift Cards tab).
  *
  * The two failures are player-readable as they stand — 404 "That redeem code
  * is not valid" and 409 "That redeem code has already been used or has
@@ -102,6 +102,56 @@ export const redeem = {
   code: (code) => post("/user/bonus/redeem", { code }),
   /** A player's own issued codes, active or spent. */
   mine: (query) => get("/user/bonus/codes", { query }),
+};
+
+/**
+ * The Bonus centre on /vip-program (owner `bonus_centre`, routes under the `bonus` plan).
+ * `history`: claims `[{ id, type, amount, amountCurrency, claimed, claimedAt, createdAt }]`;
+ * `games`: `{ counters: { luckyspin, dailybonus, … } } | null`; `events`: `[{ id, event, amount, createdAt }]`.
+ * `redeem.mine` is the player's codes.
+ */
+export const bonusCentre = {
+  history: (query) => get("/user/bonus/history", { query }),
+  games: () => get("/user/bonus/games"),
+  events: (query) => get("/user/bonus/events", { query }),
+};
+
+/**
+ * Gift cards (owner `gift_cards`) — the Gift Cards tab of the redeem dialog.
+ * `list`: `[{ giftcards: { id, uniqueKey, description, amount, periodDays, endDate, depositStatus, depositAmount,
+ * wagerStatus, wagerTimes }, usergiftcards: { status: Activated | Claimed | Expired, expired } | null,
+ * deposit: { status, message }, wager: { status, totalUsdWager, requiredWagerUSD } }]`.
+ */
+export const giftCards = {
+  list: () => get("/user/gift-cards"),
+  claimed: (query) => get("/user/gift-cards/claimed", { query }),
+  activate: (giftCardId) => post("/user/gift-cards/activate", { giftCardId }),
+  /** Answers `{ giftCardId, status, amount, currency, newBalance }`. */
+  claim: (giftCardId) => post("/user/gift-cards/claim", { giftCardId }),
+};
+
+/**
+ * The weekly raffle (owner `raffles`). `current` is public: `{ enabled, number, drawAt, status, prizePoolUsd,
+ * winners, prizeUsd, wagerPerTicketUsd, latestDrawn }`; `mine`: `{ tickets: [{ ticket, source }], freeClaimed,
+ * wageredUsd, nextTicketInUsd }`; `results(n)`: the draw plus `winners: [{ ticket, player, prizeUsd, count }]`.
+ */
+export const raffle = {
+  current: () => get("/user/raffle/current", { auth: false }),
+  mine: () => get("/user/raffle/me"),
+  claimFree: () => post("/user/raffle/claim"),
+  results: (number) => get(`/user/raffle/draws/${number}`),
+};
+
+/**
+ * The spin wheel (owner `spin_wheel`). `slices`: `{ slices: [{ id, label, rewardPct, color, isBadLuck }], disabled,
+ * maxBonus, currency }`; `eligibility`: `{ eligible, code?, reason?, nextEligibleAt, activeBonus }`;
+ * `spin`: `{ winIndex, slice, isBadLuck, redeemCode, rewardPct }` — a won % is added to the next deposit.
+ */
+export const spinWheel = {
+  slices: () => get("/user/spin-wheel/slices", { auth: false }),
+  eligibility: () => get("/user/spin-wheel/eligibility"),
+  claims: (query) => get("/user/spin-wheel/claims", { query }),
+  spin: () => post("/user/spin-wheel/spin"),
 };
 
 /** `status` is `NotSubmitted` | `Unverified` | `Pending` | `Verified` | `Rejected`. */
@@ -287,6 +337,8 @@ export const race = {
   rewards: (query) => get("/user/race/rewards", { query }),
   /** Pays one prize into the wallet; the route takes no body. */
   claim: (rewardId) => post(`/user/race/rewards/${rewardId}/claim`),
+  /** Settled races, newest first: `[{ raceId, type, endsAt, currency, prizePool, winners: [{ rank, name, amount, currency }], me }]`. */
+  history: (query) => get("/user/race/history", { query }),
 };
 
 /** `GET /casino/challenges` — `{ active, completed }`, each `{ id, game, gameName, imageUrl, minMultiplier, minBetUsd, prizeUsd, winners, winnersFound, winnerNames }`. */
@@ -383,6 +435,40 @@ export const withdrawWhitelist = {
   add: (body) => post("/user/withdrawals/whitelist", body),
   remove: (id) => del(`/user/withdrawals/whitelist/${id}`),
   enforce: (enabled) => put("/user/withdrawals/whitelist/enforcement", { enabled }),
+};
+
+/** Daily quests (owner `challenges`): `{ dailyQuest: { first: { endsAt, quests: [{ key, title, description, unit, target, progress, completed }] } } }`. */
+export const quests = {
+  list: () => get("/user/quests"),
+};
+
+/** The caller's medals: `{ medalCount, total, medals: [{ key, title, unlocked, unlockedAt, rule: { description }, progress: { current, target } }] }`. */
+export const medals = {
+  mine: () => get("/user/medals"),
+};
+
+/**
+ * Daily Reload and Pre-Monthly bonus (owner `bonus`). `overview`: `{ vipLevel, DAILY_RELOAD, PRE_MONTHLY }`, each
+ * `{ enabled, eligible, minVipLevel, open, opensAt, amount, currency, claimed, claimable }`; `calendar`: `{ enabled,
+ * eligible, today, percent, days: [{ date, earnedUsd, claimedUsd, state }] }`.
+ */
+export const reloadRewards = {
+  overview: () => get("/user/reload-rewards"),
+  calendar: () => get("/user/reload-rewards/calendar"),
+  claim: (program) => post(`/user/reload-rewards/${program}/claim`),
+};
+
+/**
+ * GIS extras. `launchDemo` answers `{ url }` (signed in only); `freespins` is the caller's active free spins,
+ * `{ total, freespins: [{ id, gameUuid, game: { uuid, name, provider, image }, quantity, quantityLeft, validUntil }] }`.
+ * The jackpot figures are the provider's own payload, passed through unshaped.
+ */
+export const gis = {
+  launchDemo: (gameUuid, device) => post("/casino/gis/launch-demo", { gameUuid, device }),
+  freespins: () => get("/casino/gis/freespins/mine"),
+  jackpots: () => get("/casino/gis/jackpots"),
+  /** Public: the hub's jackpot info. */
+  publicJackpots: () => get("/casino/catalogue/jackpots", { auth: false }),
 };
 
 /**

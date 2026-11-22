@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cx } from "../../lib/carousel";
 import { navigate } from "../../lib/router";
 import { race as raceApi, site } from "../../lib/endpoints";
@@ -10,6 +10,7 @@ import { currencyIcon } from "../../lib/currencies";
 import { useSession } from "../../lib/sessionContext";
 import { alertFromError, alertSuccess } from "../../lib/alerts";
 import Modal from "../ui/Modal";
+import Countdown from "../ui/Countdown";
 
 /**
  * "$100,000 Weekly Race" dialog — reference `RaceInfoModal`, opened from the
@@ -23,22 +24,6 @@ import Modal from "../ui/Modal";
  * player's prizes are `GET /user/race/rewards`, each paid by `POST .../:id/claim`.
  */
 
-function useCountdown(target) {
-  const end = target ? Date.parse(target) : 0;
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const left = Math.max(0, Math.floor((end - now) / 1000));
-  return [
-    [Math.floor(left / 86400), "Days"],
-    [Math.floor((left % 86400) / 3600), "Hours"],
-    [Math.floor((left % 3600) / 60), "Minutes"],
-    [left % 60, "Seconds"],
-  ];
-}
-
 function Field({ label, icon, value, placeholder }) {
   return (
     <div className="RaceInfoModal_field">
@@ -47,6 +32,42 @@ function Field({ label, icon, value, placeholder }) {
         {icon && <img alt="" className="RaceInfoModal_icon" src={icon} />}
         <span>{value}</span>
       </div>
+    </div>
+  );
+}
+
+/** The History tab: each settled race's pool, podium and the caller's own place. */
+function RaceHistory({ races, loading, error }) {
+  const list = Array.isArray(races) ? races : [];
+  if (loading) return <p className="RaceInfoModal_text">Loading…</p>;
+  if (error) return <p className="RaceInfoModal_text" role="alert">{error.message || "Could not load past races."}</p>;
+  if (!list.length) return <p className="RaceInfoModal_text">No finished races yet.</p>;
+  return (
+    <div className="RaceInfoModal_raceForm">
+      {list.map((r) => (
+        <div key={r.raceId} className="MiniList_root">
+          <div className="MiniList_row">
+            <span className="MiniList_heading">{RACE_LABEL[r.type] || r.type} race</span>
+            <span className="MiniList_meta">{r.endsAt ? new Date(r.endsAt).toLocaleDateString() : ""}</span>
+          </div>
+          <div className="MiniList_row">
+            <span>Prize pool</span>
+            <span>{formatAmount(r.prizePool)} {r.currency}</span>
+          </div>
+          {(r.winners || []).map((w) => (
+            <div key={`${w.rank}-${w.name}`} className="MiniList_row">
+              <span>#{w.rank} {w.name || "Hidden"}</span>
+              <span className="MiniList_meta">{formatAmount(w.amount)} {w.currency}</span>
+            </div>
+          ))}
+          {r.me && (
+            <div className="MiniList_row">
+              <span><strong>You · #{r.me.rank}</strong></span>
+              <span>{formatAmount(r.me.amount)} {r.me.currency}</span>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -61,9 +82,12 @@ export default function WeeklyRaceModal({ onClose }) {
   const { data: configs } = useApi("race:configs", () => raceApi.configs(), { enabled: racesOn });
   const types = (Array.isArray(configs) ? configs : []).filter((c) => c.enabled).map((c) => c.type);
   const [picked, setPicked] = useState("weekly");
-  const type = types.length && !types.includes(picked) ? types[0] : picked;
+  const historyOn = picked === "history" && racesOn;
+  const type = types.length && !types.includes(picked) ? types[0] : historyOn ? "weekly" : picked;
+  const tabs = racesOn ? [...(types.length ? types : ["weekly"]), "history"] : types;
+  // Settled races, newest first (`GET /user/race/history`); `me` is the caller's own place, signed in.
+  const { data: past, loading: pastLoading, error: pastError } = useApi("race:history", () => raceApi.history({ limit: 10 }), { enabled: historyOn });
   const { data: board } = useApi(`race:${type}`, () => raceApi.leaderboard(type));
-  const parts = useCountdown(board?.endsAt);
   const coin = board?.payoutCurrency || "USDT";
   const label = RACE_LABEL[type] || "Weekly";
   const title = board ? `${formatAmount(board.payoutNetPrizePool)} ${coin} ${label} Race` : `${label} Race`;
@@ -95,34 +119,30 @@ export default function WeeklyRaceModal({ onClose }) {
         <div className="RaceInfoModal_headerWrapper">
           <img alt="" height="80" src="/icons/race.svg" width="80" />
           <h2 className="RaceInfoModal_header">{title}</h2>
-          <div className="RaceInfoModal_countDown">
-            <div className="TournamentCounter_countDown">
-              {parts.map(([value, label]) => (
-                <div key={label} className="TournamentCounter_countDownItem">
-                  <span>{value}</span>
-                  <span>{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          {!historyOn && <Countdown target={board?.endsAt} />}
         </div>
-        {types.length > 1 && (
+        {tabs.length > 1 && (
           <div className="Tab_tabsContainer" role="tablist">
-            {types.map((t) => (
-              <button
-                key={t}
-                type="button"
-                role="tab"
-                aria-selected={type === t}
-                className={cx("Tab_tab", type === t && "Tab_active")}
-                disabled={type === t}
-                onClick={() => setPicked(t)}
-              >
-                <p className="Tab_text">{RACE_LABEL[t] || t}</p>
-              </button>
-            ))}
+            {tabs.map((t) => {
+              const current = t === "history" ? historyOn : !historyOn && type === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={current}
+                  className={cx("Tab_tab", current && "Tab_active")}
+                  disabled={current}
+                  onClick={() => setPicked(t)}
+                >
+                  <p className="Tab_text">{t === "history" ? "History" : RACE_LABEL[t] || t}</p>
+                </button>
+              );
+            })}
           </div>
         )}
+        {historyOn && <RaceHistory races={past} loading={pastLoading} error={pastError} />}
+        {!historyOn && <>
         <p className="RaceInfoModal_text">
           Place bets to climb the ranks and make your way into the top {board?.winnerCount ?? 1000} positions to win your share of the prize pool! When the race ends,
           prizes will be instantly added to your VIP rewards in the equivalent {coin} value!
@@ -161,6 +181,7 @@ export default function WeeklyRaceModal({ onClose }) {
             </button>
           )}
         </div>
+        </>}
       </div>
     </Modal>
   );

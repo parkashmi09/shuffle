@@ -12,6 +12,8 @@ import WeeklyRaceModal from "../casino/WeeklyRaceModal";
 import WalletModal from "../wallet/WalletModal";
 import VaultModal from "../wallet/VaultModal";
 import RedeemCodeModal from "../rewards/RedeemCodeModal";
+import RaffleModal from "../rewards/RaffleModal";
+import SpinWheelModal from "../rewards/SpinWheelModal";
 import NotificationPanel from "./NotificationPanel";
 import VipPanel from "./VipPanel";
 import Alerts from "../ui/Alerts";
@@ -128,6 +130,7 @@ function Shell({ children }) {
   const [walletOpen, setWalletOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);
   const [redeemCodeOpen, setRedeemCodeOpen] = useState(false);
+  const [rewardModal, setRewardModal] = useState(null); // null | "raffle" | "spin"
   const [logoutOpen, setLogoutOpen] = useState(false);
   /**
    * The right rail. Both panels stay mounted so their close animates as well as
@@ -213,6 +216,8 @@ function Shell({ children }) {
     // The vault is opened from the rail's Profile group and the account menu.
     const onVault = () => { if (signedIn) setVaultOpen(true); };
     const onRedeemCode = () => { if (signedIn) setRedeemCodeOpen(true); };
+    const onRaffle = () => { if (signedIn) setRewardModal("raffle"); };
+    const onSpin = () => { if (signedIn) setRewardModal("spin"); };
     const onNotifications = () => {
       if (signedIn) setRightRail((current) => (current === "notifications" ? null : "notifications"));
     };
@@ -224,6 +229,8 @@ function Shell({ children }) {
     window.addEventListener("shuffle:wallet", onWallet);
     window.addEventListener("shuffle:vault", onVault);
     window.addEventListener("shuffle:redeem-code", onRedeemCode);
+    window.addEventListener("shuffle:raffle", onRaffle);
+    window.addEventListener("shuffle:spin-wheel", onSpin);
     window.addEventListener("shuffle:notifications", onNotifications);
     window.addEventListener("shuffle:vip", onVip);
     window.addEventListener("shuffle:logout", onLogout);
@@ -233,6 +240,8 @@ function Shell({ children }) {
       window.removeEventListener("shuffle:wallet", onWallet);
       window.removeEventListener("shuffle:vault", onVault);
       window.removeEventListener("shuffle:redeem-code", onRedeemCode);
+      window.removeEventListener("shuffle:raffle", onRaffle);
+      window.removeEventListener("shuffle:spin-wheel", onSpin);
       window.removeEventListener("shuffle:notifications", onNotifications);
       window.removeEventListener("shuffle:vip", onVip);
       window.removeEventListener("shuffle:logout", onLogout);
@@ -373,6 +382,8 @@ function Shell({ children }) {
       {walletOpen && signedIn && walletOn && <WalletModal onClose={closeWallet} />}
       {vaultOpen && signedIn && <VaultModal onClose={closeVault} />}
       {redeemCodeOpen && signedIn && <RedeemCodeModal onClose={() => setRedeemCodeOpen(false)} />}
+      {rewardModal === "raffle" && signedIn && gate("raffles") && <RaffleModal onClose={() => setRewardModal(null)} />}
+      {rewardModal === "spin" && signedIn && gate("spinwheel") && <SpinWheelModal onClose={() => setRewardModal(null)} />}
       {logoutOpen && signedIn && <LogoutModal onClose={() => setLogoutOpen(false)} onConfirm={async () => { await logout(); setLogoutOpen(false); }} />}
 
       {/* Last, and outside every modal: the toast stack is `position: fixed`
