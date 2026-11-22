@@ -6,6 +6,7 @@ import { useGate } from "../../lib/gates";
 import ChangePasswordModal from "./ChangePasswordModal";
 import Modal from "../ui/Modal";
 import Switch from "./Switch";
+import WithdrawalWhitelist from "./WithdrawalWhitelist";
 
 /**
  * Settings → Security — reference `PasswordAndSecurity`.
@@ -30,7 +31,8 @@ const PROVIDERS = [
 export default function SettingsSecurity() {
   const [passwordOpen, setPasswordOpen] = useState(false);
   // An agent's player never reaches this tab (SettingsPage), and its password is the agent's.
-  const { agentPlayer } = useGate();
+  const on = useGate();
+  const { agentPlayer } = on;
   const { data: totp, reload } = useApi("settings:2fa", () => twoFactorApi.status().catch(() => null), { enabled: !agentPlayer });
   const enabled = Boolean(totp?.isEnabled);
   // `setup` holds `{ qrCode, secret }` while enabling; `disabling` asks for the code + password.
@@ -157,6 +159,7 @@ export default function SettingsSecurity() {
           </div>
         </form>
       </div>
+      {on.ready && on("withdraw") && <WithdrawalWhitelist />}
       </>}
 
       {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} />}

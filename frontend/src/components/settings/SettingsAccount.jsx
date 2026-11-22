@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
 import { profile as profileApi, vip as vipApi } from "../../lib/endpoints";
 import { useGate } from "../../lib/gates";
 import { tierFor } from "../vip/vipTiers";
 import { CoinIcon } from "../wallet/CurrencySelect";
+import { AvatarPickerModal, ChangeEmailModal } from "./ProfileEditors";
+import { avatarSrc } from "../../lib/adapters";
 
 /**
  * Settings → Account — reference `UserInfoPanel` + `StatisticsPanel`.
@@ -16,7 +19,11 @@ import { CoinIcon } from "../wallet/CurrencySelect";
  */
 export default function SettingsAccount() {
   const { user } = useSession();
-  const { data: me } = useApi("settings:profile", () => profileApi.get());
+  const { data: me, reload } = useApi("settings:profile", () => profileApi.get());
+  // `avatar` | `email` while one of the two editors is open (never for an agent's player: their agent keeps these).
+  const [editing, setEditing] = useState(null);
+  // shortcut: only this panel re-reads; the header avatar follows on the next `/auth/me` (page load). Add a session refresh if it must update live.
+  const saved = reload;
   const on = useGate();
   const { data: stats } = useApi("settings:profile-stats", () => profileApi.stats(), { enabled: !on.agentPlayer });
   const wagered = stats?.wagered?.usd != null ? `$${Number(stats.wagered.usd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
@@ -60,9 +67,9 @@ export default function SettingsAccount() {
             <div className="Flex_root" style={{ alignItems: "center" }}>
               <div className="UserBadgeBlock_root">
                 <div className="UserBadgeBlock_avatarContainer">
-                  <div className="Avatar_root Avatar_background">
-                    <img alt="avatar" width="40" height="40" src={me?.avatar || "/icons/user-profile.svg"} />
-                  </div>
+                  <button type="button" className="Avatar_root Avatar_background AvatarPicker_trigger" aria-label="Change avatar" onClick={() => setEditing("avatar")}>
+                    <img alt="avatar" width="40" height="40" src={avatarSrc(me?.avatar) || "/icons/user-profile.svg"} />
+                  </button>
                 </div>
                 <div className="UserBadgeBlock_badge">
                   <h2 className="UserInfoPanel_heading">{me?.username || user?.name || "—"}</h2>
@@ -123,9 +130,14 @@ export default function SettingsAccount() {
                 <img alt="tick" src="/icons/green-tick.svg" />
               </div>
             )}
+            <button type="button" className="PasswordInput_forgotPasswordText" onClick={() => setEditing("email")}>
+              Change Email
+            </button>
           </div>
         </div>
       </form>
+      {editing === "avatar" && <AvatarPickerModal current={me?.avatar} onClose={() => setEditing(null)} onSaved={saved} />}
+      {editing === "email" && <ChangeEmailModal onClose={() => setEditing(null)} onSaved={saved} />}
     </div>
   );
 }

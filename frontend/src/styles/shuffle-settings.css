@@ -653,3 +653,52 @@ h5.SwitchGroup_heading { margin-bottom: 0; }
 @media (min-width: 600px) {
   .magic-container.no-side-opened .Settings_sessionsButtonGroup { display: flex; align-items: center; justify-content: flex-end; }
 }
+
+/* ── Avatar picker (Settings → Account) ─────────────────────────────────── */
+
+.AvatarPicker_trigger {
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+
+.AvatarPicker_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--spacing-sm4);
+  margin-top: var(--spacing-md2);
+}
+
+.AvatarPicker_option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: var(--spacing-sm2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-gray800);
+  cursor: pointer;
+}
+
+.AvatarPicker_option img {
+  border-radius: var(--radius-rounded);
+  object-fit: cover;
+}
+
+.AvatarPicker_option:hover,
+.AvatarPicker_active {
+  border-color: var(--accent);
+}
+
+.AvatarPicker_level {
+  position: absolute;
+  bottom: var(--spacing-sm1);
+  right: var(--spacing-sm1);
+  padding: 0 var(--spacing-sm1);
+  border-radius: var(--radius-md);
+  background: var(--color-gray700);
+  color: var(--color-gray200);
+  font-size: var(--text-sm);
+}
