@@ -5,6 +5,7 @@ import { useSession } from "../../lib/sessionContext";
 import { useGate } from "../../lib/gates";
 import { openExternal, useBranding, useSiteContent, useSupportHref } from "../../lib/siteContent";
 import { useApi } from "../../lib/useResource";
+import { useThemeMode } from "../../lib/themeMode";
 import { preferences as preferencesApi } from "../../lib/endpoints";
 import { alertFromError } from "../../lib/alerts";
 import { LANGUAGES, setLanguage as setI18nLanguage, useAllowedLanguages, useLanguage } from "../../lib/i18n";
@@ -168,6 +169,7 @@ export default function Footer() {
   const { signedIn, rates } = useSession();
   const on = useGate();
   const brand = useBranding();
+  const { light } = useThemeMode();
   const { footer, social, support, legal } = useSiteContent();
   const siteName = brand?.siteName || "Shuffle";
   const ethUsd = Number((Array.isArray(rates) ? rates : []).find((r) => r.currency === "ETH")?.usdRate);
@@ -241,7 +243,7 @@ export default function Footer() {
             <div className="Footer_brandingWrapper">
               <a href="/" title={siteName} onClick={(e) => { e.preventDefault(); navigate("/"); }}>
                 <div className="Footer_icon">
-                  <img alt="logo" height="24" src={brand?.logoUrl || "/icons/logo.svg"} />
+                  <img alt="logo" height="24" src={brand?.logoUrl || (light ? "/icons/logo-light.svg" : "/icons/logo.svg")} />
                 </div>
               </a>
             </div>

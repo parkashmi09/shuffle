@@ -63,7 +63,6 @@
 :root[data-theme="light"] .PhoneNumberInput_input,
 :root[data-theme="light"] .PasswordInput_forgotPasswordText,
 :root[data-theme="light"] .Login_textNote,
-:root[data-theme="light"] .AuthModal_terms > a,
 :root[data-theme="light"] .TermAndPolicyRegister_root,
 :root[data-theme="light"] .TermAndPolicyRegister_root a,
 :root[data-theme="light"] .Register_collapseTitle,
@@ -176,4 +175,31 @@
 :root[data-theme="light"] .NavigationTab_active,
 :root[data-theme="light"] .NavigationTab_active span {
   color: #fff;
+}
+
+/* The auth modal's terms sit on the purple login artwork, not on a surface, so they stay light. */
+:root[data-theme="light"] .AuthModal_terms,
+:root[data-theme="light"] .AuthModal_terms > a {
+  color: var(--text-inverse);
+}
+
+/* Modal back/close hover was a literal dark grey; on light it takes the tertiary hover token. */
+@media (hover: hover) {
+  :root[data-theme="light"] .ModalBackButton_backButton:hover,
+  :root[data-theme="light"] .ModalClose_closeButton:hover {
+    background-color: var(--btn-tertiary-hover);
+  }
+}
+
+/* The game tile's popup button is a black chip over the artwork in both themes: keep its icon white. */
+:root[data-theme="light"] .TallGameCard_button img {
+  filter: none;
+}
+
+/* Multi-colour illustrations drawn for a dark page (gift boxes on the VIP reward cards, race,
+   redeem, verify, rank gems…) have white edges that vanish on a white card. The art is left as is;
+   light mode traces its silhouette in a mid-grey token. Zero specificity, so a state filter
+   (locked/claimed greyscale) on the same image still wins. */
+:where(:root[data-theme="light"]) :where(img[src="/icons/daily-bonus.svg"], img[src="/icons/weekly-bonus.svg"], img[src="/icons/monthly-bonus.svg"], img[src="/icons/rake.svg"], img[src="/icons/race.svg"], img[src="/icons/redeem.svg"], img[src="/icons/cash.svg"], img[src="/icons/verify.svg"], img[src="/icons/self-exclusion-confirmation.svg"], img[src="/icons/notification-gold.svg"], img[src="/icons/logo-mark.svg"], img[src="/icons/affiliate/promo-materials.svg"], img[src="/icons/affiliate/shuffle-partner.svg"], img[src="/images/vip/diamond.svg"], img[src="/images/vip/jade.svg"], img[src="/images/vip/opal.svg"], img[src="/images/vip/platinum.svg"], img[src="/images/vip/ruby.svg"], img[src="/images/vip/sapphire.svg"], img[src="/images/vip/silver.svg"]) {
+  filter: drop-shadow(0 0 0.5px var(--color-gray400)) drop-shadow(0 0 0.5px var(--color-gray400));
 }
