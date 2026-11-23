@@ -60,7 +60,19 @@ function cleanExtras(data) {
   };
 }
 
-const loadRaw = () => (rawOnce ??= site.branding().catch(() => null));
+const loadRaw = () => (rawOnce ??= site.branding().then(rememberLoader).catch(() => null));
+
+/* The site admin's loading picture (Site config → Branding): kept for index.html's boot script, which paints
+   it on the next load before the bundle. Readable unbranded, so not in cleanBranding. Null forgets it. */
+function rememberLoader(data) {
+  try {
+    if (data && ASSET.test(data.loaderUrl || "")) localStorage.setItem("sh.loaderUrl", `${API_ORIGIN}${data.loaderUrl}`);
+    else if (data) localStorage.removeItem("sh.loaderUrl");
+  } catch {
+    /* no storage: no loader picture */
+  }
+  return data;
+}
 export const loadBranding = () => (brandingOnce ??= loadRaw().then(cleanBranding));
 export const loadBrandExtras = () => (extrasOnce ??= loadRaw().then(cleanExtras));
 export const loadSiteContent = () => (contentOnce ??= site.content().then((d) => d || {}).catch(() => ({})));

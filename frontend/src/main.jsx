@@ -25,6 +25,8 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+// The admin's loading picture (index.html #start-up), if any, goes once the app has painted.
+requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('start-up')?.remove()))
 
 /* Web push. On only when the backend says so — see lib/onesignal.js, shared with the other CFZ
    sites. The api layer is proxied same-origin in dev (vite.config.js), so the base is the page's
