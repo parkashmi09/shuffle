@@ -60,18 +60,18 @@ const PLACEMENTS: { value: string; label: string; hint: string; mode: BannerMode
 ]
 
 /**
- * What the player site draws when a placement has NO upload (frontend-next
- * spa/hooks/useHeroSlides.js: agent mode's four game slides; Stake's direct site has none) — listed
+ * What the player site draws when a placement has NO upload (frontend src/lib/catalogue.js
+ * AGENT_DEFAULT_SLIDES: agent mode's four game slides; the direct site's fallback art (home hero slides) is not listed) — listed
  * here so the operator sees it and can hide it slot by slot. The previews are copies of the site's own files (public/builtin-banners). Must match backend
  * banners.constants.js BUILTIN_PLACEMENTS.
  */
 type Builtin = { type: string; mode: BannerMode; label: string; image: string | null; title?: string; subtitle?: string; cta?: { label: string; href: string }; replaceable: boolean }
 
 const AGENT_BUILTIN_COPY: [string, string, string, string][] = [
-  ['Cricket, football & more', 'Live odds on every match', 'Bet now', '/sports/home'],
-  ['Crash games', 'Cash out in time', 'Play now', '/casino/home'],
-  ['Back your team', 'Back or lay, in-play', 'Bet now', '/sports/home'],
-  ['Slots & live casino', 'Thousands of games', 'Play now', '/casino/home']
+  ['Cricket, football & more', '', '', '/sports'],
+  ['Crash games', '', '', '/casino/categories/originals'],
+  ['Back your team', '', '', '/sports'],
+  ['Slots & live casino', '', '', '/casino/categories/slots']
 ]
 
 const BUILTINS: Builtin[] = [
