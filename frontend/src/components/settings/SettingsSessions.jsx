@@ -95,8 +95,10 @@ export default function SettingsSessions() {
                       <span className="UserSessions_deviceIcon">
                         <img alt="desktop" src="/icons/desktop.svg" />
                       </span>
-                      {row.device_label || device(row.user_agent)}
-                      {row.id === currentId && <span className="UserSessions_ipText"> · This device</span>}
+                      <span>
+                        {row.device_label || device(row.user_agent)}
+                        {row.id === currentId && " · This device"}
+                      </span>
                     </div>
                   </div>
                 </td>

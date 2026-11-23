@@ -203,3 +203,14 @@
 :where(:root[data-theme="light"]) :where(img[src="/icons/daily-bonus.svg"], img[src="/icons/weekly-bonus.svg"], img[src="/icons/monthly-bonus.svg"], img[src="/icons/rake.svg"], img[src="/icons/race.svg"], img[src="/icons/redeem.svg"], img[src="/icons/cash.svg"], img[src="/icons/verify.svg"], img[src="/icons/self-exclusion-confirmation.svg"], img[src="/icons/notification-gold.svg"], img[src="/icons/logo-mark.svg"], img[src="/icons/affiliate/promo-materials.svg"], img[src="/icons/affiliate/shuffle-partner.svg"], img[src="/images/vip/diamond.svg"], img[src="/images/vip/jade.svg"], img[src="/images/vip/opal.svg"], img[src="/images/vip/platinum.svg"], img[src="/images/vip/ruby.svg"], img[src="/images/vip/sapphire.svg"], img[src="/images/vip/silver.svg"]) {
   filter: drop-shadow(0 0 0.5px var(--color-gray400)) drop-shadow(0 0 0.5px var(--color-gray400));
 }
+
+/* The public VIP hero writes on its own dark artwork in both themes: keep that title and copy white. */
+:root[data-theme="light"] .VipPagePublic_vipContentArea .VipPagePublic_heading,
+:root[data-theme="light"] .VipPagePublic_vipContentArea .VipPagePublic_subHeading {
+  color: #fff;
+}
+
+/* The phone tab bar sets its label colour inline (#fff); on the light bar it takes the text token. */
+:root[data-theme="light"] .MobileNavItemContent_mobileNavItemWrapper {
+  color: var(--color-white) !important;
+}
