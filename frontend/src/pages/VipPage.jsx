@@ -4,6 +4,7 @@ import { useSession } from "../lib/sessionContext";
 import VipPublic from "../components/vip/VipPublic";
 import VipOverview from "../components/vip/VipOverview";
 import VipRewards from "../components/vip/VipRewards";
+import BonusCentre from "../components/vip/BonusCentre";
 import { useGate } from "../lib/gates";
 import VipLevels from "../components/vip/VipLevels";
 import VipBenefitsTable from "../components/vip/VipBenefitsTable";
@@ -39,6 +40,7 @@ function VipMember({ user }) {
 
       <VipOverview username={user?.name} vip={vip} levels={levels} />
       {on("bonus") && <VipRewards levels={levels} />}
+      {on("bonus") && on("bonuscentre") && <BonusCentre />}
       <VipLevels levels={levels} vip={vip} />
 
       <div className="VipOverviewSectionWrapper_root">

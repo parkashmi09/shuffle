@@ -1,0 +1,139 @@
+/* ── Raffle, spin wheel, gift cards, bonus centre, reload calendar, quests, medals ──
+ * Built on the race dialog (`RaceInfoModal_*`) and the `MiniList` kit; only what
+ * those do not already cover lives here.
+ */
+
+/* The race banner image is the race's own; the other reward dialogs keep its colour only. */
+.RaceInfoModal_headerWrapper.RewardModal_plainHeader {
+  background-image: none;
+}
+
+.SpinWheel_frame {
+  position: relative;
+  width: min(280px, 70vw);
+  aspect-ratio: 1;
+  margin-bottom: var(--spacing-md2);
+}
+
+.SpinWheel_pointer {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  z-index: 1;
+  transform: translateX(-50%);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 18px solid var(--color-white);
+}
+
+.SpinWheel_wheel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 4px solid var(--color-gray800);
+  border-radius: var(--radius-rounded);
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.SpinWheel_label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.SpinWheel_label > span {
+  margin-top: 12%;
+  max-width: 30%;
+  color: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 1px 1px 2px #000;
+  overflow-wrap: anywhere;
+}
+
+/* Gift cards / bonus centre / quests: stacked MiniLists with a gap. */
+.RewardStack_root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md2);
+  margin-top: var(--spacing-md2);
+}
+
+/* Reload calendar: one cell per day, wrapping on a phone. */
+.ReloadCalendar_days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: var(--spacing-sm2);
+}
+
+.ReloadCalendar_day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm1);
+  padding: var(--spacing-sm2);
+  border: 1px solid var(--color-gray700);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-gray400);
+}
+
+.ReloadCalendar_today {
+  border-color: var(--accent);
+  color: var(--color-white);
+}
+
+.ReloadCalendar_claimed {
+  color: var(--color-gray200);
+}
+
+/* Medal strip (Settings → Account). */
+.MedalStrip_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-sm4);
+}
+
+.MedalStrip_medal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm1);
+  padding: var(--spacing-sm4);
+  border-radius: var(--radius-md);
+  background: var(--color-gray800);
+  color: var(--color-gray400);
+  font-size: var(--text-sm);
+}
+
+.MedalStrip_unlocked {
+  color: var(--color-white);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Lobby jackpot ticker. */
+.JackpotTicker_root {
+  display: flex;
+  gap: var(--spacing-md2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.JackpotTicker_item {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--spacing-sm4);
+  padding: var(--spacing-sm4) var(--spacing-md1);
+  border-radius: var(--radius-md);
+  background: var(--color-gray800);
+  color: var(--color-gray300);
+  font-size: var(--text-md);
+}
+
+.JackpotTicker_item strong {
+  color: var(--color-white);
+}

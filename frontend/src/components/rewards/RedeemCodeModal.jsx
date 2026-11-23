@@ -6,6 +6,9 @@ import { alertFromError, alertSuccess } from "../../lib/alerts";
 import { displayBalance } from "../../lib/adapters";
 import { useSession } from "../../lib/sessionContext";
 import Modal from "../ui/Modal";
+import { cx } from "../../lib/carousel";
+import { useGate } from "../../lib/gates";
+import GiftCardsTab from "./GiftCardsTab";
 
 /**
  * The redeem-code dialog — reference `RedeemCodeLookupModal`, opened from the
@@ -35,6 +38,11 @@ export default function RedeemCodeModal({ onClose }) {
   const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const inputRef = useRef(null);
+  // Bonus codes (owner `bonus`) and gift cards (owner `gift_cards`) share the dialog; either may be off.
+  const on = useGate();
+  const tabs = [on("bonus") && { id: "code", label: "Code" }, on("giftcards") && { id: "gift", label: "Gift Cards" }].filter(Boolean);
+  const [picked, setPicked] = useState("code");
+  const tab = tabs.some((t) => t.id === picked) ? picked : tabs[0]?.id;
 
   // `Modal` runs the enter transition and the Escape key; the field still has
   // to take focus once the dialog has painted.
@@ -84,9 +92,31 @@ export default function RedeemCodeModal({ onClose }) {
       <div className="IconContainer_root">
         <img alt="" src="/icons/redeem.svg" />
       </div>
-      <h3 className="Header_root" id="redeem-code-title">Redeem Code</h3>
+      <h3 className="Header_root" id="redeem-code-title">{tab === "gift" ? "Gift Cards" : "Redeem Code"}</h3>
 
-      <div className="RedeemCodeLookupModal_promoRedeemModalBody">
+      {tabs.length > 1 && (
+        <div className="TabViewOutline_root">
+          <div className="TabViewOutline_tabOutlineWrapper" role="tablist">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                data-text={t.label}
+                className={cx("TabViewOutline_tabOutline TabViewOutline_tabOutlineFullWidth TabViewOutline_tabOutlineSm", tab === t.id && "TabViewOutline_tabOutlineActive")}
+                onClick={() => setPicked(t.id)}
+              >
+                <span className="TabViewOutline_tabName">{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "gift" && <GiftCardsTab />}
+
+      {tab === "code" && <div className="RedeemCodeLookupModal_promoRedeemModalBody">
         <form className="RedeemCodeForm_root" onSubmit={submit}>
           <div className="TextInput_formControlWrapper">
             <div className="InputWrapper_root">
@@ -110,7 +140,7 @@ export default function RedeemCodeModal({ onClose }) {
             <span className="ButtonVariants_buttonContent">Redeem</span>
           </button>
         </form>
-      </div>
+      </div>}
 
       <div className="RedeemCodeLookupModal_redeemCodeLookupFooter">
         <a href="/vip-program" onClick={learnMore}>Learn more about the Shuffle VIP program</a>

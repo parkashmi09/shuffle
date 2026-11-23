@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useApi } from "../../lib/useResource";
 import { cx } from "../../lib/carousel";
 import { displayBalance, displayFiat } from "../../lib/adapters";
 import { MASKED_AMOUNT } from "../../lib/playerPreferences";
@@ -38,6 +39,14 @@ export function TipTab({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const { refreshBalances } = useSession();
+  // Recipient lookup (`GET /user/tip/users`), once typing pauses; only players who accept tips come back.
+  const [lookup, setLookup] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setLookup(username.trim()), 300);
+    return () => clearTimeout(t);
+  }, [username]);
+  const { data: found } = useApi(`tip:users:${lookup}`, () => tips.users(lookup), { enabled: lookup.length >= 2 });
+  const matches = (Array.isArray(found) ? found : []).filter((u) => u.name !== username.trim());
 
   const options = useMemo(
     () =>
@@ -94,6 +103,15 @@ export function TipTab({
             onChange={(e) => setUsername(e.target.value)}
           />
         </div>
+        {lookup === username.trim() && matches.length > 0 && (
+          <div className="MiniList_root" role="listbox" aria-label="Matching players">
+            {matches.map((u) => (
+              <button key={u.id} type="button" role="option" aria-selected="false" className="MiniList_row MiniList_option" onClick={() => setUsername(u.name)}>
+                <span>{u.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* `Tip_switch` is a child of `Tip_amount`, not a sibling of it — the

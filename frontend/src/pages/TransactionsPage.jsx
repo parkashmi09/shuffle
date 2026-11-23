@@ -45,6 +45,7 @@ const TABS = [
   { id: "bets", label: "Casino Bets" },
   { id: "sports-bets", label: "Sports Bets", gate: "sports" },
   { id: "tip-rain", label: "Tip / Rain", gate: "tips" },
+  { id: "transfers", label: "Transfers", gate: "deposit" },
   { id: "other", label: "Other" },
 ];
 
@@ -105,6 +106,12 @@ const VIEWS = {
     header: "TipRainTransactions_header",
     columns: ["Type", "User", "Date", "Amount"],
     skeleton: ["r", "cr", "r", "cr"],
+  },
+  transfers: {
+    table: "OtherTransactions_table",
+    header: "OtherTransactions_header",
+    columns: ["Type", "Date", "Amount", { label: "Direction", className: "OtherTransactions_row" }],
+    skeleton: ["r", "r", "r", "r"],
   },
   other: {
     table: "OtherTransactions_table",
@@ -378,6 +385,20 @@ const SOURCES = {
       <Money amount={row.amount} coin={row.currency} />,
     ],
   },
+  transfers: {
+    // Staff transfers are INR rows (`currency: "INR"`); the coin filter applies.
+    fetch: ({ limit, offset, coin }) =>
+      history.transfers({ limit, offset, ...(coin ? { currency: coin } : {}) }).then((rows) => (Array.isArray(rows) ? rows : [])),
+    key: (row) => row.id,
+    cells: (row) => [
+      row.note || formatLedgerReasonCode(row.transferType) || "Transfer",
+      shortDate(row.createdAt),
+      <Money amount={row.amount} coin={row.currency || "INR"} />,
+      <span className={row.direction === "credit" ? "OtherTransactions_success" : undefined}>
+        {row.direction === "credit" ? "Credit" : row.direction === "debit" ? "Debit" : "—"}
+      </span>,
+    ],
+  },
   other: {
     fetch: ({ limit, offset, coin }) =>
       wallet
@@ -394,6 +415,93 @@ const SOURCES = {
     ],
   },
 };
+
+/** Per-currency sums over the tab's rails (completed rows only), above the table; other statuses counted beside. */
+function TotalsHeader({ kind }) {
+  const { data } = useApi(`transactions:totals:${kind}`, () =>
+    kind === "deposits"
+      ? Promise.all([history.cryptoStats().catch(() => []), history.fiatStats().catch(() => [])]).then(([a, b]) => [...(a ?? []), ...(b ?? [])])
+      : history.withdrawalStats()
+  );
+  const sums = {};
+  for (const r of Array.isArray(data) ? data : []) {
+    if (!r?.currency) continue;
+    const t = (sums[r.currency] ??= { total: 0, count: 0, all: 0 });
+    t.total += Number(r.total) || 0;
+    t.count += r.count || 0;
+    t.all += Object.values(r.byStatus || {}).reduce((n, s) => n + (s?.count || 0), 0) || r.count || 0;
+  }
+  // Rows with nothing in any status can come back; leave them out.
+  const entries = Object.entries(sums).filter(([, t]) => t.all > 0);
+  if (!entries.length) return null;
+  return (
+    <div className="MiniList_root Transactions_totals">
+      <h5 className="MiniList_heading">{kind === "deposits" ? "Deposits by currency" : "Fiat withdrawals by currency"}</h5>
+      <div className="MiniList_grid">
+        {entries.map(([currency, t]) => (
+          <div key={currency} className="MiniList_row">
+            <Money amount={t.total} coin={currency} />
+            <span className="MiniList_meta">
+              {t.count} completed{t.all > t.count ? ` · ${t.all - t.count} other` : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Gateway deposits still waiting on the provider (`GET /user/payments/orders`), each with a
+ * status re-check. The re-check only reports what the provider says; the callback credits.
+ */
+function PendingOrders() {
+  const { data, reload } = useApi("transactions:pending-orders", () => funding.orders({ flow: "payin", limit: 50 }));
+  const [checked, setChecked] = useState({});
+  const pending = (Array.isArray(data) ? data : []).filter((o) => o.status === "pending");
+  if (!pending.length) return null;
+  const check = async (o) => {
+    const key = `${o.provider}:${o.reference}`;
+    setChecked((c) => ({ ...c, [key]: "Checking…" }));
+    try {
+      const res = await funding.refreshOrder(o.provider, o.reference);
+      const said = res?.providerView?.status ?? res?.providerView?.state ?? res?.status;
+      setChecked((c) => ({ ...c, [key]: said ? `Provider says: ${said}` : "No update yet" }));
+      reload();
+    } catch (e) {
+      setChecked((c) => ({ ...c, [key]: e?.message || "Could not check." }));
+    }
+  };
+  return (
+    <div className="MiniList_root Transactions_totals">
+      <h5 className="MiniList_heading">Pending deposits</h5>
+      {pending.map((o) => {
+        const key = `${o.provider}:${o.reference}`;
+        return (
+          <div key={key} className="MiniList_row">
+            <span>
+              <Money amount={o.amount} coin={o.currency} /> <span className="MiniList_meta">{shortDate(o.createdAt)} · {shorten(o.reference)}</span>
+              {checked[key] && (
+                <>
+                  <br />
+                  <span className="MiniList_meta">{checked[key]}</span>
+                </>
+              )}
+            </span>
+            <button
+              type="button"
+              disabled={checked[key] === "Checking…"}
+              onClick={() => check(o)}
+              className="ButtonVariants_root ButtonVariants_buttonHeightSmall ButtonVariants_secondary"
+            >
+              <span className="ButtonVariants_buttonContent">Check status</span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /** No payout column on `sports_bets`: a won back bet returns stake × odds, a won lay its liability + the stake. */
 function sportsPayout(row) {
@@ -539,6 +647,9 @@ export default function TransactionsPage() {
         </div>
       </div>
       )}
+
+      {signedIn && (active === "deposits" || active === "withdrawals") && <TotalsHeader key={active} kind={active} />}
+      {signedIn && active === "deposits" && <PendingOrders />}
 
       <div className="Table_root">
         <table className={cx("Table_table", view.table)}>

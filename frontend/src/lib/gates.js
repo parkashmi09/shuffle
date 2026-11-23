@@ -33,6 +33,13 @@ export const GATES = {
   notifications: { feature: "notifications" },
   kyc: { feature: "kyc" },
   tips: { feature: "tips" },
+  swap: { feature: "swap" },
+  raffles: { feature: "raffles", promo: true },
+  spinwheel: { feature: "spin_wheel", promo: true },
+  giftcards: { feature: "gift_cards", promo: true },
+  bonuscentre: { feature: "bonus_centre", flag: "bonus", promo: true },
+  // The caller's GIS free spins on the lobby; a promotion, so never for an agent's player.
+  freespins: { flag: "casino", promo: true },
 };
 
 /**
@@ -46,6 +53,11 @@ const CAPABILITY = {
   affiliate: "promotions",
   races: "promotions",
   challenges: "promotions",
+  raffles: "promotions",
+  spinwheel: "promotions",
+  giftcards: "promotions",
+  bonuscentre: "promotions",
+  freespins: "promotions",
   vault: "vault",
   swap: "swap",
   deposit: "deposit",
@@ -53,7 +65,7 @@ const CAPABILITY = {
   tips: "tips",
 };
 
-const WALLET_TABS = ["deposit", "withdraw", "tips"];
+const WALLET_TABS = ["deposit", "withdraw", "swap", "tips"];
 
 /* Never for an agent's player / a demo account, whatever the owner has on. `fullSettings` is every settings tab but Account and Security. */
 const AGENT_PLAYER_OFF = new Set(["blog", "kyc", "wise", "fullSettings"]);

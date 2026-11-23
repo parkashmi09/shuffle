@@ -366,3 +366,9 @@ export function displayFiat(amount, from, to, rates) {
     maximumFractionDigits: 2,
   })}`;
 }
+
+/** An avatar path is the gateway's (`/api/v1/…`); a split-origin build serves it from `VITE_API_BASE`. */
+export function avatarSrc(url) {
+  const base = import.meta.env.VITE_API_BASE;
+  return url && base ? url.replace(/^\/api\/v1/, base.replace(/\/+$/, "")) : url;
+}

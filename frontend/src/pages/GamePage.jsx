@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGame, useOriginal, useProviderGames, useProviders } from "../lib/catalogue";
-import { jsGames } from "../lib/endpoints";
+import { gis, jsGames } from "../lib/endpoints";
 import { LOBBY_LAUNCH_CURRENCIES, ORIGINAL_LAUNCH_CURRENCIES, launchCurrencies, launchCurrency } from "../lib/gameCurrency";
 import { useSession } from "../lib/sessionContext";
 import { useFavourites } from "../lib/favouritesContext";
@@ -79,7 +79,7 @@ function CurrencyPrompt({ currency, choices, onPick }) {
 }
 
 /** The overlay card: pick a currency, then open the game. */
-function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error, options, balances, hideBalance = false }) {
+function GameOverlay({ signedIn, currency, onCurrency, onPlay, onDemo, launching, error, options, balances, hideBalance = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -199,6 +199,17 @@ function GameOverlay({ signedIn, currency, onCurrency, onPlay, launching, error,
                   {launching ? "Starting…" : "Real Play"}
                 </span>
               </button>
+              {/* GIS demo (`POST /casino/gis/launch-demo`): no stake, no wallet. A non-GIS game is refused upstream and says so above. */}
+              {onDemo && (
+                <button
+                  type="button"
+                  className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_secondary ProviderGameOverlay_playOptionButton"
+                  disabled={launching}
+                  onClick={onDemo}
+                >
+                  <span className="ButtonVariants_buttonContent">Fun Play</span>
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -510,6 +521,20 @@ export default function GamePage({ uuid, originalCode }) {
     }
   }, [uuid, originalCode, currency, refreshBalances]);
 
+  const demo = useCallback(async () => {
+    setLaunching(true);
+    setLaunchError(null);
+    try {
+      const data = await gis.launchDemo(uuid, window.innerWidth < 768 ? "mobile" : "desktop");
+      if (!data?.url) throw new Error("The provider did not return a demo to open.");
+      setSession({ gameLaunchUrl: data.url, demo: true });
+    } catch (e) {
+      setLaunchError(e?.message || "A demo is not available for this game.");
+    } finally {
+      setLaunching(false);
+    }
+  }, [uuid]);
+
   if (readError && !loading) return <GameNotFound />;
 
   return (
@@ -538,6 +563,7 @@ export default function GamePage({ uuid, originalCode }) {
                 currency={currency ?? options[0]}
                 onCurrency={setCurrency}
                 onPlay={play}
+                onDemo={originalCode ? null : demo}
                 launching={launching}
                 error={launchError}
                 options={options}

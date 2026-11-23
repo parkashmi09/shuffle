@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSession } from "../../lib/sessionContext";
 import { useApi } from "../../lib/useResource";
-import { preferences as preferencesApi } from "../../lib/endpoints";
+import { preferences as preferencesApi, tips as tipsApi } from "../../lib/endpoints";
 import { useGate } from "../../lib/gates";
 import { FIAT_CODES } from "../../lib/currencies";
 import { PREF_DEFAULTS, readStoredPreferences, writeStoredPreferences } from "../../lib/playerPreferences";
 import WalletSelect from "../wallet/CurrencySelect";
 import Switch from "./Switch";
+import { useThemeMode } from "../../lib/themeMode";
 
 /**
  * Settings → Preferences — reference `Preferences`.
@@ -26,6 +27,8 @@ import Switch from "./Switch";
  * | Streamer Mode              | `hideBalance` on server       | Masks balances in header & wallet pickers   |
  * | Hide zero balances         | localStorage + session        | Filters zero rows in header & wallet lists  |
  * | Odds Preference            | localStorage only             | Shown only with sports on                   |
+ * | Accept tips                | `PATCH /user/tip/settings`    | Off = hidden from tip lookup, tips refused (owner `tips` on) |
+ * | Light Theme                | localStorage only             | Shown only when the owner's `theme_mode` is `switch` |
  * | Private Mode               | `PATCH /user/preferences`     | hideGamingData + showStatistics off (profile counts) + showBetsPublicly off (named on feeds/races) |
  */
 
@@ -59,6 +62,32 @@ function SwitchRow({ checked, onChange, heading, description, disabled = false }
   );
 }
 
+/** Whether other players can find and tip this one — `GET/PATCH /user/tip/settings`. Hidden until read. */
+function TipPrivacyRow() {
+  const { data, reload } = useApi("settings:tip-settings", () => tipsApi.settings());
+  const [pending, setPending] = useState(null);
+  const [saved, setSaved] = useState(null);
+  if (!data) return null;
+  const checked = pending ?? saved ?? Boolean(data.enabled);
+  const onChange = (next) => {
+    setPending(next);
+    // A refused write drops back to the server's value.
+    tipsApi.setReceiving(next).then(() => setSaved(next), () => setSaved(null)).finally(() => {
+      setPending(null);
+      reload();
+    });
+  };
+  return (
+    <SwitchRow
+      checked={checked}
+      onChange={onChange}
+      disabled={pending != null}
+      heading="Accept Tips"
+      description="Other players can find you by username and send you tips"
+    />
+  );
+}
+
 export default function SettingsPreferences() {
   const {
     displayCurrency,
@@ -78,6 +107,7 @@ export default function SettingsPreferences() {
   const [touched, setTouched] = useState(() => []);
   const { data: stored } = useApi("settings:preferences", () => preferencesApi.get().catch(() => null));
   const on = useGate();
+  const theme = useThemeMode();
 
   const prefs = useMemo(() => {
     const merged = { ...PREF_DEFAULTS, ...local, fiatView, hideZeroBalances, streamerMode: hideBalance };
@@ -171,12 +201,23 @@ export default function SettingsPreferences() {
           </div>
           )}
 
+          {theme.allowed && (
+            <SwitchRow
+              checked={theme.light}
+              onChange={theme.setLight}
+              heading="Light Theme"
+              description="Use the light colour theme on this device"
+            />
+          )}
+
           <SwitchRow
             checked={prefs.privateMode}
             onChange={(privateMode) => save({ privateMode })}
             heading="Private Mode"
             description="Other users won't be able to view your wins, losses and wagered statistics"
           />
+
+          {on.ready && on("tips") && <TipPrivacyRow />}
 
           <SwitchRow
             checked={prefs.emailMarketing}

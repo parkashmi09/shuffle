@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { ApiError } from "../../lib/api";
-import { funding } from "../../lib/endpoints";
+import { funding, wager } from "../../lib/endpoints";
 import { useSession } from "../../lib/sessionContext";
 import { displayBalance, formatAmount, isFiat } from "../../lib/adapters";
 import { currencyName } from "../../lib/currencies";
@@ -42,7 +42,38 @@ const WITHDRAW_REFUSALS = {
   FIAT_WITHDRAW_KYC_REQUIRED: "Complete identity verification (Settings → Verify) before withdrawing.",
   WITHDRAW_WAGER_REQUIRED: "Wager your deposit and bonus before withdrawing.",
   BONUS_FORFEIT_REQUIRED: "This withdrawal forfeits your active bonus — tick the box to confirm.",
+  CRYPTO_WITHDRAW_ADDRESS_NOT_WHITELISTED:
+    "Whitelist-only is on: withdraw to a saved address (Settings → Security). A new address is usable 24 hours after you add it.",
 };
+
+/** The deposit rollover (`GET /user/wager/tasks`, USD): one bar per open task; nothing when none applies. */
+function RolloverTasks({ nonce }) {
+  const { data } = useApi(`wallet:wager-tasks:${nonce}`, () => wager.tasks());
+  const tasks = (data?.tasks ?? []).filter((t) => t.status !== "complete");
+  if (!tasks.length) return null;
+  return (
+    <div className="MiniList_root">
+      <h5 className="MiniList_heading">Wagering requirement</h5>
+      {tasks.map((t) => {
+        const pct = Number(t.target) > 0 ? Math.min(100, (Number(t.wagered) / Number(t.target)) * 100) : 100;
+        return (
+          <div key={t.id} className="Flex_root Flex_column Flex_sm2">
+            <div className="MiniList_row">
+              <span>{t.label}</span>
+              <span className="MiniList_meta">${formatAmount(t.wagered)} / ${formatAmount(t.target)}</span>
+            </div>
+            <div className="MiniList_bar" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+              <span style={{ width: `${pct}%` }} />
+            </div>
+            <span className="MiniList_meta">
+              {t.locked ? "Held by the operator — contact support." : `$${formatAmount(t.remaining)} left to wager.`}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /** Why `GET /withdrawals/requirements` says no, from its `missing[]`. */
 function requirementText(req) {
@@ -346,6 +377,7 @@ export default function WithdrawTab({
   const daily = requirements?.dailyLimit;
   const gate = (
     <>
+      <RolloverTasks nonce={nonce} />
       {cap?.enabled && cap.remaining != null && (
         <span className="NoticeMessage_text">Withdrawal cap: {formatAmount(cap.remaining)} {cap.currency} left to withdraw.</span>
       )}

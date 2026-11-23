@@ -13,6 +13,17 @@ import { useSession } from "../../lib/sessionContext";
 import WalletSelect from "./CurrencySelect";
 import QrCode from "./QrCode";
 
+const usd = (v) => Number(v || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+/** The responsible-gambling deposit-limit refusals in the player's words; null for anything else. */
+function depositLimitRefusal(error) {
+  if (error?.code === "RESPONSIBLE_DEPOSIT_NO_RATE") return "This deposit cannot be checked against your deposit limit right now. Try another currency.";
+  if (error?.code !== "RESPONSIBLE_DEPOSIT_LIMIT_REACHED") return null;
+  const { limitUsd, usedUsd, resetsAt } = error.details || {};
+  const reset = resetsAt ? ` It resets ${new Date(resetsAt).toLocaleString()}.` : "";
+  return `This deposit would pass your deposit limit (${usd(usedUsd)} of ${usd(limitUsd)} used).${reset}`;
+}
+
 /** The fiat the operator publishes bank details for — the manual deposit rail. */
 const MANUAL_COIN = "INR";
 
@@ -180,7 +191,7 @@ function FiatDeposit({ coin }) {
       setScreenshot(null);
     } catch (error) {
       const fields = error instanceof ApiError ? error.fields.map((f) => f.message).join(" ") : "";
-      setStatus({ ok: false, message: fields || error.message || "Could not submit the deposit." });
+      setStatus({ ok: false, message: depositLimitRefusal(error) || fields || error.message || "Could not submit the deposit." });
     } finally {
       setBusy(false);
     }
@@ -309,7 +320,7 @@ function AutoDeposit({ coin, methods }) {
       // Stays busy: the page is leaving for the gateway, which sends the player back when paid.
       window.location.assign(order.redirectUrl);
     } catch (err) {
-      setError(err.message || "Could not start the deposit.");
+      setError(depositLimitRefusal(err) || err.message || "Could not start the deposit.");
       setBusy(false);
     }
   };

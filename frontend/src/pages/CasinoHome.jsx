@@ -7,6 +7,8 @@ import ProviderCarousel from "../components/casino/ProviderCarousel";
 import TournamentsCarousel from "../components/casino/TournamentsCarousel";
 import ActivityBoard from "../components/casino/ActivityBoard";
 import SeoArticle from "../components/casino/SeoArticle";
+import { JackpotTicker, MyFreeSpins } from "../components/casino/GisExtras";
+import { useSession } from "../lib/sessionContext";
 import { adminCategorySlug, categoryQuery } from "../lib/categories";
 import { useGate } from "../lib/gates";
 import { usePublicSiteConfig } from "../lib/usePublicSiteConfig";
@@ -106,6 +108,7 @@ export default function CasinoHome() {
   // empty — see `lib/catalogue.js`. The lobby renders identically either way.
   const { banners } = useBanners();
   const on = useGate();
+  const { signedIn } = useSession();
   // The site admin's home-section switches; unset or unanswered = shown.
   const { flags } = usePublicSiteConfig();
   const shown = (key) => flags?.[key] !== false;
@@ -130,6 +133,8 @@ export default function CasinoHome() {
             <HomeCategoryTab key={tab} {...category} />
           ) : (
             <div className="HomeTabLobby_homeTabLobbyWrapper">
+              {on("casino") && <JackpotTicker />}
+              {signedIn && on("freespins") && <MyFreeSpins />}
               {/* No View all card on this row — removed on request. */}
               <GameCarousel section={shuffleGames} viewAll={false} />
               {shown("home_popularslots") && <GameCarousel section={slots} />}

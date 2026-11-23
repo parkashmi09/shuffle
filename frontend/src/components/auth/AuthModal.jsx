@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { cx } from "../../lib/carousel";
 import { useSession } from "../../lib/sessionContext";
 import { ApiError, NetworkError } from "../../lib/api";
-import { auth as authApi } from "../../lib/endpoints";
+import { auth as authApi, emailOtp } from "../../lib/endpoints";
 import Modal from "../ui/Modal";
 import { clearStoredReferral, normalizeReferralInput, readStoredReferral } from "../../lib/referralCapture";
 import { usePublicSiteConfig } from "../../lib/usePublicSiteConfig";
@@ -267,6 +267,24 @@ function LoginForm({ onDone, initialNotice = null }) {
   // 2FA step: `AUTH_TWO_FACTOR_REQUIRED` keeps identifier/password and asks for the code, resent as `twoFactorCode`.
   const [twoFactor, setTwoFactor] = useState(false);
   const [code, setCode] = useState("");
+  // Lost authenticator: a code mailed to the account (`/user/email/2fa/reset`) turns 2FA off; `code` holds it.
+  const [resetSent, setResetSent] = useState(false);
+
+  const onLostAuthenticator = async () => {
+    setStatus(null);
+    setBusy(true);
+    try {
+      await emailOtp.twoFactorReset(form.values.identifier.trim());
+      setResetSent(true);
+      setCode("");
+      // The reply is the same whether or not a mail went out, so this must not say more.
+      setNotice("If 2FA is on for this account, a 6-digit code is on its way to its email address.");
+    } catch (error) {
+      setStatus(authMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   /**
    * Begin a password reset.
@@ -303,7 +321,23 @@ function LoginForm({ onDone, initialNotice = null }) {
       return;
     }
     if (twoFactor && code.length !== 6) {
-      setStatus("Enter the 6-digit code from your authenticator app.");
+      setStatus(resetSent ? "Enter the 6-digit code from the email." : "Enter the 6-digit code from your authenticator app.");
+      return;
+    }
+    if (resetSent) {
+      setBusy(true);
+      setStatus(null);
+      try {
+        await emailOtp.twoFactorResetConfirm(form.values.identifier.trim(), code);
+        setResetSent(false);
+        setTwoFactor(false);
+        setCode("");
+        setNotice("Two-factor authentication is off. Log in with your password.");
+      } catch (error) {
+        setStatus(authMessage(error));
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     setBusy(true);
@@ -342,7 +376,7 @@ function LoginForm({ onDone, initialNotice = null }) {
         )}
         {twoFactor ? (
           <TextField
-            label="Authentication Code*"
+            label={resetSent ? "Email Code*" : "Authentication Code*"}
             name="twoFactorCode"
             placeholder="6-digit code"
             inputMode="numeric"
@@ -377,6 +411,7 @@ function LoginForm({ onDone, initialNotice = null }) {
               disabled={busy}
               onClick={() => {
                 setTwoFactor(false);
+                setResetSent(false);
                 setCode("");
                 setStatus(null);
                 setNotice(null);
@@ -391,6 +426,11 @@ function LoginForm({ onDone, initialNotice = null }) {
           )}
         </div>
       </form>
+      {twoFactor && !resetSent && !agentSite && (
+        <button type="button" className="PasswordInput_forgotPasswordText" disabled={busy} onClick={onLostAuthenticator}>
+          Lost access to your authenticator?
+        </button>
+      )}
       {!twoFactor && !agentSite && <OauthButtons />}
     </div>
   );

@@ -1,0 +1,216 @@
+/* Light theme — only when the owner's `theme_mode` policy is `switch` and the player picked it
+   (lib/themeMode.js sets `data-theme="light"` on <html>). The site is drawn from the gray scale
+   and `--color-white` text, so flipping those tokens is the whole theme; accent purples and the
+   state colours stay as they are. Primary buttons keep their literal white label. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-mainBackground: #f3f4f8;
+  --color-grayScaleBlack: #f3f4f8;
+  --color-black900: #eceef3;
+  --color-black: #e6e8ef;
+  --color-chineseBlack: #eceef3;
+  --color-eerieBlack: #e6e8ef;
+  --color-gray900: #ffffff;
+  --color-gray800: #f2f3f7;
+  --color-gray700: #e4e7ee;
+  --color-gray600: #d7dbe4;
+  --color-gray500: #b9bfcc;
+  --color-gray400: #6e7585;
+  --color-gray300: #575e6e;
+  --color-gray200: #3b4150;
+  --color-gray100: #1e2129;
+  --color-white: #12141a;
+  --color-white100: #12141a;
+  --color-gray900-overlay: rgba(243, 244, 248, 0.7);
+  --color-overlay: rgba(18, 20, 26, 0.35);
+
+  --bg-base: #f3f4f8;
+  --bg-sunken: #eceef3;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f4f5f9;
+  --bg-surface-3: #eceef3;
+  --bg-hover: #e2e5ec;
+  --overlay: rgba(18, 20, 26, 0.35);
+
+  --border: #e4e7ee;
+  --border-strong: #d7dbe4;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+
+  --text: #12141a;
+  --text-secondary: #5d6575;
+  --text-muted: #8a90a0;
+  --text-inverse: #ffffff;
+
+  --btn-tertiary: #e4e7ee;
+  --btn-tertiary-hover: #d7dbe4;
+  --btn-tertiary-active: #b9bfcc;
+
+  --shadow-sm: 0 1px 2px rgba(18, 20, 26, 0.08);
+  --shadow-md: 0 4px 12px rgba(18, 20, 26, 0.1);
+  --shadow-lg: 0 12px 32px rgba(18, 20, 26, 0.14);
+}
+
+/* Generated from every rule that hard-codes white text on a neutral surface (accent fills are left
+   white): in light mode that text takes the flipped --color-white token instead. */
+:root[data-theme="light"] .Accordion_accordionHeader,
+:root[data-theme="light"] .Accordion_accordionHeaderLeft,
+:root[data-theme="light"] .Accordion_accordionHeaderLeft p,
+:root[data-theme="light"] .Alert_text,
+:root[data-theme="light"] .Label_root,
+:root[data-theme="light"] .SingleDateInput_segment,
+:root[data-theme="light"] .ModalClose_modalHeader,
+:root[data-theme="light"] .PhoneNumberInput_input,
+:root[data-theme="light"] .PasswordInput_forgotPasswordText,
+:root[data-theme="light"] .Login_textNote,
+:root[data-theme="light"] .TermAndPolicyRegister_root,
+:root[data-theme="light"] .TermAndPolicyRegister_root a,
+:root[data-theme="light"] .Register_collapseTitle,
+:root[data-theme="light"] .DrawResult_navigation > p,
+:root[data-theme="light"] .DrawResult_navigation > p .DrawResult_draw,
+:root[data-theme="light"] .magic-container.right-side-opened-only .DrawResult_navigation > button > span,
+:root[data-theme="light"] .magic-container.left-side-opened-only .DrawResult_navigation > button > span,
+:root[data-theme="light"] .magic-container.both-side-opened .DrawResult_navigation > button > span,
+:root[data-theme="light"] .magic-container.no-side-opened .DrawResult_navigation > button > span,
+:root[data-theme="light"] .PageHeader_root .PageHeader_backButton,
+:root[data-theme="light"] .SearchInput_input,
+:root[data-theme="light"] .CardGridEmpty_root p,
+:root[data-theme="light"] .SelectMenu_option:hover,
+:root[data-theme="light"] .SelectMenu_optionActive,
+:root[data-theme="light"] .Switch_spacedLayout .Switch_label,
+:root[data-theme="light"] .LadderMarketLayout_button,
+:root[data-theme="light"] .DefaultMarketLayout_button,
+:root[data-theme="light"] .SportsCustomBetSection_buttonsGroup button,
+:root[data-theme="light"] .SportsCustomBetSection_buttonsGroup button:hover,
+:root[data-theme="light"] .ProviderGamesFooter_button,
+:root[data-theme="light"] .BalanceSelect_balanceBtn,
+:root[data-theme="light"] .BalancePopup_root,
+:root[data-theme="light"] .BalanceItem_root,
+:root[data-theme="light"] .UserMenu_root .UserMenu_userMenuWrapper,
+:root[data-theme="light"] .ExpandMenuElement_menuItem,
+:root[data-theme="light"] .UserMenuVipCard_levelPercentage,
+:root[data-theme="light"] .HeaderBalanceSelector_root,
+:root[data-theme="light"] .TallGameCard_restrictedText,
+:root[data-theme="light"] .Tab_active,
+:root[data-theme="light"] .Input_root,
+:root[data-theme="light"] .Select_item,
+:root[data-theme="light"] .ProgressBarSection_graphContent>label,
+:root[data-theme="light"] .ProgressBarSection_tokenAmount,
+:root[data-theme="light"] .RichText_bold,
+:root[data-theme="light"] a.RichText_link,
+:root[data-theme="light"] .OddsFormatPreference_selectedItem,
+:root[data-theme="light"] .ButtonVariants_secondary .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_secondary.ButtonVariants_keepEnabledStyle:disabled .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_tertiaryRound.ButtonVariants_readOnly:disabled .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_tertiaryRound.ButtonVariants_tertiaryLoading .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_tertiaryRound.ButtonVariants_tertiaryLoading:hover .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_tertiary.ButtonVariants_readOnly:disabled .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_tertiary.ButtonVariants_tertiaryLoading .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_tertiary.ButtonVariants_tertiaryLoading:hover .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_outline .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_outline.ButtonVariants_keepEnabledStyle:disabled .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_link .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_link.ButtonVariants_keepEnabledStyle:disabled .ButtonVariants_buttonContent,
+:root[data-theme="light"] .Header_navWrapper,
+:root[data-theme="light"] .MobileNavigation_root,
+:root[data-theme="light"] .ModalListContainer_value,
+:root[data-theme="light"] .LotteryTicketsAndPrizesSection_viewDetail,
+:root[data-theme="light"] .LotteryTicketsAndPrizesSection_unStake,
+:root[data-theme="light"] .magic-container.right-side-opened-only .DrawResult_navigation>button>span,
+:root[data-theme="light"] .magic-container.left-side-opened-only .DrawResult_navigation>button>span,
+:root[data-theme="light"] .magic-container.both-side-opened .DrawResult_navigation>button>span,
+:root[data-theme="light"] .magic-container.no-side-opened .DrawResult_navigation>button>span,
+:root[data-theme="light"] .DrawResult_navigation>p,
+:root[data-theme="light"] .DrawResult_navigation>p .DrawResult_draw,
+:root[data-theme="light"] .LotteryResultDrawSelection_numberWrapper .LotteryResultDrawSelection_button,
+:root[data-theme="light"] .LotteryHowToPlayCarouselItem_heading,
+:root[data-theme="light"] .LotteryHowToPlayCarouselItem_heading p,
+:root[data-theme="light"] .LotteryTicketWrapper_disabled header,
+:root[data-theme="light"] .LotteryTicketWrapper_inactiveHeader,
+:root[data-theme="light"] .LotteryPlaySection_balance>div,
+:root[data-theme="light"] .Pagination_root .Pagination_item button,
+:root[data-theme="light"] .Tag_grey,
+:root[data-theme="light"] .Tag_live,
+:root[data-theme="light"] .TournamentInfoLeaderboard_tableButton,
+:root[data-theme="light"] .NavTabs_horizontalTabsWithArrowsWrapper .NavTabs_arrow,
+:root[data-theme="light"] .SportsBetSelectionButton_root.SportsBetSelectionButton_selected:disabled .SportsBetSelectionButton_selectionName,
+:root[data-theme="light"] .MatchEventTileRaceWinner_showAllBtn,
+:root[data-theme="light"] .AllSportsList_sportLetter,
+:root[data-theme="light"] .VipPagePublicGettingStarted_vipPagePublicGettingStartedStep p span,
+:root[data-theme="light"] .Card_completed .Card_description,
+:root[data-theme="light"] .Card_disabled .Card_heading,
+:root[data-theme="light"] .VipCurrentProgress_footer,
+:root[data-theme="light"] .VipLevelsTable_cell,
+:root[data-theme="light"] .VipLevelsTable_vipLevelStatusText,
+:root[data-theme="light"] .VipSidebarRewardBlock_vipStatusText,
+:root[data-theme="light"] .NoticeMessage_root,
+:root[data-theme="light"] .ModalBottomLink_root,
+:root[data-theme="light"] .SelfExclusionModal_cancelBtn,
+:root[data-theme="light"] .ResponsibleGamblingLimits_removeBtn,
+:root[data-theme="light"] .ExpandableLinks_root,
+:root[data-theme="light"] .ExpandableLinks_toggleButton,
+:root[data-theme="light"] .ExpandableLinks_collapsed>button:first-child {
+  color: var(--color-white);
+}
+
+/* The white monochrome UI icons turn dark. Zero specificity, so any rule that already tints an icon
+   (active nav, state colours) still wins; icons on a primary (purple) button stay white. */
+:where(:root[data-theme="light"]) :where(img[src="/icons/8.svg"], img[src="/icons/affiliate.svg"], img[src="/icons/all-sports.svg"], img[src="/icons/arrow-cricle-background.svg"], img[src="/icons/arrow-left.svg"], img[src="/icons/baccarat.svg"], img[src="/icons/bet-live.svg"], img[src="/icons/bet-slip.svg"], img[src="/icons/bin.svg"], img[src="/icons/blackjack.svg"], img[src="/icons/blog.svg"], img[src="/icons/calender-days.svg"], img[src="/icons/casino.svg"], img[src="/icons/challenge.svg"], img[src="/icons/chat.svg"], img[src="/icons/check-circle.svg"], img[src="/icons/chevron-small.svg"], img[src="/icons/chevron.svg"], img[src="/icons/coin-outline.svg"], img[src="/icons/crown.svg"], img[src="/icons/desktop.svg"], img[src="/icons/dice.svg"], img[src="/icons/double-ticks.svg"], img[src="/icons/edit-2.svg"], img[src="/icons/error-fill.svg"], img[src="/icons/esports.svg"], img[src="/icons/exclamation.svg"], img[src="/icons/eye-outline.svg"], img[src="/icons/filters.svg"], img[src="/icons/fullscreen.svg"], img[src="/icons/game-popup.svg"], img[src="/icons/game-show.svg"], img[src="/icons/global-star.svg"], img[src="/icons/greek-temple.svg"], img[src="/icons/headphone.svg"], img[src="/icons/home.svg"], img[src="/icons/info-fill.svg"], img[src="/icons/info.svg"], img[src="/icons/latest-releases.svg"], img[src="/icons/lighting.svg"], img[src="/icons/live-support.svg"], img[src="/icons/lottery-amount-ticket.svg"], img[src="/icons/menu.svg"], img[src="/icons/multi-decrease.svg"], img[src="/icons/multi-increase.svg"], img[src="/icons/notifications.svg"], img[src="/icons/original.svg"], img[src="/icons/play-no-outline.svg"], img[src="/icons/play.svg"], img[src="/icons/profile.svg"], img[src="/icons/promotions.svg"], img[src="/icons/provider.svg"], img[src="/icons/providers.svg"], img[src="/icons/question-mark.svg"], img[src="/icons/ranks.svg"], img[src="/icons/recent-played.svg"], img[src="/icons/redeem-code.svg"], img[src="/icons/redo.svg"], img[src="/icons/refresh.svg"], img[src="/icons/restricted-region-lock.svg"], img[src="/icons/rewards.svg"], img[src="/icons/roulette.svg"], img[src="/icons/search.svg"], img[src="/icons/setting.svg"], img[src="/icons/shield-lock.svg"], img[src="/icons/shield.svg"], img[src="/icons/shuffle-picks.svg"], img[src="/icons/shuffle-wise.svg"], img[src="/icons/slots.svg"], img[src="/icons/small-gift.svg"], img[src="/icons/smile-face.svg"], img[src="/icons/sort-arrow.svg"], img[src="/icons/sport.svg"], img[src="/icons/sports-bet-slip.svg"], img[src="/icons/sports-leagues.svg"], img[src="/icons/sports-stats.svg"], img[src="/icons/star.svg"], img[src="/icons/stats.svg"], img[src="/icons/success.svg"], img[src="/icons/table-games.svg"], img[src="/icons/times.svg"], img[src="/icons/token-white.svg"], img[src="/icons/transactions.svg"], img[src="/icons/trophy.svg"], img[src="/icons/user-profile.svg"], img[src="/icons/vault.svg"], img[src="/icons/vip.svg"], img[src="/icons/wallet.svg"], img[src="/icons/warning.svg"], img[src="/icons/white-cross.svg"], img[src="/icons/wide.svg"]):not(.ButtonVariants_primary img) {
+  filter: brightness(0) invert(0.2);
+}
+
+/* The base `button` rule paints every button label white; on light surfaces it takes the token too
+   (zero specificity, so a button's own colour rule still wins). */
+:where(:root[data-theme="light"]) button {
+  color: var(--color-white);
+}
+
+/* Outlined buttons draw their border in white. */
+:root[data-theme="light"] .ButtonVariants_secondary .ButtonVariants_buttonContent,
+:root[data-theme="light"] .ButtonVariants_outline .ButtonVariants_buttonContent {
+  border-color: var(--color-white);
+}
+
+/* The active Casino/Sports tab sits on the accent fill, so its label stays white. */
+:root[data-theme="light"] .NavigationTab_active,
+:root[data-theme="light"] .NavigationTab_active span {
+  color: #fff;
+}
+
+/* The auth modal's terms sit on the purple login artwork, not on a surface, so they stay light. */
+:root[data-theme="light"] .AuthModal_terms,
+:root[data-theme="light"] .AuthModal_terms > a {
+  color: var(--text-inverse);
+}
+
+/* Modal back/close hover was a literal dark grey; on light it takes the tertiary hover token. */
+@media (hover: hover) {
+  :root[data-theme="light"] .ModalBackButton_backButton:hover,
+  :root[data-theme="light"] .ModalClose_closeButton:hover {
+    background-color: var(--btn-tertiary-hover);
+  }
+}
+
+/* The game tile's popup button is a black chip over the artwork in both themes: keep its icon white. */
+:root[data-theme="light"] .TallGameCard_button img {
+  filter: none;
+}
+
+/* Multi-colour illustrations drawn for a dark page (gift boxes on the VIP reward cards, race,
+   redeem, verify, rank gems…) have white edges that vanish on a white card. The art is left as is;
+   light mode traces its silhouette in a mid-grey token. Zero specificity, so a state filter
+   (locked/claimed greyscale) on the same image still wins. */
+:where(:root[data-theme="light"]) :where(img[src="/icons/daily-bonus.svg"], img[src="/icons/weekly-bonus.svg"], img[src="/icons/monthly-bonus.svg"], img[src="/icons/rake.svg"], img[src="/icons/race.svg"], img[src="/icons/redeem.svg"], img[src="/icons/cash.svg"], img[src="/icons/verify.svg"], img[src="/icons/self-exclusion-confirmation.svg"], img[src="/icons/notification-gold.svg"], img[src="/icons/logo-mark.svg"], img[src="/icons/affiliate/promo-materials.svg"], img[src="/icons/affiliate/shuffle-partner.svg"], img[src="/images/vip/diamond.svg"], img[src="/images/vip/jade.svg"], img[src="/images/vip/opal.svg"], img[src="/images/vip/platinum.svg"], img[src="/images/vip/ruby.svg"], img[src="/images/vip/sapphire.svg"], img[src="/images/vip/silver.svg"]) {
+  filter: drop-shadow(0 0 0.5px var(--color-gray400)) drop-shadow(0 0 0.5px var(--color-gray400));
+}
+
+/* The public VIP hero writes on its own dark artwork in both themes: keep that title and copy white. */
+:root[data-theme="light"] .VipPagePublic_vipContentArea .VipPagePublic_heading,
+:root[data-theme="light"] .VipPagePublic_vipContentArea .VipPagePublic_subHeading {
+  color: #fff;
+}
+
+/* The phone tab bar sets its label colour inline (#fff); on the light bar it takes the text token. */
+:root[data-theme="light"] .MobileNavItemContent_mobileNavItemWrapper {
+  color: var(--color-white) !important;
+}

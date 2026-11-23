@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useApi } from "../../lib/useResource";
 import { auth as authApi } from "../../lib/endpoints";
+import { useSession } from "../../lib/sessionContext";
+import Modal from "../ui/Modal";
 import TableSkeleton from "../ui/TableSkeleton";
 
 /**
@@ -49,13 +51,14 @@ export default function SettingsSessions() {
   const [revoking, setRevoking] = useState(null);
   const { data, loading } = useApi(`settings:sessions:${nonce}`, () => authApi.sessions().catch(() => []));
   const rows = data || [];
+  const { logout } = useSession();
+  const [confirmCurrent, setConfirmCurrent] = useState(false);
 
-  // The row this browser is on: the most recently used one, which is the
-  // request that just fetched this list.
-  const currentId = rows.reduce(
-    (best, row) => (!best || new Date(row.last_used_at) > new Date(best.last_used_at) ? row : best),
-    null
-  )?.id;
+  // The row this browser is on: the backend's `isCurrent`, else (older
+  // backend) the most recently used one, which is the request that just fetched this list.
+  const currentId =
+    rows.find((row) => row.isCurrent)?.id ??
+    rows.reduce((best, row) => (!best || new Date(row.last_used_at) > new Date(best.last_used_at) ? row : best), null)?.id;
 
   const revoke = async (id) => {
     setRevoking(id);
@@ -92,7 +95,10 @@ export default function SettingsSessions() {
                       <span className="UserSessions_deviceIcon">
                         <img alt="desktop" src="/icons/desktop.svg" />
                       </span>
-                      {row.device_label || device(row.user_agent)}
+                      <span>
+                        {row.device_label || device(row.user_agent)}
+                        {row.id === currentId && " · This device"}
+                      </span>
                     </div>
                   </div>
                 </td>
@@ -105,18 +111,14 @@ export default function SettingsSessions() {
                 <td><div className="UserSessions_flexCell">{lastUsed(row.last_used_at)}</div></td>
                 <td>
                   <div className="UserSessions_flexCell">
-                    {row.id === currentId ? (
-                      "Current Session"
-                    ) : (
-                      <button
-                        type="button"
-                        className="UserSessions_removeBtn"
-                        disabled={revoking === row.id}
-                        onClick={() => revoke(row.id)}
-                      >
-                        {revoking === row.id ? "Removing" : "Remove"}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="UserSessions_removeBtn"
+                      disabled={revoking === row.id}
+                      onClick={() => (row.id === currentId ? setConfirmCurrent(true) : revoke(row.id))}
+                    >
+                      {revoking === row.id ? "Removing" : row.id === currentId ? "Sign Out" : "Remove"}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -126,6 +128,17 @@ export default function SettingsSessions() {
       </table>
       {!loading && rows.length === 0 && (
         <div className="Table_noResult"><p>No active sessions.</p></div>
+      )}
+      {confirmCurrent && (
+        <Modal onClose={() => setConfirmCurrent(false)} label="Sign out this device">
+          <h3 className="Header_root">Sign out this device?</h3>
+          <div className="ChangePasswordModal_root">
+            <p className="Subheader_root"><span>This is the session you are using now. You will be signed out here.</span></p>
+            <button type="button" onClick={logout} className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary ChangePasswordModal_button">
+              <span className="ButtonVariants_buttonContent">Sign Out</span>
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

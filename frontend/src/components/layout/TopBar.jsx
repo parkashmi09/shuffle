@@ -1,4 +1,5 @@
 import { useBranding } from "../../lib/siteContent";
+import { useThemeMode } from "../../lib/themeMode";
 /**
  * Main-column header — reference `Header` module.
  *
@@ -154,7 +155,9 @@ export default function TopBar({ onAuth = () => {} }) {
 
   // The owner's logo and mark when branded; the bundled Shuffle artwork otherwise.
   const brand = useBranding();
-  const logo = (cls, src = "/icons/logo.svg") => (
+  // Light theme: the same wordmark with dark text (public/icons/logo-light.svg).
+  const { light } = useThemeMode();
+  const logo = (cls, src = light ? "/icons/logo-light.svg" : "/icons/logo.svg") => (
     <a
       title={brand?.siteName || "Shuffle Casino"}
       aria-label="Home"

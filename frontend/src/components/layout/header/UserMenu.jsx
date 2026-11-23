@@ -44,6 +44,8 @@ const items = [
   { id: "notifications", label: "Notifications", icon: "/icons/notifications.svg" },
   { id: "transactions", label: "Transactions", icon: "/icons/transactions.svg", href: "/transactions" },
   { id: "redeem", label: "Redeem Code", icon: "/icons/redeem-code.svg" },
+  { id: "raffles", label: "Raffle", icon: "/icons/lottery-ticket.svg", event: "shuffle:raffle" },
+  { id: "spinwheel", label: "Spin Wheel", icon: "/icons/circulate.svg", event: "shuffle:spin-wheel" },
   { id: "settings", label: "Settings", icon: "/icons/setting.svg", href: "/settings/account" },
   { id: "wise", label: "Shuffle Wise", icon: "/icons/shuffle-wise.svg", href: "/shuffle-wise/self-exclusion" },
   { id: "support", label: "Live Support", icon: "/icons/live-support.svg" },
@@ -166,6 +168,25 @@ function MenuRow({ item, onClose, supportHref }) {
     );
   }
 
+  // A row that opens a dialog in the shell (raffle, spin wheel).
+  if (item.event) {
+    return (
+      <button
+        type="button"
+        className="ExpandMenuElement_menuItem"
+        onClick={() => {
+          onClose();
+          window.dispatchEvent(new CustomEvent(item.event));
+        }}
+      >
+        <span className="ExpandMenuElement_menuIcon">
+          <img alt="" height="16" width="16" src={item.icon} />
+        </span>
+        {item.label}
+      </button>
+    );
+  }
+
   if (item.id === "redeem") {
     return (
       <button
@@ -232,7 +253,7 @@ function MenuRow({ item, onClose, supportHref }) {
 export default function UserMenu({ user }) {
   // Item ids that are gate keys (vip, vault, affiliate, notifications) follow the owner/admin switches.
   const on = useGate();
-  const menuItems = items.filter((i) => on(i.id === "redeem" ? "bonus" : i.id));
+  const menuItems = items.filter((i) => (i.id === "redeem" ? on("bonus") || on("giftcards") : on(i.id)));
   const supportHref = useSupportHref();
   const [open, setOpen] = useState(false);
   const root = useRef(null);

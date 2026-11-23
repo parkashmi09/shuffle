@@ -140,3 +140,46 @@
   0% { transform: scaleX(1); }
   100% { transform: scaleX(0); }
 }
+
+/* Region notice (components/layout/RegionNotice.jsx) — a strip above the page content. */
+.RegionNotice_root {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md2);
+  margin: var(--spacing-md2) var(--spacing-md2) 0;
+  padding: var(--spacing-md) var(--spacing-md2);
+  background: var(--color-gray800);
+  border: 1px solid var(--color-gray700);
+  border-left: 4px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  color: var(--color-gray300);
+  font-size: 0.875rem;
+}
+
+.RegionNotice_text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm2);
+  flex: 1;
+  min-width: 0;
+}
+
+.RegionNotice_title {
+  color: var(--color-white);
+}
+
+.RegionNotice_meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm2) var(--spacing-md);
+  color: var(--color-gray400);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+  .RegionNotice_root {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

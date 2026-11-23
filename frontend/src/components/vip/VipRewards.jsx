@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/carousel";
-import { bonus as bonusApi, bonusBalance as bonusBalanceApi, lossBonus as lossBonusApi, rakeback as rakebackApi, vip as vipApi } from "../../lib/endpoints";
+import { bonus as bonusApi, bonusBalance as bonusBalanceApi, lossBonus as lossBonusApi, rakeback as rakebackApi, reloadRewards as reloadApi, vip as vipApi } from "../../lib/endpoints";
+import { formatAmount } from "../../lib/adapters";
 import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
 import { levelName } from "./vipTiers";
@@ -65,6 +66,37 @@ const STATUS = {
  * two ever have to be reconciled: the *name* came from shuffle.com, the
  * *money* comes from `dailybonus`.
  */
+/** `GET /user/reload-rewards` programs, as cards beside the recurring bonuses. */
+const RELOAD_CARDS = [
+  { program: "DAILY_RELOAD", heading: "Daily Reload", icon: "/icons/daily-bonus.svg" },
+  { program: "PRE_MONTHLY", heading: "Pre-Monthly Bonus", icon: "/icons/monthly-bonus.svg" },
+];
+
+const DAY_STATE = { claimed: "Claimed", claimable: "Claim", missed: "Missed", none: "—", building: "Building", upcoming: "" };
+
+/**
+ * The Daily Reload calendar — `GET /user/reload-rewards/calendar`: yesterday, today (the claimable day),
+ * tomorrow (still building) and the days ahead.
+ */
+function ReloadCalendar({ calendar }) {
+  if (!calendar?.enabled || !calendar.days?.length) return null;
+  return (
+    <div className="MiniList_root">
+      <p className="MiniList_heading">Daily Reload · {formatAmount(calendar.percent)}% of yesterday&apos;s wager</p>
+      {!calendar.eligible && <span className="MiniList_meta">Reach the required VIP level to claim.</span>}
+      <div className="ReloadCalendar_days">
+        {calendar.days.map((d) => (
+          <div key={d.date} className={cx("ReloadCalendar_day", d.date === calendar.today && "ReloadCalendar_today", d.state === "claimed" && "ReloadCalendar_claimed")}>
+            <span>{new Date(`${d.date}T00:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: "UTC" })}</span>
+            {Number(d.earnedUsd) > 0 && <strong>${formatAmount(d.earnedUsd)}</strong>}
+            <span>{DAY_STATE[d.state] ?? d.state}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const BONUS_CARDS = [
   { type: "daily", heading: "Daily Rakeback", icon: "/icons/daily-bonus.svg" },
   { type: "weekly", heading: "Weekly Bonus", icon: "/icons/weekly-bonus.svg" },
@@ -218,6 +250,8 @@ export default function VipRewards({ levels, variant = "page" }) {
   const { data: rankUps, reload: reloadRankUps } = useApi("vip:rank-ups", () => vipApi.rankUps());
   const { data: held, reload: reloadHeld } = useApi("vip:bonus-balance", () => bonusBalanceApi.get());
   const { data: loss, reload: reloadLoss } = useApi("vip:loss-bonus", () => lossBonusApi.get());
+  const { data: reloads, reload: reloadReloads } = useApi("vip:reload", () => reloadApi.overview());
+  const { data: calendar, reload: reloadCalendar } = useApi("vip:reload-calendar", () => reloadApi.calendar(), { enabled: variant !== "sidebar" });
   const { refreshBalances } = useSession();
 
   /* `{ [cardId]: "busy" | "claimed" | errorMessage }` — per card, so one
@@ -258,6 +292,8 @@ export default function VipRewards({ levels, variant = "page" }) {
               ? Boolean(rankUps?.cards?.length)
               : id === "deposit-bonus"
                 ? unlockedReady
+                : reloads?.[id]
+                  ? Boolean(reloads[id].claimable)
                 : id === "loss-bonus"
                   ? loss?.state === "claimable"
                   : Boolean(bonuses?.types?.[id]?.claimable);
@@ -268,7 +304,7 @@ export default function VipRewards({ levels, variant = "page" }) {
       }
       return changed ? next : c;
     });
-  }, [rake, bonuses, rankUps, unlockedReady, loss]);
+  }, [rake, bonuses, rankUps, unlockedReady, loss, reloads]);
 
   const cards = useMemo(() => {
     const list = [];
@@ -328,6 +364,27 @@ export default function VipRewards({ levels, variant = "page" }) {
       });
     }
 
+    for (const card of RELOAD_CARDS) {
+      const entry = reloads?.[card.program];
+      if (!entry?.enabled) continue;
+      list.push({
+        id: card.program,
+        heading: card.heading,
+        icon: card.icon,
+        minVipRank: levelName(levels, entry.minVipLevel) || `VIP ${entry.minVipLevel}`,
+        expiry: !entry.open ? availableIn(entry.opensAt) : null,
+        status: claims[card.program] === "claimed" || entry.claimed
+          ? STATUS.CLAIMED
+          : !entry.eligible
+            ? STATUS.LOCKED
+            : entry.claimable
+              ? STATUS.CLAIMABLE
+              : !entry.open
+                ? STATUS.COOLDOWN
+                : STATUS.WAGER,
+      });
+    }
+
     if (loss?.enabled) {
       list.push({
         id: "loss-bonus",
@@ -339,7 +396,7 @@ export default function VipRewards({ levels, variant = "page" }) {
     }
 
     return list;
-  }, [rake, bonuses, rankUps, claims, levels, lockedBonuses.length, unlockedReady, loss]);
+  }, [rake, bonuses, rankUps, claims, levels, lockedBonuses.length, unlockedReady, loss, reloads]);
 
   /* Live count of enabled Claim buttons — not a fixed label. Hidden at 0 so
      a purple "0" does not read as a static decoration. */
@@ -379,8 +436,10 @@ export default function VipRewards({ levels, variant = "page" }) {
                             ? () => bonusBalanceApi.claim()
                             : card.id === "loss-bonus"
                               ? () => lossBonusApi.claim()
-                              : () => bonusApi.claim(card.id),
-                      { rakeback: reloadRake, rankup: reloadRankUps, "deposit-bonus": reloadHeld, "loss-bonus": reloadLoss }[card.id] ?? reloadBonuses
+                              : reloads?.[card.id]
+                                ? () => reloadApi.claim(card.id)
+                                : () => bonusApi.claim(card.id),
+                      { rakeback: reloadRake, rankup: reloadRankUps, "deposit-bonus": reloadHeld, "loss-bonus": reloadLoss, DAILY_RELOAD: () => { reloadReloads(); reloadCalendar(); }, PRE_MONTHLY: reloadReloads }[card.id] ?? reloadBonuses
                     )
                   }
                 />
@@ -391,6 +450,7 @@ export default function VipRewards({ levels, variant = "page" }) {
       ) : (
         <p className="VipPageOverview_description">You currently don’t have any VIP Rewards available to claim.</p>
       )}
+      {variant !== "sidebar" && <ReloadCalendar calendar={calendar} />}
     </div>
   );
 }
