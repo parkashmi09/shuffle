@@ -1,4 +1,6 @@
 import { useCoins } from "./currencies";
+import { funding } from "./endpoints";
+import { useApi } from "./useResource";
 
 /**
  * Which chains each asset can move on.
@@ -16,23 +18,19 @@ import { useCoins } from "./currencies";
  * this only as the shape of the control, with the field marked unconfigured.
  * See `docs/MISSING-AND-UNWIRED.md`.
  *
- * The ETH list is the reference's own, read off the live modal: Ethereum
- * (ERC20), BNB Smart Chain (BEP20), Base (BASE), Robinhood Chain (RHC).
+ * Every value is a backend network key (`COIN_NETWORKS`: TRC20, ERC20, BEP20,
+ * POLYGON…) — the only thing `chain` may carry; any other name is refused with
+ * NETWORK_UNAVAILABLE. `GET /user/crypto/networks` is the live source.
  */
 
-const ETH_CHAINS = [
-  { value: "ERC20", label: "Ethereum (ERC20)" },
-  { value: "BEP20", label: "BNB Smart Chain (BEP20)" },
-  { value: "BASE", label: "Base (BASE)" },
-  { value: "RHC", label: "Robinhood Chain (RHC)" },
-];
+const ETH_CHAINS = [{ value: "ERC20", label: "Ethereum (ERC20)" }];
 
 const STABLE_CHAINS = [
   { value: "ERC20", label: "Ethereum (ERC20)" },
   { value: "TRC20", label: "Tron (TRC20)" },
   { value: "BEP20", label: "BNB Smart Chain (BEP20)" },
   { value: "SOL", label: "Solana (SOL)" },
-  { value: "MATIC", label: "Polygon (MATIC)" },
+  { value: "POLYGON", label: "Polygon (POLYGON)" },
 ];
 
 const NETWORKS = {
@@ -47,7 +45,7 @@ const NETWORKS = {
   TRX: [{ value: "TRC20", label: "Tron (TRC20)" }],
   BNB: [{ value: "BEP20", label: "BNB Smart Chain (BEP20)" }],
   MATIC: [
-    { value: "MATIC", label: "Polygon (MATIC)" },
+    { value: "POLYGON", label: "Polygon (POLYGON)" },
     { value: "ERC20", label: "Ethereum (ERC20)" },
   ],
   AVAX: [{ value: "AVAXC", label: "Avalanche C-Chain" }],
@@ -79,9 +77,20 @@ export function networkLabel(code, network) {
   return networksFor(code).find((n) => n.value === network)?.label || network || "";
 }
 
-/** The coin's networks as the site lists them (`GET /admin/currencies/public`), else the static shape. */
+/**
+ * The coin's networks: `GET /user/crypto/networks` (`live`, backend keys, switched-off ones left out),
+ * else as the site lists them (`GET /admin/currencies/public`), else the static shape.
+ */
+export function networkOptions(coin, live, siteRow) {
+  const toOption = (n) => ({ value: n.key, label: n.name || n.key });
+  const row = Array.isArray(live) ? live.find((r) => r.coin === String(coin).toUpperCase()) : null;
+  if (row) return (row.networks || []).map(toOption);
+  return siteRow?.networks?.length ? siteRow.networks.map(toOption) : networksFor(coin);
+}
+
 export function useNetworkOptions(coin) {
-  const row = useCoins()?.get(String(coin).toUpperCase());
-  return row?.networks?.length ? row.networks.map((n) => ({ value: n.key, label: n.name || n.key })) : networksFor(coin);
+  const siteRow = useCoins()?.get(String(coin).toUpperCase());
+  const { data: live } = useApi("wallet:networks", () => funding.networks());
+  return networkOptions(coin, live, siteRow);
 }
 
