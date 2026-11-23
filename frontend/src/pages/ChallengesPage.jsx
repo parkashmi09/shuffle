@@ -9,6 +9,7 @@ import { useSession } from "../lib/sessionContext";
 import { useGate } from "../lib/gates";
 import { formatAmount } from "../lib/adapters";
 import { navigate } from "../lib/router";
+import { alertFromError, alertSuccess } from "../lib/alerts";
 
 /** Challenges browse page — reference `/challenges`. */
 
@@ -21,8 +22,23 @@ const TABS = [
 
 /** Today's quests and the caller's progress: `GET /user/quests`, signed in. */
 function Quests() {
-  const { data, loading, error } = useApi("quests", () => questsApi.list());
+  const { data, loading, error, reload } = useApi("quests", () => questsApi.list());
+  const { refreshBalances } = useSession();
+  const [claiming, setClaiming] = useState(null);
   const day = data?.dailyQuest?.first;
+  const claim = async (key) => {
+    setClaiming(key);
+    try {
+      const r = await questsApi.claim(key);
+      alertSuccess(`${formatAmount(r.amount)} ${r.currency} added to your balance.`);
+      refreshBalances?.();
+      reload();
+    } catch (e) {
+      alertFromError(e, "That reward could not be claimed.");
+    } finally {
+      setClaiming(null);
+    }
+  };
   if (loading) return <p className="RaceInfoModal_text">Loading…</p>;
   if (error || !day?.quests?.length) {
     return (
@@ -46,6 +62,23 @@ function Quests() {
             </div>
             <span className="MiniList_meta">{q.description}</span>
             <div className="MiniList_bar"><span style={{ width: `${pct}%` }} /></div>
+            {Number(q.rewardUsd) > 0 && (
+              <div className="MiniList_row">
+                <span className="MiniList_meta">Reward ${formatAmount(q.rewardUsd)}</span>
+                {q.claimed ? (
+                  <span className="MiniList_meta">Claimed</span>
+                ) : q.completed ? (
+                  <button
+                    type="button"
+                    disabled={claiming != null}
+                    onClick={() => claim(q.key)}
+                    className="ButtonVariants_root ButtonVariants_buttonHeightSmall ButtonVariants_primary"
+                  >
+                    <span className="ButtonVariants_buttonContent">{claiming === q.key ? "…" : "Claim"}</span>
+                  </button>
+                ) : null}
+              </div>
+            )}
           </div>
         );
       })}

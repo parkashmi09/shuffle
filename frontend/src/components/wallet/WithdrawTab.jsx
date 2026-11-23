@@ -42,6 +42,8 @@ const WITHDRAW_REFUSALS = {
   FIAT_WITHDRAW_KYC_REQUIRED: "Complete identity verification (Settings → Verify) before withdrawing.",
   WITHDRAW_WAGER_REQUIRED: "Wager your deposit and bonus before withdrawing.",
   BONUS_FORFEIT_REQUIRED: "This withdrawal forfeits your active bonus — tick the box to confirm.",
+  CRYPTO_WITHDRAW_ADDRESS_NOT_WHITELISTED:
+    "Whitelist-only is on: withdraw to a saved address (Settings → Security). A new address is usable 24 hours after you add it.",
 };
 
 /** The deposit rollover (`GET /user/wager/tasks`, USD): one bar per open task; nothing when none applies. */

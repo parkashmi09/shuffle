@@ -432,19 +432,26 @@ export const swap = {
 };
 
 /**
- * Settings → Security's address book. `list` answers `{ whitelistOnly, addresses: [{ id, label,
- * currency, network, address, memo, createdAt }] }`; `enforce(true)` refuses on an empty list.
+ * Settings → Security's address book. `list` answers `{ whitelistOnly, offAt, addresses: [{ id, label,
+ * currency, network, address, memo, createdAt, activeAt }] }`; `enforce(true)` refuses on an empty list.
+ * `add`, `remove` and `enforce(false)` need `{ password, code? }` (403 WHITELIST_PASSWORD_REQUIRED /
+ * TWOFA_INVALID_CODE). "Off" lands at `offAt` (+24h); a new address is usable from `activeAt` (+24h).
  */
 export const withdrawWhitelist = {
   list: () => get("/user/withdrawals/whitelist"),
   add: (body) => post("/user/withdrawals/whitelist", body),
-  remove: (id) => del(`/user/withdrawals/whitelist/${id}`),
-  enforce: (enabled) => put("/user/withdrawals/whitelist/enforcement", { enabled }),
+  remove: (id, creds) => del(`/user/withdrawals/whitelist/${id}`, { body: creds }),
+  enforce: (enabled, creds) => put("/user/withdrawals/whitelist/enforcement", { enabled, ...creds }),
 };
 
-/** Daily quests (owner `challenges`): `{ dailyQuest: { first: { endsAt, quests: [{ key, title, description, unit, target, progress, completed }] } } }`. */
+/**
+ * Daily quests (owner `challenges`): `{ dailyQuest: { first: { endsAt, quests: [{ key, title, description, unit,
+ * target, progress, completed, rewardUsd, claimed }] } } }`. `claim(key)` (`dailyWager` | `dailyBets`) answers
+ * `{ key, claimed, rewardUsd, amount, currency, endsAt }`.
+ */
 export const quests = {
   list: () => get("/user/quests"),
+  claim: (key) => post(`/user/quests/${key}/claim`),
 };
 
 /** The caller's medals: `{ medalCount, total, medals: [{ key, title, unlocked, unlockedAt, rule: { description }, progress: { current, target } }] }`. */
@@ -466,7 +473,7 @@ export const reloadRewards = {
 /**
  * GIS extras. `launchDemo` answers `{ url }` (signed in only); `freespins` is the caller's active free spins,
  * `{ total, freespins: [{ id, gameUuid, game: { uuid, name, provider, image }, quantity, quantityLeft, validUntil }] }`.
- * The jackpot figures are the provider's own payload, passed through unshaped.
+ * Both jackpot reads answer `[{ name, amount (decimal string), currency, gameId?, raw }]`.
  */
 export const gis = {
   launchDemo: (gameUuid, device) => post("/casino/gis/launch-demo", { gameUuid, device }),
@@ -587,7 +594,9 @@ export const funding = {
  * `GET /` answers `{ selfExclusions[], limits[] }` (only rows still in force).
  * `type` is `CASINO` | `SPORTS` | `PLATFORM`; `breakPeriod` is one of the
  * `BREAK_PERIODS` values in `lib/shuffleWise.js`; a limit is
- * `{ type: LOSS_LIMIT | WAGER_LIMIT, usdAmount, periodUnit: DAYS | WEEKS | MONTHS }`.
+ * `{ type: LOSS_LIMIT | WAGER_LIMIT | DEPOSIT_LIMIT, usdAmount, periodUnit: DAYS | WEEKS | MONTHS }`;
+ * a limit's `progressAmount` is USD. A deposit over a DEPOSIT_LIMIT is refused 403
+ * RESPONSIBLE_DEPOSIT_LIMIT_REACHED `{ limitUsd, usedUsd, depositUsd, resetsAt }`.
  */
 export const responsibleGambling = {
   overview: () => get("/user/responsible-gambling"),
@@ -638,9 +647,9 @@ export const history = {
   withdrawals: (query) => get("/user/history/withdrawals", { query }),
   /** Both lists in one call, for a statement view. */
   combined: (query) => get("/user/history", { query }),
-  /** Staff top-ups and take-backs: `{ id, amount, direction: credit | debit | unknown, transferType, note, createdAt }` (no currency). */
+  /** Staff top-ups and take-backs: `{ id, amount, currency: "INR", direction: credit | debit | unknown, transferType, note, createdAt }`. */
   transfers: (query) => get("/user/history/transfers", { query }),
-  /** Per-currency sums, `[{ currency, count, total }]`, every status. */
+  /** Per-currency sums, `[{ currency, count, total, byStatus: { [status]: { count, total } } }]`; `count`/`total` are completed rows only. */
   cryptoStats: () => get("/user/history/crypto/stats"),
   fiatStats: () => get("/user/history/fiat/stats"),
   withdrawalStats: () => get("/user/history/withdrawals/stats"),

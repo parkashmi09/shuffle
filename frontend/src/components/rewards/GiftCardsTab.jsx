@@ -53,7 +53,7 @@ export default function GiftCardsTab() {
           <div key={card.id} className="MiniList_root">
             <div className="MiniList_row">
               <span className="MiniList_heading">{card.uniqueKey}</span>
-              <span>{formatAmount(card.amount)}</span>
+              <span>{formatAmount(card.amount)} {card.currency}</span>
             </div>
             {card.description && <span className="MiniList_meta">{card.description}</span>}
             {card.depositStatus && (

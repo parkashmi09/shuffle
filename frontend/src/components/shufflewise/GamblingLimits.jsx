@@ -12,10 +12,9 @@ import { LIMIT_TYPES, initiateLimitRemoval, limitReset, responsibleLimits } from
 /**
  * Shuffle Wise → Gambling Limits — reference `ResponsibleGamblingLimits`.
  *
- * A loss limit and a wager limit, each over a day, a week or a month. The
- * reference allows one of each and no more, which is why Set Gambling Limit
- * goes disabled at two and why the dialog's type select drops a type that is
- * already set.
+ * A loss, a wager and a deposit limit, each over a day, a week or a month. One
+ * of each and no more, which is why Set Gambling Limit goes disabled once every
+ * type is set and why the dialog's type select drops a type that is already set.
  *
  * The table only exists once there is something in it — with no limits the tab
  * is the description, the rule and the button, which is what the live page
@@ -163,7 +162,7 @@ export default function GamblingLimits() {
           <button
             type="button"
             className="ButtonVariants_root ButtonVariants_buttonHeightLarge ButtonVariants_primary ResponsibleGamblingLimits_button"
-            disabled={limits.length >= 2}
+            disabled={limits.length >= Object.keys(LIMIT_TYPES).length}
             onClick={() => setOpen(true)}
           >
             <span className="ButtonVariants_buttonContent">Set Gambling Limit</span>

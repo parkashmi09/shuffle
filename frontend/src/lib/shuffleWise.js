@@ -17,8 +17,8 @@ import { responsibleGambling as api } from "./endpoints";
 /** The three things a break can cover. `PLATFORM` is the whole account. */
 export const EXCLUSION_TYPES = { CASINO: "CASINO", SPORTS: "SPORTS", PLATFORM: "PLATFORM" };
 
-/** Loss or wager — a player may hold one of each, never two of a kind. */
-export const LIMIT_TYPES = { LOSS_LIMIT: "Loss Limit", WAGER_LIMIT: "Wager Limit" };
+/** Loss, wager or deposit — a player may hold one of each, never two of a kind. All in USD. */
+export const LIMIT_TYPES = { LOSS_LIMIT: "Loss Limit", WAGER_LIMIT: "Wager Limit", DEPOSIT_LIMIT: "Deposit Limit" };
 
 /** The three windows a limit resets over. */
 export const PERIOD_UNITS = { DAYS: "Daily", WEEKS: "Weekly", MONTHS: "Monthly" };

@@ -7,19 +7,12 @@ import { useSession } from "../../lib/sessionContext";
 import { GameCard } from "./GameCarousel";
 
 /**
- * The provider's jackpot payload is passed through unshaped (`/casino/gis/jackpots` signed in,
- * `/casino/catalogue/jackpots` signed out), so this takes the first list it finds and the usual field names.
- * shortcut: guesses field names; pin them once a live provider answer is on record.
+ * Both reads (`/casino/gis/jackpots` signed in, `/casino/catalogue/jackpots` signed out) answer
+ * `[{ name, amount (decimal string), currency, gameId?, raw }]`.
  */
 function jackpotRows(payload) {
-  const list = Array.isArray(payload) ? payload : [payload?.jackpots, payload?.data, payload?.items].find(Array.isArray) || [];
-  return list
-    .map((j, i) => ({
-      key: j.id ?? j.name ?? i,
-      name: j.name ?? j.title ?? j.game_name ?? "Jackpot",
-      amount: j.amount ?? j.value ?? j.current ?? j.jackpot,
-      currency: j.currency ?? "",
-    }))
+  return (Array.isArray(payload) ? payload : [])
+    .map((j, i) => ({ key: `${j.gameId ?? ""}:${j.name}:${i}`, name: j.name || "Jackpot", amount: j.amount, currency: j.currency ?? "" }))
     .filter((j) => j.amount != null && Number.isFinite(Number(j.amount)));
 }
 

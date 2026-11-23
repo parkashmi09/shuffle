@@ -3,7 +3,7 @@ import { cx } from "../lib/carousel";
 import { navigate, usePath } from "../lib/router";
 import { useApi } from "../lib/useResource";
 import { useSession } from "../lib/sessionContext";
-import { displayFiat, formatAmount, resolveGame } from "../lib/adapters";
+import { displayFiat, resolveGame } from "../lib/adapters";
 import { betHistory, funding, history, sportsBets, tips, wallet } from "../lib/endpoints";
 import { useGate } from "../lib/gates";
 import { sections } from "../data/catalog";
@@ -386,13 +386,14 @@ const SOURCES = {
     ],
   },
   transfers: {
-    // `staff_transfers` has no currency column, so the amount prints bare and the coin filter does not apply.
-    fetch: ({ limit, offset }) => history.transfers({ limit, offset }).then((rows) => (Array.isArray(rows) ? rows : [])),
+    // Staff transfers are INR rows (`currency: "INR"`); the coin filter applies.
+    fetch: ({ limit, offset, coin }) =>
+      history.transfers({ limit, offset, ...(coin ? { currency: coin } : {}) }).then((rows) => (Array.isArray(rows) ? rows : [])),
     key: (row) => row.id,
     cells: (row) => [
       row.note || formatLedgerReasonCode(row.transferType) || "Transfer",
       shortDate(row.createdAt),
-      formatAmount(row.amount),
+      <Money amount={row.amount} coin={row.currency || "INR"} />,
       <span className={row.direction === "credit" ? "OtherTransactions_success" : undefined}>
         {row.direction === "credit" ? "Credit" : row.direction === "debit" ? "Debit" : "—"}
       </span>,
@@ -415,7 +416,7 @@ const SOURCES = {
   },
 };
 
-/** Per-currency sums over the tab's rails (every status), above the table. */
+/** Per-currency sums over the tab's rails (completed rows only), above the table; other statuses counted beside. */
 function TotalsHeader({ kind }) {
   const { data } = useApi(`transactions:totals:${kind}`, () =>
     kind === "deposits"
@@ -425,11 +426,13 @@ function TotalsHeader({ kind }) {
   const sums = {};
   for (const r of Array.isArray(data) ? data : []) {
     if (!r?.currency) continue;
-    const t = (sums[r.currency] ??= { total: 0, count: 0 });
+    const t = (sums[r.currency] ??= { total: 0, count: 0, all: 0 });
     t.total += Number(r.total) || 0;
     t.count += r.count || 0;
+    t.all += Object.values(r.byStatus || {}).reduce((n, s) => n + (s?.count || 0), 0) || r.count || 0;
   }
-  const entries = Object.entries(sums);
+  // Rows with nothing in any status can come back; leave them out.
+  const entries = Object.entries(sums).filter(([, t]) => t.all > 0);
   if (!entries.length) return null;
   return (
     <div className="MiniList_root Transactions_totals">
@@ -438,7 +441,9 @@ function TotalsHeader({ kind }) {
         {entries.map(([currency, t]) => (
           <div key={currency} className="MiniList_row">
             <Money amount={t.total} coin={currency} />
-            <span className="MiniList_meta">{t.count} {t.count === 1 ? "request" : "requests"}</span>
+            <span className="MiniList_meta">
+              {t.count} completed{t.all > t.count ? ` · ${t.all - t.count} other` : ""}
+            </span>
           </div>
         ))}
       </div>

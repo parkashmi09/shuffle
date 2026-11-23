@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { isFiat } from "../../lib/adapters";
 import { currencyLabel } from "../../lib/currencies";
-import { withdrawWhitelist } from "../../lib/endpoints";
+import { twoFactor, withdrawWhitelist } from "../../lib/endpoints";
 import { useApi } from "../../lib/useResource";
 import { useSession } from "../../lib/sessionContext";
 import WalletSelect from "../wallet/CurrencySelect";
+import Modal from "../ui/Modal";
 import Switch from "./Switch";
 
 const EMPTY = { label: "", network: "", address: "", memo: "" };
+const when = (iso) => new Date(iso).toLocaleString();
 
 /**
  * Settings → Security → Withdrawal Whitelist — `/user/withdrawals/whitelist`.
@@ -15,6 +17,10 @@ const EMPTY = { label: "", network: "", address: "", memo: "" };
  * The player's saved crypto payout addresses, and the switch that limits
  * withdrawals to them. The backend refuses the switch on an empty list and
  * turns it off itself when the last address goes.
+ *
+ * Adding, removing and switching off need the account password (plus the 2FA
+ * code when 2FA is on), so those go through a confirm dialog. A new address is
+ * usable from `activeAt` (24h later); switching off lands at `offAt` (24h later).
  */
 export default function WithdrawalWhitelist() {
   const { balances } = useSession();
@@ -24,6 +30,10 @@ export default function WithdrawalWhitelist() {
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const { data: totp } = useApi("whitelist:2fa", () => twoFactor.status().catch(() => null));
+  // `{ title, call(creds) }` while the password / 2FA dialog is open.
+  const [confirm, setConfirm] = useState(null);
+  const [creds, setCreds] = useState({ password: "", code: "" });
   const coin = currency || coins[0]?.value || "";
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -42,12 +52,28 @@ export default function WithdrawalWhitelist() {
     }
   };
 
-  const add = async (e) => {
+  const ask = (title, call) => {
+    setError(null);
+    setCreds({ password: "", code: "" });
+    setConfirm({ title, call });
+  };
+
+  const onConfirm = async (e) => {
+    e.preventDefault();
+    const body = { password: creds.password };
+    if (totp?.isEnabled) body.code = creds.code.trim();
+    if (await run(() => confirm.call(body))) setConfirm(null);
+  };
+
+  const add = (e) => {
     e.preventDefault();
     const body = { label: form.label.trim(), currency: coin, address: form.address.trim() };
     if (form.network.trim()) body.network = form.network.trim();
     if (form.memo.trim()) body.memo = form.memo.trim();
-    if (await run(() => withdrawWhitelist.add(body))) setForm(EMPTY);
+    ask("Save Address", async (c) => {
+      await withdrawWhitelist.add({ ...body, ...c });
+      setForm(EMPTY);
+    });
   };
 
   const addresses = data?.addresses ?? [];
@@ -68,12 +94,16 @@ export default function WithdrawalWhitelist() {
             <Switch
               checked={Boolean(data.whitelistOnly)}
               disabled={busy || (!data.whitelistOnly && addresses.length === 0)}
-              onChange={(next) => run(() => withdrawWhitelist.enforce(next))}
+              onChange={(next) => (next ? run(() => withdrawWhitelist.enforce(true)) : ask("Turn Off Whitelist", (c) => withdrawWhitelist.enforce(false, c)))}
               className="SwitchGroup_switch"
             />
             <div className="SwitchGroup_switchLabelDesc">
               <h5 className="Heading_root Heading_h5 SwitchGroup_heading">Whitelist-only withdrawals</h5>
-              <p>{addresses.length ? "Only the addresses below can receive a withdrawal" : "Add an address to turn this on"}</p>
+              <p>
+                {data.offAt
+                  ? `Turns off at ${when(data.offAt)}`
+                  : addresses.length ? "Only the addresses below can receive a withdrawal" : "Add an address to turn this on"}
+              </p>
             </div>
           </div>
         )}
@@ -87,11 +117,17 @@ export default function WithdrawalWhitelist() {
                   {a.network ? ` (${a.network})` : ""}
                   <br />
                   <span className="MiniList_meta">{a.address}</span>
+                  {a.activeAt && new Date(a.activeAt) > new Date() && (
+                    <>
+                      <br />
+                      <span className="MiniList_meta">Usable from {when(a.activeAt)}</span>
+                    </>
+                  )}
                 </span>
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => run(() => withdrawWhitelist.remove(a.id))}
+                  onClick={() => ask("Remove Address", (c) => withdrawWhitelist.remove(a.id, c))}
                   className="ButtonVariants_root ButtonVariants_buttonHeightSmall ButtonVariants_secondary"
                 >
                   <span className="ButtonVariants_buttonContent">Remove</span>
@@ -116,7 +152,7 @@ export default function WithdrawalWhitelist() {
           </div>
         ))}
 
-        {error && (
+        {error && !confirm && (
           <div className="WarningMessage_container">
             <img alt="warning" className="WarningMessage_icon" src="/icons/exclamation.svg" />
             <span className="WarningMessage_content">{error}</span>
@@ -127,6 +163,42 @@ export default function WithdrawalWhitelist() {
           <span className="ButtonVariants_buttonContent">Save Address</span>
         </button>
       </form>
+
+      {confirm && (
+        <Modal onClose={() => setConfirm(null)} label={confirm.title}>
+          <h3 className="Header_root">{confirm.title}</h3>
+          <form className="ChangePasswordModal_root" onSubmit={onConfirm}>
+            <p className="Subheader_root"><span>Confirm with your password{totp?.isEnabled ? " and your 2FA code" : ""}.</span></p>
+            <div className="FormControlWrapper_root">
+              <label className="Label_root" htmlFor="wl-password">Password*</label>
+              <div className="InputWrapper_root">
+                <input id="wl-password" type="password" autoComplete="current-password" className="Input_root" value={creds.password} onChange={(e) => setCreds((c) => ({ ...c, password: e.target.value }))} />
+              </div>
+            </div>
+            {totp?.isEnabled && (
+              <div className="FormControlWrapper_root">
+                <label className="Label_root" htmlFor="wl-code">2FA Code*</label>
+                <div className="InputWrapper_root">
+                  <input id="wl-code" className="Input_root" inputMode="numeric" maxLength={6} placeholder="000000" value={creds.code} onChange={(e) => setCreds((c) => ({ ...c, code: e.target.value }))} />
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="WarningMessage_container">
+                <img alt="warning" className="WarningMessage_icon" src="/icons/exclamation.svg" />
+                <span className="WarningMessage_content">{error}</span>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={busy || !creds.password || (totp?.isEnabled && creds.code.trim().length !== 6)}
+              className="ButtonVariants_root ButtonVariants_buttonHeightMedium ButtonVariants_primary ChangePasswordModal_button"
+            >
+              <span className="ButtonVariants_buttonContent">Confirm</span>
+            </button>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
