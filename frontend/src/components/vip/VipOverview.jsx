@@ -1,5 +1,6 @@
 import VipBadge from "./VipBadge";
 import { tierFor } from "./vipTiers";
+import AvatarFace from "../ui/AvatarFace";
 
 /**
  * The card at the top of the signed-in VIP page — reference `VipPageOverview`.
@@ -49,7 +50,7 @@ export default function VipOverview({ username, vip, levels }) {
           <div className="UserBadgeBlock_root">
             <div className="UserBadgeBlock_avatarContainer">
               <div className="Avatar_root Avatar_background">
-                <img alt="avatar" width="40" height="40" src="/icons/user-profile.svg" />
+                <AvatarFace name={username} />
               </div>
             </div>
             <div className="UserBadgeBlock_badge">

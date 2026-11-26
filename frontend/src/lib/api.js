@@ -17,6 +17,12 @@
 const BASE = import.meta.env.VITE_API_BASE || "/api/v1";
 
 const ACCESS_KEY = "shuffle.accessToken";
+/**
+ * The refresh token lives in the backend's httpOnly cookie (`X-Refresh-Cookie: 1` on every
+ * request; backend `auth/refreshCookie.js`), out of reach of page script. This key only holds a
+ * token stored before that change: it is sent once on the next refresh, which moves it into the
+ * cookie, and then removed.
+ */
 const REFRESH_KEY = "shuffle.refreshToken";
 
 /** A failure the backend described. `code` is the stable identifier; `fields` is set on a 422. */
@@ -70,9 +76,9 @@ const write = (k, v) => {
 export const tokens = {
   access: () => read(ACCESS_KEY),
   refresh: () => read(REFRESH_KEY),
-  set({ accessToken, refreshToken }) {
+  set({ accessToken }) {
     write(ACCESS_KEY, accessToken);
-    if (refreshToken !== undefined) write(REFRESH_KEY, refreshToken);
+    write(REFRESH_KEY, null);
   },
   clear() {
     write(ACCESS_KEY, null);
@@ -100,8 +106,9 @@ export const setAuthLostHandler = (fn) => {
 };
 
 export async function refreshAccessToken() {
-  const refreshToken = tokens.refresh();
-  if (!refreshToken) return null;
+  // No access token means never signed in here: nothing to refresh.
+  if (!tokens.access()) return null;
+  const legacy = tokens.refresh();
 
   refreshing =
     refreshing ||
@@ -109,7 +116,7 @@ export async function refreshAccessToken() {
       try {
         const data = await request("/user/auth/refresh", {
           method: "POST",
-          body: { refreshToken },
+          body: legacy ? { refreshToken: legacy } : {},
           auth: false,
           retry: false,
         });
@@ -148,7 +155,7 @@ export async function request(path, { method = "GET", body, query, auth = true, 
   }
 
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
-  const headers = {};
+  const headers = { "X-Refresh-Cookie": "1" };
   if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
 
   const token = auth ? tokens.access() : null;
@@ -160,6 +167,8 @@ export async function request(path, { method = "GET", body, query, auth = true, 
       method,
       headers,
       signal,
+      // The refresh cookie must travel when VITE_API_BASE is another origin too.
+      credentials: "include",
       body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     });
   } catch (cause) {
@@ -169,7 +178,7 @@ export async function request(path, { method = "GET", body, query, auth = true, 
 
   // A 401 on an authenticated call is the expected end of an access token's
   // life. Refresh once and replay; a second 401 is a real refusal.
-  if (res.status === 401 && retry && auth && tokens.refresh()) {
+  if (res.status === 401 && retry && auth && tokens.access()) {
     const fresh = await refreshAccessToken();
     if (fresh) return request(path, { method, body, query, auth, retry: false, withMeta, signal });
   }

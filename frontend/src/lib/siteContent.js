@@ -60,7 +60,19 @@ function cleanExtras(data) {
   };
 }
 
-const loadRaw = () => (rawOnce ??= site.branding().catch(() => null));
+const loadRaw = () => (rawOnce ??= site.branding().then(rememberLoader).catch(() => null));
+
+/* The site admin's loading picture (Site config → Branding): kept for index.html's boot script, which paints
+   it on the next load before the bundle. Readable unbranded, so not in cleanBranding. Null forgets it. */
+function rememberLoader(data) {
+  try {
+    if (data && ASSET.test(data.loaderUrl || "")) localStorage.setItem("sh.loaderUrl", `${API_ORIGIN}${data.loaderUrl}`);
+    else if (data) localStorage.removeItem("sh.loaderUrl");
+  } catch {
+    /* no storage: no loader picture */
+  }
+  return data;
+}
 export const loadBranding = () => (brandingOnce ??= loadRaw().then(cleanBranding));
 export const loadBrandExtras = () => (extrasOnce ??= loadRaw().then(cleanExtras));
 export const loadSiteContent = () => (contentOnce ??= site.content().then((d) => d || {}).catch(() => ({})));
@@ -76,9 +88,11 @@ onBump("content", () => {
 export const useBranding = () => useApi(`site:branding:${useSiteVersion("branding")}`, loadBranding).data;
 /** `{ whatsapp, telegram, sportsbook: { tabName, gameUid } }` — see `cleanExtras`. */
 export const useBrandExtras = () => useApi(`site:brand-extras:${useSiteVersion("branding")}`, loadBrandExtras).data;
+// The email is admin-typed text going into raw HTML.
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 /** The admin's support email in place of the reference's addresses in captured HTML (unset keeps the copy). */
 export const withSupportEmail = (html, content) =>
-  content?.support?.email ? html.replace(/[\w.+-]+@shuffle\.com/g, () => content.support.email) : html;
+  content?.support?.email ? html.replace(/[\w.+-]+@shuffle\.com/g, () => escapeHtml(content.support.email)) : html;
 
 export const useSiteContent = () => useApi(`site:content:${useSiteVersion("content")}`, loadSiteContent).data || {};
 

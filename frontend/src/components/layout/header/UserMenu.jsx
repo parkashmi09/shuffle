@@ -6,6 +6,7 @@ import { useApi } from "../../../lib/useResource";
 import { vip as vipApi } from "../../../lib/endpoints";
 import VipBadge from "../../vip/VipBadge";
 import { tierFor } from "../../vip/vipTiers";
+import AvatarFace from "../../ui/AvatarFace";
 import { openExternal, useSupportHref } from "../../../lib/siteContent";
 
 /**
@@ -70,7 +71,7 @@ function VipCard({ name, avatar, vip }) {
     >
       <div className="UserMenuVipCard_name">
         <div className="Avatar_root Avatar_background">
-          <img alt="avatar" width="40" height="40" src={avatar || "/icons/user-profile.svg"} />
+          <AvatarFace src={avatar} name={name} />
         </div>
         <span className="UserMenuVipCard_username">{name}</span>
       </div>
@@ -290,7 +291,7 @@ export default function UserMenu({ user }) {
             none }` in the reference expects exactly this, and `Avatar_root` is
             what makes it a circle. */}
         <div className="Avatar_root UserMenu_avatarButton">
-          <img alt="avatar" width="40" height="40" src={user.avatar || "/icons/user-profile.svg"} />
+          <AvatarFace src={user.avatar} name={user.name} />
         </div>
       </button>
 

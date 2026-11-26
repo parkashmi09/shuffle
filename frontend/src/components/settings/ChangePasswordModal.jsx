@@ -15,7 +15,7 @@ import { underAgentBase } from "../../lib/agentBase";
  * `POST /user/auth/change-password` takes `{ currentPassword, newPassword }`
  * and signs every other session out, which is what the subheader promises.
  *
- * `forced`: an agent's player on the password their upline chose. Every other call answers 403
+ * `forced`: an agent's player on the password a staff member chose (first sign-in or a reset). Every other call answers 403
  * until it is changed, so closing this signs out (the shell passes logout as `onClose`), and a
  * success hands the new password to `onChanged` to sign in again.
  */
@@ -88,7 +88,7 @@ export default function ChangePasswordModal({ onClose, forced = false, onChanged
       <p className="Subheader_root">
         <span>
           {forced
-            ? "Your upline gave you a temporary password. Choose a new one to continue — closing this signs you out."
+            ? "Your password was set by your agent. Enter it once more, then choose your own to continue — closing this signs you out."
             : "Changing your password will sign you out on all other devices"}
         </span>
       </p>

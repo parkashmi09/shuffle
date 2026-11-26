@@ -544,6 +544,8 @@ export const rates = {
 export const funding = {
   /** Networks a coin can be deposited on. Public; needs the provider configured. */
   chains: () => get("/user/crypto/chains", { auth: false }),
+  /** Per coin, the networks that are on, by backend key: `[{ coin, networks: [{ key, name }] }]`. Public. */
+  networks: () => get("/user/crypto/networks", { auth: false }),
   /** Provider metadata for one coin. `symbol` is required by the validator. */
   coin: (symbol) => get("/user/crypto/coins", { query: { symbol }, auth: false }),
 

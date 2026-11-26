@@ -798,3 +798,18 @@ div.ExpandMenuElement_hide {
 .NavigationLineBreakWrapper_expanded {
   margin: var(--spacing-sm5) 0;
 }
+
+/* Avatars switched off: the name's first letter fills the circle (AvatarFace). */
+.Avatar_letter {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--color-primaryNeonPurple);
+  color: white;
+  font-weight: 700;
+  font-size: var(--text-lg);
+  line-height: 1;
+  user-select: none;
+}

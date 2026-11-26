@@ -68,6 +68,16 @@ const readStored = (key) => {
   }
 };
 
+/** The access token's `mcp` claim (backend: set while the password is one staff chose). */
+function tokenMustChange() {
+  try {
+    const part = tokens.access()?.split(".")[1];
+    return part ? JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/"))).mcp === true : false;
+  } catch {
+    return false;
+  }
+}
+
 export function SessionProvider({ children }) {
   const [state, setState] = useState(() => ({
     user: null,
@@ -244,7 +254,8 @@ export function SessionProvider({ children }) {
   }, []);
 
   // On a temporary password every read but `/auth/me` is refused: wait for ForcePasswordModal.
-  const pendingPassword = Boolean(state.user?.mustChangePassword);
+  // The access token's `mcp` claim says the same, should a reply ever arrive without the field.
+  const pendingPassword = Boolean(state.user && (state.user.mustChangePassword || tokenMustChange()));
 
   /** Pull the wallet once a user is known. Later refreshes go through `refreshBalances`. */
   useEffect(() => {

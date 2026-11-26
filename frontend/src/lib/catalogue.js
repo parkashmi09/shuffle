@@ -136,10 +136,16 @@ export function useBanners() {
   const { data, isLive } = useResource(
     agentSite ? "banners:agent" : "banners",
     async () => {
-      if (!agentSite) return (await site.banners()).filter((b) => b.mode !== "agent" && b.url);
-      // The auth and VIP art stays the site's; the carousel reads agent mode's own rows.
-      const [rows, agentRows] = await Promise.all([site.banners().catch(() => []), site.banners({ mode: "agent" }).catch(() => [])]);
-      return [...rows.filter((b) => b.mode !== "agent"), ...agentRows].filter((b) => b.url);
+      // `withHidden`: a placement the admin hid comes back as `{type, mode, active: false}` only (no art).
+      const shown = (b) => b.url && b.active !== false && b.hasImage !== false;
+      if (!agentSite) return (await site.banners({ withHidden: true })).filter((b) => b.mode !== "agent" && shown(b));
+      // The auth and VIP art stays the site's; the carousel reads agent mode's own rows, hidden ones kept
+      // so agentCarousel leaves that slot's built-in out.
+      const [rows, agentRows] = await Promise.all([
+        site.banners({ withHidden: true }).catch(() => []),
+        site.banners({ withHidden: true, mode: "agent" }).catch(() => []),
+      ]);
+      return [...rows.filter((b) => b.mode !== "agent" && shown(b)), ...agentRows.filter((b) => shown(b) || b.active === false)];
     },
     []
   );
@@ -147,11 +153,8 @@ export function useBanners() {
     const row = data.find((b) => b.type === type);
     return row ? toBanner(row) : null;
   };
-  const agentSlides = data
-    .filter((b) => AGENT_SLIDE.test(b.type))
-    .sort((a, b) => Number(a.type.slice(13)) - Number(b.type.slice(13)));
   const banners = agentSite
-    ? agentSlides.length ? toBanners(agentSlides) : AGENT_DEFAULT_SLIDES
+    ? agentCarousel(data)
     : toBanners(data.filter((b) => !SLOT_TYPES.includes(b.type)));
   return { banners, vip: one("vip"), auth: one("auth"), isLive };
 }
@@ -164,6 +167,34 @@ const AGENT_DEFAULT_SLIDES = [
   ["3", "/sports", "Back your team"],
   ["4", "/casino/categories/slots", "Slots & live casino"],
 ].map(([n, href, alt]) => ({ img: `/brand/agent/slide-${n}.webp`, href, alt }));
+
+/**
+ * /agent's carousel, slot by slot (hash 5dca56ef): an upload to `agent-slider-<n>` replaces built-in
+ * slide n only, a placement the admin hid (`active: false`) drops it, every other built-in stays. Slot order.
+ */
+export function agentCarousel(rows) {
+  const slot = (type) => Number(String(type).slice(13));
+  const agent = rows.filter((b) => AGENT_SLIDE.test(b?.type));
+  const hidden = new Set(agent.filter((b) => b.active === false).map((b) => slot(b.type)));
+  const uploaded = agent.filter((b) => b.active !== false);
+  const taken = new Set(uploaded.map((b) => slot(b.type)));
+  return [
+    ...uploaded.map((b) => [slot(b.type), toBanner(b)]),
+    ...AGENT_DEFAULT_SLIDES.map((s, i) => [i + 1, s]).filter(([n]) => !taken.has(n) && !hidden.has(n)),
+  ]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, s]) => s);
+}
+
+/* Self-check, dev only: no rows = the built-in four, a hidden slot drops its built-in, an upload takes its own slot. */
+if (import.meta.env.DEV) {
+  const imgs = (rows) => agentCarousel(rows).map((s) => s.img).join();
+  const art = (...n) => n.map((i) => `/brand/agent/slide-${i}.webp`).join();
+  console.assert(imgs([]) === art(1, 2, 3, 4), "agent carousel: built-ins");
+  console.assert(imgs([{ type: "agent-slider-2", active: false }]) === art(1, 3, 4), "agent carousel: hidden slot");
+  const up = agentCarousel([{ type: "agent-slider-3", url: "/api/v1/admin/banners/image/agent-slider-3" }]);
+  console.assert(up.length === 4 && up[0].img === "/brand/agent/slide-1.webp" && up[2].img !== "/brand/agent/slide-3.webp", "agent carousel: upload replaces its slot");
+}
 
 /**
  * A category browse page.

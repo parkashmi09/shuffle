@@ -92,6 +92,8 @@ export function makeGate({ features, flags }) {
   on.ready = Array.isArray(features?.list) && flags != null;
   on.agentPlayer = isAgentPlayer();
   on.demo = isDemoPlayer();
+  /** Avatars on the player site (site admin, `avatars_enabled`): off unless the config says on. */
+  on.avatars = flags?.avatars_enabled === true;
   return on;
 }
 

@@ -257,9 +257,12 @@ function DemoLoginButton({ busy, setBusy, onDone, onError }) {
 function LoginForm({ onDone, initialNotice = null }) {
   const { login } = useSession();
   const agentSite = underAgentBase();
+  /* A B2B site (owner policy `business_model: b2b`) has agent players only: their agent issues and resets
+     their logins, so it signs in as /agent does: username only, no password reset (hash 32cd2997). */
+  const usernameOnly = useSiteFeatures().policy("business_model") === "b2b" || agentSite;
   const form = useForm(
     { identifier: "", password: "" },
-    { identifier: agentSite ? (v) => (v.trim() ? null : "Username is required") : rules.identifier, password: rules.loginPassword }
+    { identifier: usernameOnly ? (v) => (v.trim() ? null : "Username is required") : rules.identifier, password: rules.loginPassword }
   );
   const [status, setStatus] = useState(null);
   const [notice, setNotice] = useState(initialNotice);
@@ -389,15 +392,15 @@ function LoginForm({ onDone, initialNotice = null }) {
         ) : (
           <>
             <TextField
-              label={agentSite ? "Username" : "Email or Username*"}
+              label={usernameOnly ? "Username" : "Email or Username*"}
               name="username"
-              placeholder={agentSite ? "Enter Username" : "Enter Email or Username"}
+              placeholder={usernameOnly ? "Enter Username" : "Enter Email or Username"}
               autoComplete="username"
               value={form.values.identifier}
               onChange={form.set("identifier")}
               error={form.errors.identifier}
             />
-            <PasswordField forgot={!agentSite} onForgot={onForgot} value={form.values.password} onChange={form.set("password")} error={form.errors.password} />
+            <PasswordField forgot={!usernameOnly} onForgot={onForgot} value={form.values.password} onChange={form.set("password")} error={form.errors.password} />
           </>
         )}
         <div className="Login_buttonGroup">
@@ -426,7 +429,7 @@ function LoginForm({ onDone, initialNotice = null }) {
           )}
         </div>
       </form>
-      {twoFactor && !resetSent && !agentSite && (
+      {twoFactor && !resetSent && !usernameOnly && (
         <button type="button" className="PasswordInput_forgotPasswordText" disabled={busy} onClick={onLostAuthenticator}>
           Lost access to your authenticator?
         </button>
@@ -604,11 +607,13 @@ export default function AuthModal({ open = true, tab = "login", onTabChange, onC
    * one policy hold for all of them; hiding the button in `TopBar` alone
    * would leave every other entry point opening a form the backend refuses.
    */
-  const { canSignUp: signupAllowed } = useSiteFeatures();
+  const { canSignUp: signupAllowed, policy } = useSiteFeatures();
   // The agent site signs in and nothing else: no sign-up and no password reset, whatever asked.
   const agentSite = underAgentBase();
+  // Nor does a B2B site reset passwords: its players are all agent players.
+  const noReset = agentSite || policy("business_model") === "b2b";
   const canSignUp = signupAllowed() && !agentSite;
-  const active = !agentSite && (tab === "reset" || canSignUp) ? tab : "login";
+  const active = !noReset && (tab === "reset" || canSignUp) ? tab : "login";
   const [notice, setNotice] = useState(null);
   const brand = useBranding();
   // Banners → placement `auth` replaces the panel artwork.
