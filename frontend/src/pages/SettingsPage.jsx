@@ -29,8 +29,8 @@ const TABS = [
   { id: "ignored-users", label: "Ignored Users", View: SettingsIgnoredUsers },
 ];
 
-/** An agent's player only reads their account; their password and the rest are their agent's. */
-const AGENT_TABS = TABS.filter((t) => t.id === "account");
+/** An agent's player reads their account and changes their password; the rest is their agent's. */
+const AGENT_TABS = TABS.filter((t) => t.id === "account" || t.id === "security");
 
 export default function SettingsPage() {
   const path = usePath();

@@ -30,7 +30,7 @@ const PROVIDERS = [
 
 export default function SettingsSecurity() {
   const [passwordOpen, setPasswordOpen] = useState(false);
-  // An agent's player never reaches this tab (SettingsPage), and its password is the agent's.
+  // An agent's player has Change Password and nothing else here.
   const on = useGate();
   const { agentPlayer } = on;
   const { data: totp, reload } = useApi("settings:2fa", () => twoFactorApi.status().catch(() => null), { enabled: !agentPlayer });
@@ -42,7 +42,6 @@ export default function SettingsSecurity() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
-  if (agentPlayer) return null;
 
   const run = async (fn) => {
     setError(null);

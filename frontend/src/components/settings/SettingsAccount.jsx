@@ -8,6 +8,7 @@ import { CoinIcon } from "../wallet/CurrencySelect";
 import { AvatarPickerModal, ChangeEmailModal } from "./ProfileEditors";
 import { avatarSrc } from "../../lib/adapters";
 import MedalStrip from "./MedalStrip";
+import AvatarFace from "../ui/AvatarFace";
 import PlayStats from "./PlayStats";
 
 /**
@@ -69,9 +70,15 @@ export default function SettingsAccount() {
             <div className="Flex_root" style={{ alignItems: "center" }}>
               <div className="UserBadgeBlock_root">
                 <div className="UserBadgeBlock_avatarContainer">
-                  <button type="button" className="Avatar_root Avatar_background AvatarPicker_trigger" aria-label="Change avatar" onClick={() => setEditing("avatar")}>
-                    <img alt="avatar" width="40" height="40" src={avatarSrc(me?.avatar) || "/icons/user-profile.svg"} />
-                  </button>
+                  {on.avatars ? (
+                    <button type="button" className="Avatar_root Avatar_background AvatarPicker_trigger" aria-label="Change avatar" onClick={() => setEditing("avatar")}>
+                      <AvatarFace src={avatarSrc(me?.avatar)} />
+                    </button>
+                  ) : (
+                    <div className="Avatar_root Avatar_background">
+                      <AvatarFace name={me?.username || user?.name} />
+                    </div>
+                  )}
                 </div>
                 <div className="UserBadgeBlock_badge">
                   <h2 className="UserInfoPanel_heading">{me?.username || user?.name || "—"}</h2>
@@ -141,7 +148,7 @@ export default function SettingsAccount() {
       {!on.demo && <PlayStats />}
       {/* Medals sit with quests under the owner's Challenges switch (and so never for an agent's player). */}
       {on("challenges") && <MedalStrip />}
-      {editing === "avatar" && <AvatarPickerModal current={me?.avatar} onClose={() => setEditing(null)} onSaved={saved} />}
+      {editing === "avatar" && on.avatars && <AvatarPickerModal current={me?.avatar} onClose={() => setEditing(null)} onSaved={saved} />}
       {editing === "email" && <ChangeEmailModal onClose={() => setEditing(null)} onSaved={saved} />}
     </div>
   );
