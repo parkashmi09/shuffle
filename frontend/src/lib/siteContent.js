@@ -88,9 +88,11 @@ onBump("content", () => {
 export const useBranding = () => useApi(`site:branding:${useSiteVersion("branding")}`, loadBranding).data;
 /** `{ whatsapp, telegram, sportsbook: { tabName, gameUid } }` — see `cleanExtras`. */
 export const useBrandExtras = () => useApi(`site:brand-extras:${useSiteVersion("branding")}`, loadBrandExtras).data;
+// The email is admin-typed text going into raw HTML.
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 /** The admin's support email in place of the reference's addresses in captured HTML (unset keeps the copy). */
 export const withSupportEmail = (html, content) =>
-  content?.support?.email ? html.replace(/[\w.+-]+@shuffle\.com/g, () => content.support.email) : html;
+  content?.support?.email ? html.replace(/[\w.+-]+@shuffle\.com/g, () => escapeHtml(content.support.email)) : html;
 
 export const useSiteContent = () => useApi(`site:content:${useSiteVersion("content")}`, loadSiteContent).data || {};
 
