@@ -2,6 +2,8 @@
  * Turn admin-authored HTML (or plain text) into the markup Shuffle blog articles use.
  */
 
+import { sanitizeHtml } from "./sanitizeHtml.js";
+
 function escapeHtml(text) {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -85,7 +87,11 @@ function plainTextToHtml(text) {
  * @param {string} raw  Post body from the API.
  * @param {{ category?: string, subheading?: string }} opts
  */
-export function normalizeBlogHtml(raw, { category, subheading } = {}) {
+export function normalizeBlogHtml(raw, opts) {
+  return sanitizeHtml(buildBlogHtml(raw, opts));
+}
+
+function buildBlogHtml(raw, { category, subheading } = {}) {
   let text = String(raw || "").trim();
   if (!text && !subheading) return tagsMarkup(category);
 

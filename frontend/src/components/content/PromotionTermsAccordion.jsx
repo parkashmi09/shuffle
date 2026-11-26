@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
+import { sanitizeHtml } from "../../lib/sanitizeHtml";
 
 /** Optional promotion T&amp;Cs — same accordion pattern as reference promotion articles. */
 export default function PromotionTermsAccordion({ html }) {
   const rootRef = useRef(null);
-  const body = String(html || "").trim();
+  const body = sanitizeHtml(String(html || "").trim());
 
   useEffect(() => {
     if (!body) return undefined;
