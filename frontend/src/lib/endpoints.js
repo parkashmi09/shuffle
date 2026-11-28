@@ -55,6 +55,8 @@ export const profile = {
   /** Lifetime play: `{ bets, wins, winRate, wagered: { usd, byCurrency } }`. */
   stats: () => get("/user/profile/stats"),
   update: (body) => put("/user/profile", body),
+  /** Add the mobile number while the account has none; answers the profile. 409 `PROFILE_PHONE_TAKEN` / `PROFILE_PHONE_ALREADY_SET`. */
+  setPhone: (phone) => put("/user/profile/phone", { phone }),
   /** `code` is the one `emailOtp.request(newEmail, "change-email")` sent to the NEW address; `password` is the current one. */
   changeEmail: (email, code, password) => post("/user/profile/change-email", { email, code, password }),
   /** One of the site admin's avatars by id; 403 `AVATAR_LOCKED` above the player's VIP level. Answers the profile. */
