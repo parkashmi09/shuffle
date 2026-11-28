@@ -7,6 +7,7 @@ import PageLoader from "./PageLoader";
 import AuthModal from "../auth/AuthModal";
 import LogoutModal from "../auth/LogoutModal";
 import ChangePasswordModal from "../settings/ChangePasswordModal";
+import RequirePhoneModal from "../auth/RequirePhoneModal";
 import ChatButtons from "./ChatButtons";
 import WeeklyRaceModal from "../casino/WeeklyRaceModal";
 import WalletModal from "../wallet/WalletModal";
@@ -407,6 +408,8 @@ function Shell({ children }) {
           }}
         />
       )}
+      {/* The owner's `phone_required`: a direct player without a mobile number adds one first. */}
+      <RequirePhoneModal />
       <ChatButtons />
       <Alerts />
     </div>

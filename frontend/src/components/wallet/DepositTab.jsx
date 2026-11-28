@@ -384,7 +384,8 @@ export default function DepositTab({
   const autoMethods = (automatic && rails?.methods) || NO_METHODS;
   const coinMethods = autoMethods.filter((row) => String(row.currency).toUpperCase() === coin);
   const autoInr = autoMethods.some((row) => String(row.currency).toUpperCase() === MANUAL_COIN);
-  const [pickedRail, setPickedRail] = useState("manual");
+  // Automatic is the default and comes first (as hash FiatTab, 2026-11-27); Manual stays one pick away.
+  const [pickedRail, setPickedRail] = useState("auto");
   const rail = shownRail({ manual, auto: coinMethods.length > 0, picked: pickedRail });
 
   const options = useMemo(
@@ -441,7 +442,7 @@ export default function DepositTab({
           {manual && coinMethods.length > 0 && (
             <WalletSelect
               label="Deposit type"
-              options={[{ value: "manual", label: "Manual" }, { value: "auto", label: "Automatic" }]}
+              options={[{ value: "auto", label: "Automatic" }, { value: "manual", label: "Manual" }]}
               value={rail}
               onChange={setPickedRail}
             />

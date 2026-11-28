@@ -12,6 +12,7 @@ import { useBranding } from "../../lib/siteContent";
 import { useBanners } from "../../lib/catalogue";
 import { navigate } from "../../lib/router";
 import { underAgentBase } from "../../lib/agentBase";
+import { cleanPhone, isValidPhone } from "../../lib/phone";
 
 /**
  * Login / Register modal — a 1:1 port of the reference AuthModal
@@ -141,6 +142,8 @@ const rules = {
   loginPassword: (v) => (!v ? "Password is required" : null),
   // The reset schema's floor is 8 (`auth.validators` `password`), not register's 10.
   newPassword: (v) => (!v ? "Password is required" : v.length < 8 ? "Password must be at least 8 characters" : null),
+  // Only while the owner's `phone_required` is `required`; the backend applies the same rule.
+  phone: (v) => (!v.trim() ? "Mobile Number is required" : !isValidPhone(v) ? "Enter a valid mobile number (10 to 15 digits)" : null),
   terms: (v) => (v ? null : "You must agree to the Terms of Service and Privacy Policy"),
 };
 
@@ -492,11 +495,12 @@ function ResetPasswordForm({ token, onDone }) {
 function RegisterForm({ onDone }) {
   const { register } = useSession();
   const { registerBonus, registerBonusCurrency } = usePublicSiteConfig();
+  const phoneRequired = useSiteFeatures().policy("phone_required") === "required";
   const initialReferrer = readStoredReferral();
   const [referralOpen, setReferralOpen] = useState(() => Boolean(initialReferrer));
   const form = useForm(
-    { username: "", email: "", password: "", referrerCode: initialReferrer, terms: false },
-    { username: rules.username, email: rules.email, password: rules.password, terms: rules.terms }
+    { username: "", email: "", password: "", phone: "", referrerCode: initialReferrer, terms: false },
+    { username: rules.username, email: rules.email, password: rules.password, ...(phoneRequired ? { phone: rules.phone } : {}), terms: rules.terms }
   );
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -520,6 +524,7 @@ function RegisterForm({ onDone }) {
         username: form.values.username,
         email: form.values.email,
         password: form.values.password,
+        ...(phoneRequired ? { phone: cleanPhone(form.values.phone) } : {}),
         ...(referredBy ? { referredBy } : {}),
       });
       // `register` signs in as its second step, so this closes onto a session.
@@ -544,6 +549,9 @@ function RegisterForm({ onDone }) {
           )}
           <TextField label="Username*" name="username" placeholder="Enter Username" autoComplete="username" value={form.values.username} onChange={form.set("username")} error={form.errors.username} />
           <TextField label="Email*" name="email" placeholder="Enter Email" inputMode="email" autoComplete="email" value={form.values.email} onChange={form.set("email")} error={form.errors.email} />
+          {phoneRequired && (
+            <TextField label="Mobile Number*" name="phone" type="tel" placeholder="Enter Mobile Number" inputMode="tel" autoComplete="tel" value={form.values.phone} onChange={form.set("phone")} error={form.errors.phone} />
+          )}
           <PasswordField value={form.values.password} onChange={form.set("password")} error={form.errors.password} autoComplete="new-password" />
         </div>
         <input type="hidden" name="cxd" value="" />

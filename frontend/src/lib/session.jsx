@@ -457,6 +457,8 @@ export function SessionProvider({ children }) {
       register,
       logout,
       refreshBalances: loadBalances,
+      /** Merge fields into the signed-in user (RequirePhone after a save). */
+      updateUser: (patch) => setState((s) => (s.user ? { ...s, user: { ...s.user, ...patch } } : s)),
       /** An agent's player on the upline's temporary password (ForcePasswordModal). */
       mustChangePassword: pendingPassword,
     };
